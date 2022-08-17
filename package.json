@@ -13,7 +13,7 @@
     "lint": "eslint 'packages/**/*.{ts,tsx}'",
     "format": "prettier --write 'packages/**/*.{ts,tsx}'",
     "add-owner": "tsx scripts/npm-add-owner",
-    "preinstall": "tsx scripts/preinstall.js",
+    "preinstall": "npx only-allow pnpm",
     "prepare": "husky install",
     "release": "tsx scripts/release"
   },
@@ -42,6 +42,7 @@
     "husky": "^8.0.1",
     "jest": "^27.5.1",
     "lint-staged": "^12.3.4",
+    "only-allow": "^1.1.1",
     "prettier": "^2.7.1",
     "prettier-plugin-organize-imports": "^3.0.3",
     "strip-ansi": "^6.0.0",

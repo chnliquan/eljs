@@ -106,7 +106,7 @@ eljs ${shortName}
 
 ## 快速开始
 
-1. 安装
+### 1. 安装
 
 \`\`\`bash
 $ npm i ${name} -S
@@ -116,7 +116,7 @@ $ yarn add ${name}
 $ pnpm add ${name}
 \`\`\`
 
-2. 使用
+### 2. 使用
 
 \`\`\`ts
 import ${shortName} from '${name}'
@@ -128,24 +128,29 @@ import ${shortName} from '${name}'
 ## 开发
 
 \`\`\`bash
-// dev
-$ pnpm -F '@eljs/${shortName}' dev
-// build
-$ pnpm -F '@eljs/${shortName}' build
+$ pnpm dev --filter ${name}
+// or
+$ pnpm -F '${name}' dev
 \`\`\`
-
-> 在根路径下执行
 
 ## 发布
 
-1. [语义化提交 Commit](https://www.conventionalcommits.org/en/v1.0.0/#summary) 
+### 1. [语义化提交 Commit](https://www.conventionalcommits.org/en/v1.0.0/#summary) 
 
 \`\`\`bash
 $ git commit -m 'feat(${shortName}): add some feature'
 $ git commit -m 'fix(${shortName}): fix some bug'
 \`\`\`
 
-2. 执行发包命令
+### 2. 编译（可选）
+
+\`\`\`bash
+$ pnpm build --filter ${name}
+// or
+$ pnpm -F '${name}' build
+\`\`\`
+
+### 3. 执行发包命令
 
 \`\`\`bash
 $ pnpm release
@@ -154,8 +159,6 @@ Options:
   --skipTests skip package test
   --skipBuild skip package build
 \`\`\`
-
-> 在根路径下执行  
   `.trim() + '\n',
     )
   }

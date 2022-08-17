@@ -72,10 +72,12 @@ $ git commit -m 'fix: fix some bug'
 $ git pull origin master
 ```
 
-### 3. 打包有修改的子包（可选）
+### 3. 编译有修改的子包（可选）
 
 ```bash
-$ pnpm -F '@eljs/create' build
+$ pnpm build --filter <sub-package-name>
+// or
+$ pnpm -F '<sub-package-name>' build
 ```
 
 ### 4. 执行发包命令
