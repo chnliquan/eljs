@@ -1,6 +1,6 @@
 import { argv } from 'zx'
 import 'zx/globals'
-import { logger } from '../packages/release/src/index'
+import { logger, release } from '../packages/release/src/index'
 
 import { assert, bin } from './utils'
 
@@ -33,8 +33,8 @@ async function main(): Promise<void> {
   } else {
     console.log(`(skipped)`)
   }
-  return
-  // release({
-  //   checkGitStatus: false,
-  // })
+
+  release({
+    checkGitStatus: false,
+  })
 }
