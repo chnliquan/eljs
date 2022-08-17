@@ -58,7 +58,7 @@ function ensurePkgJson(name: string, shortName: string): void {
       },
       repository: {
         type: 'git',
-        url: 'git@github.com:chnliquan/eljs.git',
+        url: 'https://github.com/chnliquan/eljs',
       },
       homepage: `https://github.com/chnliquan/eljs/tree/master/packages/${shortName}#readme`,
       bugs: {
