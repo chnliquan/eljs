@@ -8,6 +8,7 @@
 *.diff
 *.patch
 *.tmp
+.turbo
 .eslintcache
 
 # Coverage
@@ -18,5 +19,5 @@ coverage/
 node_modules/
 
 # Custermize
-dist/
+lib/
 *.local.*

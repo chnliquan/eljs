@@ -1,0 +1,33 @@
+{
+  "name": "@eljs/changelog-preset",
+  "version": "0.7.3",
+  "description": "eljs release default changelog preset",
+  "keywords": [
+    "eljs",
+    "release",
+    "changelog-preset"
+  ],
+  "main": "index.js",
+  "files": [
+    "conventional-changelog.js",
+    "conventional-recommended-bump.js",
+    "index.js",
+    "parser-opts.js",
+    "writer-opts.js",
+    "templates"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:chnliquan/eljs.git"
+  },
+  "homepage": "https://github.com/chnliquan/eljs/tree/master/packages/changelog-preset#readme",
+  "bugs": {
+    "url": "https://github.com/chnliquan/eljs/issues"
+  },
+  "author": "liquan",
+  "license": "MIT",
+  "dependencies": {
+    "compare-func": "^2.0.0",
+    "q": "^1.5.1"
+  }
+}

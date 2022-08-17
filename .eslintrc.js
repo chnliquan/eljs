@@ -1,5 +1,5 @@
 module.exports = {
-  parser: "@typescript-eslint/parser",
+  parser: '@typescript-eslint/parser',
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
@@ -22,10 +22,10 @@ module.exports = {
       },
     ],
     '@typescript-eslint/explicit-member-accessibility': 'error',
-    '@typescript-eslint/explicit-function-return-type': 'error',
+    '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/no-explicit-any': 'error',
     '@typescript-eslint/no-unused-vars': 'error',
-    '@typescript-eslint/no-shadow': 'error',
+    '@typescript-eslint/no-shadow': 'off',
     '@typescript-eslint/no-non-null-assertion': 'error',
     'dirs/dirnames': ['error', { pattern: '^([a-z0-9\\-]+)|__tests__$' }],
     'dirs/filenames': [

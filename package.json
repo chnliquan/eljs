@@ -1,27 +1,28 @@
 {
   "name": "eljs",
-  "version": "0.0.0",
-  "description": "nodejs cli &amp; utility monorepo",
+  "version": "0.7.3",
+  "private": true,
+  "description": "Nodejs utility monorepo",
   "scripts": {
-    "boot": "node scripts/bootstrap.js",
-    "dev": "node scripts/dev.js",
-    "build": "node scripts/build.js",
-    "lint": "eslint 'packages/**/*.@(js|ts)'",
-    "format": "prettier --write 'packages/**/*.@(js|ts)'",
+    "boot": "tsx scripts/bootstrap",
+    "dev": "turbo run dev",
+    "build": "turbo run build",
     "test": "npm run test:once -- --watch",
     "test:once": "jest --runInBand --colors --forceExit",
     "coverage": "codecov",
-    "add-owner": "node scripts/npm-add-owner.js",
-    "preinstall": "node scripts/preinstall.js",
+    "lint": "eslint 'packages/**/*.{ts,tsx}'",
+    "format": "prettier --write 'packages/**/*.{ts,tsx}'",
+    "add-owner": "tsx scripts/npm-add-owner",
+    "preinstall": "tsx scripts/preinstall.js",
     "prepare": "husky install",
-    "release": "node scripts/release.js"
+    "release": "tsx scripts/release"
   },
   "repository": {
     "type": "git",
     "url": "git@github.com:chnliquan/eljs.git"
   },
   "lint-staged": {
-    "packages/**/*.{js,ts}": [
+    "packages/**/*.{ts,tsx}": [
       "prettier --write",
       "eslint --fix"
     ]
@@ -29,19 +30,12 @@
   "devDependencies": {
     "@commitlint/cli": "^16.2.1",
     "@commitlint/config-conventional": "^16.2.1",
-    "@eljs/node-utils": "0.6.1",
-    "@eljs/release": "0.7.3",
-    "@microsoft/api-extractor": "^7.19.4",
-    "@rollup/plugin-commonjs": "^21.0.2",
-    "@rollup/plugin-json": "^4.1.0",
-    "@rollup/plugin-node-resolve": "^13.3.0",
-    "@rollup/plugin-replace": "^4.0.0",
     "@types/jest": "^27.4.1",
     "@types/node": "^17.0.21",
-    "@typescript-eslint/eslint-plugin": "^5.13.0",
-    "@typescript-eslint/parser": "^5.13.0",
+    "@typescript-eslint/eslint-plugin": "^5.33.1",
+    "@typescript-eslint/parser": "^5.33.1",
     "codecov": "^3.8.3",
-    "eslint": "^8.10.0",
+    "eslint": "^8.22.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-dirs": "^0.0.4",
     "eslint-plugin-prettier": "^4.2.1",
@@ -50,12 +44,14 @@
     "lint-staged": "^12.3.4",
     "prettier": "^2.7.1",
     "prettier-plugin-organize-imports": "^3.0.3",
-    "rollup": "^2.77.2",
-    "rollup-plugin-typescript2": "^0.32.1",
+    "strip-ansi": "^6.0.0",
     "ts-jest": "^27.1.3",
     "ts-node": "^10.9.1",
     "tslib": "^2.4.0",
-    "typescript": "^4.7.4"
+    "tsx": "^3.8.2",
+    "turbo": "^1.4.3",
+    "typescript": "^4.7.4",
+    "zx": "^4.3.0"
   },
   "author": "liquan",
   "publishConfig": {
