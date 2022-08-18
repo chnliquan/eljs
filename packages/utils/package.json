@@ -6,14 +6,24 @@
     "eljs",
     "utils"
   ],
+  "homepage": "https://github.com/chnliquan/eljs/tree/master/packages/utils#readme",
+  "bugs": {
+    "url": "https://github.com/chnliquan/eljs/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chnliquan/eljs"
+  },
+  "license": "MIT",
+  "author": "liquan",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
     "lib"
   ],
   "scripts": {
-    "dev": "tsc --watch",
-    "build": "tsc"
+    "build": "tsc",
+    "dev": "tsc --watch"
   },
   "dependencies": {
     "@types/co": "^4.6.3",
@@ -51,15 +61,5 @@
     "urllib": "^2.36.1",
     "uuid": "^8.3.2",
     "which": "^2.0.2"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/chnliquan/eljs"
-  },
-  "homepage": "https://github.com/chnliquan/eljs/tree/master/packages/utils#readme",
-  "bugs": {
-    "url": "https://github.com/chnliquan/eljs/issues"
-  },
-  "author": "liquan",
-  "license": "MIT"
+  }
 }

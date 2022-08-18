@@ -49,6 +49,16 @@ function ensurePkgJson(name: string, shortName: string): void {
       version,
       description: name,
       keywords: ['eljs', shortName],
+      homepage: `https://github.com/chnliquan/eljs/tree/master/packages/${shortName}#readme`,
+      bugs: {
+        url: 'https://github.com/chnliquan/eljs/issues',
+      },
+      repository: {
+        type: 'git',
+        url: 'https://github.com/chnliquan/eljs',
+      },
+      author: 'liquan',
+      license: 'MIT',
       main: 'lib/index.js',
       types: `lib/index.d.ts`,
       files: [`lib`],
@@ -56,16 +66,6 @@ function ensurePkgJson(name: string, shortName: string): void {
         dev: 'tsc --watch',
         build: 'tsc',
       },
-      repository: {
-        type: 'git',
-        url: 'https://github.com/chnliquan/eljs',
-      },
-      homepage: `https://github.com/chnliquan/eljs/tree/master/packages/${shortName}#readme`,
-      bugs: {
-        url: 'https://github.com/chnliquan/eljs/issues',
-      },
-      author: 'liquan',
-      license: 'MIT',
     }
 
     if (pkgJSONExists) {
@@ -73,6 +73,8 @@ function ensurePkgJson(name: string, shortName: string): void {
       ;[
         'description',
         'keywords',
+        'author',
+        'sideEffects',
         'main',
         'types',
         'files',
@@ -80,8 +82,6 @@ function ensurePkgJson(name: string, shortName: string): void {
         'dependencies',
         'devDependencies',
         'peerDependencies',
-        'author',
-        'sideEffects',
       ].forEach(key => {
         if (pkg[key]) {
           json[key] = pkg[key]
