@@ -1,3 +1,4 @@
+import path from 'path'
 import { existsSync } from './file'
 
 export function winPath(path: string) {
@@ -12,6 +13,27 @@ export function winPath(path: string) {
 
 export function tryPaths(paths: string[]) {
   for (const path of paths) {
-    if (existsSync(path)) return path
+    if (existsSync(path)) {
+      return path
+    }
   }
+}
+
+export function extractCallDir() {
+  const obj = Object.create(null)
+  Error.captureStackTrace(obj)
+  const callSite = obj.stack.split('\n')[3]
+
+  // the regexp for the stack when called inside a named function
+  const namedStackRegExp = /\s\((.*):\d+:\d+\)$/
+  // the regexp for the stack when called inside an anonymous
+  const anonymousStackRegExp = /at (.*):\d+:\d+$/
+
+  let matchResult = callSite.match(namedStackRegExp)
+  if (!matchResult) {
+    matchResult = callSite.match(anonymousStackRegExp)
+  }
+
+  const fileName = matchResult[1]
+  return path.dirname(fileName)
 }
