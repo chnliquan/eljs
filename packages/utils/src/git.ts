@@ -2,7 +2,7 @@ import fs from 'fs'
 import ini from 'ini'
 import path from 'path'
 import { URL } from 'url'
-import { GitInfo, Repo } from './types'
+import { GitInfo, GitRepo } from './types'
 
 function getProjectGitDir(dir: string): string | undefined {
   let current = dir
@@ -23,39 +23,41 @@ function getProjectGitDir(dir: string): string | undefined {
   }
 }
 
-export function normalizeRepo(url: string): Repo {
+export function normalizeGitRepo(url: string): GitRepo {
   let repo = ''
   let hostname = ''
 
   if (url.startsWith('git')) {
-    // git@git.corp.xxx.com:group/node-utils.git
-    // git@github.com:chnliquan/node-utils.git
+    // git@git.corp.xxx.com:group/eljs.git
+    // git@github.com:chnliquan/eljs.git
     const pieces = url.split(':')
     hostname = pieces[0].split('@')[1]
     repo = pieces[1].replace(/\.git$/, '')
   } else if (url.startsWith('http')) {
-    // https://git.corp.xxx.com/group/node-utils.git
-    // https://github.com/chnliquan/node-utils.git
+    // https://git.corp.xxx.com/group/eljs.git
+    // https://github.com/chnliquan/eljs.git
     const parsedUrl = new URL(url)
     hostname = parsedUrl.hostname || ''
     repo = parsedUrl.pathname?.slice(1)?.replace(/\.git$/, '') || ''
   }
 
   let group = ''
-  let project = ''
+  let name = ''
 
   repo.split('/').forEach((str, index, arr) => {
     if (index === arr.length - 1) {
-      project = str
+      name = str
     } else {
       group += `/${str}`
     }
   })
 
+  group = group.substring(1)
+
   return {
-    href: `https://${hostname}/${group.substring(1)}/${project}`,
-    group: group.substring(1),
-    project,
+    name,
+    group,
+    href: `https://${hostname}/${group}/${name}`,
   }
 }
 
@@ -89,10 +91,10 @@ export function getGitInfo(dir: string, exact?: boolean): GitInfo | null {
   }
 
   const gitInfo: GitInfo = {
+    name: '',
+    group: '',
     href: '',
     url: '',
-    group: '',
-    project: '',
     branch: '',
   }
 
@@ -105,10 +107,10 @@ export function getGitInfo(dir: string, exact?: boolean): GitInfo | null {
       gitInfo.url = config['remote "origin"'].url
 
       if (gitInfo.url) {
-        const repo = normalizeRepo(gitInfo.url)
+        const repo = normalizeGitRepo(gitInfo.url)
         gitInfo.href = repo.href
         gitInfo.group = repo.group
-        gitInfo.project = repo.project
+        gitInfo.name = repo.name
       }
     }
     // branch

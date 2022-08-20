@@ -1,9 +1,12 @@
 import { execSync } from 'child_process'
+import { sync } from 'cross-spawn'
 import path from 'path'
 import urllib from 'urllib'
 import which from 'which'
 
 import { PLATFORM } from './const'
+import { existsSync } from './file'
+import { NpmClient, PkgJson } from './types'
 
 export function getNodePrefix(): string {
   if (process.env.GLOBAL_PREFIX) {
@@ -24,28 +27,66 @@ export function getNodePrefix(): string {
         // ignore
       }
     }
+
     process.env.GLOBAL_PREFIX = prefix
     return prefix
   }
 }
 
-export interface NpmInfo {
+export function getNpmClient(cwd: string): NpmClient {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const chokidarPkg = require('chokidar/package.json')
+
+  if (chokidarPkg.__npminstall_done) {
+    return 'cnpm'
+  }
+
+  const chokidarPath = require.resolve('chokidar')
+
+  if (
+    chokidarPath.includes('.pnpm') ||
+    existsSync(path.join(cwd, 'node_modules', '.pnpm'))
+  ) {
+    return 'pnpm'
+  }
+
+  if (
+    existsSync(path.join(cwd, 'yarn.lock')) ||
+    existsSync(path.join(cwd, 'node_modules', '.yarn-integrity'))
+  ) {
+    return 'yarn'
+  }
+
+  return 'npm'
+}
+
+export interface InstallWithNpmClientOpts {
+  npmClient: NpmClient
+  cwd: string
+}
+
+export function installWithNpmClient({
+  npmClient,
+  cwd,
+}: InstallWithNpmClientOpts): void {
+  const npm = sync(npmClient, [npmClient === 'yarn' ? '' : 'install'], {
+    stdio: 'inherit',
+    cwd,
+  })
+
+  if (npm.error) {
+    throw npm.error
+  }
+}
+
+export interface NpmInfo extends PkgJson {
   version: string
   name: string
-  main?: string
-  repository?: {
-    type: string
-    url: string
-  }
-  scripts?: Record<string, string>
-  dependencies?: Record<string, string>
-  devDependencies?: Record<string, string>
   dist: {
     shasum: string
     size: number
     tarball: string
   }
-  [propName: string]: unknown
 }
 
 export function getNpmInfo(

@@ -4,10 +4,6 @@ import ini from 'ini'
 import os from 'os'
 import path from 'path'
 
-interface Config {
-  [propName: string]: string
-}
-
 export interface UserAccount {
   name: string
   email: string
@@ -24,7 +20,7 @@ export function getUserAccount(): UserAccount {
     const gitConfigList = execSync('git config --list').toString()
 
     if (gitConfigList) {
-      const config: Config = {}
+      const config = Object.create(null)
 
       gitConfigList.split(os.EOL).forEach(line => {
         const [key, value] = line.split('=')

@@ -1,10 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import inquirer from 'inquirer'
-import ora from 'ora'
+import prompts, { Choice, PromptObject } from 'prompts'
 import readline from 'readline'
-import { SpinOptions } from './types'
-
-export { SpinOptions }
+import { isNull } from './type'
 
 export function pause(message?: string): Promise<void> {
   return new Promise(resolve => {
@@ -25,67 +21,60 @@ export function pause(message?: string): Promise<void> {
 }
 
 export function confirm(message: string, preferNo?: boolean): Promise<boolean> {
-  return inquirer
-    .prompt([
-      {
-        type: 'confirm',
-        message,
-        name: 'confirm',
-        default: !preferNo,
-      },
-    ])
-    .then(answers => {
-      return answers.confirm
-    })
-}
-
-export interface Choice {
-  name: string
-  value: unknown
-}
-
-export function select<T = string, U extends Choice = Choice>(
-  message: string,
-  choices: U[],
-  defaultValue?: string,
-): Promise<T> {
-  const fields = [
-    {
-      name: 'name',
-      message,
-      type: 'list',
-      choices,
-      default: defaultValue,
-    },
-  ]
-  return inquirer.prompt(fields).then(answers => {
-    return answers.name
+  return prompts({
+    type: 'confirm',
+    message,
+    name: 'confirm',
+    initial: !preferNo,
+  }).then(answers => {
+    return answers.confirm
   })
 }
 
-export function ask<T extends Record<string, any> = Record<string, any>>(
-  fields: Record<string, any>[],
-  defaults: Partial<T> = Object.create(null),
-): Promise<T> {
-  return inquirer.prompt(
-    fields.map(field => {
-      const copied = Object.assign({}, field)
-      copied.type = copied.type || 'input'
-      const name = (copied.name || '') as string
+export function select<T extends Choice>(
+  message: string,
+  choices: T[],
+  initial?: PromptObject['initial'],
+): Promise<string> {
+  const fields: Array<PromptObject> = [
+    {
+      name: 'name',
+      message,
+      type: 'select',
+      choices,
+      initial,
+    },
+  ]
 
-      if (defaults[name]) {
-        copied.default = defaults[name]
-      }
-      return copied
-    }),
-  )
+  return prompts(fields).then(answers => {
+    return answers.name
+  })
+}
+export function ask<T extends PromptObject, U extends Record<string, any>>(
+  questions: T[],
+  initials: U = Object.create(null),
+): Promise<U> {
+  questions = questions.map(question => {
+    const copied = Object.assign({}, question)
+    const name = (copied.name || '') as string
+
+    copied.type = copied.type || isNull(copied.type) ? copied.type : 'text'
+
+    if (initials[name]) {
+      copied.initial = initials[name]
+    }
+
+    return copied
+  })
+
+  return prompts(questions) as Promise<U>
 }
 
-export function loopAsk<T extends Record<string, any> = Record<string, any>>(
-  fields: Record<string, any>[],
-  defaults: Partial<T> = Object.create(null),
-): Promise<T> {
-  return ask(fields, defaults).then((answers: any) => {
+export function loopAsk<
+  T extends PromptObject,
+  U extends Record<string, any> = Record<string, any>,
+>(questions: T[], initials: U = Object.create(null)): Promise<U> {
+  return ask(questions, initials).then(answers => {
     console.log()
     console.log('The information you entered is as follows:')
     console.log(JSON.stringify(answers, null, 2))
@@ -97,33 +86,8 @@ export function loopAsk<T extends Record<string, any> = Record<string, any>>(
       if (isOK) {
         return answers
       } else {
-        return loopAsk(fields, answers)
+        return loopAsk(questions, answers)
       }
     })
   })
-}
-
-export async function spin<T>(
-  text: string,
-  handler: (...args: any[]) => Promise<T>,
-  options?: SpinOptions,
-): Promise<T> {
-  const spinner = ora(text).start()
-  const opts = Object.assign(
-    {
-      successText: text,
-      failText: text,
-      args: [],
-    },
-    options,
-  )
-
-  try {
-    const res = await handler(...opts.args)
-    spinner.succeed(opts.successText)
-    return res
-  } catch (error) {
-    spinner.fail(opts.failText)
-    throw new Error(`Failed spin ${handler}, the error is ${error}`)
-  }
 }

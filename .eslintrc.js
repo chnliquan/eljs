@@ -13,6 +13,7 @@ module.exports = {
       {
         selector: 'default',
         format: ['camelCase', 'PascalCase', 'UPPER_CASE'],
+        leadingUnderscore: 'allow',
       },
       {
         selector: ['memberLike', 'property', 'method'],
@@ -23,7 +24,7 @@ module.exports = {
     ],
     '@typescript-eslint/explicit-member-accessibility': 'error',
     '@typescript-eslint/explicit-function-return-type': 'off',
-    '@typescript-eslint/no-explicit-any': 'error',
+    '@typescript-eslint/no-explicit-any': 'warn',
     '@typescript-eslint/no-unused-vars': 'error',
     '@typescript-eslint/no-shadow': 'off',
     '@typescript-eslint/no-non-null-assertion': 'error',

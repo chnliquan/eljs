@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import { execSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
@@ -57,7 +56,6 @@ function checkYarn(result: boolean) {
 export function hasProjectYarn(cwd: string): boolean {
   const lockFile = path.join(cwd, 'yarn.lock')
   const result = fs.existsSync(lockFile)
-
   return checkYarn(result)
 }
 
@@ -92,6 +90,5 @@ export function hasProjectGit(cwd: string): boolean {
 export function hasProjectNpm(cwd: string): boolean {
   const lockFile = path.join(cwd, 'package-lock.json')
   const result = fs.existsSync(lockFile)
-
   return result
 }

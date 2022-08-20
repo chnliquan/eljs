@@ -1,17 +1,24 @@
-export function camelize(str: string, bigCamelCase = false): string {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  const formattedStr = str.replace(/[-_\s]+(.)?/g, function (_, c) {
+export function camelCase(str: string): string {
+  return str.replace(/[-_\s]+(.)?/g, function (_, c) {
+    return c ? c.toUpperCase() : ''
+  })
+}
+
+export function pascalCase(str: string): string {
+  const camelCaseStr = str.replace(/[-_\s]+(.)?/g, function (_, c) {
     return c ? c.toUpperCase() : ''
   })
 
-  return bigCamelCase
-    ? `${formattedStr.slice(0, 1).toUpperCase()}${formattedStr.slice(1)}`
-    : formattedStr
+  return `${camelCaseStr.slice(0, 1).toUpperCase()}${camelCaseStr.slice(1)}`
 }
 
-export function dasherize(str: string): string {
+export function kebabCase(str: string): string {
   return str
     .replace(/([A-Z])/g, '-$1')
     .replace(/[-_\s]+/g, '-')
     .toLowerCase()
+}
+
+export function stripBlankLines(str: string): string {
+  return str.replace(/(\n[\s|\t]*\r*\n)/g, '\n')
 }
