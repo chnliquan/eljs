@@ -25,6 +25,18 @@
       "args": ["${fileBasenameNoExtension}", "--config", "jest.config.js"],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "release",
+      "program": "${workspaceRoot}/node_modules/ts-node/dist/bin.js",
+      "windows": {
+        "program": "${workspaceFolder}/node_modules/ts-node/bin/ts-node"
+      },
+      "args": ["-O", "{\"module\": \"commonjs\"}", "--files", "bin/release.js"],
+      "cwd": "${workspaceRoot}/packages/release",
+      "console": "integratedTerminal"
     }
   ]
 }

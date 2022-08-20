@@ -1,6 +1,6 @@
-import { Loader, transformSync } from 'esbuild'
 import { extname } from 'path'
 import { addHook } from 'pirates'
+import { Implementor } from './types'
 
 const COMPILE_EXTS = ['.ts', '.tsx', '.js', '.jsx']
 const HOOK_EXTS = [...COMPILE_EXTS, '.mjs']
@@ -10,21 +10,22 @@ let files: string[] = []
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 let revert: () => void = () => {}
 
-export interface TransformOptions {
+export interface TransformOpts {
   code: string
   filename: string
+  implementor: Implementor
 }
 
-function transform(opts: TransformOptions) {
-  const { code, filename } = opts
-  const ext = extname(filename).slice(1) as Loader
+function transform(opts: TransformOpts) {
+  const { code, filename, implementor } = opts
+  const ext = extname(filename)
 
   files.push(filename)
 
   try {
-    return transformSync(code, {
+    return implementor.transformSync(code, {
       sourcefile: filename,
-      loader: ext,
+      loader: ext.slice(1),
       target: 'es2019',
       format: 'cjs',
       logLevel: 'error',
@@ -34,18 +35,23 @@ function transform(opts: TransformOptions) {
   }
 }
 
-export interface RegisterOptions {
+export interface RegisterOpts {
+  implementor: Implementor
   exts?: string[]
 }
 
-export function register(opts?: RegisterOptions) {
+export function register(opts: RegisterOpts) {
   files = []
 
   if (!registered) {
-    revert = addHook((code, filename) => transform({ code, filename }), {
-      ext: opts?.exts || HOOK_EXTS,
-      ignoreNodeModules: true,
-    })
+    revert = addHook(
+      (code, filename) =>
+        transform({ code, filename, implementor: opts.implementor }),
+      {
+        exts: opts.exts || HOOK_EXTS,
+        ignoreNodeModules: true,
+      },
+    )
     registered = true
   }
 }

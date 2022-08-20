@@ -54,3 +54,7 @@ export interface GitInfo extends GitRepo {
   /** git branch */
   branch: string
 }
+
+export interface Implementor {
+  transformSync: (code: string, opts: Record<string, any>) => { code: string }
+}

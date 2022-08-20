@@ -1,5 +1,4 @@
 import ejs, { Options } from 'ejs'
-import { Loader, transformSync } from 'esbuild'
 import fs from 'fs'
 import mkdirp from 'mkdirp'
 import Mustache, {
@@ -16,6 +15,7 @@ import util from 'util'
 import { v4 } from 'uuid'
 
 import { PLATFORM, TEMP_DIR } from './const'
+import { Implementor } from './types'
 
 export function readJSONSync(file: string): Record<string, unknown> {
   try {
@@ -164,12 +164,12 @@ export function tmpdir(random?: boolean): string {
   }
 }
 
-export function loadFile(filepath: string) {
+export function loadFile(filepath: string, implementor: Implementor) {
   const content = fs.readFileSync(filepath, 'utf-8')
 
-  const loader = path.extname(filepath).slice(1) as Loader
-  const result = transformSync(content, {
-    loader,
+  const ext = path.extname(filepath)
+  const result = implementor.transformSync(content, {
+    loader: ext.slice(1),
     format: 'cjs',
     sourcemap: false,
     minify: false,

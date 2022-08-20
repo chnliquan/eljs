@@ -7,6 +7,16 @@
     "release",
     "changelog-preset"
   ],
+  "homepage": "https://github.com/chnliquan/eljs/tree/master/packages/changelog-preset#readme",
+  "bugs": {
+    "url": "https://github.com/chnliquan/eljs/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chnliquan/eljs"
+  },
+  "license": "MIT",
+  "author": "liquan",
   "main": "index.js",
   "files": [
     "conventional-changelog.js",
@@ -16,16 +26,6 @@
     "writer-opts.js",
     "templates"
   ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/chnliquan/eljs"
-  },
-  "homepage": "https://github.com/chnliquan/eljs/tree/master/packages/changelog-preset#readme",
-  "bugs": {
-    "url": "https://github.com/chnliquan/eljs/issues"
-  },
-  "author": "liquan",
-  "license": "MIT",
   "dependencies": {
     "compare-func": "^2.0.0",
     "q": "^1.5.1"

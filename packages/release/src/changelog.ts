@@ -1,9 +1,8 @@
-import chalk from 'chalk'
+import { chalk, logger } from '@eljs/utils'
 import conventionalChangelog from 'conventional-changelog'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { logger } from './utils/logger'
 
 const cwd = process.cwd()
 const CHANGELOG = path.join(cwd, 'CHANGELOG.md')

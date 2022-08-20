@@ -1,4 +1,4 @@
-import chalk from 'chalk'
+import { chalk, logger, run } from '@eljs/utils'
 import fs from 'fs'
 import yaml from 'js-yaml'
 import { not } from 'junk'
@@ -9,18 +9,15 @@ import { URL } from 'url'
 
 import { Package, Workspace } from '.'
 import { generateChangelog } from './changelog'
+import { getTargetVersion } from './prompt'
 import { Options } from './types'
+import { updateVersions } from './update'
 import {
-  exec,
   isAlphaVersion,
   isBetaVersion,
   isPrerelease,
   isRcVersion,
-  logger,
-  updateVersions,
-} from './utils'
-import { getBranchName, getStatus } from './utils/git'
-import { getTargetVersion } from './version'
+} from './version'
 
 const cwd = process.cwd()
 
@@ -60,6 +57,8 @@ try {
 
 const isMonorepo = Object.keys(workspace).length > 0
 
+export const step = logger.step('Release')
+
 /**
  * Workflow
  *
@@ -75,7 +74,7 @@ const isMonorepo = Object.keys(workspace).length > 0
 export async function release(options: Options): Promise<void> {
   if (isMonorepo) {
     try {
-      await exec('pnpm -v')
+      await run(`pnpm -v`)
     } catch (err) {
       logger.printErrorAndExit(
         'Release script depend on `pnpm`, please install `pnpm` first.',
@@ -114,7 +113,7 @@ export async function release(options: Options): Promise<void> {
     specifiedRepoType || (repoUrl.includes('github') ? 'github' : 'gitlab')
 
   if (checkGitStatus) {
-    const hasModified = await getStatus()
+    const hasModified = (await run(`git status --porcelain`)).stdout.length
 
     if (hasModified) {
       logger.printErrorAndExit('Your git status is not clean. Aborting.')
@@ -145,12 +144,12 @@ export async function release(options: Options): Promise<void> {
   }
 
   if (registry) {
-    const userRegistry = await exec('npm config get registry')
+    const userRegistry = (await run(`npm config get registry`)).stdout.trim()
 
     if (!userRegistry.includes(registry)) {
-      logger.printErrorAndExit(
-        `Release failed, npm registry must be ${chalk.blue(registry)}.`,
-      )
+      // logger.printErrorAndExit(
+      //   `Release failed, npm registry must be ${chalk.blue(registry)}.`,
+      // )
     }
   }
 
@@ -165,7 +164,7 @@ export async function release(options: Options): Promise<void> {
   }
 
   // update all package versions and inter-dependencies
-  logger.step('Updating versions ...')
+  step('Updating versions ...')
   const pkgDirs = updateVersions(name, targetVersion, workspace)
 
   if (typeof beforeChangelog === 'function') {
@@ -173,37 +172,40 @@ export async function release(options: Options): Promise<void> {
   }
 
   // generate changelog
-  logger.step(`Generating changelog ...`)
+  step(`Generating changelog ...`)
   const changelog = await generateChangelog(changelogPreset, latest, name)
 
   if (isMonorepo) {
     // update pnpm-lock.yaml
-    logger.step('Updating lockfile...')
-    await exec('pnpm install --prefer-offline')
+    step('Updating lockfile...')
+    await run(`pnpm install --prefer-offline`)
   }
 
   // commit git changes
-  logger.step('Committing changes ...')
-  await exec('git add -A')
-  await exec(`git commit -m 'chore: bump version v${targetVersion}'`)
+  step('Committing changes ...')
+  await run(`git add -A`)
+  await run(`git commit -m 'chore: bump version v${targetVersion}`)
 
   // publish package
   if (isMonorepo) {
-    logger.step(`Publishing packages ...`)
+    step(`Publishing packages ...`)
     for (const pkgDir of pkgDirs) {
       await publishPackage(pkgDir, targetVersion)
     }
   } else {
-    logger.step(`Publishing package ${name} ...`)
+    step(`Publishing package ${name} ...`)
     await publishPackage(cwd, targetVersion)
   }
 
   const tag = `v${targetVersion}`
 
-  logger.step('Pushing to git remote ...')
-  await exec(`git tag v${targetVersion}`)
-  const branch = await getBranchName()
-  await exec(`git push --set-upstream origin ${branch} --tags`)
+  step('Pushing to git remote ...')
+  await run(`git tag v${targetVersion}`)
+  const branch = (await run(`git rev-parse --abbrev-ref HEAD`)).stdout.replace(
+    /\n|\r|\t/,
+    '',
+  )
+  await run(`git push --set-upstream origin ${branch} --tags`)
 
   // github release
   if (repoType === 'github' && repoUrl) {
@@ -239,9 +241,10 @@ async function publishPackage(pkgDir: string, targetVersion: string) {
     releaseTag ? ` --tag ${releaseTag}` : ''
   } --access public`
 
-  await exec(`${cli} ${cliArgs}`, {
+  await run(`${cli} ${cliArgs}`, {
     cwd: pkgDir,
   })
+
   logger.done(
     `Published ${chalk.cyanBright.bold(
       `${pkg.name}@${targetVersion}`,

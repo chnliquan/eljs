@@ -18,7 +18,11 @@
   "author": "liquan",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
+  "bin": {
+    "release": "bin/release.js"
+  },
   "files": [
+    "bin",
     "lib"
   ],
   "scripts": {
@@ -27,16 +31,12 @@
   },
   "dependencies": {
     "@eljs/changelog-preset": "0.7.5",
-    "@types/compare-func": "^1.3.0",
+    "@eljs/utils": "0.7.5",
     "@types/conventional-changelog": "^3.1.1",
-    "@types/inquirer": "^8.2.0",
     "@types/js-yaml": "^4.0.5",
-    "@types/q": "^1.5.5",
     "@types/semver": "^7.3.12",
-    "chalk": "^4.1.2",
-    "commander": "^7.2.0",
+    "commander": "^9.4.0",
     "conventional-changelog": "^3.1.25",
-    "inquirer": "^7.2.0",
     "js-yaml": "^4.1.0",
     "junk": "^3.1.0",
     "new-github-release-url": "^1.0.0",
