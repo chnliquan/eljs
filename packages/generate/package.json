@@ -1,0 +1,38 @@
+{
+  "name": "@eljs/generate",
+  "version": "0.7.5",
+  "description": "@eljs/generate",
+  "keywords": [
+    "eljs",
+    "generate"
+  ],
+  "homepage": "https://github.com/chnliquan/eljs/tree/master/packages/generate#readme",
+  "bugs": {
+    "url": "https://github.com/chnliquan/eljs/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chnliquan/eljs"
+  },
+  "license": "MIT",
+  "author": "liquan",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "bin": {
+    "generate": "bin/generate"
+  },
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@eljs/utils": "0.7.5",
+    "@types/download": "8.0.1",
+    "download": "^8.0.0",
+    "prettier": "^2.7.1",
+    "sort-package-json": "^1.57.0"
+  }
+}
