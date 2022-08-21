@@ -5,14 +5,12 @@ import { existsSync } from 'fs'
 import sum from 'hash-sum'
 import { basename, dirname, extname, join, relative } from 'path'
 import { pkgUpSync } from 'pkg-up'
-import { EnableBy, PluginReturnType } from '../types'
+import { EnableBy, PluginReturnType, PluginType } from '../types'
 
 const RE = {
   preset: /^(@eljs\/|eljs-)create-preset-/,
   plugin: /^(@eljs\/|eljs-)create-plugin-/,
 }
-
-type PluginType = 'plugin' | 'preset'
 
 export interface PluginOpts {
   path: Plugin['path']
@@ -22,7 +20,6 @@ export interface PluginOpts {
 
 export class Plugin {
   private _cwd: string
-
   /**
    * 插件类型
    */
@@ -48,7 +45,7 @@ export class Plugin {
   /**
    * 插件是否可以执行
    */
-  public enableBy: EnableBy | (() => boolean) = EnableBy.register
+  public enableBy: EnableBy | (() => boolean) = EnableBy.Register
 
   public constructor(opts: PluginOpts) {
     this.type = opts.type
@@ -171,13 +168,13 @@ export class Plugin {
     return name
   }
 
-  public static getPluginsAndPresets(opts: {
+  public static getPresetsAndPlugins(opts: {
     cwd: string
     plugins?: string[]
     presets?: string[]
   }) {
     function get(type: PluginType) {
-      const types = `${type}s` as 'plugins' | 'presets'
+      const types = `${type}s` as 'presets' | 'plugins'
       return [
         // opts
         ...(opts[types] || []),
@@ -207,8 +204,8 @@ export class Plugin {
     }
 
     return {
-      presets: get('preset'),
-      plugins: get('plugin'),
+      presets: get('preset' as PluginType),
+      plugins: get('plugin' as PluginType),
     }
   }
 }

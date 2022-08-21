@@ -71,14 +71,20 @@ importers:
       '@eljs/service': 0.7.5
       '@eljs/utils': 0.7.5
       '@types/download': 8.0.1
+      '@types/glob': ^7.2.0
+      '@types/prettier': ^2.7.0
       download: ^8.0.0
+      glob: ^8.0.3
       prettier: ^2.7.1
       sort-package-json: ^1.57.0
     dependencies:
       '@eljs/service': link:../service
       '@eljs/utils': link:../utils
       '@types/download': 8.0.1
+      '@types/glob': 7.2.0
+      '@types/prettier': 2.7.0
       download: 8.0.0
+      glob: 8.0.3
       prettier: 2.7.1
       sort-package-json: 1.57.0
 
@@ -1276,7 +1282,6 @@ packages:
 
   /@types/prettier/2.7.0:
     resolution: {integrity: sha512-RI1L7N4JnW5gQw2spvL7Sllfuf1SaHdrZpCHiBlCXjIlufi1SMNnbu2teze3/QE67Fg2tBlH7W+mi4hVNk4p0A==}
-    dev: true
 
   /@types/prompts/2.4.0:
     resolution: {integrity: sha512-7th8Opn+0XlN0O6qzO7dXOPwL6rigq/EwRS2DntaTHwSw8cLaYKeAPt5dWEKHSL+ffVSUl1itTPUC06+FlsV4Q==}
@@ -3400,6 +3405,17 @@ packages:
       minimatch: 3.1.2
       once: 1.4.0
       path-is-absolute: 1.0.1
+
+  /glob/8.0.3:
+    resolution: {integrity: sha512-ull455NHSHI/Y1FqGaaYFaLGkNMMJbavMrEGFXG/PGrg6y7sutWHUHrz6gy6WEBH6akM1M414dWKCNs+IhKdiQ==}
+    engines: {node: '>=12'}
+    dependencies:
+      fs.realpath: 1.0.0
+      inflight: 1.0.6
+      inherits: 2.0.4
+      minimatch: 5.1.0
+      once: 1.4.0
+    dev: false
 
   /global-dirs/0.1.1:
     resolution: {integrity: sha512-NknMLn7F2J7aflwFOlGdNIuCDpN3VGoSoB+aap3KABFWbHVn1TCgFC+np23J8W2BiZbjfEw3BFBycSMv1AFblg==}

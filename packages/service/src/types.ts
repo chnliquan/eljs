@@ -1,22 +1,29 @@
+export enum ServiceStage {
+  Uninitialized = 'uninitialized',
+  Init = 'init',
+  InitPresets = 'initPresets',
+  InitPlugins = 'initPlugins',
+}
+
 export interface PluginReturnType {
   presets?: string[]
   plugins?: string[]
 }
 
 export enum PluginType {
-  preset = 'preset',
-  plugin = 'plugin',
+  Preset = 'preset',
+  Plugin = 'plugin',
 }
 
 export enum ApplyPluginsType {
-  add = 'add',
-  modify = 'modify',
-  event = 'event',
+  Add = 'add',
+  Modify = 'modify',
+  Event = 'event',
 }
 
 export enum EnableBy {
-  register = 'register',
-  prompts = 'prompts',
+  Register = 'register',
+  Prompts = 'prompts',
 }
 
 export interface ApplyEvent<T> {

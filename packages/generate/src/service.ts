@@ -7,8 +7,17 @@ import {
   ServiceOpts,
   ServicePluginAPI,
 } from '@eljs/service'
-import utils, { logger, prompts } from '@eljs/utils'
-import { AppData, GenerateConfig, GenerateServiceStage, Paths } from '../types'
+import utils, { logger, prompts, RenderTemplateOptions } from '@eljs/utils'
+import {
+  AppData,
+  CopyDirectory,
+  CopyFileOpts,
+  CopyTplOpts,
+  ExtendPackageOpts,
+  GenerateConfig,
+  GenerateServiceStage,
+  Paths,
+} from './types'
 
 export interface GenerateServiceOpts extends ServiceOpts {
   /**
@@ -29,27 +38,27 @@ export class GenerateService extends Service {
   /**
    * 其它执行参数
    */
-  public args: Record<string, any> = {}
+  public args: Record<string, any> = Object.create(null)
   /**
    * 存储全局数据
    */
-  public appData: AppData = {}
+  public appData: AppData = Object.create(null)
   /**
    * 存储项目路径
    */
-  public paths: Paths = {}
+  public paths: Paths = Object.create(null)
   /**
    * 执行阶段
    */
-  public stage = GenerateServiceStage.uninitialized
+  public stage = GenerateServiceStage.Uninitialized
   /**
    * 插件启用配置，用于控制插件，是否启用可通过 `modifyConfig` 方法修改
    */
-  public config: GenerateConfig = {}
+  public config: GenerateConfig = Object.create(null)
   /**
    * 用户输入
    */
-  public prompts: Record<string, any> = {}
+  public prompts: Record<string, any> = Object.create(null)
   /**
    * 项目的 package.json 对象
    */
@@ -60,7 +69,10 @@ export class GenerateService extends Service {
   public cliVersion = ''
 
   public constructor(opts: GenerateServiceOpts) {
-    super(opts)
+    super({
+      ...opts,
+      presets: [require.resolve('./preset')],
+    })
     this.opts = opts
     this.cliVersion = require('../../package.json').version
   }
@@ -76,7 +88,7 @@ export class GenerateService extends Service {
       args: {},
     })
 
-    this.stage = GenerateServiceStage.prompting
+    this.stage = GenerateServiceStage.Prompting
 
     const questions = await this.applyPlugins({
       key: 'addQuestions',
@@ -105,7 +117,8 @@ export class GenerateService extends Service {
     this.paths = await this.applyPlugins({
       key: 'modifyPaths',
       initialValue: {
-        absOutputPath: target,
+        cwd: this.cwd,
+        dest: target,
       },
       args: {
         cwd: this.cwd,
@@ -114,7 +127,7 @@ export class GenerateService extends Service {
     })
 
     // applyPlugin collect app data
-    this.stage = GenerateServiceStage.collectAppData
+    this.stage = GenerateServiceStage.CollectAppData
     this.appData = await this.applyPlugins({
       key: 'modifyAppData',
       initialValue: {
@@ -125,13 +138,13 @@ export class GenerateService extends Service {
     })
 
     // applyPlugin onCheck
-    this.stage = GenerateServiceStage.onCheck
+    this.stage = GenerateServiceStage.OnCheck
     await this.applyPlugins({
       key: 'onCheck',
     })
 
     // applyPlugin onStart
-    this.stage = GenerateServiceStage.onStart
+    this.stage = GenerateServiceStage.OnStart
     await this.applyPlugins({
       key: 'onStart',
     })
@@ -190,6 +203,10 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
    */
   paths: Required<typeof GenerateService.prototype.paths>
   /**
+   * 用户输入的命令行提示
+   */
+  prompts: typeof GenerateService.prototype.prompts
+  /**
    * 插件启用配置，用于控制插件，是否启用可通过 `modifyConfig` 方法修改
    */
   config: typeof GenerateService.prototype.config
@@ -202,25 +219,33 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
    */
   convertFilePrefix: (rawPath: string) => string
   /**
+   * 复制文件
+   */
+  copyFile: (opts: CopyFileOpts) => void
+  /**
    * 将文件从模板文件复制到目录文件
    */
-  copyTpl: (opts: any) => void
+  copyTpl: (opts: CopyTplOpts) => void
   /**
    * 将文件夹从模板文件夹复制到目标文件夹
    */
-  copyDirectory: (opts: any) => void
-  /**
-   * 复制文件
-   */
-  copyFile: (opts: any) => void
+  copyDirectory: (opts: CopyDirectory) => void
   /**
    * 将模板文件渲染到目标文件对象中
    */
-  render: (path: string, args?: Record<string, any>) => void
+  render: (
+    path: string,
+    data: Record<string, any>,
+    opts?: RenderTemplateOptions,
+  ) => void
   /**
    * 更新 package.json
    */
-  extendPackage: (fields: Record<string, any>) => void
+  extendPackage: (opts: ExtendPackageOpts) => void
+  /**
+   * 在当前工程下解析一个路径
+   */
+  resolve: (...paths: string[]) => string
   /**
    * 安装依赖
    */

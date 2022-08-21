@@ -1,4 +1,6 @@
-import { NpmClientEnum } from '@eljs/utils'
+import { PluginAPI } from '@eljs/service'
+import { NpmClientEnum, PkgJson, RenderTemplateOptions } from '@eljs/utils'
+import { GenerateService, GenerateServicePluginAPI } from './service'
 
 export interface AppData {
   /**
@@ -17,6 +19,10 @@ export interface AppData {
 }
 
 export interface Paths {
+  /**
+   * 当前执行路径
+   */
+  cwd: string
   /**
    * 项目生成输出路径
    */
@@ -41,12 +47,51 @@ export interface GenerateConfig {
 }
 
 export enum GenerateServiceStage {
-  uninitialized = 'uninitialized',
-  init = 'init',
-  initPresets = 'initPresets',
-  initPlugins = 'initPlugins',
-  prompting = 'prompting',
-  collectAppData = 'collectAppData',
-  onCheck = 'onCheck',
-  onStart = 'onStart',
+  // #region service stage
+  Uninitialized = 'uninitialized',
+  Init = 'init',
+  InitPresets = 'initPresets',
+  InitPlugins = 'initPlugins',
+  // #endregion service stage
+  Prompting = 'prompting',
+  CollectAppData = 'collectAppData',
+  OnCheck = 'onCheck',
+  OnStart = 'onStart',
 }
+
+export type ExtendPackageOpts = (pkg: PkgJson) => PkgJson | PkgJson
+
+export interface CopyFileOpts {
+  /**
+   * 模板文件路径
+   */
+  from: string
+  /**
+   * 目标文件路径
+   */
+  to: string
+}
+
+export interface CopyTplOpts extends CopyFileOpts {
+  /**
+   * 模板渲染需要的参数
+   */
+  data: Record<string, any>
+  /**
+   * 渲染引擎的参数
+   */
+  opts?: RenderTemplateOptions
+}
+
+export interface CopyDirectory extends CopyFileOpts {
+  /**
+   * 模板渲染需要的参数
+   */
+  data: Record<string, any>
+  /**
+   * 渲染引擎的参数
+   */
+  opts?: RenderTemplateOptions
+}
+
+export type Api = GenerateServicePluginAPI & PluginAPI<GenerateService>

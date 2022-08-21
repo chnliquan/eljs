@@ -1,37 +1,35 @@
 import { isPlainObject, isString } from '@eljs/utils'
 import assert from 'assert'
-import { EnableBy, PluginType } from '../types'
+import { EnableBy, PluginType, ServiceStage } from '../types'
 import { Hook, HookOpts } from './hook'
 import { Plugin } from './plugin'
 import { Service } from './service'
 
-export interface ProxyPluginAPIOpts {
+export interface ProxyPluginAPIOpts<T = Service> {
   pluginAPI: PluginAPI
-  service: Service
+  service: T
   serviceProps: string[]
   staticProps: Record<string, any>
 }
 
-export interface PluginAPIOpts {
-  service: Service
+export interface PluginAPIOpts<T = Service> {
+  service: T
   plugin: Plugin
 }
 
-export interface DescribeOpts {
-  key?: string
-  enableBy?: EnableBy | (() => boolean)
-}
-
-export class PluginAPI {
-  public service: Service
+export class PluginAPI<T extends Service = Service> {
+  public service: T
   public plugin: Plugin
 
   public constructor(opts: PluginAPIOpts) {
-    this.service = opts.service
+    this.service = opts.service as T
     this.plugin = opts.plugin
   }
 
-  public describe(opts: DescribeOpts) {
+  public describe(opts: {
+    key?: string
+    enableBy?: EnableBy | (() => boolean)
+  }) {
     this.plugin.merge(opts)
   }
 
@@ -42,7 +40,7 @@ export class PluginAPI {
     )
   }
 
-  public registerMethod(opts: { name: string; fn?: () => void }) {
+  public registerMethod(opts: { name: string; fn?: (...args: any[]) => any }) {
     assert(
       !this.service.pluginMethods[opts.name],
       `api.registerMethod() failed, method ${opts.name} is already exist.`,
@@ -54,7 +52,7 @@ export class PluginAPI {
         opts.fn ||
         // 这里不能用 arrow function，this 需指向执行此方法的 PluginAPI
         // 否则 pluginId 会不对，导致不能正确 skip plugin
-        function fn(fn: () => void | Record<string, any>) {
+        function fn(fn: (...args: any[]) => any | Record<string, any>) {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
           this.register({
@@ -67,7 +65,7 @@ export class PluginAPI {
 
   public registerPresets(source: Plugin[], presets: any[]) {
     assert(
-      this.service.stage === 'initPresets',
+      this.service.stage === ServiceStage.InitPresets,
       `api.registerPresets() failed, it should only used in presets.`,
     )
 
@@ -76,7 +74,7 @@ export class PluginAPI {
         new Plugin({
           path: preset,
           cwd: this.service.cwd,
-          type: PluginType.plugin,
+          type: PluginType.Plugin,
         }),
     )
 
@@ -85,8 +83,8 @@ export class PluginAPI {
 
   public registerPlugins(source: Plugin[], plugins: any[]) {
     assert(
-      this.service.stage === 'initPresets' ||
-        this.service.stage === 'initPlugins',
+      this.service.stage === ServiceStage.InitPresets ||
+        this.service.stage === ServiceStage.InitPlugins,
       `api.registerPlugins() failed, it should only be used in registering stage.`,
     )
 
@@ -95,7 +93,7 @@ export class PluginAPI {
         return new Plugin({
           path: plugin,
           cwd: this.service.cwd,
-          type: PluginType.plugin,
+          type: PluginType.Plugin,
         })
       } else {
         assert(
@@ -103,8 +101,8 @@ export class PluginAPI {
           `Invalid plugin object, id and key must supplied.`,
         )
 
-        plugin.type = PluginType.plugin
-        plugin.enableBy = plugin.enableBy || EnableBy.register
+        plugin.type = PluginType.Plugin
+        plugin.enableBy = plugin.enableBy || EnableBy.Register
         // eslint-disable-next-line @typescript-eslint/no-empty-function
         plugin.apply = plugin.apply || (() => () => {})
         plugin.config = plugin.config || {}
@@ -112,7 +110,7 @@ export class PluginAPI {
       }
     })
 
-    if (this.service.stage === 'initPresets') {
+    if (this.service.stage === ServiceStage.InitPresets) {
       source.push(...mappedPlugins)
     } else {
       source.splice(0, 0, ...mappedPlugins)

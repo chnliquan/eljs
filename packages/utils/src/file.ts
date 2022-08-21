@@ -179,9 +179,7 @@ export function loadFile(filepath: string, implementor: Implementor) {
   return module.default || module
 }
 
-interface RenderTemplateOptions {
-  template: string
-  data: Record<string, unknown>
+export interface RenderTemplateOptions {
   type?: 'mustache' | 'ejs'
   partials?: PartialsOrLookupFn
   tagsOrOptions?: OpeningAndClosingTags | RenderOptions
@@ -189,16 +187,11 @@ interface RenderTemplateOptions {
 }
 
 export async function renderTemplate(
-  opts: RenderTemplateOptions,
+  template: string,
+  data: Record<string, unknown>,
+  opts?: RenderTemplateOptions,
 ): Promise<string> {
-  const {
-    template,
-    data,
-    type = 'mustache',
-    partials,
-    tagsOrOptions,
-    options,
-  } = opts
+  const { type = 'mustache', partials, tagsOrOptions, options } = opts || {}
 
   if (type === 'ejs') {
     const compiled = ejs.compile(template, options)

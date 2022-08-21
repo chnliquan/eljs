@@ -2,7 +2,13 @@ import utils, { isPromise } from '@eljs/utils'
 import assert from 'assert'
 import { existsSync } from 'fs'
 import { AsyncSeriesWaterfallHook } from 'tapable'
-import { ApplyEvent, ApplyPluginsType, EnableBy, PluginType } from '../types'
+import {
+  ApplyEvent,
+  ApplyPluginsType,
+  EnableBy,
+  PluginType,
+  ServiceStage,
+} from '../types'
 import { Hook } from './hook'
 import { Plugin } from './plugin'
 import { PluginAPI } from './plugin-api'
@@ -26,7 +32,7 @@ export class Service {
   /**
    * 执行阶段
    */
-  public stage = 'uninitialized'
+  public stage: string = ServiceStage.Uninitialized
   /**
    * 构造函数配置项
    */
@@ -132,7 +138,7 @@ export class Service {
         (preset: string) =>
           new Plugin({
             path: preset,
-            type: PluginType.preset,
+            type: PluginType.Preset,
             cwd: this.cwd,
           }),
       )
@@ -143,7 +149,7 @@ export class Service {
         plugin =>
           new Plugin({
             path: plugin,
-            type: PluginType.plugin,
+            type: PluginType.Plugin,
             cwd: this.cwd,
           }),
       )
@@ -195,11 +201,11 @@ export class Service {
     // guess type from key
     if (!type) {
       if (opts.key.startsWith('on')) {
-        type = ApplyPluginsType.event
+        type = ApplyPluginsType.Event
       } else if (opts.key.startsWith('modify')) {
-        type = ApplyPluginsType.modify
+        type = ApplyPluginsType.Modify
       } else if (opts.key.startsWith('add')) {
-        type = ApplyPluginsType.add
+        type = ApplyPluginsType.Add
       } else {
         throw new Error(
           `Invalid applyPlugins arguments, type must be supplied for key ${opts.key}.`,
@@ -210,7 +216,7 @@ export class Service {
     const hooks = this.hooks[opts.key] || []
 
     switch (type) {
-      case ApplyPluginsType.add:
+      case ApplyPluginsType.Add:
         assert(
           !('initialValue' in opts) || Array.isArray(opts.initialValue),
           `applyPlugins failed, opts.initialValue must be Array if opts.type is add.`,
@@ -235,7 +241,7 @@ export class Service {
         }
         return tAdd.promise(opts.initialValue || [])
 
-      case ApplyPluginsType.modify:
+      case ApplyPluginsType.Modify:
         // eslint-disable-next-line no-case-declarations
         const tModify = new AsyncSeriesWaterfallHook(['memo'])
 
@@ -252,7 +258,7 @@ export class Service {
         }
         return tModify.promise(opts.initialValue)
 
-      case ApplyPluginsType.event:
+      case ApplyPluginsType.Event:
         // eslint-disable-next-line no-case-declarations
         const tEvent = new AsyncSeriesWaterfallHook(['_'])
 
@@ -277,16 +283,16 @@ export class Service {
   }
 
   public async getPresetsAndPlugins() {
-    this.stage = 'init'
+    this.stage = ServiceStage.Init
 
-    const { plugins, presets } = Plugin.getPluginsAndPresets({
+    const { plugins, presets } = Plugin.getPresetsAndPlugins({
       cwd: this.cwd,
       presets: this.opts.presets || [],
       plugins: (this.opts.plugins || []) as string[],
     })
 
     // 注册预设
-    this.stage = 'initPresets'
+    this.stage = ServiceStage.InitPresets
 
     const presetPlugins: Plugin[] = []
     while (presets.length) {
@@ -300,7 +306,7 @@ export class Service {
     plugins.unshift(...presetPlugins)
 
     // 注册插件
-    this.stage = 'initPlugins'
+    this.stage = ServiceStage.InitPlugins
     while (plugins.length) {
       await this.initPlugin({ plugin: plugins.shift() as Plugin, plugins })
     }
@@ -341,6 +347,7 @@ export interface ServicePluginAPI {
    * 工具函数
    */
   utils: typeof utils
+
   /**
    * 执行插件
    */
