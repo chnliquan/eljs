@@ -14,8 +14,8 @@
     "type": "git",
     "url": "https://github.com/chnliquan/eljs"
   },
-  "license": "MIT",
   "author": "liquan",
+  "license": "MIT",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [

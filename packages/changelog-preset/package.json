@@ -15,8 +15,8 @@
     "type": "git",
     "url": "https://github.com/chnliquan/eljs"
   },
-  "license": "MIT",
   "author": "liquan",
+  "license": "MIT",
   "main": "index.js",
   "files": [
     "conventional-changelog.js",
@@ -26,6 +26,10 @@
     "writer-opts.js",
     "templates"
   ],
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc"
+  },
   "dependencies": {
     "compare-func": "^2.0.0",
     "q": "^1.5.1"
