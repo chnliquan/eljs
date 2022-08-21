@@ -1,12 +1,12 @@
 {
-  "name": "@eljs/generate",
+  "name": "@eljs/service",
   "version": "0.7.5",
-  "description": "@eljs/generate",
+  "description": "@eljs/service",
   "keywords": [
     "eljs",
-    "generate"
+    "service"
   ],
-  "homepage": "https://github.com/chnliquan/eljs/tree/master/packages/generate#readme",
+  "homepage": "https://github.com/chnliquan/eljs/tree/master/packages/service#readme",
   "bugs": {
     "url": "https://github.com/chnliquan/eljs/issues"
   },
@@ -18,9 +18,6 @@
   "author": "liquan",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
-  "bin": {
-    "gen": "bin/gen"
-  },
   "files": [
     "lib"
   ],
@@ -29,11 +26,11 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@eljs/service": "0.7.5",
     "@eljs/utils": "0.7.5",
-    "@types/download": "8.0.1",
-    "download": "^8.0.0",
-    "prettier": "^2.7.1",
-    "sort-package-json": "^1.57.0"
+    "@types/hash-sum": "^1.0.0",
+    "esbuild": "^0.15.5",
+    "hash-sum": "^2.0.0",
+    "pkg-up": "^4.0.0",
+    "tapable": "^2.2.1"
   }
 }
