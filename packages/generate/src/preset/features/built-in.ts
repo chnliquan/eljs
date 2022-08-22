@@ -1,22 +1,55 @@
 import {
+  chalk,
   deepMerge,
   installWithNpmClient,
   isFunction,
   logger,
+  readJSONSync,
+  tryPaths,
 } from '@eljs/utils'
 import { existsSync, writeFileSync } from 'fs'
-import { join, resolve } from 'path'
+import { join } from 'path'
 import prettier from 'prettier'
 import sortPackageJson from 'sort-package-json'
 import { Api, ExtendPackageOpts } from '../../types'
 
-function formatPkg(pkg: string) {
+function formatPkg(pkg: string, absOutputPath: string) {
   const sortPkg = sortPackageJson(pkg)
-  return prettier.format(sortPkg, {
-    printWidth: 120,
-    proseWrap: 'never',
-    parser: 'json',
-  })
+
+  function getPrettierConfig() {
+    const prettierPath = tryPaths([
+      `${absOutputPath}/prettier.config.js`,
+      `${absOutputPath}/.prettierrc.js`,
+      `${absOutputPath}/.prettierrc`,
+    ])
+
+    if (!prettierPath) {
+      return {
+        trailingComma: 'all',
+        tabWidth: 2,
+        semi: false,
+        singleQuote: true,
+        bracketSpacing: true,
+        bracketSameLine: false,
+        arrowParens: 'avoid',
+      }
+    }
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const configOrConfigGen = require(prettierPath)
+
+      if (typeof configOrConfigGen === 'function') {
+        return configOrConfigGen.call(null)
+      }
+
+      return configOrConfigGen
+    } catch (e) {
+      return readJSONSync(prettierPath)
+    }
+  }
+
+  return prettier.format(sortPkg, getPrettierConfig())
 }
 
 export default (api: Api) => {
@@ -31,12 +64,21 @@ export default (api: Api) => {
   })
 
   api.register({
+    key: 'onGenerateFiles',
+    stage: Number.NEGATIVE_INFINITY,
+    async fn() {
+      console.log(`${chalk.cyan('wait')} - Generate files ing ...`)
+    },
+  })
+
+  api.register({
     key: 'onGenerateDone',
+    stage: Number.NEGATIVE_INFINITY,
     fn() {
       const pkgJSONPath = join(api.paths.absOutputPath, 'package.json')
       let pkg = api.service.pkg
-
       if (existsSync(pkgJSONPath)) {
+        console.log('process.cwd()', process.cwd())
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const originPkg = require(pkgJSONPath)
         pkg = deepMerge(originPkg, pkg)
@@ -47,16 +89,12 @@ export default (api: Api) => {
         return
       }
 
-      writeFileSync(pkgJSONPath, formatPkg(JSON.stringify(pkg, null, 2)))
-      logger.info('Generate package.json')
-    },
-    stage: Number.NEGATIVE_INFINITY - 1,
-  })
+      writeFileSync(
+        pkgJSONPath,
+        formatPkg(JSON.stringify(pkg, null, 2), api.paths.absOutputPath),
+      )
 
-  api.registerMethod({
-    name: 'resolve',
-    fn(...paths: string[]) {
-      return resolve(api.service.target, ...paths)
+      logger.info('Generate package.json')
     },
   })
 

@@ -70,6 +70,14 @@ export interface CopyFileOpts {
    * 目标文件路径
    */
   to: string
+  /**
+   * 模板渲染需要的参数
+   */
+  data?: Record<string, any>
+  /**
+   * 渲染引擎的参数
+   */
+  opts?: RenderTemplateOptions
 }
 
 export interface CopyTplOpts extends CopyFileOpts {
@@ -77,10 +85,6 @@ export interface CopyTplOpts extends CopyFileOpts {
    * 模板渲染需要的参数
    */
   data: Record<string, any>
-  /**
-   * 渲染引擎的参数
-   */
-  opts?: RenderTemplateOptions
 }
 
 export interface CopyDirectory extends CopyFileOpts {
@@ -88,10 +92,6 @@ export interface CopyDirectory extends CopyFileOpts {
    * 模板渲染需要的参数
    */
   data: Record<string, any>
-  /**
-   * 渲染引擎的参数
-   */
-  opts?: RenderTemplateOptions
 }
 
 export type Api = GenerateServicePluginAPI & PluginAPI<GenerateService>

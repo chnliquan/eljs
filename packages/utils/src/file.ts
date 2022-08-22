@@ -186,16 +186,18 @@ export interface RenderTemplateOptions {
   options?: Options
 }
 
-export async function renderTemplate(
+export function renderTemplate(
   template: string,
   data: Record<string, unknown>,
   opts?: RenderTemplateOptions,
-): Promise<string> {
+) {
   const { type = 'mustache', partials, tagsOrOptions, options } = opts || {}
 
   if (type === 'ejs') {
-    const compiled = ejs.compile(template, options)
-    return compiled(data)
+    return ejs.render(template, data, {
+      ...options,
+      async: false,
+    })
   } else {
     return Mustache.render(template, data, partials, tagsOrOptions)
   }

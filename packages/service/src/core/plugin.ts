@@ -4,7 +4,7 @@ import esbuild from 'esbuild'
 import { existsSync } from 'fs'
 import sum from 'hash-sum'
 import { basename, dirname, extname, join, relative } from 'path'
-import { pkgUpSync } from 'pkg-up'
+import pkgUp from 'pkg-up'
 import { EnableBy, PluginReturnType, PluginType } from '../types'
 
 const RE = {
@@ -59,7 +59,7 @@ export class Plugin {
 
     let pkg = null
     let isPkgEntry = false
-    const pkgJSONPath = pkgUpSync({ cwd: this.path }) as string
+    const pkgJSONPath = pkgUp.sync({ cwd: this.path }) as string
 
     if (pkgJSONPath) {
       pkg = require(pkgJSONPath)
@@ -76,6 +76,7 @@ export class Plugin {
         exts: ['.ts'],
       })
       register.clearFiles()
+
       let ret
       try {
         ret = require(this.path)

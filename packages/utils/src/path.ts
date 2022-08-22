@@ -22,7 +22,7 @@ export function tryPaths(paths: string[]) {
 export function extractCallDir() {
   const obj = Object.create(null)
   Error.captureStackTrace(obj)
-  const callSite = obj.stack.split('\n')[3]
+  const callSite = obj.stack.split('\n')[2]
 
   // the regexp for the stack when called inside a named function
   const namedStackRegExp = /\s\((.*):\d+:\d+\)$/

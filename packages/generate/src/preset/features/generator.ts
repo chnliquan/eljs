@@ -1,10 +1,17 @@
 import { chalk, isDirectory, mkdirSync, renderTemplate } from '@eljs/utils'
 import { copyFileSync, readFileSync, writeFileSync } from 'fs'
 import { glob } from 'glob'
-import { dirname, join, relative } from 'path'
+import { dirname, join, relative, resolve } from 'path'
 import { Api, CopyDirectory, CopyFileOpts, CopyTplOpts } from '../../types'
 
 export default (api: Api) => {
+  api.registerMethod({
+    name: 'resolve',
+    fn(...paths: string[]) {
+      return resolve(api.service.target, ...paths)
+    },
+  })
+
   // 转换文件前缀，处理文件名的边界情况
   api.registerMethod({
     name: 'convertFilePrefix',
@@ -36,23 +43,34 @@ export default (api: Api) => {
   api.registerMethod({
     name: 'copyFile',
     fn(opts: CopyFileOpts) {
-      const file = relative(api.target, opts.to)
-      console.log(`${chalk.green('Copy: ')} ${file}`)
-      const dest = api.convertFilePrefix(opts.to)
-      mkdirSync(dirname(dest))
-      copyFileSync(opts.from, dest)
+      let destFile = api.convertFilePrefix(opts.to)
+
+      if (destFile.indexOf('{{') > -1 || destFile.indexOf('<%') > -1) {
+        destFile = renderTemplate(destFile, opts.data || {}, opts.opts)
+      }
+
+      mkdirSync(dirname(destFile))
+      console.log(`${chalk.green('Copy: ')} ${relative(api.target, destFile)}`)
+      copyFileSync(opts.from, api.convertFilePrefix(destFile))
     },
   })
 
   // 复制模板文件
   api.registerMethod({
     name: 'copyTpl',
-    async fn(opts: CopyTplOpts) {
+    fn(opts: CopyTplOpts) {
       const tpl = readFileSync(opts.from, 'utf-8')
-      const content = await renderTemplate(tpl, opts.data, opts.opts)
-      mkdirSync(dirname(opts.to))
-      console.log(`${chalk.green('Write:')} ${relative(api.target, opts.to)}`)
-      writeFileSync(api.convertFilePrefix(opts.to), content, 'utf-8')
+      const content = renderTemplate(tpl, opts.data, opts.opts)
+
+      let destFile = api.convertFilePrefix(opts.to)
+
+      if (destFile.indexOf('{{') > -1 || destFile.indexOf('<%') > -1) {
+        destFile = renderTemplate(destFile, opts.data, opts.opts)
+      }
+
+      mkdirSync(dirname(destFile))
+      console.log(`${chalk.green('Write:')} ${relative(api.target, destFile)}`)
+      writeFileSync(destFile, content, 'utf-8')
     },
   })
 
@@ -67,23 +85,24 @@ export default (api: Api) => {
       })
 
       files.forEach(file => {
-        const src = join(opts.from, file)
+        const srcFile = join(opts.from, file)
 
-        if (isDirectory(src)) {
+        if (isDirectory(srcFile)) {
           return
         }
 
         if (file.endsWith('.tpl')) {
           api.copyTpl({
             ...opts,
-            from: src,
+            from: srcFile,
             to: join(opts.to, file.replace(/\.tpl$/, '')),
           })
         } else {
-          const dest = join(opts.to, file)
+          const destFile = join(opts.to, file)
           api.copyFile({
-            from: src,
-            to: dest,
+            ...opts,
+            from: srcFile,
+            to: destFile,
           })
         }
       })

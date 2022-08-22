@@ -1,5 +1,5 @@
 import { extractCallDir, isDirectory, RenderTemplateOptions } from '@eljs/utils'
-import { basename, join, resolve } from 'path'
+import { join, resolve } from 'path'
 import { Api } from '../../types'
 
 export default (api: Api) => {
@@ -12,30 +12,34 @@ export default (api: Api) => {
       opts?: RenderTemplateOptions,
     ) {
       const baseDir = extractCallDir()
-      const src = resolve(baseDir, path)
+      const srcFile = resolve(baseDir, path)
 
-      if (isDirectory(src)) {
+      if (isDirectory(srcFile)) {
         api.copyDirectory({
-          from: src,
+          from: srcFile,
           to: api.paths.absOutputPath,
           data,
           opts,
         })
       } else {
-        const file = basename(src.replace(/\.tpl$/, ''))
-        const dest = join(api.paths.absOutputPath, file)
+        const destFile = join(
+          api.paths.absOutputPath,
+          srcFile.replace(/\.tpl$/, ''),
+        )
 
-        if (src.endsWith('.tpl')) {
+        if (srcFile.endsWith('.tpl')) {
           api.copyTpl({
-            from: src,
-            to: dest,
+            from: srcFile,
+            to: destFile,
             data,
             opts,
           })
         } else {
           api.copyFile({
-            from: src,
-            to: dest,
+            from: srcFile,
+            to: destFile,
+            data,
+            opts,
           })
         }
       }

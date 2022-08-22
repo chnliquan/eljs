@@ -30,7 +30,7 @@ export class GenerateService extends Service {
   /**
    * 构造函数配置项
    */
-  public opts: GenerateServiceOpts
+  public opts!: GenerateServiceOpts
   /**
    * 目标路径
    */
@@ -73,8 +73,7 @@ export class GenerateService extends Service {
       ...opts,
       presets: [require.resolve('./preset')],
     })
-    this.opts = opts
-    this.cliVersion = require('../../package.json').version
+    this.cliVersion = require('../package.json').version
   }
 
   public async run(opts: { target: string; args?: any }) {
@@ -113,12 +112,13 @@ export class GenerateService extends Service {
       args: { questions },
     })
 
+    console.log('target', target)
     // 修改项目路径
     this.paths = await this.applyPlugins({
       key: 'modifyPaths',
       initialValue: {
         cwd: this.cwd,
-        dest: target,
+        absOutputPath: target,
       },
       args: {
         cwd: this.cwd,
@@ -237,7 +237,7 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
     path: string,
     data: Record<string, any>,
     opts?: RenderTemplateOptions,
-  ) => void
+  ) => Promise<void>
   /**
    * 更新 package.json
    */
