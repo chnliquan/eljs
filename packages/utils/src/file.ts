@@ -150,7 +150,7 @@ export function tmpdir(random?: boolean): string {
 
   if (random) {
     const name = util.format(
-      'cli-tmp-%s-%s',
+      'tmp-%s-%s',
       Date.now(),
       Math.ceil(Math.random() * 1000),
     )
@@ -159,9 +159,9 @@ export function tmpdir(random?: boolean): string {
     mkdirSync(tmpdir)
 
     return tmpdir
-  } else {
-    return tmpdir
   }
+
+  return tmpdir
 }
 
 export function loadFile(filepath: string, implementor: Implementor) {

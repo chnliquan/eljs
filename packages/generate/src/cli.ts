@@ -1,15 +1,22 @@
-import { GenerateService } from './service'
+import { minimist } from '@eljs/utils'
+import { Create } from './create'
 
-main().catch(err => {
+async function cli() {
+  const cwd = process.cwd()
+  const { _, ...otherArgs } = minimist(process.argv.slice(2))
+  const [projectName = 'template'] = _
+
+  const create = new Create({
+    template: '.',
+    force: true,
+    cwd,
+    ...otherArgs,
+  })
+
+  await create.run(projectName)
+}
+
+cli().catch((err: Error) => {
+  console.error(`Create failed, ${err.message}`)
   console.error(err)
 })
-
-async function main() {
-  const service = new GenerateService({
-    cwd: process.cwd(),
-  })
-
-  await service.run({
-    target: '',
-  })
-}

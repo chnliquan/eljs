@@ -31,10 +31,8 @@
   "dependencies": {
     "@eljs/service": "0.7.5",
     "@eljs/utils": "0.7.5",
-    "@types/download": "8.0.1",
     "@types/glob": "^7.2.0",
     "@types/prettier": "^2.7.0",
-    "download": "^8.0.0",
     "glob": "^8.0.3",
     "prettier": "^2.7.1",
     "sort-package-json": "^1.57.0"

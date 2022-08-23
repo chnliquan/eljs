@@ -5,6 +5,7 @@
       "type": "node",
       "request": "launch",
       "name": "Current File",
+      "runtimeExecutable": "/usr/local/bin/node",
       "program": "${workspaceRoot}/node_modules/ts-node/dist/bin.js",
       "windows": {
         "program": "${workspaceFolder}/node_modules/ts-node/bin/ts-node"
@@ -17,11 +18,11 @@
       "type": "node",
       "request": "launch",
       "name": "Jest Current File",
+      "runtimeExecutable": "/usr/local/bin/node",
       "program": "${workspaceFolder}/node_modules/.bin/jest",
       "windows": {
         "program": "${workspaceFolder}/node_modules/jest/bin/jest"
       },
-      "runtimeExecutable": "sh",
       "args": ["${fileBasenameNoExtension}", "--config", "jest.config.js"],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"

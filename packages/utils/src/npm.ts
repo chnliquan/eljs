@@ -1,11 +1,14 @@
 import { execSync } from 'child_process'
 import { sync } from 'cross-spawn'
+import download from 'download'
 import path from 'path'
 import urllib from 'urllib'
 import which from 'which'
 
 import { PLATFORM } from './const'
-import { existsSync } from './file'
+import { existsSync, tmpdir } from './file'
+import { logger } from './logger'
+import { isString } from './type'
 import { NpmClient, PkgJson } from './types'
 
 export function getNodePrefix(): string {
@@ -90,19 +93,62 @@ export interface NpmInfo extends PkgJson {
 }
 
 export function getNpmInfo(
-  pkgName: string,
-  baseUrl = 'https://registry.npmjs.org',
-  version = 'latest',
+  name: string,
+  opts?: {
+    registry?: string
+    version?: string
+  },
 ): Promise<NpmInfo | null> {
-  const url = `${baseUrl}/${pkgName}/${version}`
+  const { registry = 'https://registry.npmjs.org', version = 'latest' } =
+    opts || {}
+  const url = `${registry.replace(/\/+$/, '')}/${encodeURIComponent(
+    name,
+  ).replace(/^%40/, '@')}/${version}`
 
   return urllib
     .request(url, { timeout: 30000, dataType: 'json' })
     .then(({ data }) => {
+      if (isString(data) || data.error) {
+        return null
+      }
+
       if (version === 'latest') {
         return data.latest || data
       } else {
         return data?.versions?.[version] || data
       }
     })
+}
+
+export function pkgNameAnalysis(name = '') {
+  try {
+    const regex = /^(@?[^@]+)(?:@(.+))?$/
+    const [, pkgName = name, pkgVersion = 'latest'] = name.match(regex) || []
+    return [pkgName, pkgVersion]
+  } catch (error) {
+    return [name, 'latest']
+  }
+}
+
+export async function downloadNpmRepo(
+  url: string,
+  dest = tmpdir(true),
+  opts?: download.DownloadOptions,
+): Promise<string> {
+  try {
+    await download(url, dest, {
+      extract: true,
+      strip: 1,
+      headers: {
+        accept: 'application/tgz',
+      },
+      ...opts,
+    })
+  } catch (err) {
+    logger.printErrorAndExit(
+      `Failed to download template repository ${url}，\n ${err}`,
+    )
+  }
+
+  return dest
 }

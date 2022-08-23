@@ -2,6 +2,9 @@ import fs from 'fs'
 import ini from 'ini'
 import path from 'path'
 import { URL } from 'url'
+import { run } from './cp'
+import { tmpdir } from './file'
+import { logger } from './logger'
 import { GitInfo, GitRepo } from './types'
 
 function getProjectGitDir(dir: string): string | undefined {
@@ -121,4 +124,41 @@ export function getGitInfo(dir: string, exact?: boolean): GitInfo | null {
   }
 
   return gitInfo
+}
+
+export interface DownloadGitRepoOpts {
+  url: string
+  branch?: string
+  dest?: string
+}
+
+export async function downloadGitRepo(
+  url: string,
+  opts?: DownloadGitRepoOpts,
+): Promise<string> {
+  const { branch = 'master', dest = tmpdir(true) } = opts || {}
+
+  const command = [
+    'git',
+    'clone',
+    url,
+    '-q',
+    '-b',
+    branch,
+    '--depth',
+    '1',
+    'package',
+  ]
+
+  try {
+    await run(`${command.join(' ')}`, {
+      cwd: dest,
+    })
+  } catch (err) {
+    logger.printErrorAndExit(
+      `Failed to download template repository ${url}，\n ${err}`,
+    )
+  }
+
+  return path.join(dest, 'package')
 }

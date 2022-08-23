@@ -8,6 +8,7 @@ import {
   ServicePluginAPI,
 } from '@eljs/service'
 import utils, { logger, prompts, RenderTemplateOptions } from '@eljs/utils'
+import { getPresetsAndPlugins } from './get'
 import {
   AppData,
   CopyDirectory,
@@ -20,6 +21,10 @@ import {
 } from './types'
 
 export interface GenerateServiceOpts extends ServiceOpts {
+  /**
+   * 入口生成文件
+   */
+  generatorFile: string
   /**
    * 是否生成 schema
    */
@@ -69,15 +74,20 @@ export class GenerateService extends Service {
   public cliVersion = ''
 
   public constructor(opts: GenerateServiceOpts) {
+    const { generatorFile, cwd } = opts
+    const absGeneratorFile = require.resolve(generatorFile)
+    const { presets, plugins } = getPresetsAndPlugins(cwd)
+
     super({
       ...opts,
-      presets: [require.resolve('./preset')],
+      presets: [require.resolve('./preset'), ...presets],
+      plugins: [...plugins, absGeneratorFile],
     })
     this.cliVersion = require('../package.json').version
   }
 
-  public async run(opts: { target: string; args?: any }) {
-    const { presets, plugins } = await this.getPresetsAndPlugins()
+  public async run(opts: { target: string; args?: Record<string, any> }) {
+    await this.loadPresetsAndPlugins()
     const { target, args } = opts
 
     // 修改业务配置
@@ -132,8 +142,6 @@ export class GenerateService extends Service {
       key: 'modifyAppData',
       initialValue: {
         cwd: this.cwd,
-        plugins,
-        presets,
       },
     })
 

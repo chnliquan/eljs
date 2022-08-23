@@ -25,7 +25,7 @@ export interface ServiceOpts {
   /**
    * 插件集合
    */
-  plugins?: Service['plugins']
+  plugins?: string[]
 }
 
 export class Service {
@@ -282,7 +282,8 @@ export class Service {
     }
   }
 
-  public async getPresetsAndPlugins() {
+  // TODO：支持传入 extractor
+  public async loadPresetsAndPlugins() {
     this.stage = ServiceStage.Init
 
     const { plugins, presets } = Plugin.getPresetsAndPlugins({
@@ -310,8 +311,6 @@ export class Service {
     while (plugins.length) {
       await this.initPlugin({ plugin: plugins.shift() as Plugin, plugins })
     }
-
-    return { presets, plugins }
   }
 
   public isPluginEnable(hook: Hook | string) {

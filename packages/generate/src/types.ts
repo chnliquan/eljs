@@ -2,6 +2,67 @@ import { PluginAPI } from '@eljs/service'
 import { NpmClientEnum, PkgJson, RenderTemplateOptions } from '@eljs/utils'
 import { GenerateService, GenerateServicePluginAPI } from './service'
 
+export type TemplateType = 'npm' | 'git' | 'local'
+
+export interface TemplateInfo {
+  /**
+   * 模板类型
+   */
+  type: 'npm' | 'git'
+  /**
+   * 模板描述
+   */
+  description: string
+  /**
+   * 模版类型对应值
+   */
+  value: string
+}
+
+export interface CreateOpts {
+  /**
+   * 是否直接覆盖文件
+   */
+  force?: boolean
+  /**
+   * 模板路径
+   */
+  template?: string
+  /**
+   * 模版信息
+   */
+  templateInfo?: TemplateInfo
+  /**
+   * 模版配置（不同场景的多个模版）
+   */
+  templateConfig?: TemplateConfig
+  /**
+   * 当前路径
+   */
+  cwd?: string
+  /**
+   * 是否生成 schema
+   */
+  schema?: boolean
+}
+
+export interface TemplateConfigWithAppType {
+  /**
+   * 模版场景
+   */
+  appType: Record<string, string>
+  /**
+   * 模版集合
+   */
+  templates: Record<string, Record<string, TemplateInfo>>
+}
+
+export type TemplateConfigWithoutAppType = TemplateInfo[]
+
+export type TemplateConfig =
+  | TemplateConfigWithAppType
+  | TemplateConfigWithoutAppType
+
 export interface AppData {
   /**
    * 项目名
