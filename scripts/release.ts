@@ -1,6 +1,6 @@
 import { argv } from 'zx'
 import 'zx/globals'
-import { logger, release } from '../packages/release/src/index'
+import { release, step } from '../packages/release/src/index'
 
 import { assert, bin } from './utils'
 
@@ -18,7 +18,7 @@ async function main(): Promise<void> {
   assert(!hasModified, 'Your git status is not clean. Aborting.')
 
   // run tests before release
-  logger.step('Running tests ...')
+  step('Running tests ...')
   if (!skipTests) {
     await $`${bin('jest')} --clearCache`
     await $`pnpm test:once --bail --passWithNoTests`
@@ -27,7 +27,7 @@ async function main(): Promise<void> {
   }
 
   // build all packages
-  logger.step('Building all packages ...')
+  step('Building all packages ...')
   if (!skipBuild) {
     await $`pnpm build --no-cache`
   } else {

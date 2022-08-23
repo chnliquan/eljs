@@ -1,3 +1,3 @@
 export { generateChangelog } from './changelog'
-export { release } from './release'
+export { release, step } from './release'
 export * from './types'
