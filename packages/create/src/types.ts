@@ -1,6 +1,6 @@
 import { PluginAPI } from '@eljs/service'
 import { NpmClientEnum, PkgJson, RenderTemplateOptions } from '@eljs/utils'
-import { GenerateService, GenerateServicePluginAPI } from './service'
+import { GenerateService, GenerateServicePluginAPI } from './core/service'
 
 export type TemplateType = 'npm' | 'git' | 'local'
 

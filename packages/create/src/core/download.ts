@@ -7,7 +7,7 @@ import {
   ora,
   pkgNameAnalysis,
 } from '@eljs/utils'
-import { TemplateInfo } from './types'
+import { TemplateInfo } from '../types'
 
 export class Download {
   private _opts: TemplateInfo

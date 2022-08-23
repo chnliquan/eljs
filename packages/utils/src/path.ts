@@ -19,10 +19,10 @@ export function tryPaths(paths: string[]) {
   }
 }
 
-export function extractCallDir() {
+export function extractCallDir(stack = 2) {
   const obj = Object.create(null)
   Error.captureStackTrace(obj)
-  const callSite = obj.stack.split('\n')[2]
+  const callSite = obj.stack.split('\n')[stack]
 
   // the regexp for the stack when called inside a named function
   const namedStackRegExp = /\s\((.*):\d+:\d+\)$/
@@ -33,7 +33,6 @@ export function extractCallDir() {
   if (!matchResult) {
     matchResult = callSite.match(anonymousStackRegExp)
   }
-
   const fileName = matchResult[1]
   return path.dirname(fileName)
 }

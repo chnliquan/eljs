@@ -18,6 +18,7 @@
   "author": "liquan",
   "license": "MIT",
   "main": "index.js",
+  "types": "lib/index.d.ts",
   "files": [
     "conventional-changelog.js",
     "conventional-recommended-bump.js",

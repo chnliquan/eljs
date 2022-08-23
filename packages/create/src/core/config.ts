@@ -1,4 +1,4 @@
-import { logger, resolve } from '@eljs/utils'
+import { existsSync, logger, resolve } from '@eljs/utils'
 import { join } from 'path'
 
 function getGenConfig(configFile: string) {
@@ -7,6 +7,10 @@ function getGenConfig(configFile: string) {
   } catch (error) {
     return {}
   }
+}
+
+export function isGenConfigExist(cwd: string) {
+  return existsSync(join(cwd, 'gen.json'))
 }
 
 export function getPresetsAndPlugins(cwd: string) {
@@ -19,6 +23,10 @@ export function getPresetsAndPlugins(cwd: string) {
       return value
         .map((item: string) => {
           try {
+            if (item.startsWith('./')) {
+              return join(cwd, item)
+            }
+
             return resolve.sync(item, {
               basedir: cwd,
               extensions: ['.tsx', '.ts', '.mjs', '.jsx', '.js'],

@@ -8,7 +8,6 @@ import {
   ServicePluginAPI,
 } from '@eljs/service'
 import utils, { logger, prompts, RenderTemplateOptions } from '@eljs/utils'
-import { getPresetsAndPlugins } from './get'
 import {
   AppData,
   CopyDirectory,
@@ -18,13 +17,10 @@ import {
   GenerateConfig,
   GenerateServiceStage,
   Paths,
-} from './types'
+} from '../types'
+import { getPresetsAndPlugins } from './config'
 
 export interface GenerateServiceOpts extends ServiceOpts {
-  /**
-   * 入口生成文件
-   */
-  generatorFile: string
   /**
    * 是否生成 schema
    */
@@ -74,14 +70,12 @@ export class GenerateService extends Service {
   public cliVersion = ''
 
   public constructor(opts: GenerateServiceOpts) {
-    const { generatorFile, cwd } = opts
-    const absGeneratorFile = require.resolve(generatorFile)
-    const { presets, plugins } = getPresetsAndPlugins(cwd)
+    const { presets, plugins } = getPresetsAndPlugins(opts.cwd)
 
     super({
       ...opts,
       presets: [require.resolve('./preset'), ...presets],
-      plugins: [...plugins, absGeneratorFile],
+      plugins: [...plugins],
     })
     this.cliVersion = require('../package.json').version
   }

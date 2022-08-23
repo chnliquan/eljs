@@ -1,5 +1,5 @@
 import { minimist } from '@eljs/utils'
-import { Create } from './create'
+import { Create } from './core/create'
 
 async function cli() {
   const cwd = process.cwd()

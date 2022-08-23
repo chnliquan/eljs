@@ -1,6 +1,15 @@
-import { chalk, prompts } from '@eljs/utils'
+import {
+  camelCase,
+  chalk,
+  getGitUrl,
+  getUserAccount,
+  normalizeGitRepo,
+  prompts,
+} from '@eljs/utils'
+import { execSync } from 'child_process'
 import { writeFileSync } from 'fs'
-import { join } from 'path'
+import moment from 'moment'
+import { basename, join } from 'path'
 import { Api } from '../../types'
 
 export default (api: Api) => {
@@ -22,6 +31,43 @@ export default (api: Api) => {
     }
 
     return memo
+  })
+
+  api.modifyPrompts(memo => {
+    const { name, email } = getUserAccount()
+    const gitUrl = getGitUrl(api.target)
+    const { href: gitHref = '' } = normalizeGitRepo(gitUrl)
+    const year = moment().format('YYYY')
+    const date = moment().format('YYYY-MM-DD')
+    const dateTime = moment().format('YYYY-MM-DD hh:mm:ss')
+    const dirname = basename(api.target)
+
+    let registry: string
+
+    if (gitHref.includes('github.com')) {
+      registry = 'https://registry.npmjs.org'
+    } else {
+      registry =
+        execSync('npm config get registry').toString().trim() ||
+        'https://registry.npmjs.org'
+    }
+
+    const shortName = memo.name.replace(/^@[\s\S]+\//, '')
+
+    return {
+      author: name,
+      email,
+      gitUrl,
+      gitHref,
+      registry,
+      year,
+      date,
+      dateTime,
+      dirname,
+      shortName,
+      camelCaseName: camelCase(shortName),
+      ...memo,
+    }
   })
 
   api.onGenerateSchema(({ questions }) => {

@@ -1,12 +1,12 @@
 {
-  "name": "@eljs/generate",
+  "name": "@eljs/create",
   "version": "0.7.5",
-  "description": "@eljs/generate",
+  "description": "@eljs/create",
   "keywords": [
     "eljs",
-    "generate"
+    "create"
   ],
-  "homepage": "https://github.com/chnliquan/eljs/tree/master/packages/generate#readme",
+  "homepage": "https://github.com/chnliquan/eljs/tree/master/packages/create#readme",
   "bugs": {
     "url": "https://github.com/chnliquan/eljs/issues"
   },
@@ -19,10 +19,11 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "bin": {
-    "gen": "bin/gen"
+    "gen": "bin/gen.js"
   },
   "files": [
-    "lib"
+    "lib",
+    "bin"
   ],
   "scripts": {
     "build": "tsc",
@@ -34,6 +35,7 @@
     "@types/glob": "^7.2.0",
     "@types/prettier": "^2.7.0",
     "glob": "^8.0.3",
+    "moment": "^2.29.4",
     "prettier": "^2.7.1",
     "sort-package-json": "^1.57.0"
   }

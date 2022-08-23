@@ -11,7 +11,7 @@ export default (api: Api) => {
       data: Record<string, any> = {},
       opts?: RenderTemplateOptions,
     ) {
-      const baseDir = extractCallDir()
+      const baseDir = extractCallDir(3)
       const srcFile = resolve(baseDir, path)
 
       if (isDirectory(srcFile)) {
