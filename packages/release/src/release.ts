@@ -184,7 +184,7 @@ export async function release(options: Options): Promise<void> {
   // commit git changes
   step('Committing changes ...')
   await run(`git add -A`)
-  await run(`git commit -m 'chore: bump version v${targetVersion}`)
+  await run(`git commit -m 'chore: bump version v${targetVersion}'`)
 
   // publish package
   if (isMonorepo) {
