@@ -240,6 +240,5 @@ export async function getTargetVersion(
       break
   }
 
-  console.log(targetVersion.value)
-  process.exit(0)
+  return targetVersion.value
 }

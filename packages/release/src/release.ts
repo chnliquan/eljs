@@ -147,9 +147,9 @@ export async function release(options: Options): Promise<void> {
     const userRegistry = (await run(`npm config get registry`)).stdout.trim()
 
     if (!userRegistry.includes(registry)) {
-      // logger.printErrorAndExit(
-      //   `Release failed, npm registry must be ${chalk.blue(registry)}.`,
-      // )
+      logger.printErrorAndExit(
+        `Release failed, npm registry must be ${chalk.blue(registry)}.`,
+      )
     }
   }
 
