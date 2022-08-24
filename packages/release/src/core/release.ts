@@ -43,11 +43,11 @@ export async function release(opts: Options): Promise<void> {
 
   const { pkgJSON, pkgPaths } = await init(cwd)
 
-  const defaultOptions = {
+  const defaultOptions: Options = {
     changelogPreset: '@eljs/changelog-preset',
     repoUrl: pkgJSON?.repository?.url || '',
     latest: true,
-    checkGitStatus: true,
+    gitChecks: true,
   }
 
   const {
@@ -55,16 +55,16 @@ export async function release(opts: Options): Promise<void> {
     latest,
     repoType: customRepoType,
     repoUrl,
-    checkGitStatus,
+    gitChecks,
     targetVersion: customVersion,
     beforeUpdateVersion,
     beforeChangelog,
   } = Object.assign(defaultOptions, opts)
   const repoType =
-    customRepoType || (repoUrl.includes('github') ? 'github' : 'gitlab')
+    customRepoType || (repoUrl?.includes('github') ? 'github' : 'gitlab')
 
   // check git status
-  await gitCheck(checkGitStatus)
+  await gitCheck(gitChecks)
 
   // check registry
   await registryCheck({
@@ -100,7 +100,7 @@ export async function release(opts: Options): Promise<void> {
   // generate changelog
   step(`Generating changelog ...`)
   const changelog = await generateChangelog({
-    changelogPreset,
+    changelogPreset: changelogPreset as string,
     latest,
     pkgName: pkgJSON.name as string,
     cwd,
@@ -121,6 +121,7 @@ export async function release(opts: Options): Promise<void> {
   await publish({
     version: targetVersion,
     publishPkgDirs: publishPkgDirs || [cwd],
+    gitChecks,
     changelog,
     repoType,
     repoUrl,
@@ -167,9 +168,10 @@ async function init(cwd: string) {
   }
 }
 
-async function gitCheck(checkGit: boolean) {
+async function gitCheck(gitChecks?: boolean) {
   step('Checking git ...')
-  if (checkGit) {
+
+  if (gitChecks) {
     const isGitClean = (await run(`git status --porcelain`)).stdout.length
 
     if (isGitClean) {
@@ -187,7 +189,7 @@ async function gitCheck(checkGit: boolean) {
 
 async function registryCheck(opts: {
   repoType: string
-  repoUrl: string
+  repoUrl?: string
   pkgRegistry?: string
 }) {
   const { repoType, repoUrl, pkgRegistry } = opts
@@ -252,12 +254,15 @@ async function publish(opts: {
   version: string
   publishPkgDirs: string[]
   changelog: string
+  gitChecks?: boolean
   repoType: string
-  repoUrl: string
+  repoUrl?: string
 }) {
-  const { version, publishPkgDirs, changelog, repoType, repoUrl } = opts
-  step(`Publishing package ...`)
+  const { version, publishPkgDirs, changelog, gitChecks, repoType, repoUrl } =
+    opts
+  const isPnpm = publishPkgDirs.length > 1
 
+  step(`Publishing package ...`)
   for (const pkgDir of publishPkgDirs) {
     await publishPackage(pkgDir, version)
   }
@@ -286,10 +291,16 @@ async function publish(opts: {
       releaseTag = 'beta'
     }
 
-    const cmd = publishPkgDirs.length > 0 ? 'pnpm' : 'npm'
+    const cmd = isPnpm ? 'pnpm' : 'npm'
     const tag = releaseTag ? ['--tag', releaseTag] : []
 
-    const cliArgs = ['publish', ...tag, '--access', 'public', '--no-git-checks']
+    const cliArgs = [
+      'publish',
+      ...tag,
+      '--access',
+      'public',
+      isPnpm && !gitChecks ? '--no-git-checks' : '',
+    ].filter(Boolean)
 
     await execa(cmd, cliArgs, {
       cwd: pkgDir,

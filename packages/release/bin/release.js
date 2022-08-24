@@ -35,6 +35,7 @@ function run() {
       'Target release version.',
       checkVersion,
     )
+    .option('--git-checks', 'Check whether the current branch is release brach')
     .option('--latest', 'Generate latest changelog', true)
 
   program.commands.forEach(c => c.on('--help', () => console.log()))
