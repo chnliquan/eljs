@@ -68,8 +68,8 @@ importers:
 
   packages/create:
     specifiers:
-      '@eljs/service': 0.7.5
-      '@eljs/utils': 0.7.5
+      '@eljs/service': 0.8.0-beta.0
+      '@eljs/utils': 0.8.0-beta.0
       '@types/glob': ^7.2.0
       '@types/prettier': ^2.7.0
       glob: ^8.0.3
@@ -86,20 +86,10 @@ importers:
       prettier: 2.7.1
       sort-package-json: 1.57.0
 
-  packages/create-plugin-config:
-    specifiers:
-      '@eljs/create': 0.7.5
-      '@eljs/utils': 0.7.5
-      moment: ^2.29.4
-    dependencies:
-      '@eljs/create': link:../create
-      '@eljs/utils': link:../utils
-      moment: 2.29.4
-
   packages/release:
     specifiers:
-      '@eljs/changelog-preset': 0.7.5
-      '@eljs/utils': 0.7.5
+      '@eljs/changelog-preset': 0.8.0-beta.0
+      '@eljs/utils': 0.8.0-beta.0
       '@types/conventional-changelog': ^3.1.1
       '@types/js-yaml': ^4.0.5
       '@types/semver': ^7.3.12
@@ -126,7 +116,7 @@ importers:
 
   packages/service:
     specifiers:
-      '@eljs/utils': 0.7.5
+      '@eljs/utils': 0.8.0-beta.0
       '@types/hash-sum': ^1.0.0
       esbuild: ^0.15.5
       hash-sum: ^2.0.0
