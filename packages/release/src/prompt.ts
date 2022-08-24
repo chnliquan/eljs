@@ -1,7 +1,10 @@
-import { chalk, logger, prompts } from '@eljs/utils'
-import fs from 'fs'
+import { chalk, logger, PkgJSON, prompts } from '@eljs/utils'
 import semver from 'semver'
-import { getDistTag, getReferenceVersion, isVersionExist } from './version'
+import {
+  getDistTag,
+  getReferenceVersion,
+  isVersionExist,
+} from './utils/version'
 
 const VERSION_MAJOR = 'Major'
 const VERSION_MINOR = 'Minor'
@@ -64,30 +67,33 @@ function generatePreVersionSuggestion(
   }
 }
 
-export async function getTargetVersion(
-  rootPkgPath: string,
-  isMonorepo = false,
-  specifiedTargetVersion?: string,
-): Promise<string> {
-  if (!rootPkgPath || !fs.existsSync(rootPkgPath)) {
-    logger.printErrorAndExit(`package.json file ${rootPkgPath} is not exist.`)
+export async function getTargetVersion(opts: {
+  pkgJSON: Required<PkgJSON>
+  isMonorepo?: boolean
+  customVersion?: string
+}): Promise<string> {
+  const { pkgJSON, isMonorepo, customVersion } = opts
+
+  if (customVersion) {
+    const isExist = await isVersionExist(pkgJSON.name, customVersion)
+
+    if (isExist) {
+      logger.printErrorAndExit(
+        `${pkgJSON.name} has already published v${chalk.bold(customVersion)}.`,
+      )
+    } else {
+      return customVersion
+    }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const pkg = require(rootPkgPath)
-
-  if (!pkg || !pkg.version) {
-    logger.printErrorAndExit(`package.json file ${rootPkgPath} is not valid.`)
-  }
-
-  const localVersion = pkg.version
+  const localVersion = pkgJSON.version
   let remoteLatestVersion: string | undefined
   let remoteAlphaVersion: string | undefined
   let remoteBetaVersion: string | undefined
   let remoteNextVersion: string | undefined
 
   if (!isMonorepo) {
-    const distTag = await getDistTag(pkg.name)
+    const distTag = await getDistTag(pkgJSON.name)
     remoteLatestVersion = distTag.remoteLatestVersion
     remoteAlphaVersion = distTag.remoteAlphaVersion
     remoteBetaVersion = distTag.remoteBetaVersion
@@ -122,23 +128,6 @@ export async function getTargetVersion(
     }
 
     console.log()
-  }
-
-  // specified target version, check version exist
-  if (specifiedTargetVersion) {
-    const isExist = await isVersionExist(pkg.name, specifiedTargetVersion)
-
-    if (isExist) {
-      logger.error(
-        `This package ${pkg.name} is already published v${chalk.bold(
-          specifiedTargetVersion,
-        )}, please check your targetVersion.`,
-      )
-      process.exit(1)
-    } else {
-      logger.warn(`- Specified target version: ${specifiedTargetVersion}`)
-      return specifiedTargetVersion
-    }
   }
 
   const latestReferenceVersion = getReferenceVersion(
@@ -209,7 +198,7 @@ export async function getTargetVersion(
     },
   ]
 
-  let targetVersion = await prompts([
+  let answer = await prompts([
     {
       name: 'value',
       type: 'select',
@@ -218,27 +207,21 @@ export async function getTargetVersion(
     },
   ])
 
-  switch (targetVersion.value) {
+  switch (answer.value) {
     case 'Beta':
-      targetVersion = await prompts(
-        generatePreVersionQuestions('Beta', suggestions),
-      )
+      answer = await prompts(generatePreVersionQuestions('Beta', suggestions))
       break
 
     case 'Alpha':
-      targetVersion = await prompts(
-        generatePreVersionQuestions('Alpha', suggestions),
-      )
+      answer = await prompts(generatePreVersionQuestions('Alpha', suggestions))
       break
 
     case 'Rc':
-      targetVersion = await prompts(
-        generatePreVersionQuestions('Rc', suggestions),
-      )
+      answer = await prompts(generatePreVersionQuestions('Rc', suggestions))
       break
     default:
       break
   }
 
-  return targetVersion.value
+  return answer.value
 }

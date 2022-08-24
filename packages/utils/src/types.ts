@@ -7,7 +7,7 @@ export enum NpmClientEnum {
   npm = 'npm',
 }
 
-export interface PkgJson {
+export interface PkgJSON {
   name?: string
   version?: string
   private?: boolean

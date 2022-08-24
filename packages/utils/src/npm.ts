@@ -9,7 +9,7 @@ import { PLATFORM } from './const'
 import { existsSync, tmpdir } from './file'
 import { logger } from './logger'
 import { isString } from './type'
-import { NpmClient, PkgJson } from './types'
+import { NpmClient, PkgJSON } from './types'
 
 export function getNodePrefix(): string {
   if (process.env.GLOBAL_PREFIX) {
@@ -82,7 +82,7 @@ export function installWithNpmClient({
   }
 }
 
-export interface NpmInfo extends PkgJson {
+export interface NpmInfo extends PkgJSON {
   version: string
   name: string
   dist: {

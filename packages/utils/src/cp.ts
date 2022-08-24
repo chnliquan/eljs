@@ -1,15 +1,47 @@
+import chalk from 'chalk'
 import cp from 'child_process'
 import execa from 'execa'
 import read from 'read'
 
 import { getExecutableCmd } from './file'
 
+const SPACES_REGEXP = / +/g
+
+export function parseCommand(command: string) {
+  const tokens: string[] = []
+
+  for (const token of command.trim().split(SPACES_REGEXP)) {
+    // Allow spaces to be escaped by a backslash if not meant as a delimiter
+    const previousToken: string = tokens[tokens.length - 1]
+    if (previousToken && previousToken.endsWith('\\')) {
+      // Merge previous token with current one
+      tokens[tokens.length - 1] = `${previousToken.slice(0, -1)} ${token}`
+    } else {
+      tokens.push(token)
+    }
+  }
+
+  return tokens
+}
+
 export function run(
   command: string,
-  opts?: execa.Options,
+  opts?: execa.Options & {
+    verbose?: boolean
+  },
 ): execa.ExecaChildProcess {
+  if (opts?.verbose !== false) {
+    const [cmd, ...args] = parseCommand(command)
+    console.log('$', chalk.greenBright(cmd), ...args)
+  }
+
   return execa.command(command, opts)
 }
+
+const targetVersion = '0.2.2'
+run(`git commit --message chore:\\ bump\\ version\\ v${targetVersion}`, {
+  verbose: false,
+})
 
 export function getPid(cmd: string): Promise<number | null> {
   const parse = (data: string, cmd: string): number | null => {

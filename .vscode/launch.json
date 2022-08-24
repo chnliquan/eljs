@@ -36,8 +36,13 @@
       "windows": {
         "program": "${workspaceFolder}/node_modules/ts-node/bin/ts-node"
       },
-      "args": ["-O", "{\"module\": \"commonjs\"}", "--files", "bin/release.js"],
-      "cwd": "${workspaceRoot}/packages/release",
+      "args": [
+        "-O",
+        "{\"module\": \"commonjs\"}",
+        "--files",
+        "${workspaceRoot}/packages/release/bin/release.js"
+      ],
+      "cwd": "/Users/ender/workspace/technology/pnpm-test",
       "console": "integratedTerminal"
     },
     {

@@ -1,31 +1,30 @@
-import { chalk, logger } from '@eljs/utils'
+import { logger } from '@eljs/utils'
 import conventionalChangelog from 'conventional-changelog'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
 
-const cwd = process.cwd()
-const CHANGELOG = path.join(cwd, 'CHANGELOG.md')
-const LATESTLOG = path.join(cwd, 'LATESTLOG.md')
+export async function generateChangelog(opts: {
+  pkgName: string
+  changelogPreset: string
+  latest?: boolean
+  cwd?: string
+}): Promise<string> {
+  const { pkgName, changelogPreset, latest = true, cwd = process.cwd() } = opts
+  const CHANGELOG = path.join(cwd, 'CHANGELOG.md')
+  const LATESTLOG = path.join(cwd, 'LATESTLOG.md')
 
-export async function generateChangelog(
-  changelogPreset: string,
-  latest: boolean,
-  pkgName: string,
-): Promise<string> {
   let hasError = false
 
   return new Promise((resolve, reject) => {
     let config
+
     try {
       config = require(changelogPreset)
     } catch (err) {
-      console.log(
-        chalk.redBright(
-          `Can not resolve the changelog preset ${changelogPreset}.`,
-        ),
+      logger.printErrorAndExit(
+        `can not resolve the changelog preset ${changelogPreset}.`,
       )
-      process.exit(1)
     }
 
     const stream = conventionalChangelog({
@@ -79,7 +78,6 @@ export async function generateChangelog(
           fs.writeFileSync(LATESTLOG, latestLog)
           logger.done(`Generated LATESTLOG successfully.`)
         }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         hasError = true
         reject(err.stack)
