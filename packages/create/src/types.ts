@@ -1,5 +1,5 @@
 import { PluginAPI } from '@eljs/service'
-import { NpmClientEnum, PkgJson, RenderTemplateOptions } from '@eljs/utils'
+import { NpmClientEnum, PkgJSON, RenderTemplateOptions } from '@eljs/utils'
 import { GenerateService, GenerateServicePluginAPI } from './core/service'
 
 export type TemplateType = 'npm' | 'git' | 'local'
@@ -120,7 +120,7 @@ export enum GenerateServiceStage {
   OnStart = 'onStart',
 }
 
-export type ExtendPackageOpts = (pkg: PkgJson) => PkgJson | PkgJson
+export type ExtendPackageOpts = (pkg: PkgJSON) => PkgJSON | PkgJSON
 
 export interface CopyFileOpts {
   /**
