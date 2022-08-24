@@ -1,4 +1,4 @@
-import { chalk, logger, run } from '@eljs/utils'
+import { chalk, execa, logger, run } from '@eljs/utils'
 import fs from 'fs'
 import yaml from 'js-yaml'
 import { not } from 'junk'
@@ -112,14 +112,23 @@ export async function release(options: Options): Promise<void> {
   const repoType =
     specifiedRepoType || (repoUrl.includes('github') ? 'github' : 'gitlab')
 
+  step('Checking git ...')
   if (checkGitStatus) {
-    const hasModified = (await run(`git status --porcelain`)).stdout.length
+    const isGitClean = (await run(`git status --porcelain`)).stdout.length
 
-    if (hasModified) {
-      logger.printErrorAndExit('Your git status is not clean. Aborting.')
+    if (isGitClean) {
+      logger.printErrorAndExit('git status is not clean.')
     }
   }
 
+  await run('git fetch')
+  const gitStatus = (await run('git status --short --branch')).stdout.trim()
+
+  if (gitStatus.includes('behind')) {
+    logger.printErrorAndExit('git status is behind remote.')
+  }
+
+  step('Checking registry ...')
   let registry = ''
 
   if (repoType === 'github') {
@@ -127,9 +136,7 @@ export async function release(options: Options): Promise<void> {
       try {
         new URL(repoUrl)
       } catch {
-        logger.printErrorAndExit(
-          `GitHub repo url is invalid: ${repoUrl}, Aborting.`,
-        )
+        logger.printErrorAndExit(`github repo url is invalid: ${repoUrl}.`)
       }
     }
 
@@ -147,11 +154,13 @@ export async function release(options: Options): Promise<void> {
     const userRegistry = (await run(`npm config get registry`)).stdout.trim()
 
     if (!userRegistry.includes(registry)) {
-      logger.printErrorAndExit(
-        `Release failed, npm registry must be ${chalk.blue(registry)}.`,
-      )
+      logger.printErrorAndExit(`npm registry is not ${chalk.blue(registry)}.`)
     }
   }
+
+  // TODO: check ownership
+  // step('Checking npm ownership ...')
+  // const whoami = (await run('npm whoami')).stdout.trim()
 
   const targetVersion = await getTargetVersion(
     rootPkgJSONPath,
@@ -183,8 +192,15 @@ export async function release(options: Options): Promise<void> {
 
   // commit git changes
   step('Committing changes ...')
-  await run(`git add -A`)
-  await run(`git commit -m 'chore: bump version v${targetVersion}'`)
+  // await run(
+  //   `git commit --all --message chore:\\ bump\\ version\\ v${targetVersion}`,
+  // )
+  await execa('git', [
+    'commit',
+    '--all',
+    '--message',
+    `chore: bump version v${targetVersion}`,
+  ])
 
   // publish package
   if (isMonorepo) {
