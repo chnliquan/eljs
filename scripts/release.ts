@@ -13,9 +13,9 @@ main().catch(err => {
 })
 
 async function main(): Promise<void> {
-  const hasModified = (await $`git status --porcelain`).stdout.trim().length
+  const isGitClean = (await $`git status --porcelain`).stdout.trim().length
 
-  assert(!hasModified, 'Your git status is not clean. Aborting.')
+  assert(!isGitClean, 'Your git status is not clean. Aborting.')
 
   // run tests before release
   step('Running tests ...')
@@ -35,6 +35,6 @@ async function main(): Promise<void> {
   }
 
   release({
-    checkGitStatus: false,
+    gitChecks: false,
   })
 }
