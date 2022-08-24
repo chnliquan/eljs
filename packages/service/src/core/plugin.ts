@@ -1,4 +1,4 @@
-import { camelCase, PkgJson, register, resolve, winPath } from '@eljs/utils'
+import { camelCase, PkgJSON, register, resolve, winPath } from '@eljs/utils'
 import assert from 'assert'
 import esbuild from 'esbuild'
 import { existsSync } from 'fs'
@@ -57,19 +57,19 @@ export class Plugin {
       `Invalid ${this.type} ${this.path}, it's not exists.`,
     )
 
-    let pkg = null
+    let pkgJSON = null as unknown as PkgJSON
     let isPkgEntry = false
     const pkgJSONPath = pkgUp.sync({ cwd: this.path }) as string
 
     if (pkgJSONPath) {
-      pkg = require(pkgJSONPath)
+      pkgJSON = require(pkgJSONPath)
       isPkgEntry =
-        winPath(join(dirname(pkgJSONPath), pkg.main || 'index.js')) ===
+        winPath(join(dirname(pkgJSONPath), pkgJSON.main || 'index.js')) ===
         winPath(this.path)
     }
 
-    this.id = this.getId({ pkg, isPkgEntry, pkgJSONPath })
-    this.key = this.getKey({ pkg, isPkgEntry })
+    this.id = this.getId({ pkgJSON, isPkgEntry, pkgJSONPath })
+    this.key = this.getKey({ pkgJSON, isPkgEntry })
     this.apply = () => {
       register.register({
         implementor: esbuild,
@@ -103,22 +103,20 @@ export class Plugin {
   }
 
   public getId(opts: {
-    pkg: PkgJson
+    pkgJSON: PkgJSON
     isPkgEntry: boolean
     pkgJSONPath: string | null
   }) {
+    const { pkgJSON, isPkgEntry, pkgJSONPath } = opts
     let id = ''
 
-    if (opts.isPkgEntry) {
-      id = opts.pkg.name as string
+    if (isPkgEntry) {
+      id = pkgJSON.name as string
     } else if (winPath(this.path).startsWith(winPath(this._cwd))) {
       id = `./${winPath(relative(this._cwd, this.path))}`
-    } else if (opts.pkgJSONPath) {
+    } else if (pkgJSONPath) {
       id = winPath(
-        join(
-          opts.pkg.name as string,
-          relative(dirname(opts.pkgJSONPath), this.path),
-        ),
+        join(pkgJSON.name as string, relative(dirname(pkgJSONPath), this.path)),
       )
     } else {
       id = winPath(this.path)
@@ -129,7 +127,8 @@ export class Plugin {
     return id
   }
 
-  public getKey(opts: { pkg: PkgJson; isPkgEntry: boolean }) {
+  public getKey(opts: { pkgJSON: PkgJSON; isPkgEntry: boolean }) {
+    const { pkgJSON, isPkgEntry } = opts
     // e.g.
     // initial-state -> initialState
     // webpack.css-loader -> webpack.cssLoader
@@ -140,9 +139,9 @@ export class Plugin {
         .join('.')
     }
 
-    if (opts.isPkgEntry) {
+    if (isPkgEntry) {
       return nameToKey(
-        Plugin.stripNoneUmiScope(opts.pkg.name as string).replace(
+        Plugin.stripNoneUmiScope(pkgJSON.name as string).replace(
           RE[this.type],
           '',
         ),
