@@ -68,8 +68,8 @@ importers:
 
   packages/create:
     specifiers:
-      '@eljs/service': 0.8.0-beta.5
-      '@eljs/utils': 0.8.0-beta.5
+      '@eljs/service': 0.8.0-beta.6
+      '@eljs/utils': 0.8.0-beta.6
       '@types/glob': ^7.2.0
       '@types/prettier': ^2.7.0
       glob: ^8.0.3
@@ -88,8 +88,8 @@ importers:
 
   packages/release:
     specifiers:
-      '@eljs/changelog-preset': 0.8.0-beta.5
-      '@eljs/utils': 0.8.0-beta.5
+      '@eljs/changelog-preset': 0.8.0-beta.6
+      '@eljs/utils': 0.8.0-beta.6
       '@types/conventional-changelog': ^3.1.1
       '@types/glob': ^7.2.0
       '@types/js-yaml': ^4.0.5
@@ -120,7 +120,7 @@ importers:
 
   packages/service:
     specifiers:
-      '@eljs/utils': 0.8.0-beta.5
+      '@eljs/utils': 0.8.0-beta.6
       '@types/hash-sum': ^1.0.0
       esbuild: ^0.15.5
       hash-sum: ^2.0.0
