@@ -1,6 +1,6 @@
 {
   "name": "@eljs/release",
-  "version": "0.8.0-beta.4",
+  "version": "0.8.0-beta.5",
   "description": "release npm package easily",
   "keywords": [
     "eljs",
@@ -27,8 +27,8 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@eljs/changelog-preset": "0.8.0-beta.4",
-    "@eljs/utils": "0.8.0-beta.4",
+    "@eljs/changelog-preset": "0.8.0-beta.5",
+    "@eljs/utils": "0.8.0-beta.5",
     "@types/conventional-changelog": "^3.1.1",
     "@types/glob": "^7.2.0",
     "@types/js-yaml": "^4.0.5",
