@@ -1,11 +1,7 @@
-## 0.8.0-beta.1 (2022-08-24)
+## 0.8.0-beta.2 (2022-08-25)
 
-**Note:** Version bump only for package eljs* fix(create): type error ([993041f](https://github.com/chnliquan/eljs/commit/993041f))
+**Note:** Version bump only for package eljs* fix(release): get pkg paths ([6d85f76](https://github.com/chnliquan/eljs/commit/6d85f76))
 
-**Note:** Version bump only for package eljs* fix(service): type error ([7c53a65](https://github.com/chnliquan/eljs/commit/7c53a65))
-
-**Note:** Version bump only for package eljs* feat(release): support multi workspace ([d301fbd](https://github.com/chnliquan/eljs/commit/d301fbd))
-
-**Note:** Version bump only for package eljs* feat(release): support pnpm no git check ([9b0dce1](https://github.com/chnliquan/eljs/commit/9b0dce1))
+**Note:** Version bump only for package eljs* chore: release script ([53db291](https://github.com/chnliquan/eljs/commit/53db291))
 
 **Note:** Version bump only for package eljs
