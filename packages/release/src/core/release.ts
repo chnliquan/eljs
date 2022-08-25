@@ -313,3 +313,16 @@ async function publish(opts: {
     )
   }
 }
+
+;(async () => {
+  try {
+    const a = '123'
+    const d = {}
+    await run(`cnpm -v`)
+    console.log(a, d)
+  } catch (err) {
+    logger.printErrorAndExit(
+      'sync cnpm need install `cnpm` first or you can sync manually by https://npmmirror.com/sync/<package-name>.',
+    )
+  }
+})()

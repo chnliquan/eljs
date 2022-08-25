@@ -4,8 +4,8 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Current File",
-      "runtimeExecutable": "/usr/local/bin/node",
+      "name": "Active File",
+      "runtimeExecutable": "/Users/ender/.nvm/versions/node/v16.15.0/bin/node",
       "program": "${workspaceRoot}/node_modules/ts-node/dist/bin.js",
       "windows": {
         "program": "${workspaceFolder}/node_modules/ts-node/bin/ts-node"
@@ -17,7 +17,7 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Jest Current File",
+      "name": "Jest Active File",
       "runtimeExecutable": "/usr/local/bin/node",
       "program": "${workspaceFolder}/node_modules/.bin/jest",
       "windows": {
@@ -30,7 +30,7 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "release",
+      "name": "eljs release",
       "runtimeExecutable": "/usr/local/bin/node",
       "program": "${workspaceRoot}/node_modules/ts-node/dist/bin.js",
       "windows": {
@@ -48,7 +48,7 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "gen",
+      "name": "eljs gen",
       "runtimeExecutable": "/usr/local/bin/node",
       "program": "${workspaceRoot}/node_modules/ts-node/dist/bin.js",
       "windows": {
