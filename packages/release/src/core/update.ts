@@ -44,6 +44,7 @@ export function updateVersions(opts: {
   })
 
   const publishPkgDirs: string[] = []
+  const publishPkgNames: string[] = []
 
   // 2. update all packages with monorepo
   if (pkgPaths.length > 0) {
@@ -61,6 +62,7 @@ export function updateVersions(opts: {
 
       if (!pkgJSON.private) {
         publishPkgDirs.push(pkgDir)
+        publishPkgNames.push(pkgJSON.name as string)
       }
     })
 
@@ -73,7 +75,7 @@ export function updateVersions(opts: {
       })
     })
 
-    return publishPkgDirs
+    return { publishPkgDirs, publishPkgNames }
   }
 }
 

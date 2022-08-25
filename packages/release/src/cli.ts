@@ -17,18 +17,22 @@ function cli() {
       '-v, --version',
       'Output the current version.',
     )
-    .option('-t, --repo-type <repo-type>', 'Publish type, github or gitlab.')
-    .option('-u, --repo-url <repo-url>', 'Github repo url to release.')
-    .option(
-      '-p, --changelog-preset <changelog-preset>',
-      'Customize conventional changelog preset.',
-    )
     .option(
       '--target-version <target-version>',
       'Target release version.',
       checkVersion,
     )
-    .option('--git-checks', 'Check whether the current branch is release brach')
+    .option(
+      '--git-checks',
+      'Check whether the current branch is release brach.',
+    )
+    .option('--sync-cnpm', 'Sync to cnpm when publish done.')
+    .option('--repo-type <repo-type>', 'Publish type, github or gitlab.')
+    .option('--repo-url <repo-url>', 'Github repo url to release.')
+    .option(
+      '--changelog-preset <changelog-preset>',
+      'Customize conventional changelog preset.',
+    )
     .option('--latest', 'Generate latest changelog')
 
   program.commands.forEach(c => c.on('--help', () => console.log()))

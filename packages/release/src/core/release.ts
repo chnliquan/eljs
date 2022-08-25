@@ -44,19 +44,21 @@ export async function release(opts: Options): Promise<void> {
   const { pkgJSON, pkgPaths } = await init(cwd)
 
   const defaultOptions: Options = {
-    changelogPreset: '@eljs/changelog-preset',
-    repoUrl: pkgJSON?.repository?.url || '',
-    latest: true,
     gitChecks: true,
+    syncCnpm: false,
+    repoUrl: pkgJSON?.repository?.url || '',
+    changelogPreset: '@eljs/changelog-preset',
+    latest: true,
   }
 
   const {
-    changelogPreset,
-    latest,
+    targetVersion: customVersion,
+    gitChecks,
+    syncCnpm,
     repoType: customRepoType,
     repoUrl,
-    gitChecks,
-    targetVersion: customVersion,
+    changelogPreset,
+    latest,
     beforeUpdateVersion,
     beforeChangelog,
   } = Object.assign(defaultOptions, opts)
@@ -87,7 +89,7 @@ export async function release(opts: Options): Promise<void> {
 
   // update all package versions and inter-dependencies
   step('Updating versions ...')
-  const publishPkgDirs = updateVersions({
+  const publishPkgInfo = updateVersions({
     rootDir: cwd,
     pkgPaths,
     version: targetVersion,
@@ -120,12 +122,16 @@ export async function release(opts: Options): Promise<void> {
   // publish package
   await publish({
     version: targetVersion,
-    publishPkgDirs: publishPkgDirs || [cwd],
+    publishPkgDirs: publishPkgInfo?.publishPkgDirs || [cwd],
     gitChecks,
     changelog,
     repoType,
     repoUrl,
   })
+
+  if (syncCnpm) {
+    await sync(publishPkgInfo?.publishPkgNames || [pkgJSON.name as string])
+  }
 }
 
 async function init(cwd: string) {
@@ -314,15 +320,17 @@ async function publish(opts: {
   }
 }
 
-;(async () => {
+async function sync(publishPkgNames: string[]) {
   try {
-    const a = '123'
-    const d = {}
     await run(`cnpm -v`)
-    console.log(a, d)
   } catch (err) {
     logger.printErrorAndExit(
       'sync cnpm need install `cnpm` first or you can sync manually by https://npmmirror.com/sync/<package-name>.',
     )
   }
-})()
+
+  step('Sync cnpm ...')
+  for (const pkgName of publishPkgNames) {
+    await run(`cnpm sync ${pkgName}`)
+  }
+}

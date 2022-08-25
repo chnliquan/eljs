@@ -4,12 +4,13 @@ export type ChangelogConfig = conventionalChangelog.Options['config']
 
 export interface Options {
   cwd?: string
-  gitChecks?: boolean
   targetVersion?: string
+  gitChecks?: boolean
+  syncCnpm?: boolean
   repoType?: 'github' | 'gitlab'
   repoUrl?: string
-  latest?: boolean
   changelogPreset?: string
+  latest?: boolean
 
   beforeUpdateVersion?: (version: string) => Promise<void>
   beforeChangelog?: () => Promise<void>
