@@ -36,7 +36,7 @@ export async function generateChangelog(opts: {
     stream.on('data', chunk => {
       try {
         let data: string = chunk.toString()
-        console.log('data', data)
+
         if (data.indexOf('###') === -1) {
           data = data.replace(
             /\n+/g,
