@@ -7,8 +7,8 @@ import { assert } from './utils'
 const skipTests = argv.skipTests
 const skipBuild = argv.skipBuild
 
-main().catch(err => {
-  console.error(err)
+main().catch((err: Error) => {
+  console.error(`release error: ${err.message}`)
   process.exit(1)
 })
 
