@@ -1,8 +1,8 @@
 import { argv } from 'zx'
 import 'zx/globals'
-import { release, step } from '../packages/release/src/index'
+import { release, resolveBin, step } from '../packages/release/src/index'
 
-import { assert, bin } from './utils'
+import { assert } from './utils'
 
 const skipTests = argv.skipTests
 const skipBuild = argv.skipBuild
@@ -20,7 +20,7 @@ async function main(): Promise<void> {
   // run tests before release
   step('Running tests ...')
   if (!skipTests) {
-    await $`${bin('jest')} --clearCache`
+    await $`${resolveBin.sync('jest')} --clearCache`
     await $`pnpm test:once --bail --passWithNoTests`
   } else {
     console.log(`(skipped)`)

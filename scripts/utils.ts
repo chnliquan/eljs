@@ -52,10 +52,6 @@ export function fuzzyMatchTarget(
   }
 }
 
-export function bin(name: string): string {
-  return path.resolve(__dirname, '../node_modules/.bin/' + name)
-}
-
 export function isDirectory(file: string): boolean {
   const stats = fs.statSync(file)
   return stats.isDirectory()

@@ -10,6 +10,7 @@ import {
 import githubRelease from 'new-github-release-url'
 import open from 'open'
 import path from 'path'
+import resolveBin from 'resolve-bin'
 import { URL } from 'url'
 
 import { getTargetVersion } from '../prompt'
@@ -321,16 +322,13 @@ async function publish(opts: {
 }
 
 async function sync(publishPkgNames: string[]) {
-  try {
-    await run(`cnpm -v`)
-  } catch (err) {
-    logger.printErrorAndExit(
-      'sync cnpm need install `cnpm` first or you can sync manually by https://npmmirror.com/sync/<package-name>.',
-    )
-  }
+  const cnpm = resolveBin.sync('cnpm')
 
   step('Sync cnpm ...')
   for (const pkgName of publishPkgNames) {
-    await run(`cnpm sync ${pkgName}`)
+    await run(`${cnpm} sync ${pkgName}`, {
+      verbose: false,
+    })
+    logger.done(`Sync ${chalk.cyanBright.bold(`${pkgName}`)} to cnpm.`)
   }
 }
