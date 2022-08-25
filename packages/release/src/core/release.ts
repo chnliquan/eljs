@@ -12,7 +12,6 @@ import open from 'open'
 import path from 'path'
 import { URL } from 'url'
 
-import { getTargetVersion } from '../prompt'
 import { Options } from '../types'
 import { getPkgPaths } from '../utils/pkg'
 import {
@@ -22,7 +21,6 @@ import {
   isRcVersion,
 } from '../utils/version'
 import { generateChangelog } from './changelog'
-import { updateLock, updateVersions } from './update'
 
 export const step = logger.step('Release')
 
@@ -64,38 +62,46 @@ export async function release(opts: Options): Promise<void> {
     customRepoType || (repoUrl?.includes('github') ? 'github' : 'gitlab')
 
   // check git status
-  await gitCheck(gitChecks)
+  // await gitCheck(gitChecks)
 
-  // check registry
-  await registryCheck({
-    repoType,
-    repoUrl,
-    pkgRegistry: pkgJSON?.publishConfig?.registry,
-  })
+  // // check registry
+  // await registryCheck({
+  //   repoType,
+  //   repoUrl,
+  //   pkgRegistry: pkgJSON?.publishConfig?.registry,
+  // })
 
-  // bump version
-  step('Bump version ...')
-  const targetVersion = await getTargetVersion({
-    pkgJSON: pkgJSON as Required<PkgJSON>,
-    isMonorepo: pkgPaths.length > 0,
-    customVersion,
-  })
+  // // bump version
+  // step('Bump version ...')
+  // const targetVersion = await getTargetVersion({
+  //   pkgJSON: pkgJSON as Required<PkgJSON>,
+  //   isMonorepo: pkgPaths.length > 0,
+  //   customVersion,
+  // })
 
-  if (typeof beforeUpdateVersion === 'function') {
-    await beforeUpdateVersion(targetVersion)
-  }
+  // if (typeof beforeUpdateVersion === 'function') {
+  //   await beforeUpdateVersion(targetVersion)
+  // }
 
-  // update all package versions and inter-dependencies
-  step('Updating versions ...')
-  const publishPkgDirs = updateVersions({
-    rootDir: cwd,
-    pkgPaths,
-    version: targetVersion,
-  })
+  // // update all package versions and inter-dependencies
+  // step('Updating versions ...')
+  // const publishPkgDirs = updateVersions({
+  //   rootDir: cwd,
+  //   pkgPaths,
+  //   version: targetVersion,
+  // })
 
-  if (typeof beforeChangelog === 'function') {
-    await beforeChangelog()
-  }
+  // // update pnpm-lock.yaml or package-lock.json
+  // step('Updating lockfile...')
+  // await updateLock({
+  //   isMonorepo: pkgPaths.length > 0,
+  //   version: targetVersion,
+  //   rootDir: cwd,
+  // })
+
+  // if (typeof beforeChangelog === 'function') {
+  //   await beforeChangelog()
+  // }
 
   // generate changelog
   step(`Generating changelog ...`)
@@ -106,26 +112,18 @@ export async function release(opts: Options): Promise<void> {
     cwd,
   })
 
-  // update pnpm-lock.yaml or package-lock.json
-  step('Updating lockfile...')
-  updateLock({
-    isMonorepo: pkgPaths.length > 0,
-    version: targetVersion,
-    rootDir: cwd,
-  })
-
   // commit git changes
-  await commit(targetVersion)
+  // await commit(targetVersion)
 
-  // publish package
-  await publish({
-    version: targetVersion,
-    publishPkgDirs: publishPkgDirs || [cwd],
-    gitChecks,
-    changelog,
-    repoType,
-    repoUrl,
-  })
+  // // publish package
+  // await publish({
+  //   version: targetVersion,
+  //   publishPkgDirs: publishPkgDirs || [cwd],
+  //   gitChecks,
+  //   changelog,
+  //   repoType,
+  //   repoUrl,
+  // })
 }
 
 async function init(cwd: string) {
