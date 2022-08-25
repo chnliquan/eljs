@@ -1,6 +1,7 @@
 {
   "name": "@eljs/changelog-preset",
-  "version": "0.8.0-beta.1",
+  "version": "0.8.0-beta.4",
+  "private": true,
   "description": "eljs release default changelog preset",
   "keywords": [
     "eljs",
@@ -15,8 +16,8 @@
     "type": "git",
     "url": "https://github.com/chnliquan/eljs"
   },
-  "author": "liquan",
   "license": "MIT",
+  "author": "liquan",
   "main": "index.js",
   "types": "lib/index.d.ts",
   "files": [
@@ -27,10 +28,6 @@
     "writer-opts.js",
     "templates"
   ],
-  "scripts": {
-    "dev": "tsc --watch",
-    "build": "tsc"
-  },
   "dependencies": {
     "compare-func": "^2.0.0",
     "q": "^1.5.1"

@@ -93,6 +93,14 @@ export async function release(opts: Options): Promise<void> {
     version: targetVersion,
   })
 
+  // update pnpm-lock.yaml or package-lock.json
+  step('Updating lockfile...')
+  await updateLock({
+    isMonorepo: pkgPaths.length > 0,
+    version: targetVersion,
+    rootDir: cwd,
+  })
+
   if (typeof beforeChangelog === 'function') {
     await beforeChangelog()
   }
@@ -104,14 +112,6 @@ export async function release(opts: Options): Promise<void> {
     latest,
     pkgName: pkgJSON.name as string,
     cwd,
-  })
-
-  // update pnpm-lock.yaml or package-lock.json
-  step('Updating lockfile...')
-  updateLock({
-    isMonorepo: pkgPaths.length > 0,
-    version: targetVersion,
-    rootDir: cwd,
   })
 
   // commit git changes

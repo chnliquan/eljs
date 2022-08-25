@@ -1,6 +1,6 @@
 {
   "name": "eljs",
-  "version": "0.8.0-beta.1",
+  "version": "0.8.0-beta.4",
   "private": true,
   "description": "Nodejs utility monorepo",
   "repository": {
@@ -10,7 +10,7 @@
   "license": "MIT",
   "author": "liquan",
   "scripts": {
-    "add-owner": "tsx scripts/npm-add-owner",
+    "add-owner": "tsx scripts/add-owner",
     "boot": "tsx scripts/bootstrap",
     "build": "turbo run build",
     "coverage": "codecov",

@@ -42,7 +42,7 @@
         "--files",
         "${workspaceRoot}/packages/release/bin/release.js"
       ],
-      "cwd": "/Users/ender/workspace/technology/pnpm-test",
+      "cwd": "${workspaceRoot}",
       "console": "integratedTerminal"
     },
     {

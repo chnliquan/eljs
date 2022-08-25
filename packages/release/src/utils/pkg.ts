@@ -1,3 +1,4 @@
+import { existsSync } from '@eljs/utils'
 import fs from 'fs'
 import glob from 'glob'
 import yaml from 'js-yaml'
@@ -15,13 +16,14 @@ export function getPkgPaths(cwd = process.cwd()) {
 
     if (doc.packages?.length) {
       doc.packages.forEach(matcher => {
+        matcher = matcher.replace(/\/\*+$/, '/*')
         if (matcher.endsWith('/*')) {
           const partialPkgPaths = glob.sync(matcher, {
             cwd,
             ignore: '*/*.*',
           })
           pkgPaths.push(...partialPkgPaths)
-        } else {
+        } else if (existsSync(path.resolve(cwd, matcher))) {
           pkgPaths.push(matcher)
         }
       })

@@ -13,7 +13,6 @@ export async function generateChangelog(opts: {
   const { pkgName, changelogPreset, latest = true, cwd = process.cwd() } = opts
   const CHANGELOG = path.join(cwd, 'CHANGELOG.md')
   const LATESTLOG = path.join(cwd, 'LATESTLOG.md')
-
   let hasError = false
 
   return new Promise((resolve, reject) => {
@@ -37,7 +36,7 @@ export async function generateChangelog(opts: {
     stream.on('data', chunk => {
       try {
         let data: string = chunk.toString()
-
+        console.log('data', data)
         if (data.indexOf('###') === -1) {
           data = data.replace(
             /\n+/g,
