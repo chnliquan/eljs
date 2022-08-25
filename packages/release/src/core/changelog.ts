@@ -14,7 +14,7 @@ export async function generateChangelog(opts: {
   const CHANGELOG = path.join(cwd, 'CHANGELOG.md')
   const LATESTLOG = path.join(cwd, 'LATESTLOG.md')
   let hasError = false
-
+  console.log('changelogPreset', changelogPreset)
   return new Promise((resolve, reject) => {
     let config
 
