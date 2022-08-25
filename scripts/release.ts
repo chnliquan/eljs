@@ -36,5 +36,6 @@ async function main(): Promise<void> {
 
   release({
     gitChecks: false,
+    syncCnpm: true,
   })
 }
