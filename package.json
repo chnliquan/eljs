@@ -10,7 +10,7 @@
   "license": "MIT",
   "author": "liquan",
   "scripts": {
-    "add-owner": "tsx scripts/npm-add-owner",
+    "add-owner": "tsx scripts/add-owner",
     "boot": "tsx scripts/bootstrap",
     "build": "turbo run build",
     "coverage": "codecov",
