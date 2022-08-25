@@ -53,6 +53,7 @@ export async function generateChangelog(opts: {
           changelog = '# ChangeLog \n\n' + data
         }
 
+        console.log(CHANGELOG, changelog)
         fs.writeFileSync(CHANGELOG, changelog)
 
         if (!latest) {
