@@ -13,9 +13,12 @@ import { CreateOpts, TemplateInfo } from '../types'
 import { Download } from './download'
 import Generator from './generator'
 
-export function objectToArray(obj: Record<string, any>, valueIsNumber = false) {
+export function objectToArray(
+  obj: Record<string, unknown>,
+  valueIsNumber = false,
+) {
   return Object.keys(obj).map(key => {
-    const title = obj[key]
+    const title = obj[key] as string
     return {
       title,
       value: valueIsNumber ? Number(key) : key,
@@ -42,8 +45,9 @@ export class Create {
   public constructor(opts: CreateOpts) {
     assert(
       opts.template || opts.templateConfig || opts.templateInfo,
-      `请传入\`templateConfig\`,\`templateInfo\`,\`template\`之一的配置项`,
+      `请传入 \`templateConfig\`, \`templateInfo\`, \`template\` 之一的配置项`,
     )
+
     this._opts = opts
 
     if (opts.cwd) {
@@ -67,6 +71,8 @@ export class Create {
 
   public async run(projectName: string) {
     try {
+      const name =
+        projectName === '.' ? path.relative('../', this.cwd) : projectName
       const targetDir = path.resolve(this.cwd, projectName)
       const override = await this._checkTargetDir(targetDir)
 
@@ -78,15 +84,15 @@ export class Create {
 
       const generator = new Generator({
         isLocalTemplate: !!this._localTemplatePath,
-        projectName,
+        projectName: name,
         targetDir,
         cwd: this.cwd,
         isGenSchema: this._opts.schema,
       })
 
       await generator.create(templatePath)
-    } catch (err: any) {
-      logger.error(err.message)
+    } catch (err: unknown) {
+      logger.error((err as Error).message)
       process.exit(1)
     }
   }

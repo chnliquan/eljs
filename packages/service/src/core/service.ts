@@ -160,7 +160,7 @@ export class Service {
 
   protected getProxyProps(opts?: {
     serviceProps: string[]
-    staticProps: Record<string, any>
+    staticProps: Record<string, unknown>
   }) {
     const { serviceProps = [], staticProps = Object.create(null) } = opts || {}
     return {
@@ -173,7 +173,7 @@ export class Service {
         utils,
         ...staticProps,
       },
-    } as { serviceProps: string[]; staticProps: Record<string, any> }
+    } as { serviceProps: string[]; staticProps: Record<string, unknown> }
   }
 
   public async initPreset(opts: {
@@ -193,8 +193,8 @@ export class Service {
   public async applyPlugins<T>(opts: {
     key: string
     type?: ApplyPluginsType
-    initialValue?: any
-    args?: any
+    initialValue?: unknown
+    args?: unknown
   }): Promise<typeof opts.initialValue | T> {
     let { type } = opts
 
@@ -370,7 +370,7 @@ export interface ServicePluginAPI {
   /**
    * 注册插件预设
    */
-  registerPlugins: (plugins: (Plugin | Record<string, any>)[]) => void
+  registerPlugins: (plugins: (Plugin | Record<string, unknown>)[]) => void
 
   /**
    * 插件执行类型枚举

@@ -40,7 +40,7 @@ export class Plugin {
    * 插件执行函数
    */
   public apply: () => (
-    ...args: any[]
+    ...args: unknown[]
   ) => PluginReturnType | Promise<PluginReturnType>
   /**
    * 插件是否可以执行
@@ -80,9 +80,11 @@ export class Plugin {
       let ret
       try {
         ret = require(this.path)
-      } catch (e: any) {
+      } catch (e: unknown) {
         throw new Error(
-          `Register ${this.type} ${this.path} failed, since ${e.message}`,
+          `Register ${this.type} ${this.path} failed, since ${
+            (e as Error).message
+          }`,
         )
       } finally {
         register.restore()
@@ -92,13 +94,13 @@ export class Plugin {
     }
   }
 
-  public merge(opts: { key?: string; enableBy?: any }) {
+  public merge(opts: { key?: string; enableBy?: unknown }) {
     if (opts.key) {
       this.key = opts.key
     }
 
     if (opts.enableBy) {
-      this.enableBy = opts.enableBy
+      this.enableBy = opts.enableBy as Plugin['enableBy']
     }
   }
 
