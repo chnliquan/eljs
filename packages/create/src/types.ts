@@ -33,10 +33,6 @@ export interface CreateOpts {
    */
   templateInfo?: TemplateInfo
   /**
-   * 模版配置（不同场景的多个模版）
-   */
-  templateConfig?: TemplateConfig
-  /**
    * 当前路径
    */
   cwd?: string
@@ -45,23 +41,6 @@ export interface CreateOpts {
    */
   schema?: boolean
 }
-
-export interface TemplateConfigWithAppType {
-  /**
-   * 模版场景
-   */
-  appType: Record<string, string>
-  /**
-   * 模版集合
-   */
-  templates: Record<string, Record<string, TemplateInfo>>
-}
-
-export type TemplateConfigWithoutAppType = TemplateInfo[]
-
-export type TemplateConfig =
-  | TemplateConfigWithAppType
-  | TemplateConfigWithoutAppType
 
 export interface AppData {
   /**

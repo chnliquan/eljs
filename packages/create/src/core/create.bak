@@ -1,4 +1,11 @@
-import { chalk, confirm, isDirectory, logger } from '@eljs/utils'
+import {
+  chalk,
+  confirm,
+  isArray,
+  isDirectory,
+  logger,
+  prompts,
+} from '@eljs/utils'
 import assert from 'assert'
 import { existsSync, readdirSync } from 'fs'
 import path from 'path'
@@ -37,10 +44,9 @@ export class Create {
 
   public constructor(opts: CreateOpts) {
     assert(
-      opts.template || opts.templateInfo,
-      `请传入 \`templateInfo\` 或者 \`template\``,
+      opts.template || opts.templateConfig || opts.templateInfo,
+      `请传入\`templateConfig\`,\`templateInfo\`,\`template\`之一的配置项`,
     )
-
     this._opts = opts
 
     if (opts.cwd) {
@@ -54,14 +60,16 @@ export class Create {
     return this._cwd
   }
 
+  public get templateConfig() {
+    return this._opts.templateConfig
+  }
+
   public get templateInfo() {
     return this._opts.templateInfo
   }
 
   public async run(projectName: string) {
     try {
-      const name =
-        projectName === '.' ? path.relative('../', this.cwd) : projectName
       const targetDir = path.resolve(this.cwd, projectName)
       const override = await this._checkTargetDir(targetDir)
 
@@ -73,15 +81,15 @@ export class Create {
 
       const generator = new Generator({
         isLocalTemplate: !!this._localTemplatePath,
-        projectName: name,
+        projectName,
         targetDir,
         cwd: this.cwd,
         isGenSchema: this._opts.schema,
       })
 
       await generator.create(templatePath)
-    } catch (err: unknown) {
-      logger.error((err as Error).message)
+    } catch (err: any) {
+      logger.error(err.message)
       process.exit(1)
     }
   }
@@ -127,12 +135,87 @@ export class Create {
     return true
   }
 
+  private _formatTemplate(template: Record<string, TemplateInfo>) {
+    return Object.keys(template).map(key => {
+      const title = template[key].description
+      return {
+        title,
+        value: key,
+      }
+    })
+  }
+
+  private async _getTemplateInfo() {
+    if (this.templateInfo) {
+      return this.templateInfo
+    }
+
+    if (isArray(this.templateConfig)) {
+      const { templateId } = await prompts(
+        {
+          type: 'select',
+          name: 'templateId',
+          message: '选择模板',
+          choices: this.templateConfig.map((templateInfo, index) => ({
+            title: templateInfo.description,
+            value: index,
+          })),
+        },
+        {
+          onCancel() {
+            throw new Error(chalk.red('✖') + ' Operation cancelled')
+          },
+        },
+      )
+      return this.templateConfig[templateId]
+    } else if (this.templateConfig) {
+      const { appType, templates } = this.templateConfig
+      const choices = objectToArray(appType)
+
+      const { appType: selectedAppType, templateId } = await prompts(
+        [
+          {
+            type: 'select',
+            name: 'appType',
+            message: '请选择场景',
+            choices,
+          },
+          {
+            type: 'select',
+            name: 'templateId',
+            message: '请选择模板',
+            choices: (prev: string) => this._formatTemplate(templates[prev]),
+          },
+        ],
+        {
+          onCancel() {
+            throw new Error(chalk.red('✖') + ' Operation cancelled')
+          },
+        },
+      )
+
+      assert(selectedAppType, '请选择场景')
+      assert(templateId, '请选择模板')
+
+      const templateInfo =
+        this.templateConfig.templates[selectedAppType][templateId]
+
+      assert(
+        templateInfo,
+        `当前选择的场景：${appType}，模板Id：${templateId} 未找到对应的模板配置`,
+      )
+
+      return templateInfo
+    }
+  }
+
   private async _getTemplatePath() {
     if (this._localTemplatePath) {
       return this._localTemplatePath
     }
 
-    const download = new Download(this.templateInfo as TemplateInfo)
+    const templateInfo = await this._getTemplateInfo()
+    const download = new Download(templateInfo as TemplateInfo)
     return download.download()
   }
 }

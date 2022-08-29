@@ -30,7 +30,7 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "eljs release",
+      "name": "Release",
       "runtimeExecutable": "/usr/local/bin/node",
       "program": "${workspaceRoot}/node_modules/ts-node/dist/bin.js",
       "windows": {
@@ -48,7 +48,7 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "eljs gen",
+      "name": "Gen",
       "runtimeExecutable": "/usr/local/bin/node",
       "program": "${workspaceRoot}/node_modules/ts-node/dist/bin.js",
       "windows": {
@@ -56,6 +56,31 @@
       },
       "args": ["-O", "{\"module\": \"commonjs\"}", "--files", "bin/gen.js"],
       "cwd": "${workspaceRoot}/packages/generate",
+      "console": "integratedTerminal"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Create Template",
+      "runtimeExecutable": "/Users/ender/.nvm/versions/node/v16.15.0/bin/node",
+      "program": "${workspaceRoot}/node_modules/ts-node/dist/bin.js",
+      "windows": {
+        "program": "${workspaceFolder}/node_modules/ts-node/bin/ts-node"
+      },
+      "args": [
+        "-O",
+        "{\"module\": \"commonjs\"}",
+        "--files",
+        "${file}",
+        "tempalate",
+        "-c",
+        "${workspaceFolder}/packages/create-template/config.js"
+        // "-t",
+        // "web",
+        // "-n",
+        // "monorepo"
+      ],
+      "cwd": "${workspaceRoot}",
       "console": "integratedTerminal"
     }
   ]

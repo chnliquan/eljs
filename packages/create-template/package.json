@@ -1,0 +1,37 @@
+{
+  "name": "@eljs/create-template",
+  "version": "0.8.0",
+  "description": "@eljs/create-template",
+  "keywords": [
+    "eljs",
+    "create-template"
+  ],
+  "homepage": "https://github.com/chnliquan/eljs/tree/master/packages/create-template#readme",
+  "bugs": {
+    "url": "https://github.com/chnliquan/eljs/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chnliquan/eljs"
+  },
+  "license": "MIT",
+  "author": "liquan",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "bin": {
+    "create-template": "bin/create-template.js"
+  },
+  "files": [
+    "lib",
+    "bin"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@eljs/create": "0.8.0",
+    "@eljs/utils": "0.8.0",
+    "commander": "^9.4.0"
+  }
+}
