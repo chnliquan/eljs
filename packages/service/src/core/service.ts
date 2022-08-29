@@ -193,8 +193,8 @@ export class Service {
   public async applyPlugins<T>(opts: {
     key: string
     type?: ApplyPluginsType
-    initialValue?: unknown
-    args?: unknown
+    initialValue?: any
+    args?: any
   }): Promise<typeof opts.initialValue | T> {
     let { type } = opts
 

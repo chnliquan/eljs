@@ -124,7 +124,7 @@ export class Plugin {
       id = winPath(this.path)
     }
 
-    id = id.replace('@eljs/generator/lib/core', '@@')
+    id = id.replace('@eljs/lib/core', '@@')
     id = id.replace(/\.js$/, '')
     return id
   }
