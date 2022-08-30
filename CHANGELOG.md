@@ -1,5 +1,16 @@
 # ChangeLog 
 
+## [0.9.2-beta.3](https://github.com/chnliquan/eljs/compare/v0.9.2-beta.2...v0.9.2-beta.3) (2022-08-30)
+
+
+### 🐛 Bug Fixes
+
+* **create:** pass utils ([a59653e](https://github.com/chnliquan/eljs/commit/a59653ee0c963c9a01292db24dfc80d7ec146674))
+
+
+
+ 
+
 ## [0.9.2-beta.2](https://github.com/chnliquan/eljs/compare/v0.9.2-beta.1...v0.9.2-beta.2) (2022-08-30)
 
 **Note:** Version bump only for package eljs 
