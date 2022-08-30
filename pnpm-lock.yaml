@@ -72,8 +72,8 @@ importers:
       '@eljs/utils': 0.9.0
       '@types/glob': ^7.2.0
       '@types/prettier': ^2.7.0
+      dayjs: ^1.11.5
       glob: ^8.0.3
-      moment: ^2.29.4
       prettier: ^2.7.1
       sort-package-json: ^1.57.0
     dependencies:
@@ -81,8 +81,8 @@ importers:
       '@eljs/utils': link:../utils
       '@types/glob': 7.2.0
       '@types/prettier': 2.7.0
+      dayjs: 1.11.5
       glob: 8.0.3
-      moment: 2.29.4
       prettier: 2.7.1
       sort-package-json: 1.57.0
 
@@ -2590,6 +2590,10 @@ packages:
 
   /dateformat/3.0.3:
     resolution: {integrity: sha512-jyCETtSl3VMZMWeRo7iY1FL19ges1t55hMo5yaam4Jrsm5EPL89UQkoQRyiI+Yf4k8r2ZpdngkV8hr1lIdjb3Q==}
+    dev: false
+
+  /dayjs/1.11.5:
+    resolution: {integrity: sha512-CAdX5Q3YW3Gclyo5Vpqkgpj8fSdLQcRuzfX6mC6Phy0nfJ0eGYOeS7m4mt2plDWLAtA4TqTakvbboHvUxfe4iA==}
     dev: false
 
   /debug/2.6.9:

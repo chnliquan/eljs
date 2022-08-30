@@ -7,8 +7,8 @@ import {
   prompts,
 } from '@eljs/utils'
 import { execSync } from 'child_process'
+import dayjs from 'dayjs'
 import { writeFileSync } from 'fs'
-import moment from 'moment'
 import { basename, join } from 'path'
 import { Api } from '../../types'
 
@@ -37,9 +37,9 @@ export default (api: Api) => {
     const { name, email } = getUserAccount()
     const gitUrl = getGitUrl(api.target)
     const { href: gitHref = '' } = normalizeGitRepo(gitUrl)
-    const year = moment().format('YYYY')
-    const date = moment().format('YYYY-MM-DD')
-    const dateTime = moment().format('YYYY-MM-DD hh:mm:ss')
+    const year = dayjs().format('YYYY')
+    const date = dayjs().format('YYYY-MM-DD')
+    const dateTime = dayjs().format('YYYY-MM-DD hh:mm:ss')
     const dirname = basename(api.target)
 
     let registry: string

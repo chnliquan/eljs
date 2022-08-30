@@ -74,7 +74,7 @@ export class GenerateService extends Service {
 
     super({
       ...opts,
-      presets: [require.resolve('./preset'), ...presets],
+      presets: [require.resolve('../internal'), ...presets],
       plugins: [...plugins],
     })
     this.cliVersion = require('../package.json').version
