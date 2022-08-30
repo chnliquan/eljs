@@ -1,5 +1,4 @@
 import {
-  camelCase,
   chalk,
   getGitUrl,
   getUserAccount,
@@ -52,20 +51,18 @@ export default (api: Api) => {
         'https://registry.npmjs.org'
     }
 
-    const shortName = memo.name.replace(/^@[\s\S]+\//, '')
-
     return {
-      author: name,
-      email,
-      gitUrl,
-      gitHref,
-      registry,
-      year,
-      date,
-      dateTime,
-      dirname,
-      shortName,
-      camelCaseName: camelCase(shortName),
+      ...{
+        author: name,
+        email,
+        gitUrl,
+        gitHref,
+        registry,
+        year,
+        date,
+        dateTime,
+        dirname,
+      },
       ...memo,
     }
   })

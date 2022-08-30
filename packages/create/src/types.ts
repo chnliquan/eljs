@@ -58,6 +58,47 @@ export interface AppData {
   [key: string]: any
 }
 
+export interface Prompts {
+  /**
+   * 项目作者
+   */
+  author: string
+  /**
+   * 邮箱
+   */
+  email: string
+  /**
+   * git url 地址，git@github.com:chnliquan/eljs.git
+   */
+  gitUrl: string
+  /**
+   * git href 地址，https://github.com/chnliquan/eljs
+   */
+  gitHref: string
+  /**
+   * npm 仓库源
+   */
+  registry: string
+  /**
+   * 创建时对应的年，YYYY
+   */
+  year: string
+  /**
+   * 创建时对应的日期，YYYY-MM-DD
+   */
+  date: string
+  /**
+   * 创建时对应的时间，YYYY-MM-DD hh:mm:ss
+   */
+  dateTime: string
+  /**
+   * 创建时使用的文件夹名称
+   */
+  dirname: string
+
+  [property: string]: any
+}
+
 export interface Paths {
   /**
    * 当前执行路径

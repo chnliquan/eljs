@@ -7,7 +7,12 @@ import {
   ServiceOpts,
   ServicePluginAPI,
 } from '@eljs/service'
-import utils, { logger, prompts, RenderTemplateOptions } from '@eljs/utils'
+import utils, {
+  logger,
+  PkgJSON,
+  prompts,
+  RenderTemplateOptions,
+} from '@eljs/utils'
 import {
   AppData,
   CopyDirectory,
@@ -17,6 +22,7 @@ import {
   GenerateConfig,
   GenerateServiceStage,
   Paths,
+  Prompts,
 } from '../types'
 import { getPresetsAndPlugins } from './config'
 
@@ -59,11 +65,11 @@ export class GenerateService extends Service {
   /**
    * 用户输入
    */
-  public prompts: Record<string, any> = Object.create(null)
+  public prompts: Prompts = Object.create(null)
   /**
    * 项目的 package.json 对象
    */
-  public pkg: Record<string, any> = {}
+  public pkgJSON: PkgJSON = {}
   /**
    * cli版本
    */
@@ -77,7 +83,7 @@ export class GenerateService extends Service {
       presets: [require.resolve('../internal'), ...presets],
       plugins: [...plugins],
     })
-    this.cliVersion = require('../package.json').version
+    this.cliVersion = require('../../package.json').version
   }
 
   public async run(opts: { target: string; args?: Record<string, any> }) {
