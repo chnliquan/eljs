@@ -94,6 +94,18 @@ export default (api: Api) => {
     },
   })
 
+  api.register({
+    key: 'onGenerateDone',
+    stage: Infinity,
+    fn() {
+      api.utils.logger.done(
+        `🎉  Created project ${chalk.green.bold(
+          api.appData.projectName,
+        )} successfully.`,
+      )
+    },
+  })
+
   api.registerMethod({
     name: 'installDeps',
     fn() {

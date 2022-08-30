@@ -3,9 +3,13 @@ import assert from 'assert'
 import { existsSync } from 'fs'
 import { AsyncSeriesWaterfallHook } from 'tapable'
 import {
+  AppData,
   ApplyEvent,
+  ApplyModify,
   ApplyPluginsType,
+  Config,
   EnableBy,
+  Paths,
   PluginType,
   ServiceStage,
 } from '../types'
@@ -30,10 +34,6 @@ export interface ServiceOpts {
 
 export class Service {
   /**
-   * 执行阶段
-   */
-  public stage: string = ServiceStage.Uninitialized
-  /**
    * 构造函数配置项
    */
   public opts: ServiceOpts
@@ -41,6 +41,22 @@ export class Service {
    * 当前执行路径
    */
   public cwd: string
+  /**
+   * 执行阶段
+   */
+  public stage: string = ServiceStage.Uninitialized
+  /**
+   * 插件配置项，是否启用可通过 `modifyConfig` 方法修改
+   */
+  public config: Config = Object.create(null)
+  /**
+   * 存储全局数据
+   */
+  public appData: AppData = Object.create(null)
+  /**
+   * 存储项目路径
+   */
+  public paths: Paths = Object.create(null)
   /**
    * 钩子映射表
    */
@@ -153,6 +169,12 @@ export class Service {
             cwd: this.cwd,
           }),
       )
+    }
+
+    // 合并模版配置
+    this.config = {
+      ...this.config,
+      ...opts.plugin.config,
     }
 
     return res
@@ -283,7 +305,9 @@ export class Service {
   }
 
   // TODO：支持传入 extractor
-  public async loadPresetsAndPlugins() {
+  public async run(opts: { target: string; args?: Record<string, any> }) {
+    const { target, args } = opts
+
     this.stage = ServiceStage.Init
 
     const { plugins, presets } = Plugin.getPresetsAndPlugins({
@@ -311,6 +335,35 @@ export class Service {
     while (plugins.length) {
       await this.initPlugin({ plugin: plugins.shift() as Plugin, plugins })
     }
+
+    // applyPlugin modify config
+    this.config = await this.applyPlugins({
+      key: 'modifyConfig',
+      initialValue: this.config,
+      args: {},
+    })
+
+    // applyPlugin modify paths
+    this.paths = await this.applyPlugins({
+      key: 'modifyPaths',
+      initialValue: {
+        cwd: this.cwd,
+        absOutputPath: target,
+      },
+      args: {
+        cwd: this.cwd,
+        args,
+      },
+    })
+
+    // applyPlugin collect app data
+    this.stage = ServiceStage.CollectAppData
+    this.appData = await this.applyPlugins({
+      key: 'modifyAppData',
+      initialValue: {
+        cwd: this.cwd,
+      },
+    })
   }
 
   public isPluginEnable(hook: Hook | string) {
@@ -338,15 +391,45 @@ export class Service {
 }
 
 export interface ServicePluginAPI {
+  // #region 服务自身属性
   /**
    * 当前执行路径
    */
   cwd: typeof Service.prototype.cwd
   /**
-   * 工具函数
+   * 存储全局数据
    */
-  utils: typeof utils
+  appData: typeof Service.prototype.appData
+  /**
+   * 项目路径
+   */
+  paths: Required<typeof Service.prototype.paths>
+  // #endregion
 
+  // #region 插件钩子
+  /**
+   * 修改用户业务配置，用于控制插件启用或者其它业务逻辑
+   */
+  modifyConfig: ApplyModify<Config, null>
+  /**
+   * 修改项目路径
+   */
+  modifyPaths: ApplyModify<typeof Service.prototype.paths, null>
+  /**
+   * 修改应用数据
+   */
+  modifyAppData: ApplyModify<typeof Service.prototype.appData, null>
+  /**
+   * 应用检查事件
+   */
+  onCheck: ApplyEvent<null>
+  /**
+   * 应用启动事件
+   */
+  onStart: ApplyEvent<null>
+  // #endregion
+
+  // #region 插件和服务方法
   /**
    * 执行插件
    */
@@ -356,14 +439,6 @@ export interface ServicePluginAPI {
    */
   isPluginEnable: typeof Service.prototype.isPluginEnable
   /**
-   * 应用检查事件
-   */
-  onCheck: ApplyEvent<null>
-  /**
-   * 应用启动事件
-   */
-  onStart: ApplyEvent<null>
-  /**
    * 注册预设
    */
   registerPresets: (presets: string[]) => void
@@ -371,7 +446,13 @@ export interface ServicePluginAPI {
    * 注册插件预设
    */
   registerPlugins: (plugins: (Plugin | Record<string, unknown>)[]) => void
+  // #endregion
 
+  // #region 静态属性
+  /**
+   * 工具函数
+   */
+  utils: typeof utils
   /**
    * 插件执行类型枚举
    */
@@ -384,4 +465,5 @@ export interface ServicePluginAPI {
    * 插件类型枚举
    */
   PluginType: typeof PluginType
+  // #endregion
 }

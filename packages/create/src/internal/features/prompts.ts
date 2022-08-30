@@ -1,15 +1,10 @@
-import {
-  chalk,
-  getGitUrl,
-  getUserAccount,
-  normalizeGitRepo,
-  prompts,
-} from '@eljs/utils'
+import { chalk, prompts } from '@eljs/utils'
 import { execSync } from 'child_process'
 import dayjs from 'dayjs'
 import { writeFileSync } from 'fs'
-import { basename, join } from 'path'
+import { join } from 'path'
 import { Api } from '../../types'
+import { author, email, getGitHref, getGitUrl } from '../const'
 
 export default (api: Api) => {
   api.modifyPrompts(async (memo, { questions }) => {
@@ -33,13 +28,11 @@ export default (api: Api) => {
   })
 
   api.modifyPrompts(memo => {
-    const { name, email } = getUserAccount()
     const gitUrl = getGitUrl(api.target)
-    const { href: gitHref = '' } = normalizeGitRepo(gitUrl)
+    const gitHref = getGitHref(api.target, memo.gitUrl)
     const year = dayjs().format('YYYY')
     const date = dayjs().format('YYYY-MM-DD')
     const dateTime = dayjs().format('YYYY-MM-DD hh:mm:ss')
-    const dirname = basename(api.target)
 
     let registry: string
 
@@ -53,7 +46,7 @@ export default (api: Api) => {
 
     return {
       ...{
-        author: name,
+        author,
         email,
         gitUrl,
         gitHref,
@@ -61,7 +54,6 @@ export default (api: Api) => {
         year,
         date,
         dateTime,
-        dirname,
       },
       ...memo,
     }

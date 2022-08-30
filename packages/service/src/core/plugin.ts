@@ -37,6 +37,10 @@ export class Plugin {
    */
   public key: string
   /**
+   * 插件配置项
+   */
+  public config: Record<string, any> = Object.create(null)
+  /**
    * 插件执行函数
    */
   public apply: () => (

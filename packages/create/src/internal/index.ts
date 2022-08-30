@@ -5,6 +5,7 @@ export default () => ({
     require.resolve('./features/built-in'),
     require.resolve('./features/generator'),
     require.resolve('./features/prompts'),
+    require.resolve('./features/questions'),
     require.resolve('./features/render'),
   ],
 })

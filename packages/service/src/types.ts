@@ -1,8 +1,45 @@
+import { NpmClientEnum } from '@eljs/utils'
+
 export enum ServiceStage {
   Uninitialized = 'uninitialized',
   Init = 'init',
   InitPresets = 'initPresets',
   InitPlugins = 'initPlugins',
+  CollectAppData = 'collectAppData',
+}
+
+export interface Config {
+  [property: string]: any
+}
+
+export interface Paths {
+  /**
+   * 当前执行路径
+   */
+  cwd: string
+  /**
+   * 项目生成输出路径
+   */
+  absOutputPath?: string
+
+  [property: string]: any
+}
+
+export interface AppData {
+  /**
+   * 项目名
+   */
+  projectName?: string
+  /**
+   * 当前版本
+   */
+  version?: string
+  /**
+   * NPM 客户端
+   */
+  npmClient?: NpmClientEnum
+
+  [property: string]: any
 }
 
 export interface PluginReturnType {

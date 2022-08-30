@@ -1,8 +1,8 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
 import {
   ApplyAdd,
   ApplyEvent,
   ApplyModify,
+  Paths,
   Service,
   ServiceOpts,
   ServicePluginAPI,
@@ -10,14 +10,12 @@ import {
 import * as utils from '@eljs/utils'
 import { logger, PkgJSON, prompts, RenderTemplateOptions } from '@eljs/utils'
 import {
-  AppData,
   CopyDirectory,
   CopyFileOpts,
   CopyTplOpts,
   ExtendPackageOpts,
   GenerateConfig,
   GenerateServiceStage,
-  Paths,
   Prompts,
 } from '../types'
 import { getPresetsAndPlugins } from './config'
@@ -43,14 +41,6 @@ export class GenerateService extends Service {
    */
   public args: Record<string, any> = Object.create(null)
   /**
-   * 存储全局数据
-   */
-  public appData: AppData = Object.create(null)
-  /**
-   * 存储项目路径
-   */
-  public paths: Paths = Object.create(null)
-  /**
    * 执行阶段
    */
   public stage = GenerateServiceStage.Uninitialized
@@ -65,7 +55,7 @@ export class GenerateService extends Service {
   /**
    * 项目的 package.json 对象
    */
-  public pkgJSON: PkgJSON = {}
+  public pkgJSON: PkgJSON = Object.create(null)
   /**
    * cli版本
    */
@@ -79,19 +69,12 @@ export class GenerateService extends Service {
       presets: [require.resolve('../internal'), ...presets],
       plugins: [...plugins],
     })
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     this.cliVersion = require('../../package.json').version
   }
 
   public async run(opts: { target: string; args?: Record<string, any> }) {
-    await this.loadPresetsAndPlugins()
-    const { target, args } = opts
-
-    // 修改业务配置
-    this.config = await this.applyPlugins({
-      key: 'modifyConfig',
-      initialValue: this.config,
-      args: {},
-    })
+    await super.run(opts)
 
     this.stage = GenerateServiceStage.Prompting
 
@@ -116,28 +99,6 @@ export class GenerateService extends Service {
       key: 'modifyPrompts',
       initialValue: {},
       args: { questions },
-    })
-
-    // 修改项目路径
-    this.paths = await this.applyPlugins({
-      key: 'modifyPaths',
-      initialValue: {
-        cwd: this.cwd,
-        absOutputPath: target,
-      },
-      args: {
-        cwd: this.cwd,
-        args,
-      },
-    })
-
-    // applyPlugin collect app data
-    this.stage = GenerateServiceStage.CollectAppData
-    this.appData = await this.applyPlugins({
-      key: 'modifyAppData',
-      initialValue: {
-        cwd: this.cwd,
-      },
     })
 
     // applyPlugin onCheck
@@ -192,6 +153,7 @@ export class GenerateService extends Service {
 }
 
 export interface GenerateServicePluginAPI extends ServicePluginAPI {
+  // #region 服务自身属性
   /**
    * 目标路径
    */
@@ -217,47 +179,18 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
    */
   config: typeof GenerateService.prototype.config
   /**
-   * 工具函数
+   * 命令行版本
    */
-  utils: typeof utils
-  /**
-   * 转换文件前缀 处理文件名的边界情况
-   */
-  convertFilePrefix: (rawPath: string) => string
-  /**
-   * 复制文件
-   */
-  copyFile: (opts: CopyFileOpts) => void
-  /**
-   * 将文件从模板文件复制到目录文件
-   */
-  copyTpl: (opts: CopyTplOpts) => void
-  /**
-   * 将文件夹从模板文件夹复制到目标文件夹
-   */
-  copyDirectory: (opts: CopyDirectory) => void
-  /**
-   * 将模板文件渲染到目标文件对象中
-   */
-  render: (
-    path: string,
-    data: Record<string, any>,
-    opts?: RenderTemplateOptions,
-  ) => Promise<void>
-  /**
-   * 更新 package.json
-   */
-  extendPackage: (opts: ExtendPackageOpts) => void
-  /**
-   * 在当前工程下解析一个路径
-   */
-  resolve: (...paths: string[]) => string
-  /**
-   * 安装依赖
-   */
-  installDeps: () => void
+  cliVersion: string
+  // #endregion
+
+  // #region 插件钩子
   /**
    * 修改用户业务配置，用于控制插件启用或者其它业务逻辑
+   */
+  modifyConfig: ApplyModify<GenerateConfig, null>
+  /**
+   * 修改项目路径
    */
   modifyPaths: ApplyModify<typeof GenerateService.prototype.paths, null>
   /**
@@ -294,9 +227,51 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
    * 生成文件完成事件
    */
   onGenerateDone: ApplyEvent<null>
+  // #endregion
 
+  // #region 插件工具方法
+  /**
+   * 转换文件前缀 处理文件名的边界情况
+   */
+  convertFilePrefix: (rawPath: string) => string
+  /**
+   * 复制文件
+   */
+  copyFile: (opts: CopyFileOpts) => void
+  /**
+   * 将文件从模板文件复制到目录文件
+   */
+  copyTpl: (opts: CopyTplOpts) => void
+  /**
+   * 将文件夹从模板文件夹复制到目标文件夹
+   */
+  copyDirectory: (opts: CopyDirectory) => void
+  /**
+   * 将模板文件渲染到目标文件对象中
+   */
+  render: (
+    path: string,
+    data: Record<string, any>,
+    opts?: RenderTemplateOptions,
+  ) => Promise<void>
+  /**
+   * 更新 package.json
+   */
+  extendPackage: (opts: ExtendPackageOpts) => void
+  /**
+   * 在当前工程下解析一个路径
+   */
+  resolve: (...paths: string[]) => string
+  /**
+   * 安装依赖
+   */
+  installDeps: () => void
+  // #endregion
+
+  // #region 静态属性
   /**
    * 服务执行阶段类型枚举
    */
   Stage: typeof GenerateServiceStage
+  // #endregion
 }

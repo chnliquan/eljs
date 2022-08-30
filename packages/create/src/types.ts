@@ -1,5 +1,5 @@
-import { PluginAPI } from '@eljs/service'
-import { NpmClientEnum, PkgJSON, RenderTemplateOptions } from '@eljs/utils'
+import { Config, PluginAPI } from '@eljs/service'
+import { PkgJSON, RenderTemplateOptions } from '@eljs/utils'
 import { GenerateService, GenerateServicePluginAPI } from './core/service'
 
 export type TemplateType = 'npm' | 'git' | 'local'
@@ -40,22 +40,6 @@ export interface CreateOpts {
    * 是否生成 schema
    */
   schema?: boolean
-}
-
-export interface AppData {
-  /**
-   * 项目名
-   */
-  projectName?: string
-  /**
-   * 当前版本
-   */
-  version?: string
-  /**
-   * NPM 客户端
-   */
-  npmClient?: NpmClientEnum
-  [key: string]: any
 }
 
 export interface Prompts {
@@ -99,32 +83,16 @@ export interface Prompts {
   [property: string]: any
 }
 
-export interface Paths {
-  /**
-   * 当前执行路径
-   */
-  cwd: string
-  /**
-   * 项目生成输出路径
-   */
-  absOutputPath?: string
-}
-
-export interface GenerateConfig {
-  /**
-   * 启用生成成功提示
-   */
-  generatorDoneTip?: boolean
+export interface GenerateConfig extends Config {
   /**
    *
-   * 启用 默认问询 包含 npm 客户端选择, 项目名称, 描述
+   * 是否启用默认问询
    */
   defaultPrompts?: boolean
   /**
-   * 启用git 初始化逻辑
+   * 是否启用 git 初始化
    */
   gitInit?: boolean
-  [key: string]: any
 }
 
 export enum GenerateServiceStage {
@@ -133,9 +101,9 @@ export enum GenerateServiceStage {
   Init = 'init',
   InitPresets = 'initPresets',
   InitPlugins = 'initPlugins',
+  CollectAppData = 'collectAppData',
   // #endregion service stage
   Prompting = 'prompting',
-  CollectAppData = 'collectAppData',
   OnCheck = 'onCheck',
   OnStart = 'onStart',
 }
