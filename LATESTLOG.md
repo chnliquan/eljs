@@ -1,9 +1,10 @@
-## [Changes](https://github.com/chnliquan/eljs/compare/v0.9.0...v0.9.1) (2022-08-30)
+## [0.9.2-beta.0](https://github.com/chnliquan/eljs/compare/v0.9.1...v0.9.2-beta.0) (2022-08-30)
 
 
 ### 🐛 Bug Fixes
 
-* **create:** internal presets ([9dffd26](https://github.com/chnliquan/eljs/commit/9dffd264e04d657773db8e737f51b01f66232853))
+* **create:** cli version ([d86e225](https://github.com/chnliquan/eljs/commit/d86e225b313118424f48eaf8d2837748704a3404))
+* **create:** pkg json ([519e2c1](https://github.com/chnliquan/eljs/commit/519e2c1dc136546e5467a543ab562921453d3315))
 
 
 
