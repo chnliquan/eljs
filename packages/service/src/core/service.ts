@@ -248,7 +248,10 @@ export class Service {
         const tAdd = new AsyncSeriesWaterfallHook(['memo'])
 
         for (const hook of hooks) {
-          if (!this.isPluginEnable(hook)) continue
+          if (!this.isPluginEnable(hook)) {
+            continue
+          }
+
           tAdd.tapPromise(
             {
               name: hook.plugin.key,
@@ -268,7 +271,9 @@ export class Service {
         const tModify = new AsyncSeriesWaterfallHook(['memo'])
 
         for (const hook of hooks) {
-          if (!this.isPluginEnable(hook)) continue
+          if (!this.isPluginEnable(hook)) {
+            continue
+          }
           tModify.tapPromise(
             {
               name: hook.plugin.key,
@@ -285,7 +290,10 @@ export class Service {
         const tEvent = new AsyncSeriesWaterfallHook(['_'])
 
         for (const hook of hooks) {
-          if (!this.isPluginEnable(hook)) continue
+          if (!this.isPluginEnable(hook)) {
+            continue
+          }
+
           tEvent.tapPromise(
             {
               name: hook.plugin.key,

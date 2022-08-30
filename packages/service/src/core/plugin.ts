@@ -93,6 +93,9 @@ export class Plugin {
       } finally {
         register.restore()
       }
+
+      this.config = ret.config ?? Object.create(null)
+
       // use the default member for es modules
       return ret.__esModule ? ret.default : ret
     }
