@@ -7,12 +7,8 @@ import {
   ServiceOpts,
   ServicePluginAPI,
 } from '@eljs/service'
-import utils, {
-  logger,
-  PkgJSON,
-  prompts,
-  RenderTemplateOptions,
-} from '@eljs/utils'
+import * as utils from '@eljs/utils'
+import { logger, PkgJSON, prompts, RenderTemplateOptions } from '@eljs/utils'
 import {
   AppData,
   CopyDirectory,
