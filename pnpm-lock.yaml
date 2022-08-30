@@ -68,8 +68,8 @@ importers:
 
   packages/create:
     specifiers:
-      '@eljs/service': 0.9.2-beta.0
-      '@eljs/utils': 0.9.2-beta.0
+      '@eljs/service': 0.9.2-beta.1
+      '@eljs/utils': 0.9.2-beta.1
       '@types/glob': ^7.2.0
       '@types/prettier': ^2.7.0
       dayjs: ^1.11.5
@@ -88,8 +88,8 @@ importers:
 
   packages/create-template:
     specifiers:
-      '@eljs/create': 0.9.2-beta.0
-      '@eljs/utils': 0.9.2-beta.0
+      '@eljs/create': 0.9.2-beta.1
+      '@eljs/utils': 0.9.2-beta.1
       commander: ^9.4.0
     dependencies:
       '@eljs/create': link:../create
@@ -98,8 +98,8 @@ importers:
 
   packages/release:
     specifiers:
-      '@eljs/changelog-preset': 0.9.2-beta.0
-      '@eljs/utils': 0.9.2-beta.0
+      '@eljs/changelog-preset': 0.9.2-beta.1
+      '@eljs/utils': 0.9.2-beta.1
       '@types/conventional-changelog': ^3.1.1
       '@types/glob': ^7.2.0
       '@types/js-yaml': ^4.0.5
@@ -136,7 +136,7 @@ importers:
 
   packages/service:
     specifiers:
-      '@eljs/utils': 0.9.2-beta.0
+      '@eljs/utils': 0.9.2-beta.1
       '@types/hash-sum': ^1.0.0
       esbuild: ^0.15.5
       hash-sum: ^2.0.0
