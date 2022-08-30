@@ -1,33 +1,21 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import { TemplateConfig } from './types'
 
 export const defaultTemplateConfig: TemplateConfig = {
   appType: {
-    web: 'Web 应用',
-    node: 'Node 应用',
+    npm: 'NPM 包',
   },
   templates: {
-    web: {
-      monorepo: {
+    npm: {
+      'template-npm-web': {
         type: 'npm',
-        description: 'Monorepo Web 通用模版',
-        value: '@eljs/template-web-monorepo',
+        description: 'Web 通用模版',
+        value: '@eljs/template-npm-web',
       },
-      polyrepo: {
+      'template-npm-node': {
         type: 'npm',
-        description: 'Polyrepo Web 通用模版',
-        value: '@eljs/template-web-polyrepo',
-      },
-    },
-    node: {
-      monorepo: {
-        type: 'npm',
-        description: 'Monorepo Node 通用模版',
-        value: '@eljs/template-node-monorepo',
-      },
-      polyrepo: {
-        type: 'npm',
-        description: 'Polyrepo Node 通用模版',
-        value: '@eljs/template-node-polyrepo',
+        description: 'Node 通用模版',
+        value: '@eljs/template-npm-node',
       },
     },
   },
