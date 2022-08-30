@@ -122,7 +122,6 @@ export class GenerateService extends Service {
       args: { questions },
     })
 
-    console.log('target', target)
     // 修改项目路径
     this.paths = await this.applyPlugins({
       key: 'modifyPaths',
@@ -188,7 +187,10 @@ export class GenerateService extends Service {
   protected getProxyProps() {
     return super.getProxyProps({
       serviceProps: ['target', 'args', 'paths', 'appData', 'prompts', 'config'],
-      staticProps: {},
+      staticProps: {
+        utils,
+        Stage: GenerateServiceStage,
+      },
     })
   }
 }
