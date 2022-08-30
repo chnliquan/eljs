@@ -22,6 +22,7 @@ importers:
       prettier: ^2.7.1
       prettier-plugin-organize-imports: ^3.0.3
       prettier-plugin-packagejson: ^2.2.18
+      rimraf: ^3.0.2
       strip-ansi: ^6.0.0
       ts-jest: ^27.1.3
       ts-node: ^10.9.1
@@ -49,6 +50,7 @@ importers:
       prettier: 2.7.1
       prettier-plugin-organize-imports: 3.1.0_3izbkkkilozjwunt7rvlqzc6b4
       prettier-plugin-packagejson: 2.2.18_prettier@2.7.1
+      rimraf: 3.0.2
       strip-ansi: 6.0.1
       ts-jest: 27.1.5_ycpvkzuynwz3ym5w5cufqamazq
       ts-node: 10.9.1_vxrnv5tlr43u5xabofdb6zoswy

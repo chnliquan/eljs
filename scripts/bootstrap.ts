@@ -63,8 +63,9 @@ function ensurePkgJson(name: string, shortName: string): void {
       types: `lib/index.d.ts`,
       files: [`lib`],
       scripts: {
-        dev: 'tsc --watch',
         build: 'tsc',
+        clean: 'rimraf lib',
+        dev: 'tsc --watch',
       },
     }
 
