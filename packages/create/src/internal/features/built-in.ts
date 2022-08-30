@@ -53,9 +53,9 @@ export default (api: Api) => {
   api.registerMethod({
     name: 'extendPackage',
     async fn(opts: ExtendPackageOpts) {
-      const pkg = api.service.pkg
-      const toMerge = (isFunction(opts) ? await opts(pkg) : opts) ?? {}
-      api.service.pkg = deepMerge(api.service.pkg, toMerge)
+      const pkgJSON = api.service.pkgJSON
+      const toMerge = (isFunction(opts) ? await opts(pkgJSON) : opts) ?? {}
+      api.service.pkgJSON = deepMerge(api.service.pkgJSON, toMerge)
     },
   })
 
@@ -72,19 +72,23 @@ export default (api: Api) => {
     stage: Number.NEGATIVE_INFINITY,
     fn() {
       const pkgJSONPath = join(api.paths.absOutputPath, 'package.json')
-      let pkg = api.service.pkg
+      let pkgJSON = api.service.pkgJSON
+
       if (existsSync(pkgJSONPath)) {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const originPkg = require(pkgJSONPath)
-        pkg = deepMerge(originPkg, pkg)
+        const originPkgJSON = require(pkgJSONPath)
+        pkgJSON = deepMerge(originPkgJSON, pkgJSON)
       }
 
-      if (Object.keys(pkg).length === 0) {
-        logger.warn('pkg 为空对象, 不生成 package.json')
+      if (Object.keys(pkgJSON).length === 0) {
+        logger.warn('pkgJSON 为空对象, 跳过 package.json 生成')
         return
       }
 
-      writeFileSync(pkgJSONPath, formatPkgJSON(JSON.stringify(pkg, null, 2)))
+      writeFileSync(
+        pkgJSONPath,
+        formatPkgJSON(JSON.stringify(pkgJSON, null, 2)),
+      )
 
       logger.info('Generate package.json')
     },
