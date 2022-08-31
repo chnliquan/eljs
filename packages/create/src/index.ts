@@ -1,3 +1,4 @@
+import './require-hook'
 import { GenerateConfig } from './types'
 
 export { Create } from './core/create'

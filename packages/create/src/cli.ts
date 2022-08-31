@@ -9,7 +9,7 @@ cli().catch((err: Error) => {
 async function cli() {
   const cwd = process.cwd()
   const { _, ...otherArgs } = minimist(process.argv.slice(2))
-  const [projectName = 'template'] = _
+  const [projectName = 'temp'] = _
 
   const create = new Create({
     template: '.',

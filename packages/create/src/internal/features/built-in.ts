@@ -60,14 +60,6 @@ export default (api: Api) => {
   })
 
   api.register({
-    key: 'onGenerateFiles',
-    stage: Number.NEGATIVE_INFINITY,
-    async fn() {
-      console.log(`${chalk.cyan('wait')} - Generate files ing ...`)
-    },
-  })
-
-  api.register({
     key: 'onGenerateDone',
     stage: Number.NEGATIVE_INFINITY,
     fn() {
@@ -81,7 +73,6 @@ export default (api: Api) => {
       }
 
       if (Object.keys(pkgJSON).length === 0) {
-        logger.warn('pkgJSON 为空对象, 跳过 package.json 生成')
         return
       }
 
@@ -89,8 +80,6 @@ export default (api: Api) => {
         pkgJSONPath,
         formatPkgJSON(JSON.stringify(pkgJSON, null, 2)),
       )
-
-      logger.info('Generate package.json')
     },
   })
 

@@ -32,8 +32,8 @@ export default class Generator {
       let presets: string[] = []
       let plugins: string[] = []
 
-      if (isGenConfigExist(cwd)) {
-        const presetsAndPlugins = getPresetsAndPlugins(cwd)
+      if (isGenConfigExist(templatePath)) {
+        const presetsAndPlugins = getPresetsAndPlugins(templatePath)
         presets = presetsAndPlugins.presets
         plugins = presetsAndPlugins.plugins
       } else {
@@ -65,7 +65,7 @@ export default class Generator {
         },
       })
 
-      this._removeTemplate(templatePath)
+      // this._removeTemplate(templatePath)
     }
   }
 

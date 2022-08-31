@@ -31,8 +31,9 @@ export function getPresetsAndPlugins(cwd: string) {
               basedir: cwd,
               extensions: ['.tsx', '.ts', '.mjs', '.jsx', '.js'],
             })
-          } catch (err: any) {
-            logger.error(err.message)
+          } catch (err) {
+            console.log('item', item)
+            logger.error((err as Error).message)
           }
         })
         .filter(Boolean) as string[]

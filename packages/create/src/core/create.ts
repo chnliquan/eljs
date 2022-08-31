@@ -1,4 +1,4 @@
-import { chalk, confirm, isDirectory, logger } from '@eljs/utils'
+import { chalk, confirm, isDirectory, logger, mkdirSync } from '@eljs/utils'
 import assert from 'assert'
 import { existsSync, readdirSync } from 'fs'
 import path from 'path'
@@ -40,7 +40,6 @@ export class Create {
       opts.template || opts.templateInfo,
       `请传入 \`templateInfo\` 或者 \`template\``,
     )
-
     this._opts = opts
 
     if (opts.cwd) {
@@ -63,10 +62,15 @@ export class Create {
       const name =
         projectName === '.' ? path.relative('../', this.cwd) : projectName
       const targetDir = path.resolve(this.cwd, projectName)
-      const override = await this._checkTargetDir(targetDir)
 
-      if (!override) {
-        return
+      if (!existsSync(targetDir)) {
+        mkdirSync(targetDir)
+      } else {
+        const override = await this._checkTargetDir(targetDir)
+
+        if (!override) {
+          return
+        }
       }
 
       const templatePath = await this._getTemplatePath()

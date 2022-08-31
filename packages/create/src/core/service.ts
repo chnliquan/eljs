@@ -18,7 +18,6 @@ import {
   GenerateServiceStage,
   Prompts,
 } from '../types'
-import { getPresetsAndPlugins } from './config'
 
 export interface GenerateServiceOpts extends ServiceOpts {
   /**
@@ -62,12 +61,10 @@ export class GenerateService extends Service {
   public cliVersion = ''
 
   public constructor(opts: GenerateServiceOpts) {
-    const { presets, plugins } = getPresetsAndPlugins(opts.cwd)
-
     super({
       ...opts,
-      presets: [require.resolve('../internal'), ...presets],
-      plugins: [...plugins],
+      presets: [require.resolve('../internal'), ...(opts.presets || [])],
+      plugins: [...(opts.plugins || [])],
     })
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     this.cliVersion = require('../../package.json').version

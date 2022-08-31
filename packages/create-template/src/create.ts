@@ -45,13 +45,11 @@ export class CreateTemplate {
   public async run(projectName: string) {
     const templateInfo = await this._getTemplateInfo()
 
-    console.log('templateInfo', templateInfo)
-    process.exit(0)
     const create = new Create({
       cwd: this.cwd,
       templateInfo,
     })
-    create.run(projectName)
+    await create.run(projectName)
   }
 
   private _formatTemplate(template: Record<string, TemplateInfo>) {
