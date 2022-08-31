@@ -1,0 +1,43 @@
+{
+  "name": "@eljs/create",
+  "version": "0.9.2-beta.5",
+  "description": "@eljs/create",
+  "keywords": [
+    "eljs",
+    "create"
+  ],
+  "homepage": "https://github.com/chnliquan/eljs/tree/master/packages/create#readme",
+  "bugs": {
+    "url": "https://github.com/chnliquan/eljs/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chnliquan/eljs"
+  },
+  "license": "MIT",
+  "author": "liquan",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "bin": {
+    "gen": "bin/gen.js"
+  },
+  "files": [
+    "lib",
+    "bin"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rimraf lib",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@eljs/service": "0.9.2-beta.5",
+    "@eljs/utils": "0.9.2-beta.5",
+    "@types/glob": "^7.2.0",
+    "@types/prettier": "^2.7.0",
+    "dayjs": "^1.11.5",
+    "glob": "^8.0.3",
+    "prettier": "^2.7.1",
+    "sort-package-json": "^1.57.0"
+  }
+}

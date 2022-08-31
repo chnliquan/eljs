@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "baseUrl": "./",
+    "paths": {
+      "@eljs/*": ["packages/*/src"]
+    }
+  }
+}

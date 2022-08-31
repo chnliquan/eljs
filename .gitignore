@@ -1,0 +1,24 @@
+# system
+.DS_Store
+.idea/
+
+# temp
+temp
+*.log
+*.cache
+*.diff
+*.patch
+*.tmp
+.turbo
+.eslintcache
+
+# coverage
+coverage/
+*.lcov
+
+# dependencies
+node_modules/
+
+# others
+lib/
+*.local.*
