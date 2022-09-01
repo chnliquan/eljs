@@ -151,7 +151,7 @@ export class Plugin {
 
     if (isPkgEntry) {
       return nameToKey(
-        Plugin.stripNoneUmiScope(pkgJSON.name as string).replace(
+        Plugin.stripNoneScope(pkgJSON.name as string).replace(
           RE[this.type],
           '',
         ),
@@ -168,10 +168,10 @@ export class Plugin {
   }
 
   public static isPresetOrPlugin(type: PluginType, name: string) {
-    return RE[type].test(Plugin.stripNoneUmiScope(name))
+    return RE[type].test(Plugin.stripNoneScope(name))
   }
 
-  public static stripNoneUmiScope(name: string) {
+  public static stripNoneScope(name: string) {
     if (name.charAt(0) === '@' && !name.startsWith('@eljs/')) {
       name = name.split('/')[1]
     }

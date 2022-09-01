@@ -66,7 +66,7 @@ export class PluginAPI<T extends Service = Service> {
   public registerPresets(source: Plugin[], presets: unknown[]) {
     assert(
       this.service.stage === ServiceStage.InitPresets,
-      `api.registerPresets() failed, it should only used in presets.`,
+      `api.registerPresets() failed, it should only used in presets stage.`,
     )
 
     const plugins = presets.map(
@@ -78,7 +78,7 @@ export class PluginAPI<T extends Service = Service> {
         }),
     )
 
-    source.splice(0, 0, ...plugins)
+    source.unshift(...plugins)
   }
 
   public registerPlugins<T extends string | Plugin>(
@@ -116,7 +116,7 @@ export class PluginAPI<T extends Service = Service> {
     if (this.service.stage === ServiceStage.InitPresets) {
       source.push(...mappedPlugins)
     } else {
-      source.splice(0, 0, ...mappedPlugins)
+      source.unshift(...mappedPlugins)
     }
   }
 
