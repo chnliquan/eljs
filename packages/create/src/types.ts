@@ -40,6 +40,10 @@ export interface CreateOpts {
    * 是否生成 schema
    */
   schema?: boolean
+  /**
+   * 命令行参数
+   */
+  args?: Record<string, any>
 }
 
 export interface Prompts {

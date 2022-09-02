@@ -59,6 +59,7 @@ async function cli() {
 
   return new CreateTemplate({
     ...opts,
+    args: opts,
     templateConfig,
   }).run(program.args[0])
 }

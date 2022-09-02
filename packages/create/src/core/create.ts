@@ -88,6 +88,7 @@ export class Create {
         projectName: name,
         targetDir,
         cwd: this.cwd,
+        args: this._opts.args,
         isGenSchema: this._opts.schema,
       })
 

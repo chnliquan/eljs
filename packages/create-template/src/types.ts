@@ -21,6 +21,10 @@ export interface CreateTemplateOpts {
    * 当前路径
    */
   cwd?: string
+  /**
+   * 命令行参数
+   */
+  args?: Record<string, any>
 }
 
 export interface TemplateConfig {

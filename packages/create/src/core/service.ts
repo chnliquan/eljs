@@ -2,6 +2,7 @@ import {
   ApplyAdd,
   ApplyEvent,
   ApplyModify,
+  Args,
   Paths,
   Service,
   ServiceOpts,
@@ -38,7 +39,7 @@ export class GenerateService extends Service {
   /**
    * 其它执行参数
    */
-  public args: Record<string, any> = Object.create(null)
+  public args!: Args
   /**
    * 执行阶段
    */

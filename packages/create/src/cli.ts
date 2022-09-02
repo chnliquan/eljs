@@ -8,15 +8,16 @@ cli().catch((err: Error) => {
 
 async function cli() {
   const cwd = process.cwd()
-  const { _, ...otherArgs } = minimist(process.argv.slice(2))
-  const [projectName = 'temp'] = _
+  const args = minimist(process.argv.slice(2))
+  const { _, ...otherArgs } = args
 
   const create = new Create({
+    ...otherArgs,
     template: '.',
     force: true,
     cwd,
-    ...otherArgs,
+    args,
   })
 
-  await create.run(projectName)
+  await create.run(_[0] || 'temp')
 }

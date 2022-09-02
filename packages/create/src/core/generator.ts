@@ -8,6 +8,7 @@ export interface GeneratorOptions {
   targetDir: string
   projectName: string
   cwd: string
+  args?: Record<string, any>
   isLocalTemplate?: boolean
   isGenSchema?: boolean
 }
@@ -61,6 +62,7 @@ export default class Generator {
       await gen.run({
         target: targetDir,
         args: {
+          ...(this._opts.args || {}),
           projectName,
         },
       })

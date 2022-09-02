@@ -5,7 +5,7 @@ import { existsSync } from 'fs'
 import sum from 'hash-sum'
 import { basename, dirname, extname, join, relative } from 'path'
 import pkgUp from 'pkg-up'
-import { EnableBy, PluginReturnType, PluginType } from '../types'
+import { Config, EnableBy, PluginReturnType, PluginType } from '../types'
 
 const RE = {
   preset: /^(@eljs\/|eljs-)create-preset-/,
@@ -33,13 +33,13 @@ export class Plugin {
    */
   public id: string
   /**
-   * 插件 Key
+   * 插件 key
    */
   public key: string
   /**
    * 插件配置项
    */
-  public config: Record<string, any> = Object.create(null)
+  public config: Config = Object.create(null)
   /**
    * 插件执行函数
    */

@@ -1,24 +1,43 @@
 {
+  // https://code.visualstudio.com/docs/editor/variables-reference
   "version": "0.2.0",
   "configurations": [
     {
       "type": "node",
       "request": "launch",
-      "name": "Active File",
-      "runtimeExecutable": "/Users/ender/.nvm/versions/node/v16.15.0/bin/node",
-      "program": "${workspaceRoot}/node_modules/ts-node/dist/bin.js",
+      "name": "Active Js File",
+      "runtimeExecutable": "node",
+      "args": ["${file}"],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Active Ts File",
+      "runtimeExecutable": "node",
+      "program": "${workspaceFolder}/node_modules/ts-node/dist/bin.js",
       "windows": {
         "program": "${workspaceFolder}/node_modules/ts-node/bin/ts-node"
       },
-      "args": ["-O", "{\"module\": \"commonjs\"}", "--files", "${file}"],
-      "cwd": "${workspaceRoot}",
+      "args": [
+        "-O",
+        "{\"module\": \"commonjs\"}",
+        "--files",
+        "${file}",
+        "a",
+        "b",
+        "--app-type",
+        "x"
+      ],
+      "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
     },
     {
       "type": "node",
       "request": "launch",
       "name": "Jest Active File",
-      "runtimeExecutable": "/usr/local/bin/node",
+      "runtimeExecutable": "node",
       "program": "${workspaceFolder}/node_modules/.bin/jest",
       "windows": {
         "program": "${workspaceFolder}/node_modules/jest/bin/jest"
@@ -31,8 +50,8 @@
       "type": "node",
       "request": "launch",
       "name": "Release",
-      "runtimeExecutable": "/usr/local/bin/node",
-      "program": "${workspaceRoot}/node_modules/ts-node/dist/bin.js",
+      "runtimeExecutable": "node",
+      "program": "${workspaceFolder}/node_modules/ts-node/dist/bin.js",
       "windows": {
         "program": "${workspaceFolder}/node_modules/ts-node/bin/ts-node"
       },
@@ -40,22 +59,22 @@
         "-O",
         "{\"module\": \"commonjs\"}",
         "--files",
-        "${workspaceRoot}/packages/release/bin/release.js"
+        "${workspaceFolder}/packages/release/bin/release.js"
       ],
-      "cwd": "${workspaceRoot}",
+      "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
     },
     {
       "type": "node",
       "request": "launch",
       "name": "Gen",
-      "runtimeExecutable": "/usr/local/bin/node",
-      "program": "${workspaceRoot}/node_modules/ts-node/dist/bin.js",
+      "runtimeExecutable": "node",
+      "program": "${workspaceFolder}/node_modules/ts-node/dist/bin.js",
       "windows": {
         "program": "${workspaceFolder}/node_modules/ts-node/bin/ts-node"
       },
       "args": ["-O", "{\"module\": \"commonjs\"}", "--files", "bin/gen.js"],
-      "cwd": "${workspaceRoot}/packages/generate",
+      "cwd": "${workspaceFolder}/packages/generate",
       "console": "integratedTerminal"
     },
     {
@@ -64,11 +83,11 @@
       "name": "Create Template",
       "runtimeExecutable": "node",
       "args": [
-        "${workspaceRoot}/packages/create-template/bin/create-template",
+        "${workspaceFolder}/packages/create-template/bin/create-template",
         "temp",
         "-f"
       ],
-      "cwd": "${workspaceRoot}",
+      "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
     }
   ]

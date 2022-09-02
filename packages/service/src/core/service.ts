@@ -7,6 +7,7 @@ import {
   ApplyEvent,
   ApplyModify,
   ApplyPluginsType,
+  Args,
   Config,
   EnableBy,
   Paths,
@@ -44,7 +45,9 @@ export class Service {
   /**
    * 其它执行参数
    */
-  public args: Record<string, any> = Object.create(null)
+  public args: Args = {
+    _: [],
+  }
   /**
    * 执行阶段
    */
@@ -317,10 +320,16 @@ export class Service {
   }
 
   // TODO：支持传入 extractor
-  public async run(opts: { target: string; args?: Record<string, any> }) {
-    const { target, args } = opts
+  public async run(opts: { target: string; args?: any }) {
+    const { target, args = {} } = opts
 
-    this.args = args || {}
+    args._ = args._ || []
+    // shift the command itself
+    if (args._[0] === target) {
+      args._.shift()
+    }
+
+    this.args = args
     this.stage = ServiceStage.Init
 
     const { plugins, presets } = Plugin.getPresetsAndPlugins({

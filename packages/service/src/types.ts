@@ -12,6 +12,11 @@ export interface Config {
   [property: string]: any
 }
 
+export interface Args {
+  _: string[]
+  [property: string]: any
+}
+
 export interface Paths {
   /**
    * 当前执行路径
