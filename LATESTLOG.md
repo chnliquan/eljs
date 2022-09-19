@@ -1,20 +1,15 @@
-## [Changes](https://github.com/chnliquan/eljs/compare/v0.9.2-beta.5...v0.9.2) (2022-09-02)
+## [0.9.3-beta.0](https://github.com/chnliquan/eljs/compare/v0.9.2...v0.9.3-beta.0) (2022-09-19)
 
 
 ### ♻ Code Refactoring
 
-* **service:** use unshfit ([b56684d](https://github.com/chnliquan/eljs/commit/b56684d9a173cc49081ba7ca9accffc2d06139c0))
+* **release:** init package ([0efa16e](https://github.com/chnliquan/eljs/commit/0efa16e5830a89c0c5c19f6a184d687778785163))
 
 
 ### ✨ Features
 
-* **create-template:** modify default template config ([fd99af6](https://github.com/chnliquan/eljs/commit/fd99af6019e6b669b8a65d175f3b160c0413e1c3))
-* **service:** support pass argv ([825aef9](https://github.com/chnliquan/eljs/commit/825aef9523d8fafe50dc784f6485b861cf99c298))
-
-
-### 🐛 Bug Fixes
-
-* **create:** require hook ([82ebc71](https://github.com/chnliquan/eljs/commit/82ebc713a619909abdc912425bf82b942c1398ce))
+* **release:** add reconfirm version ([8896a5b](https://github.com/chnliquan/eljs/commit/8896a5b83f98ee2bf570ef34feacc334cce68893))
+* **release:** check npm ownership ([f4a17be](https://github.com/chnliquan/eljs/commit/f4a17bec0995bf4bc781e5ae368e950a175671b5))
 
 
 
