@@ -1,5 +1,6 @@
 import {
   chalk,
+  confirm,
   execa,
   existsSync,
   logger,
@@ -15,7 +16,7 @@ import { URL } from 'url'
 
 import { getTargetVersion } from '../prompt'
 import { Options } from '../types'
-import { getPkgPaths } from '../utils/pkg'
+import { getPkgPaths, getPublishPkgInfo } from '../utils/pkg'
 import {
   isAlphaVersion,
   isBetaVersion,
@@ -42,12 +43,12 @@ export const step = logger.step('Release')
 export async function release(opts: Options): Promise<void> {
   const { cwd = process.cwd() } = opts
 
-  const { pkgJSON, pkgPaths } = await init(cwd)
+  const { rootPkgJSON, pkgPaths } = await init(cwd)
 
   const defaultOptions: Options = {
     gitChecks: true,
     syncCnpm: false,
-    repoUrl: pkgJSON?.repository?.url || '',
+    repoUrl: rootPkgJSON?.repository?.url || '',
     changelogPreset: '@eljs/changelog-preset',
     latest: true,
   }
@@ -69,20 +70,30 @@ export async function release(opts: Options): Promise<void> {
   // check git status
   await gitCheck(gitChecks)
 
+  const publishPkgInfo = getPublishPkgInfo({
+    cwd,
+    rootPkgJSON,
+    pkgPaths,
+  })
+
   // check registry
   await registryCheck({
     repoType,
     repoUrl,
-    pkgRegistry: pkgJSON?.publishConfig?.registry,
+    pkgRegistry: rootPkgJSON?.publishConfig?.registry,
   })
 
   // bump version
   step('Bump version ...')
   const targetVersion = await getTargetVersion({
-    pkgJSON: pkgJSON as Required<PkgJSON>,
+    pkgJSON: rootPkgJSON,
     isMonorepo: pkgPaths.length > 0,
     customVersion,
   })
+
+  if (!customVersion) {
+    await reconfirm(targetVersion, publishPkgInfo.publishPkgNames)
+  }
 
   if (typeof beforeUpdateVersion === 'function') {
     await beforeUpdateVersion(targetVersion)
@@ -90,7 +101,7 @@ export async function release(opts: Options): Promise<void> {
 
   // update all package versions and inter-dependencies
   step('Updating versions ...')
-  const publishPkgInfo = updateVersions({
+  await updateVersions({
     rootDir: cwd,
     pkgPaths,
     version: targetVersion,
@@ -113,7 +124,7 @@ export async function release(opts: Options): Promise<void> {
   const changelog = await generateChangelog({
     changelogPreset: changelogPreset as string,
     latest,
-    pkgName: pkgJSON.name as string,
+    pkgName: rootPkgJSON.name as string,
     cwd,
   })
 
@@ -131,7 +142,7 @@ export async function release(opts: Options): Promise<void> {
   })
 
   if (syncCnpm) {
-    await sync(publishPkgInfo?.publishPkgNames || [pkgJSON.name as string])
+    await sync(publishPkgInfo?.publishPkgNames || [rootPkgJSON.name as string])
   }
 }
 
@@ -169,8 +180,8 @@ async function init(cwd: string) {
   }
 
   return {
-    pkgJSONPath,
-    pkgJSON,
+    rootPkgJSONPath: pkgJSONPath,
+    rootPkgJSON: pkgJSON as Required<PkgJSON>,
     pkgPaths,
   }
 }
@@ -231,9 +242,43 @@ async function registryCheck(opts: {
     }
   }
 
-  // TODO: check ownership
-  // step('Checking npm ownership ...')
-  // const whoami = (await run('npm whoami')).stdout.trim()
+  step('Checking npm ownership ...')
+  const whoami = (await run('npm whoami')).stdout.trim()
+  console.log('whoami', whoami)
+  // await Promise.all(
+  //   ['umi', '@umijs/core'].map(async pkg => {
+  //     const owners = (await $`npm owner ls ${pkg}`).stdout
+  //       .trim()
+  //       .split('\n')
+  //       .map(line => {
+  //         return line.split(' ')[0]
+  //       })
+  //     assert(owners.includes(whoami), `${pkg} is not owned by ${whoami}`)
+  //   }),
+  // )
+}
+
+async function reconfirm(targetVersion: string, publishPkgNames: string[]) {
+  let confirmMessage = ''
+
+  if (publishPkgNames.length === 1) {
+    confirmMessage = `Are you sure to bump ${chalk.greenBright(
+      publishPkgNames[0],
+    )} to ${chalk.cyanBright(targetVersion)}`
+  } else {
+    console.log(chalk.bold('The package will bump is as follows:'))
+    publishPkgNames.forEach(pkgName =>
+      console.log(` - ${chalk.cyanBright(`${pkgName}@${targetVersion}`)}`),
+    )
+    confirmMessage = 'Are you sure to bump?'
+  }
+
+  const answer = await confirm(confirmMessage)
+
+  if (!answer) {
+    logger.info('Cancel')
+    process.exit(0)
+  }
 }
 
 async function commit(version: string) {

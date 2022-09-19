@@ -1,4 +1,4 @@
-import { existsSync } from '@eljs/utils'
+import { existsSync, PkgJSON, readJSONSync } from '@eljs/utils'
 import fs from 'fs'
 import glob from 'glob'
 import yaml from 'js-yaml'
@@ -33,4 +33,43 @@ export function getPkgPaths(cwd = process.cwd()) {
   }
 
   return pkgPaths
+}
+
+export function getPublishPkgInfo(opts: {
+  cwd: string
+  rootPkgJSON: PkgJSON
+  pkgPaths: string[]
+}) {
+  const { cwd, rootPkgJSON, pkgPaths } = opts
+  const publishPkgDirs: string[] = []
+  const publishPkgNames: string[] = []
+
+  if (pkgPaths.length > 0) {
+    const pkgJSONPaths: string[] = []
+    const pkgJSONs: PkgJSON[] = []
+    const pkgNames: string[] = []
+
+    pkgPaths.forEach(pkgPath => {
+      const pkgDir = path.join(cwd, pkgPath)
+      const pkgJSONPath = path.join(pkgDir, 'package.json')
+      const pkgJSON: PkgJSON = readJSONSync(pkgJSONPath)
+
+      pkgJSONPaths.push(pkgJSONPath)
+      pkgJSONs.push(pkgJSON)
+      pkgNames.push(pkgJSON.name as string)
+
+      if (!pkgJSON.private) {
+        publishPkgDirs.push(pkgDir)
+        publishPkgNames.push(pkgJSON.name as string)
+      }
+    })
+  } else {
+    publishPkgDirs.push(cwd)
+    publishPkgNames.push(rootPkgJSON.name as string)
+  }
+
+  return {
+    publishPkgDirs,
+    publishPkgNames,
+  }
 }

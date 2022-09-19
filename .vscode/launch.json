@@ -59,7 +59,9 @@
         "-O",
         "{\"module\": \"commonjs\"}",
         "--files",
-        "${workspaceFolder}/packages/release/bin/release.js"
+        "${workspaceFolder}/packages/release/bin/release.js",
+        "git-checks",
+        "false"
       ],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
