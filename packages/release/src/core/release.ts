@@ -83,6 +83,9 @@ export async function release(opts: Options): Promise<void> {
     pkgRegistry: rootPkgJSON?.publishConfig?.registry,
   })
 
+  // check ownership
+  await ownershipCheck(publishPkgInfo.publishPkgNames)
+
   // bump version
   step('Bump version ...')
   const targetVersion = await getTargetVersion({
@@ -241,21 +244,24 @@ async function registryCheck(opts: {
       logger.printErrorAndExit(`npm registry is not ${chalk.blue(registry)}`)
     }
   }
+}
 
+async function ownershipCheck(publishPkgNames: string[]) {
   step('Checking npm ownership ...')
+
   const whoami = (await run('npm whoami')).stdout.trim()
-  console.log('whoami', whoami)
-  // await Promise.all(
-  //   ['umi', '@umijs/core'].map(async pkg => {
-  //     const owners = (await $`npm owner ls ${pkg}`).stdout
-  //       .trim()
-  //       .split('\n')
-  //       .map(line => {
-  //         return line.split(' ')[0]
-  //       })
-  //     assert(owners.includes(whoami), `${pkg} is not owned by ${whoami}`)
-  //   }),
-  // )
+  await Promise.all(
+    publishPkgNames.map(async pkgName => {
+      const owners = (await run(`npm owner ls ${pkgName}`)).stdout
+        .trim()
+        .split('\n')
+        .map(line => line.split(' ')[0])
+
+      if (!owners.includes(whoami)) {
+        logger.printErrorAndExit(`${pkgName} is not owned by ${whoami}.`)
+      }
+    }),
+  )
 }
 
 async function reconfirm(targetVersion: string, publishPkgNames: string[]) {
