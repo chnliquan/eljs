@@ -45,18 +45,10 @@ export function getPublishPkgInfo(opts: {
   const publishPkgNames: string[] = []
 
   if (pkgPaths.length > 0) {
-    const pkgJSONPaths: string[] = []
-    const pkgJSONs: PkgJSON[] = []
-    const pkgNames: string[] = []
-
     pkgPaths.forEach(pkgPath => {
       const pkgDir = path.join(cwd, pkgPath)
       const pkgJSONPath = path.join(pkgDir, 'package.json')
       const pkgJSON: PkgJSON = readJSONSync(pkgJSONPath)
-
-      pkgJSONPaths.push(pkgJSONPath)
-      pkgJSONs.push(pkgJSON)
-      pkgNames.push(pkgJSON.name as string)
 
       if (!pkgJSON.private) {
         publishPkgDirs.push(pkgDir)

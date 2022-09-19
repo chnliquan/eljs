@@ -16,7 +16,7 @@ import { URL } from 'url'
 
 import { getTargetVersion } from '../prompt'
 import { Options } from '../types'
-import { getPkgPaths, getPublishPkgInfo } from '../utils/pkg'
+import { getPkgPaths } from '../utils/pkg'
 import {
   isAlphaVersion,
   isBetaVersion,
@@ -41,12 +41,23 @@ export const step = logger.step('Release')
  * 8. Push
  */
 export async function release(opts: Options): Promise<void> {
-  const { cwd = process.cwd() } = opts
+  const { cwd = process.cwd(), gitChecks = true } = opts
 
-  const { rootPkgJSON, pkgPaths } = await init(cwd)
+  // check git status
+  await gitCheck(gitChecks)
+
+  const {
+    rootPkgJSONPath,
+    rootPkgJSON,
+    isMonorepo,
+    pkgNames,
+    pkgJSONPaths,
+    pkgJSONs,
+    publishPkgDirs,
+    publishPkgNames,
+  } = await init(cwd)
 
   const defaultOptions: Options = {
-    gitChecks: true,
     syncCnpm: false,
     repoUrl: rootPkgJSON?.repository?.url || '',
     changelogPreset: '@eljs/changelog-preset',
@@ -55,7 +66,6 @@ export async function release(opts: Options): Promise<void> {
 
   const {
     targetVersion: customVersion,
-    gitChecks,
     syncCnpm,
     repoType: customRepoType,
     repoUrl,
@@ -67,15 +77,6 @@ export async function release(opts: Options): Promise<void> {
   const repoType =
     customRepoType || (repoUrl?.includes('github') ? 'github' : 'gitlab')
 
-  // check git status
-  await gitCheck(gitChecks)
-
-  const publishPkgInfo = getPublishPkgInfo({
-    cwd,
-    rootPkgJSON,
-    pkgPaths,
-  })
-
   // check registry
   await registryCheck({
     repoType,
@@ -84,18 +85,18 @@ export async function release(opts: Options): Promise<void> {
   })
 
   // check ownership
-  await ownershipCheck(publishPkgInfo.publishPkgNames)
+  await ownershipCheck(publishPkgNames)
 
   // bump version
   step('Bump version ...')
   const targetVersion = await getTargetVersion({
     pkgJSON: rootPkgJSON,
-    isMonorepo: pkgPaths.length > 0,
+    isMonorepo,
     customVersion,
   })
 
   if (!customVersion) {
-    await reconfirm(targetVersion, publishPkgInfo.publishPkgNames)
+    await reconfirm(targetVersion, publishPkgNames)
   }
 
   if (typeof beforeUpdateVersion === 'function') {
@@ -105,15 +106,19 @@ export async function release(opts: Options): Promise<void> {
   // update all package versions and inter-dependencies
   step('Updating versions ...')
   await updateVersions({
-    rootDir: cwd,
-    pkgPaths,
+    rootPkgJSONPath,
+    rootPkgJSON,
+    isMonorepo,
+    pkgNames,
+    pkgJSONPaths,
+    pkgJSONs,
     version: targetVersion,
   })
 
   // update pnpm-lock.yaml or package-lock.json
   step('Updating lockfile...')
   await updateLock({
-    isMonorepo: pkgPaths.length > 0,
+    isMonorepo,
     version: targetVersion,
     rootDir: cwd,
   })
@@ -137,7 +142,7 @@ export async function release(opts: Options): Promise<void> {
   // publish package
   await publish({
     version: targetVersion,
-    publishPkgDirs: publishPkgInfo?.publishPkgDirs || [cwd],
+    publishPkgDirs,
     gitChecks,
     changelog,
     repoType,
@@ -145,28 +150,35 @@ export async function release(opts: Options): Promise<void> {
   })
 
   if (syncCnpm) {
-    await sync(publishPkgInfo?.publishPkgNames || [rootPkgJSON.name as string])
+    await sync(publishPkgNames)
   }
 }
 
 async function init(cwd: string) {
-  const pkgJSONPath = path.join(cwd, 'package.json')
+  const rootPkgJSONPath = path.join(cwd, 'package.json')
 
-  if (!existsSync(pkgJSONPath)) {
+  if (!existsSync(rootPkgJSONPath)) {
     logger.printErrorAndExit(
-      `unable to find the ${pkgJSONPath} file, make sure execute the command in the root directory.`,
+      `unable to find the ${rootPkgJSONPath} file, make sure execute the command in the root directory.`,
     )
   }
 
-  const pkgJSON: PkgJSON =
+  const rootPkgJSON: PkgJSON =
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    require(pkgJSONPath)
+    require(rootPkgJSONPath)
 
-  if (!pkgJSON.version) {
-    logger.printErrorAndExit(`can not read version field in ${pkgJSONPath}.`)
+  if (!rootPkgJSON.version) {
+    logger.printErrorAndExit(
+      `can not read version field in ${rootPkgJSONPath}.`,
+    )
   }
 
   const pkgPaths = getPkgPaths(cwd)
+  const pkgJSONPaths: string[] = []
+  const pkgJSONs: PkgJSON[] = []
+  const pkgNames: string[] = []
+  const publishPkgDirs: string[] = []
+  const publishPkgNames: string[] = []
 
   if (pkgPaths.length > 0) {
     try {
@@ -176,16 +188,53 @@ async function init(cwd: string) {
         'monorepo release depend on `pnpm`, please install `pnpm` first.',
       )
     }
+
+    pkgPaths.forEach(pkgPath => {
+      const pkgDir = path.join(cwd, pkgPath)
+      const pkgJSONPath = path.join(pkgDir, 'package.json')
+      const pkgJSON: PkgJSON = readJSONSync(pkgJSONPath)
+
+      pkgJSONPaths.push(pkgJSONPath)
+      pkgJSONs.push(pkgJSON)
+
+      if (!pkgJSON.name) {
+        logger.printErrorAndExit(`can not read name field in ${pkgJSONPath}.`)
+      } else {
+        pkgNames.push(pkgJSON.name)
+      }
+
+      if (!pkgJSON.private) {
+        publishPkgDirs.push(pkgDir)
+        publishPkgNames.push(pkgJSON.name as string)
+      }
+    })
   } else {
-    if (!pkgJSON.name) {
-      logger.printErrorAndExit(`can not read name field in ${pkgJSONPath}.`)
+    if (rootPkgJSON.private) {
+      logger.printErrorAndExit(
+        `can not publish private package ${rootPkgJSONPath}.`,
+      )
     }
+
+    if (!rootPkgJSON.name) {
+      logger.printErrorAndExit(`can not read name field in ${rootPkgJSONPath}.`)
+    }
+
+    pkgNames.push(rootPkgJSON.name as string)
+    pkgJSONPaths.push(rootPkgJSONPath)
+    pkgJSONs.push(rootPkgJSON)
+    publishPkgDirs.push(cwd)
+    publishPkgNames.push(rootPkgJSON.name as string)
   }
 
   return {
-    rootPkgJSONPath: pkgJSONPath,
-    rootPkgJSON: pkgJSON as Required<PkgJSON>,
-    pkgPaths,
+    rootPkgJSONPath: rootPkgJSONPath,
+    rootPkgJSON: rootPkgJSON as Required<PkgJSON>,
+    isMonorepo: pkgPaths.length > 0,
+    pkgNames,
+    pkgJSONPaths,
+    pkgJSONs: pkgJSONs as Required<PkgJSON>[],
+    publishPkgDirs,
+    publishPkgNames,
   }
 }
 

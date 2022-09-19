@@ -27,14 +27,23 @@ export async function updateLock(opts: {
 }
 
 export function updateVersions(opts: {
-  rootDir: string
+  rootPkgJSONPath: string
+  rootPkgJSON: Required<PkgJSON>
+  isMonorepo: boolean
+  pkgNames: string[]
+  pkgJSONPaths: string[]
+  pkgJSONs: Required<PkgJSON>[]
   version: string
-  pkgPaths: string[]
 }) {
-  const { rootDir, version, pkgPaths } = opts
-
-  const rootPkgJSONPath = path.join(rootDir, 'package.json')
-  const rootPkgJSON = readJSONSync(rootPkgJSONPath)
+  const {
+    rootPkgJSONPath,
+    rootPkgJSON,
+    isMonorepo,
+    pkgNames,
+    pkgJSONPaths,
+    pkgJSONs,
+    version,
+  } = opts
 
   // 1. update root package.json
   updatePackage({
@@ -43,30 +52,9 @@ export function updateVersions(opts: {
     version,
   })
 
-  const publishPkgDirs: string[] = []
-  const publishPkgNames: string[] = []
-
   // 2. update all packages with monorepo
-  if (pkgPaths.length > 0) {
-    const pkgJSONPaths: string[] = []
-    const pkgJSONs: PkgJSON[] = []
-    const pkgNames: string[] = []
-
-    pkgPaths.forEach(pkgPath => {
-      const pkgDir = path.join(rootDir, pkgPath)
-      const pkgJSONPath = path.join(pkgDir, 'package.json')
-      const pkgJSON: PkgJSON = readJSONSync(pkgJSONPath)
-      pkgJSONPaths.push(pkgJSONPath)
-      pkgJSONs.push(pkgJSON)
-      pkgNames.push(pkgJSON.name as string)
-
-      if (!pkgJSON.private) {
-        publishPkgDirs.push(pkgDir)
-        publishPkgNames.push(pkgJSON.name as string)
-      }
-    })
-
-    pkgPaths.forEach((_, index) => {
+  if (isMonorepo) {
+    pkgNames.forEach((_, index) => {
       updatePackage({
         pkgJSONPath: pkgJSONPaths[index],
         pkgJSON: pkgJSONs[index],
@@ -74,8 +62,6 @@ export function updateVersions(opts: {
         version,
       })
     })
-
-    return { publishPkgDirs, publishPkgNames }
   }
 }
 
