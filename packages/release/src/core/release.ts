@@ -299,8 +299,9 @@ async function ownershipCheck(publishPkgNames: string[]) {
   step('Checking npm ownership ...')
 
   const whoami = (await run('npm whoami')).stdout.trim()
-  await Promise.all(
-    publishPkgNames.map(async pkgName => {
+
+  for (const pkgName of publishPkgNames) {
+    try {
       const owners = (await run(`npm owner ls ${pkgName}`)).stdout
         .trim()
         .split('\n')
@@ -309,8 +310,15 @@ async function ownershipCheck(publishPkgNames: string[]) {
       if (!owners.includes(whoami)) {
         logger.printErrorAndExit(`${pkgName} is not owned by ${whoami}.`)
       }
-    }),
-  )
+    } catch (err) {
+      if ((err as Error).message.indexOf('Not Found') > -1) {
+        continue
+      }
+
+      logger.error(`${pkgName} ownership is invalid.`)
+      throw new Error((err as Error).message)
+    }
+  }
 }
 
 async function reconfirm(targetVersion: string, publishPkgNames: string[]) {
