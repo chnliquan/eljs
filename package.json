@@ -33,9 +33,10 @@
   "devDependencies": {
     "@commitlint/cli": "^16.2.1",
     "@commitlint/config-conventional": "^16.2.1",
+    "@eljs/create": "workspace:*",
+    "@eljs/release": "workspace:*",
     "@types/jest": "^27.4.1",
     "@types/node": "^17.0.21",
-    "@eljs/create": "workspace:*",
     "@typescript-eslint/eslint-plugin": "^5.33.1",
     "@typescript-eslint/parser": "^5.33.1",
     "codecov": "^3.8.3",
