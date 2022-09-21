@@ -11,7 +11,7 @@ import {
 import * as utils from '@eljs/utils'
 import { logger, PkgJSON, prompts, RenderTemplateOptions } from '@eljs/utils'
 import {
-  CopyDirectory,
+  CopyDirectoryOpts,
   CopyFileOpts,
   CopyTplOpts,
   ExtendPackageOpts,
@@ -229,10 +229,6 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
 
   // #region 插件工具方法
   /**
-   * 转换文件前缀 处理文件名的边界情况
-   */
-  convertFilePrefix: (rawPath: string) => string
-  /**
    * 复制文件
    */
   copyFile: (opts: CopyFileOpts) => void
@@ -243,7 +239,7 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
   /**
    * 将文件夹从模板文件夹复制到目标文件夹
    */
-  copyDirectory: (opts: CopyDirectory) => void
+  copyDirectory: (opts: CopyDirectoryOpts) => void
   /**
    * 将模板文件渲染到目标文件对象中
    */

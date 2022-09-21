@@ -140,7 +140,7 @@ export interface CopyTplOpts extends CopyFileOpts {
   data: Record<string, any>
 }
 
-export interface CopyDirectory extends CopyFileOpts {
+export interface CopyDirectoryOpts extends CopyFileOpts {
   /**
    * 模板渲染需要的参数
    */
