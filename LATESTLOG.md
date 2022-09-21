@@ -1,9 +1,9 @@
-## [0.9.3-beta.1](https://github.com/chnliquan/eljs/compare/v0.9.3-beta.0...v0.9.3-beta.1) (2022-09-20)
+## [0.9.3-beta.2](https://github.com/chnliquan/eljs/compare/v0.9.3-beta.1...v0.9.3-beta.2) (2022-09-21)
 
 
-### 🐛 Bug Fixes
+### ✨ Features
 
-* **release:** catch ownership error ([3d18e66](https://github.com/chnliquan/eljs/commit/3d18e6696a132d5cff3cabc26e5f37583783ac09))
+* **utils:** add generator ([ac8164e](https://github.com/chnliquan/eljs/commit/ac8164eba848bc41380010c67f03ecb14bec4aa3))
 
 
 
