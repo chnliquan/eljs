@@ -17,15 +17,13 @@ function cli() {
       '-v, --version',
       'Output the current version.',
     )
+    .option('--tag <tag>', 'Npm publish tag.')
     .option(
       '--target-version <target-version>',
       'Target release version.',
       checkVersion,
     )
-    .option(
-      '--git-checks',
-      'Check whether the current branch is release brach.',
-    )
+    .option('--no-git-checks', 'Whether check the git.')
     .option('--sync-cnpm', 'Sync to cnpm when publish done.')
     .option('--repo-type <repo-type>', 'Publish type, github or gitlab.')
     .option('--repo-url <repo-url>', 'Github repo url to release.')
@@ -56,13 +54,15 @@ function cli() {
 
   const opts = program.opts()
 
-  if (
-    opts.repoType &&
-    opts.repoType !== 'github' &&
-    opts.repoType !== 'gitlab'
-  ) {
+  if (opts.repoType && !['github', 'gitlab'].includes(opts.repoType)) {
     logger.printErrorAndExit(
       `Expected the --repo-type as github or gitlab, but got ${opts.repoType}.`,
+    )
+  }
+
+  if (opts.tag && !['alpha', 'beta', 'next'].includes(opts.tag)) {
+    logger.printErrorAndExit(
+      `Expected the --tag as alpha beta or next, but got ${opts.tag}.`,
     )
   }
 

@@ -1,5 +1,6 @@
 import { chalk, logger, PkgJSON, prompts } from '@eljs/utils'
 import semver from 'semver'
+import { PublishTag } from './types'
 import {
   getDistTag,
   getReferenceVersion,
@@ -15,8 +16,14 @@ const VERSION_PRE_MAJOR = 'Premajor'
 const VERSION_PRE_MINOR = 'Preminor'
 const VERSION_PRE_PATCH = 'Prepatch'
 
+const tag2TypeMap = {
+  alpha: 'Alpha',
+  beta: 'Beta',
+  next: 'Rc',
+} as const
+
 function generatePreVersionQuestions(
-  type: 'Beta' | 'Alpha' | 'Rc',
+  type: 'Alpha' | 'Beta' | 'Rc',
   suggestions: Record<string, any>,
 ): any[] {
   return [
@@ -46,22 +53,22 @@ function generatePreVersionSuggestion(
   return {
     [VERSION_PRE_MAJOR]: semver.inc(
       referenceVersion,
-      VERSION_PRE_MAJOR.toLowerCase() as semver.ReleaseType,
+      VERSION_PRE_MAJOR.toLocaleLowerCase() as semver.ReleaseType,
       type.toLocaleLowerCase(),
     ),
     [VERSION_PRE_MINOR]: semver.inc(
       referenceVersion,
-      VERSION_PRE_MINOR.toLowerCase() as semver.ReleaseType,
+      VERSION_PRE_MINOR.toLocaleLowerCase() as semver.ReleaseType,
       type.toLocaleLowerCase(),
     ),
     [VERSION_PRE_PATCH]: semver.inc(
       referenceVersion,
-      VERSION_PRE_PATCH.toLowerCase() as semver.ReleaseType,
+      VERSION_PRE_PATCH.toLocaleLowerCase() as semver.ReleaseType,
       type.toLocaleLowerCase(),
     ),
     [VERSION_PRE_RELEASE]: semver.inc(
       referenceVersion,
-      VERSION_PRE_RELEASE.toLowerCase() as semver.ReleaseType,
+      VERSION_PRE_RELEASE.toLocaleLowerCase() as semver.ReleaseType,
       type.toLocaleLowerCase(),
     ),
   }
@@ -70,9 +77,10 @@ function generatePreVersionSuggestion(
 export async function getTargetVersion(opts: {
   pkgJSON: Required<PkgJSON>
   isMonorepo?: boolean
+  tag?: PublishTag
   customVersion?: string
 }): Promise<string> {
-  const { pkgJSON, isMonorepo, customVersion } = opts
+  const { pkgJSON, isMonorepo, tag, customVersion } = opts
 
   if (customVersion) {
     const isExist = await isVersionExist(pkgJSON.name, customVersion)
@@ -198,29 +206,41 @@ export async function getTargetVersion(opts: {
     },
   ]
 
-  let answer = await prompts([
-    {
-      name: 'value',
-      type: 'select',
-      message: 'Please select the version number to be upgraded:',
-      choices,
-    },
-  ])
+  let answer: prompts.Answers<'value'> = {
+    value: '',
+  }
 
-  switch (answer.value) {
-    case 'Beta':
-      answer = await prompts(generatePreVersionQuestions('Beta', suggestions))
-      break
+  if (!tag) {
+    answer = await prompts([
+      {
+        name: 'value',
+        type: 'select',
+        message: 'Please select the version number to be upgraded:',
+        choices,
+      },
+    ])
 
-    case 'Alpha':
-      answer = await prompts(generatePreVersionQuestions('Alpha', suggestions))
-      break
+    switch (answer.value) {
+      case 'Beta':
+        answer = await prompts(generatePreVersionQuestions('Beta', suggestions))
+        break
 
-    case 'Rc':
-      answer = await prompts(generatePreVersionQuestions('Rc', suggestions))
-      break
-    default:
-      break
+      case 'Alpha':
+        answer = await prompts(
+          generatePreVersionQuestions('Alpha', suggestions),
+        )
+        break
+
+      case 'Rc':
+        answer = await prompts(generatePreVersionQuestions('Rc', suggestions))
+        break
+      default:
+        break
+    }
+  } else {
+    answer = await prompts(
+      generatePreVersionQuestions(tag2TypeMap[tag], suggestions),
+    )
   }
 
   return answer.value

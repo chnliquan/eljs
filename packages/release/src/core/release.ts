@@ -15,7 +15,7 @@ import resolveBin from 'resolve-bin'
 import { URL } from 'url'
 
 import { getTargetVersion } from '../prompt'
-import { Options } from '../types'
+import { Options, PublishTag } from '../types'
 import { getPkgPaths } from '../utils/pkg'
 import {
   isAlphaVersion,
@@ -66,6 +66,7 @@ export async function release(opts: Options): Promise<void> {
 
   const {
     targetVersion: customVersion,
+    tag,
     syncCnpm,
     repoType: customRepoType,
     repoUrl,
@@ -92,6 +93,7 @@ export async function release(opts: Options): Promise<void> {
   const targetVersion = await getTargetVersion({
     pkgJSON: rootPkgJSON,
     isMonorepo,
+    tag,
     customVersion,
   })
 
@@ -143,6 +145,7 @@ export async function release(opts: Options): Promise<void> {
   await publish({
     version: targetVersion,
     publishPkgDirs,
+    tag,
     gitChecks,
     changelog,
     repoType,
@@ -369,17 +372,36 @@ async function publish(opts: {
   version: string
   publishPkgDirs: string[]
   changelog: string
+  tag?: PublishTag
   gitChecks?: boolean
   repoType: string
   repoUrl?: string
 }) {
-  const { version, publishPkgDirs, changelog, gitChecks, repoType, repoUrl } =
-    opts
+  const {
+    version,
+    publishPkgDirs,
+    changelog,
+    tag,
+    gitChecks,
+    repoType,
+    repoUrl,
+  } = opts
   const isPnpm = publishPkgDirs.length > 1
+  let publishTag: PublishTag | undefined
+
+  if (tag) {
+    publishTag = tag
+  } else if (isAlphaVersion(version)) {
+    publishTag = 'alpha'
+  } else if (isBetaVersion(version)) {
+    publishTag = 'beta'
+  } else if (isRcVersion(version)) {
+    publishTag = 'next'
+  }
 
   step(`Publishing package ...`)
   for (const pkgDir of publishPkgDirs) {
-    await publishPackage(pkgDir, version)
+    await publishPackage(pkgDir, version, publishTag)
   }
 
   // github release
@@ -394,20 +416,14 @@ async function publish(opts: {
     await open(url)
   }
 
-  async function publishPackage(pkgDir: string, targetVersion: string) {
+  async function publishPackage(
+    pkgDir: string,
+    targetVersion: string,
+    publishTag?: PublishTag,
+  ) {
     const pkgJSON = readJSONSync(path.join(pkgDir, 'package.json'))
-    let releaseTag = ''
-
-    if (isRcVersion(targetVersion)) {
-      releaseTag = 'next'
-    } else if (isAlphaVersion(targetVersion)) {
-      releaseTag = 'alpha'
-    } else if (isBetaVersion(targetVersion)) {
-      releaseTag = 'beta'
-    }
-
     const cmd = isPnpm ? 'pnpm' : 'npm'
-    const tag = releaseTag ? ['--tag', releaseTag] : []
+    const tag = publishTag ? ['--tag', publishTag] : []
 
     const cliArgs = [
       'publish',
