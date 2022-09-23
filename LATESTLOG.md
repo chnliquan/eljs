@@ -1,9 +1,9 @@
-## [0.9.3-beta.2](https://github.com/chnliquan/eljs/compare/v0.9.3-beta.1...v0.9.3-beta.2) (2022-09-21)
+## [Changes](https://github.com/chnliquan/eljs/compare/v0.9.3-beta.2...v0.9.3) (2022-09-23)
 
 
 ### ✨ Features
 
-* **utils:** add generator ([ac8164e](https://github.com/chnliquan/eljs/commit/ac8164eba848bc41380010c67f03ecb14bec4aa3))
+* **release:** support pass publish tag ([c2debdc](https://github.com/chnliquan/eljs/commit/c2debdcc3b76406b6a1ae79f6ab97d26c6643e2d))
 
 
 
