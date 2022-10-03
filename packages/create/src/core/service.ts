@@ -8,7 +8,6 @@ import {
   ServiceOpts,
   ServicePluginAPI,
 } from '@eljs/service'
-import * as utils from '@eljs/utils'
 import { logger, PkgJSON, prompts, RenderTemplateOptions } from '@eljs/utils'
 import {
   CopyDirectoryOpts,
@@ -66,6 +65,14 @@ export class GenerateService extends Service {
       ...opts,
       presets: [require.resolve('../internal'), ...(opts.presets || [])],
       plugins: [...(opts.plugins || [])],
+      proxyPluginApiPropsExtractor() {
+        return {
+          serviceProps: ['target', 'args', 'prompts', 'config'],
+          staticProps: {
+            Stage: GenerateServiceStage,
+          },
+        }
+      },
     })
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     this.cliVersion = require('../../package.json').version
@@ -136,16 +143,6 @@ export class GenerateService extends Service {
 
     await this.applyPlugins({
       key: 'onGenerateDone',
-    })
-  }
-
-  protected getProxyProps() {
-    return super.getProxyProps({
-      serviceProps: ['target', 'args', 'paths', 'appData', 'prompts', 'config'],
-      staticProps: {
-        utils,
-        Stage: GenerateServiceStage,
-      },
     })
   }
 }

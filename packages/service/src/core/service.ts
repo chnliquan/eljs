@@ -63,10 +63,6 @@ export class Service {
    */
   public stage: string = ServiceStage.Uninitialized
   /**
-   * 插件配置项，是否启用可通过 `modifyConfig` 方法修改
-   */
-  public config: Config = {}
-  /**
    * 存储全局数据
    */
   public appData: AppData = {}
@@ -76,6 +72,10 @@ export class Service {
   public paths: Paths = {
     cwd: '',
   }
+  /**
+   * 插件配置项，是否启用可通过 `modifyConfig` 方法修改
+   */
+  public config: Config = {}
   /**
    * 钩子映射表
    */
@@ -138,9 +138,16 @@ export class Service {
     )
 
     // merge proxy props
-    const proxyProps = deepMerge(
+    const proxyPluginApiProps = deepMerge(
       {
-        serviceProps: ['cwd', 'applyPlugins', 'isPluginEnable'],
+        serviceProps: [
+          'cwd',
+          'appData',
+          'paths',
+          'config',
+          'applyPlugins',
+          'isPluginEnable',
+        ],
         staticProps: {
           ApplyPluginsType,
           EnableBy,
@@ -155,7 +162,7 @@ export class Service {
     const proxyPluginAPI = PluginAPI.proxyPluginAPI({
       service: this,
       pluginAPI,
-      ...proxyProps,
+      ...proxyPluginApiProps,
     })
 
     const res: {
@@ -441,6 +448,10 @@ export interface ServicePluginAPI {
    * 项目路径
    */
   paths: Required<typeof Service.prototype.paths>
+  /**
+   * 插件配置项，是否启用可通过 `modifyConfig` 方法修改
+   */
+  config: typeof Service.prototype.config
   // #endregion
 
   // #region 插件钩子

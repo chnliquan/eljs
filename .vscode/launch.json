@@ -68,7 +68,7 @@
         "program": "${workspaceFolder}/node_modules/ts-node/bin/ts-node"
       },
       "args": ["-O", "{\"module\": \"commonjs\"}", "--files", "bin/gen.js"],
-      "cwd": "${workspaceFolder}/packages/generate",
+      "cwd": "${workspaceFolder}/packages/create",
       "console": "integratedTerminal"
     },
     {
