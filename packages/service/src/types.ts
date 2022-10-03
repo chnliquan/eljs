@@ -47,6 +47,25 @@ export interface AppData {
   [property: string]: any
 }
 
+/**
+ * 预设插件提取器
+ */
+export interface PresetsAndPluginsExtractor {
+  (presetsOrPlugins: string[], cwd: string, opts: Record<string, any>): string[]
+}
+
+export interface ProxyPluginApiPropsExtractorReturnType {
+  serviceProps: string[]
+  staticProps: Record<string, any>
+}
+
+/**
+ * 代理属性提取器
+ */
+export interface ProxyPluginApiPropsExtractor {
+  (): ProxyPluginApiPropsExtractorReturnType
+}
+
 export interface PluginReturnType {
   presets?: string[]
   plugins?: string[]

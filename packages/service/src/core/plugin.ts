@@ -5,7 +5,13 @@ import { existsSync } from 'fs'
 import sum from 'hash-sum'
 import { basename, dirname, extname, join, relative } from 'path'
 import pkgUp from 'pkg-up'
-import { Config, EnableBy, PluginReturnType, PluginType } from '../types'
+import {
+  Config,
+  EnableBy,
+  PluginReturnType,
+  PluginType,
+  PresetsAndPluginsExtractor,
+} from '../types'
 
 const RE = {
   preset: /^(@eljs\/|eljs-)create-preset-/,
@@ -182,12 +188,15 @@ export class Plugin {
     cwd: string
     plugins?: string[]
     presets?: string[]
+    extractor?: PresetsAndPluginsExtractor
   }) {
     function get(type: PluginType) {
       const types = `${type}s` as 'presets' | 'plugins'
+      const presetsOrPlugins = opts[types] || []
+
       return [
-        // opts
-        ...(opts[types] || []),
+        ...presetsOrPlugins,
+        ...(opts.extractor?.(presetsOrPlugins, opts.cwd, {}) || []),
       ].map(path => {
         assert(
           typeof path === 'string',

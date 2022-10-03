@@ -1,4 +1,4 @@
-import utils, { isPromise } from '@eljs/utils'
+import utils, { deepMerge, isPromise } from '@eljs/utils'
 import assert from 'assert'
 import { existsSync } from 'fs'
 import { AsyncSeriesWaterfallHook } from 'tapable'
@@ -12,6 +12,8 @@ import {
   EnableBy,
   Paths,
   PluginType,
+  PresetsAndPluginsExtractor,
+  ProxyPluginApiPropsExtractor,
   ServiceStage,
 } from '../types'
 import { Hook } from './hook'
@@ -31,6 +33,14 @@ export interface ServiceOpts {
    * 插件集合
    */
   plugins?: string[]
+  /**
+   * 预设插件提取器
+   */
+  presetsAndPluginsExtractor?: PresetsAndPluginsExtractor
+  /**
+   * 代理属性提取器
+   */
+  proxyPluginApiPropsExtractor?: ProxyPluginApiPropsExtractor
 }
 
 export class Service {
@@ -55,15 +65,17 @@ export class Service {
   /**
    * 插件配置项，是否启用可通过 `modifyConfig` 方法修改
    */
-  public config: Config = Object.create(null)
+  public config: Config = {}
   /**
    * 存储全局数据
    */
-  public appData: AppData = Object.create(null)
+  public appData: AppData = {}
   /**
    * 存储项目路径
    */
-  public paths: Paths = Object.create(null)
+  public paths: Paths = {
+    cwd: '',
+  }
   /**
    * 钩子映射表
    */
@@ -125,10 +137,25 @@ export class Service {
       opts.plugins,
     )
 
+    // merge proxy props
+    const proxyProps = deepMerge(
+      {
+        serviceProps: ['cwd', 'applyPlugins', 'isPluginEnable'],
+        staticProps: {
+          ApplyPluginsType,
+          EnableBy,
+          PluginType,
+          service: this,
+          utils,
+        },
+      },
+      this.opts.proxyPluginApiPropsExtractor?.() ?? {},
+    )
+
     const proxyPluginAPI = PluginAPI.proxyPluginAPI({
       service: this,
       pluginAPI,
-      ...this.getProxyProps(),
+      ...proxyProps,
     })
 
     const res: {
@@ -178,31 +205,13 @@ export class Service {
       )
     }
 
-    // 合并模版配置
+    // merge plugin config
     this.config = {
       ...this.config,
       ...opts.plugin.config,
     }
 
     return res
-  }
-
-  protected getProxyProps(opts?: {
-    serviceProps: string[]
-    staticProps: Record<string, unknown>
-  }) {
-    const { serviceProps = [], staticProps = Object.create(null) } = opts || {}
-    return {
-      serviceProps: ['cwd', 'applyPlugins', 'isPluginEnable', ...serviceProps],
-      staticProps: {
-        ApplyPluginsType,
-        EnableBy,
-        PluginType,
-        service: this,
-        utils,
-        ...staticProps,
-      },
-    } as { serviceProps: string[]; staticProps: Record<string, unknown> }
   }
 
   public async initPreset(opts: {
@@ -319,7 +328,6 @@ export class Service {
     }
   }
 
-  // TODO：支持传入 extractor
   public async run(opts: { target: string; args?: any }) {
     const { target, args = {} } = opts
 
@@ -336,6 +344,7 @@ export class Service {
       cwd: this.cwd,
       presets: this.opts.presets || [],
       plugins: (this.opts.plugins || []) as string[],
+      extractor: this.opts.presetsAndPluginsExtractor,
     })
 
     // register presets
