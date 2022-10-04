@@ -54,16 +54,9 @@ export interface PresetsAndPluginsExtractor {
   (presetsOrPlugins: string[], cwd: string, opts: Record<string, any>): string[]
 }
 
-export interface ProxyPluginApiPropsExtractorReturnType {
+export interface ProxyPluginAPIPropsExtractorReturnType {
   serviceProps: string[]
   staticProps: Record<string, any>
-}
-
-/**
- * 代理属性提取器
- */
-export interface ProxyPluginApiPropsExtractor {
-  (): ProxyPluginApiPropsExtractorReturnType
 }
 
 export interface PluginReturnType {

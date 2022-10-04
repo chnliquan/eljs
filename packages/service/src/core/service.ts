@@ -12,8 +12,7 @@ import {
   EnableBy,
   Paths,
   PluginType,
-  PresetsAndPluginsExtractor,
-  ProxyPluginApiPropsExtractor,
+  ProxyPluginAPIPropsExtractorReturnType,
   ServiceStage,
 } from '../types'
 import { Hook } from './hook'
@@ -33,14 +32,6 @@ export interface ServiceOpts {
    * 插件集合
    */
   plugins?: string[]
-  /**
-   * 预设插件提取器
-   */
-  presetsAndPluginsExtractor?: PresetsAndPluginsExtractor
-  /**
-   * 代理属性提取器
-   */
-  proxyPluginApiPropsExtractor?: ProxyPluginApiPropsExtractor
 }
 
 export class Service {
@@ -138,7 +129,7 @@ export class Service {
     )
 
     // merge proxy props
-    const proxyPluginApiProps = deepMerge(
+    const proxyPluginAPIProps = deepMerge(
       {
         serviceProps: [
           'cwd',
@@ -156,13 +147,13 @@ export class Service {
           utils,
         },
       },
-      this.opts.proxyPluginApiPropsExtractor?.() ?? {},
+      this.proxyPluginAPIPropsExtractor(),
     )
 
     const proxyPluginAPI = PluginAPI.proxyPluginAPI({
       service: this,
       pluginAPI,
-      ...proxyPluginApiProps,
+      ...proxyPluginAPIProps,
     })
 
     const res: {
@@ -351,7 +342,7 @@ export class Service {
       cwd: this.cwd,
       presets: this.opts.presets || [],
       plugins: (this.opts.plugins || []) as string[],
-      extractor: this.opts.presetsAndPluginsExtractor,
+      extractor: this.presetsAndPluginsExtractor,
     })
 
     // register presets
@@ -374,12 +365,16 @@ export class Service {
       await this.initPlugin({ plugin: plugins.shift() as Plugin, plugins })
     }
 
+    this.beforeModifyConfig(this)
+
     // applyPlugin modify config
     this.config = await this.applyPlugins({
       key: 'modifyConfig',
       initialValue: this.config,
       args: {},
     })
+
+    this.beforeModifyPaths(this)
 
     // applyPlugin modify paths
     this.paths = await this.applyPlugins({
@@ -392,6 +387,8 @@ export class Service {
         cwd: this.cwd,
       },
     })
+
+    this.beforeModifyAppData(this)
 
     // applyPlugin collect app data
     this.stage = ServiceStage.CollectAppData
@@ -425,7 +422,54 @@ export class Service {
       return enableBy()
     }
 
-    // EnableBy.register
+    return this.isPluginEnableBy(plugin)
+  }
+
+  /**
+   * 执行 `applyPlugin('modifyConfig') 之前的钩子`
+   */
+  // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+  protected beforeModifyConfig(service: Service) {}
+
+  /**
+   * 执行 `applyPlugin('modifyPaths') 之前的钩子`
+   */
+  // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+  protected beforeModifyPaths(service: Service) {}
+
+  /**
+   * 执行 `applyPlugin('modifyAppData') 之前的钩子`
+   */
+  // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+  protected beforeModifyAppData(service: Service) {}
+
+  /**
+   * 自定义的预设和插件路径提取器
+   */
+  protected presetsAndPluginsExtractor(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    presetsOrPlugins: string[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    cwd: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    opts: Record<string, any>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  ): string[] {
+    return []
+  }
+
+  /**
+   * 自定义的代理插件API属性提取器
+   */
+  protected proxyPluginAPIPropsExtractor(): ProxyPluginAPIPropsExtractorReturnType {
+    return Object.create(null)
+  }
+
+  /**
+   * 插件是否可以启用，需要优先满足 `Service#isPluginEnable` 的逻辑
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected isPluginEnableBy(plugin: Plugin): boolean {
     return true
   }
 }

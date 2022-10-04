@@ -196,7 +196,7 @@ export class Plugin {
 
       return [
         ...presetsOrPlugins,
-        ...(opts.extractor?.(presetsOrPlugins, opts.cwd, {}) || []),
+        ...(opts.extractor?.(presetsOrPlugins, opts.cwd, opts) || []),
       ].map(path => {
         assert(
           typeof path === 'string',

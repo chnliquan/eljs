@@ -65,14 +65,6 @@ export class GenerateService extends Service {
       ...opts,
       presets: [require.resolve('../internal'), ...(opts.presets || [])],
       plugins: [...(opts.plugins || [])],
-      proxyPluginApiPropsExtractor() {
-        return {
-          serviceProps: ['target', 'args', 'prompts', 'config'],
-          staticProps: {
-            Stage: GenerateServiceStage,
-          },
-        }
-      },
     })
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     this.cliVersion = require('../../package.json').version
@@ -144,6 +136,15 @@ export class GenerateService extends Service {
     await this.applyPlugins({
       key: 'onGenerateDone',
     })
+  }
+
+  protected proxyPluginAPIPropsExtractor() {
+    return {
+      serviceProps: ['target', 'args', 'prompts'],
+      staticProps: {
+        Stage: GenerateServiceStage,
+      },
+    }
   }
 }
 
