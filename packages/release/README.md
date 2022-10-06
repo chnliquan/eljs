@@ -7,21 +7,43 @@ eljs release
 ### 1. 安装
 
 ```bash
-$ npm i @eljs/release -S
+$ npm i @eljs/release -D
 // or
-$ yarn add @eljs/release
+$ yarn add @eljs/release -D
 // or
-$ pnpm add @eljs/release
+$ pnpm add @eljs/release -D
 ```
 
 ### 2. 使用
 
-```ts
-import release from '@eljs/release'
+```diff
+"scripts": {
+++  "release: "release"
+}
+```
+
+### 3. 命令行参数
+
+```bash
+Usage: release [options]
+
+Options:
+  -v, --version                          Output the current version.
+  --tag <tag>                            Npm publish tag.
+  --target-version <target-version>      Target release version.
+  --no-git-checks                        No check the git status and remote.
+  --no-registry-checks                   No check the package registry.
+  --no-ownership-checks                  No check the npm ownership.
+  --no-github-release                    No release to github when publish down.
+  --sync-cnpm                            Sync to cnpm when publish done.
+  --latest                               Generate latest changelog.
+  --repo-type <repo-type>                Publish type, github or gitlab.
+  --repo-url <repo-url>                  Github repo url to release.
+  --changelog-preset <changelog-preset>  Customize conventional changelog preset.
+  -h, --help                             display help for command
 ```
 
 ## API
-
 
 ## 开发
 
@@ -33,7 +55,7 @@ $ pnpm -F '@eljs/release' dev
 
 ## 发布
 
-### 1. [语义化提交 Commit](https://www.conventionalcommits.org/en/v1.0.0/#summary) 
+### 1. [语义化提交 Commit](https://www.conventionalcommits.org/en/v1.0.0/#summary)
 
 ```bash
 $ git commit -m 'feat(release): add some feature'

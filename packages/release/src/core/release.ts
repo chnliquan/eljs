@@ -8,7 +8,7 @@ import {
   readJSONSync,
   run,
 } from '@eljs/utils'
-import githubRelease from 'new-github-release-url'
+import githubReleaseUrl from 'new-github-release-url'
 import open from 'open'
 import path from 'path'
 import resolveBin from 'resolve-bin'
@@ -44,7 +44,9 @@ export async function release(opts: Options): Promise<void> {
   const { cwd = process.cwd(), gitChecks = true } = opts
 
   // check git status
-  await gitCheck(gitChecks)
+  if (gitChecks) {
+    await gitCheck()
+  }
 
   const {
     rootPkgJSONPath,
@@ -58,35 +60,46 @@ export async function release(opts: Options): Promise<void> {
   } = await init(cwd)
 
   const defaultOptions: Options = {
+    registryChecks: true,
+    ownershipChecks: true,
     syncCnpm: false,
     repoUrl: rootPkgJSON?.repository?.url || '',
     changelogPreset: '@eljs/changelog-preset',
     latest: true,
+    githubRelease: true,
   }
 
   const {
     targetVersion: customVersion,
+    registryChecks,
+    ownershipChecks,
     tag,
     syncCnpm,
     repoType: customRepoType,
     repoUrl,
     changelogPreset,
     latest,
+    githubRelease,
     beforeUpdateVersion,
     beforeChangelog,
   } = Object.assign(defaultOptions, opts)
+
   const repoType =
     customRepoType || (repoUrl?.includes('github') ? 'github' : 'gitlab')
 
   // check registry
-  await registryCheck({
-    repoType,
-    repoUrl,
-    pkgRegistry: rootPkgJSON?.publishConfig?.registry,
-  })
+  if (registryChecks) {
+    await registryCheck({
+      repoType,
+      repoUrl,
+      pkgRegistry: rootPkgJSON?.publishConfig?.registry,
+    })
+  }
 
   // check ownership
-  await ownershipCheck(publishPkgNames)
+  if (ownershipChecks) {
+    await ownershipCheck(publishPkgNames)
+  }
 
   // bump version
   step('Bump version ...')
@@ -150,8 +163,10 @@ export async function release(opts: Options): Promise<void> {
     changelog,
     repoType,
     repoUrl,
+    githubRelease,
   })
 
+  // sync cnpm
   if (syncCnpm) {
     await sync(publishPkgNames)
   }
@@ -241,15 +256,13 @@ async function init(cwd: string) {
   }
 }
 
-async function gitCheck(gitChecks?: boolean) {
+async function gitCheck() {
   step('Checking git ...')
 
-  if (gitChecks) {
-    const isGitClean = (await run(`git status --porcelain`)).stdout.length
+  const isGitClean = (await run(`git status --porcelain`)).stdout.length
 
-    if (isGitClean) {
-      logger.printErrorAndExit('git status is not clean.')
-    }
+  if (isGitClean) {
+    logger.printErrorAndExit('git status is not clean.')
   }
 
   await run('git fetch')
@@ -376,6 +389,7 @@ async function publish(opts: {
   gitChecks?: boolean
   repoType: string
   repoUrl?: string
+  githubRelease?: boolean
 }) {
   const {
     version,
@@ -385,6 +399,7 @@ async function publish(opts: {
     gitChecks,
     repoType,
     repoUrl,
+    githubRelease,
   } = opts
   const isPnpm = publishPkgDirs.length > 1
   let publishTag: PublishTag | undefined
@@ -405,8 +420,8 @@ async function publish(opts: {
   }
 
   // github release
-  if (repoType === 'github' && repoUrl) {
-    const url = await githubRelease({
+  if (githubRelease && repoType === 'github' && repoUrl) {
+    const url = await githubReleaseUrl({
       repoUrl,
       tag: `v${version}`,
       body: changelog,

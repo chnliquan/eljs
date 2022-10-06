@@ -10,11 +10,14 @@ export interface Options {
   tag?: PublishTag
   targetVersion?: string
   gitChecks?: boolean
+  registryChecks?: boolean
+  ownershipChecks?: boolean
+  githubRelease?: boolean
   syncCnpm?: boolean
+  latest?: boolean
   repoType?: RepoType
   repoUrl?: string
   changelogPreset?: string
-  latest?: boolean
 
   beforeUpdateVersion?: (version: string) => Promise<void>
   beforeChangelog?: () => Promise<void>

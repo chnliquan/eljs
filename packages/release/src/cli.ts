@@ -23,15 +23,18 @@ function cli() {
       'Target release version.',
       checkVersion,
     )
-    .option('--no-git-checks', 'Whether check the git.')
+    .option('--no-git-checks', 'No check the git status and remote.')
+    .option('--no-registry-checks', 'No check the package registry.')
+    .option('--no-ownership-checks', 'No check the npm ownership.')
+    .option('--no-github-release', 'No release to github when publish down.')
     .option('--sync-cnpm', 'Sync to cnpm when publish done.')
+    .option('--latest', 'Generate latest changelog.')
     .option('--repo-type <repo-type>', 'Publish type, github or gitlab.')
     .option('--repo-url <repo-url>', 'Github repo url to release.')
     .option(
       '--changelog-preset <changelog-preset>',
       'Customize conventional changelog preset.',
     )
-    .option('--latest', 'Generate latest changelog')
 
   program.commands.forEach(c => c.on('--help', () => console.log()))
 
