@@ -1,7 +1,7 @@
+import { Env } from '@eljs/service'
 import { chalk, logger, tryPaths } from '@eljs/utils'
 import assert from 'assert'
 import { join } from 'path'
-import { getPresetsAndPlugins, isGenConfigExist } from './config'
 import { GenerateService } from './service'
 
 export interface GeneratorOptions {
@@ -30,36 +30,20 @@ export default class Generator {
         logger.info(`启用本地模板生成，模板路径：${chalk.yellow(templatePath)}`)
       }
 
-      let presets: string[] = []
-      let plugins: string[] = []
+      // 检查生成配置否存在
+      const generatorFile = tryPaths([
+        join(templatePath, 'generators/index.ts'),
+        join(templatePath, 'generators/index.js'),
+      ])
 
-      if (isGenConfigExist(templatePath)) {
-        const presetsAndPlugins = getPresetsAndPlugins(templatePath)
-        presets = presetsAndPlugins.presets
-        plugins = presetsAndPlugins.plugins
-      } else {
-        // 检查生成配置否存在
-        const generatorFile = tryPaths([
-          join(templatePath, 'generators/index.ts'),
-          join(templatePath, 'generators/index.js'),
-        ])
-
-        assert(
-          generatorFile,
-          `创建项目失败, 模板配置必须包含 ${chalk.red('generators/index.ts')}`,
-        )
-
-        plugins = [require.resolve(generatorFile)]
-      }
-
-      const gen = new GenerateService({
+      const service = new GenerateService({
         cwd,
-        presets,
-        plugins,
+        plugins: generatorFile ? [require.resolve(generatorFile)] : [],
         isGenSchema,
+        env: process.env.NODE_ENV as Env,
       })
 
-      await gen.run({
+      await service.run({
         target: targetDir,
         args: {
           ...(this._opts.args || {}),

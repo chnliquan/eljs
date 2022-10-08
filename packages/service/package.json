@@ -29,9 +29,12 @@
   "dependencies": {
     "@eljs/utils": "0.9.3",
     "@types/hash-sum": "^1.0.0",
+    "@types/lodash": "^4.14.186",
+    "deepmerge": "^4.2.2",
     "esbuild": "^0.15.5",
     "hash-sum": "^2.0.0",
     "joi": "^17.6.2",
+    "lodash": "^4.17.21",
     "pkg-up": "^3.1.0",
     "tapable": "^2.2.1"
   }

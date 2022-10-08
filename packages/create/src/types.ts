@@ -1,4 +1,4 @@
-import { Config, PluginAPI } from '@eljs/service'
+import { PluginAPI, PluginConfig } from '@eljs/service'
 import { PkgJSON, RenderTemplateOptions } from '@eljs/utils'
 import { GenerateService, GenerateServicePluginAPI } from './core/service'
 
@@ -87,7 +87,7 @@ export interface Prompts {
   [property: string]: any
 }
 
-export interface GenerateConfig extends Config {
+export interface GeneratePluginConfig extends PluginConfig {
   /**
    *
    * 是否启用默认问询

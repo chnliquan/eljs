@@ -1,6 +1,6 @@
-import utils, { chalk, deepMerge } from '@eljs/utils'
+import * as utils from '@eljs/utils'
 import assert from 'assert'
-import { existsSync } from 'fs'
+import _ from 'lodash'
 import { AsyncSeriesWaterfallHook } from 'tapable'
 import { ConfigManager } from '../config/manager'
 import {
@@ -38,7 +38,7 @@ export interface ServiceOpts {
   /**
    * 默认的配置文件列表
    */
-  defaultConfigFiles?: []
+  defaultConfigFiles?: string[]
   /**
    * 预设集合
    */
@@ -140,7 +140,10 @@ export class Service {
         : `${opts.frameworkName}-`
       : '@eljs/service-'
 
-    assert(existsSync(this.cwd), `Invalid cwd ${this.cwd}, it's not found.`)
+    assert(
+      utils.existsSync(this.cwd),
+      `Invalid cwd ${this.cwd}, it's not found.`,
+    )
   }
 
   public async initPlugin(opts: {
@@ -175,32 +178,34 @@ export class Service {
       this._prefix,
     )
 
-    // merge proxy props
-    const proxyPluginAPIProps = deepMerge(
-      {
-        serviceProps: [
+    const { serviceProps, staticProps } = this.proxyPluginAPIPropsExtractor()
+    const proxyPluginAPI = PluginAPI.proxyPluginAPI({
+      service: this,
+      pluginAPI,
+      serviceProps: _.union(
+        [
           'cwd',
+          'args',
+          'userConfig',
           'appData',
           'paths',
-          'config',
+          'pluginConfig',
           'applyPlugins',
           'isPluginEnable',
         ],
-        staticProps: {
+        serviceProps,
+      ),
+      staticProps: _.merge(
+        {
           ApplyPluginsType,
           EnableBy,
           PluginType,
           service: this,
-          utils,
+          utils: utils,
+          lodash: _,
         },
-      },
-      this.proxyPluginAPIPropsExtractor(),
-    )
-
-    const proxyPluginAPI = PluginAPI.proxyPluginAPI({
-      service: this,
-      pluginAPI,
-      ...proxyPluginAPIProps,
+        staticProps,
+      ),
     })
 
     const ret: {
@@ -419,7 +424,9 @@ export class Service {
     const { plugins, presets } = Plugin.getPresetsAndPlugins({
       cwd: this.cwd,
       userConfig: this.userConfig,
-      presets: this.opts.presets || [],
+      presets: [require.resolve('./service-plugin')].concat(
+        this.opts.presets || [],
+      ),
       plugins: (this.opts.plugins || []) as string[],
       extractor: this.presetsAndPluginsExtractor,
     })
@@ -600,7 +607,7 @@ export class Service {
       console.log()
       for (const id of Object.keys(this.plugins)) {
         const plugin = this.plugins[id]
-        console.log(chalk.green('plugin'), plugin.id, plugin.time)
+        console.log(utils.chalk.green('plugin'), plugin.id, plugin.time)
       }
     }
   }
@@ -616,6 +623,10 @@ export interface ServicePluginAPI {
    * 其它执行参数
    */
   args: typeof Service.prototype.args
+  /**
+   * 用户配置
+   */
+  userConfig: typeof Service.prototype.userConfig
   /**
    * 存储全局数据
    */
@@ -677,6 +688,10 @@ export interface ServicePluginAPI {
    * 工具函数
    */
   utils: typeof utils
+  /**
+   * lodash
+   */
+  lodash: typeof _
   /**
    * 插件执行类型枚举
    */

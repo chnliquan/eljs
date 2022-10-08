@@ -6,7 +6,7 @@ export default async (api: Api) => {
   api.describe({
     key: 'defaultPrompts',
     enableBy() {
-      return api.config.defaultPrompts === true
+      return api.pluginConfig.defaultPrompts === true
     },
   })
 

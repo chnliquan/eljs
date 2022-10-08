@@ -67,8 +67,8 @@
       "windows": {
         "program": "${workspaceFolder}/node_modules/ts-node/bin/ts-node"
       },
-      "args": ["-O", "{\"module\": \"commonjs\"}", "--files", "bin/gen.js"],
-      "cwd": "${workspaceFolder}/packages/create",
+      "args": ["-O", "{\"module\": \"commonjs\"}", "--files", "${workspaceFolder}/packages/create/bin/gen.js"],
+      "cwd": "/Users/ender/learning/github/templates/packages/npm-node",
       "console": "integratedTerminal"
     },
     {

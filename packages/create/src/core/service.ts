@@ -14,7 +14,7 @@ import {
   CopyFileOpts,
   CopyTplOpts,
   ExtendPackageOpts,
-  GenerateConfig,
+  GeneratePluginConfig,
   GenerateServiceStage,
   Prompts,
 } from '../types'
@@ -46,7 +46,7 @@ export class GenerateService extends Service {
   /**
    * 插件启用配置，用于控制插件，是否启用可通过 `modifyConfig` 方法修改
    */
-  public config: GenerateConfig = Object.create(null)
+  public pluginConfig: GeneratePluginConfig = Object.create(null)
   /**
    * 用户输入
    */
@@ -63,6 +63,8 @@ export class GenerateService extends Service {
   public constructor(opts: GenerateServiceOpts) {
     super({
       ...opts,
+      frameworkName: '@eljs/create',
+      defaultConfigFiles: ['.create.ts', '.create.js'],
       presets: [require.resolve('../internal'), ...(opts.presets || [])],
       plugins: [...(opts.plugins || [])],
     })
@@ -70,9 +72,7 @@ export class GenerateService extends Service {
     this.cliVersion = require('../../package.json').version
   }
 
-  public async run(opts: { target: string; args?: Record<string, any> }) {
-    await super.run(opts)
-
+  protected async afterRun(): Promise<void> {
     this.stage = GenerateServiceStage.Prompting
 
     const questions = await this.applyPlugins({
@@ -159,6 +159,10 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
    */
   args: typeof GenerateService.prototype.args
   /**
+   * 用户配置
+   */
+  userConfig: typeof GenerateService.prototype.userConfig
+  /**
    * 存储全局数据
    */
   appData: typeof GenerateService.prototype.appData
@@ -173,7 +177,7 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
   /**
    * 插件启用配置，用于控制插件，是否启用可通过 `modifyConfig` 方法修改
    */
-  config: typeof GenerateService.prototype.config
+  pluginConfig: typeof GenerateService.prototype.pluginConfig
   /**
    * 命令行版本
    */
@@ -184,7 +188,7 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
   /**
    * 修改用户业务配置，用于控制插件启用或者其它业务逻辑
    */
-  modifyConfig: ApplyModify<GenerateConfig, null>
+  modifyPluginConfig: ApplyModify<GeneratePluginConfig, null>
   /**
    * 修改项目路径
    */

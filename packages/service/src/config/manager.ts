@@ -1,5 +1,6 @@
-import { deepMerge, existsSync, register } from '@eljs/utils'
+import { existsSync, register } from '@eljs/utils'
 import assert from 'assert'
+import deepMerge from 'deepmerge'
 import esbuild from 'esbuild'
 import joi from 'joi'
 import { join } from 'path'

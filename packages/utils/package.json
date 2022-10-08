@@ -46,6 +46,7 @@
     "chalk": "^4.1.2",
     "chokidar": "^3.5.3",
     "cross-spawn": "^7.0.3",
+    "deepmerge": "^4.2.2",
     "download": "^8.0.0",
     "ejs": "^3.1.8",
     "execa": "^5.1.1",
