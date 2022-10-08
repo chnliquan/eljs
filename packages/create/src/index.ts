@@ -1,9 +1,11 @@
 import './require-hook'
-import { GenerateConfig } from './types'
+import { GeneratePluginConfig } from './types'
 
 export { Create } from './core/create'
 export * from './types'
 
-export function defineConfig(config: GenerateConfig): GenerateConfig {
+export function defineConfig(
+  config: GeneratePluginConfig,
+): GeneratePluginConfig {
   return config
 }
