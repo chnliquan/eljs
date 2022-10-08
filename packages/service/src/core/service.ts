@@ -34,6 +34,11 @@ export interface ServiceOpts {
   plugins?: string[]
 }
 
+export interface ServiceRunOpts {
+  target: string
+  args?: any
+}
+
 export class Service {
   /**
    * 构造函数配置项
@@ -344,7 +349,7 @@ export class Service {
     }
   }
 
-  public async run(opts: { target: string; args?: any }) {
+  public async run(opts: ServiceRunOpts) {
     const { target, args = {} } = opts
 
     args._ = args._ || []
@@ -354,6 +359,9 @@ export class Service {
     }
 
     this.args = args
+
+    this.beforeRun(opts, this)
+
     this.stage = ServiceStage.Init
 
     const { plugins, presets } = Plugin.getPresetsAndPlugins({
@@ -383,7 +391,7 @@ export class Service {
       await this.initPlugin({ plugin: plugins.shift() as Plugin, plugins })
     }
 
-    this.beforeModifyConfig(this)
+    this.beforeModifyConfig(opts, this)
 
     // applyPlugin modify config
     this.config = await this.applyPlugins({
@@ -392,7 +400,7 @@ export class Service {
       args: {},
     })
 
-    this.beforeModifyPaths(this)
+    this.beforeModifyPaths(opts, this)
 
     // applyPlugin modify paths
     this.paths = await this.applyPlugins({
@@ -406,7 +414,7 @@ export class Service {
       },
     })
 
-    this.beforeModifyAppData(this)
+    this.beforeModifyAppData(opts, this)
 
     // applyPlugin collect app data
     this.stage = ServiceStage.CollectAppData
@@ -420,6 +428,7 @@ export class Service {
       },
     })
 
+    this.afterRun(opts, this)
     this._baconPlugins()
   }
 
@@ -446,22 +455,33 @@ export class Service {
   }
 
   /**
-   * 执行 `applyPlugin('modifyConfig') 之前的钩子`
+   * 执行 `run` 方法之前的钩子
    */
   // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-  protected beforeModifyConfig(service: Service) {}
+  protected beforeRun(opts: ServiceRunOpts, service: Service) {}
 
   /**
-   * 执行 `applyPlugin('modifyPaths') 之前的钩子`
+   * 执行 `applyPlugin('modifyConfig')` 之前的钩子
    */
   // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-  protected beforeModifyPaths(service: Service) {}
+  protected beforeModifyConfig(opts: ServiceRunOpts, service: Service) {}
 
   /**
-   * 执行 `applyPlugin('modifyAppData') 之前的钩子`
+   * 执行 `applyPlugin('modifyPaths')` 之前的钩子
    */
   // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-  protected beforeModifyAppData(service: Service) {}
+  protected beforeModifyPaths(opts: ServiceRunOpts, service: Service) {}
+
+  /**
+   * 执行 `applyPlugin('modifyAppData')' 之前的钩子
+   */
+  // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+  protected beforeModifyAppData(opts: ServiceRunOpts, service: Service) {}
+  /**
+   * 执行 `run` 方法之后的钩子
+   */
+  // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+  protected afterRun(opts: ServiceRunOpts, service: Service) {}
 
   /**
    * 自定义的预设和插件路径提取器
