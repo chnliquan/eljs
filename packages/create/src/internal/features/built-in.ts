@@ -1,10 +1,4 @@
-import {
-  chalk,
-  deepMerge,
-  installWithNpmClient,
-  isFunction,
-  logger,
-} from '@eljs/utils'
+import { chalk, installWithNpmClient, isFunction, logger } from '@eljs/utils'
 import { existsSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import prettier from 'prettier'
@@ -55,7 +49,7 @@ export default (api: Api) => {
     async fn(opts: ExtendPackageOpts) {
       const pkgJSON = api.service.pkgJSON
       const toMerge = (isFunction(opts) ? await opts(pkgJSON) : opts) ?? {}
-      api.service.pkgJSON = deepMerge(api.service.pkgJSON, toMerge)
+      api.service.pkgJSON = api.lodash.merge(api.service.pkgJSON, toMerge)
     },
   })
 
@@ -69,7 +63,7 @@ export default (api: Api) => {
       if (existsSync(pkgJSONPath)) {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const originPkgJSON = require(pkgJSONPath)
-        pkgJSON = deepMerge(originPkgJSON, pkgJSON)
+        pkgJSON = api.lodash.merge(originPkgJSON, pkgJSON)
       }
 
       if (Object.keys(pkgJSON).length === 0) {
