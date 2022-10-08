@@ -25,6 +25,9 @@ export interface PluginOpts {
 }
 
 export class Plugin {
+  /**
+   * 当前路径
+   */
   private _cwd: string
   /**
    * 插件类型
@@ -46,6 +49,13 @@ export class Plugin {
    * 插件配置项
    */
   public config: Config = Object.create(null)
+  /**
+   * 插件执行时间
+   */
+  public time: {
+    register?: number
+    hooks: Record<string, number[]>
+  } = { hooks: {} }
   /**
    * 插件执行函数
    */

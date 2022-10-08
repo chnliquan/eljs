@@ -1,4 +1,4 @@
-import utils, { deepMerge, isPromise } from '@eljs/utils'
+import utils, { chalk, deepMerge } from '@eljs/utils'
 import assert from 'assert'
 import { existsSync } from 'fs'
 import { AsyncSeriesWaterfallHook } from 'tapable'
@@ -161,14 +161,12 @@ export class Service {
       presets: Plugin[]
     } = Object.create(null)
 
-    let pluginRes = opts.plugin.apply()(proxyPluginAPI)
-
-    if (isPromise(pluginRes)) {
-      pluginRes = await pluginRes
-    }
+    const dateStart = new Date()
+    const pluginRet = await opts.plugin.apply()(proxyPluginAPI)
+    opts.plugin.time.register = new Date().getTime() - dateStart.getTime()
 
     if (opts.plugin.type === 'plugin') {
-      assert(!pluginRes, `plugin should return nothing.`)
+      assert(!pluginRet, `plugin should return nothing.`)
     }
 
     // key should be unique
@@ -181,8 +179,8 @@ export class Service {
 
     this.keyToPluginMap[opts.plugin.key] = opts.plugin
 
-    if (pluginRes?.presets) {
-      res.presets = pluginRes.presets.map(
+    if (pluginRet?.presets) {
+      res.presets = pluginRet.presets.map(
         (preset: string) =>
           new Plugin({
             path: preset,
@@ -192,8 +190,8 @@ export class Service {
       )
     }
 
-    if (pluginRes?.plugins) {
-      res.plugins = pluginRes.plugins.map(
+    if (pluginRet?.plugins) {
+      res.plugins = pluginRet.plugins.map(
         plugin =>
           new Plugin({
             path: plugin,
@@ -273,7 +271,12 @@ export class Service {
               before: hook.before,
             },
             async memo => {
+              const dateStart = new Date()
               const items = await hook.fn(opts.args)
+              hook.plugin.time.hooks[opts.key] ||= []
+              hook.plugin.time.hooks[opts.key].push(
+                new Date().getTime() - dateStart.getTime(),
+              )
               return (memo as []).concat(items)
             },
           )
@@ -294,7 +297,15 @@ export class Service {
               stage: hook.stage,
               before: hook.before,
             },
-            async memo => await hook.fn(memo, opts.args),
+            async memo => {
+              const dateStart = new Date()
+              const ret = await hook.fn(memo, opts.args)
+              hook.plugin.time.hooks[opts.key] ||= []
+              hook.plugin.time.hooks[opts.key].push(
+                new Date().getTime() - dateStart.getTime(),
+              )
+              return ret
+            },
           )
         }
         return tModify.promise(opts.initialValue)
@@ -314,7 +325,14 @@ export class Service {
               stage: hook.stage || 0,
               before: hook.before,
             },
-            async () => await hook.fn(opts.args),
+            async () => {
+              const dateStart = new Date()
+              await hook.fn(opts.args)
+              hook.plugin.time.hooks[opts.key] ||= []
+              hook.plugin.time.hooks[opts.key].push(
+                new Date().getTime() - dateStart.getTime(),
+              )
+            },
           )
         }
         return tEvent.promise(1)
@@ -401,6 +419,8 @@ export class Service {
         presets,
       },
     })
+
+    this._baconPlugins()
   }
 
   public isPluginEnable(hook: Hook | string) {
@@ -471,6 +491,16 @@ export class Service {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected isPluginEnableBy(plugin: Plugin): boolean {
     return true
+  }
+
+  private _baconPlugins() {
+    if (this.args.baconPlugins) {
+      console.log()
+      for (const id of Object.keys(this.plugins)) {
+        const plugin = this.plugins[id]
+        console.log(chalk.green('plugin'), plugin.id, plugin.time)
+      }
+    }
   }
 }
 
