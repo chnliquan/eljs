@@ -23,7 +23,11 @@ export interface ServiceOpts {
   /**
    * 当前执行路径
    */
-  cwd: Service['cwd']
+  cwd: string
+  /**
+   * 框架名称
+   */
+  frameworkName?: string
   /**
    * 预设集合
    */
@@ -96,9 +100,19 @@ export class Service {
    */
   public skipPluginIds: Set<string> = new Set<string>()
 
+  /**
+   * Npm 前缀
+   */
+  private _prefix: string
+
   public constructor(opts: ServiceOpts) {
     this.opts = opts
     this.cwd = opts.cwd
+    this._prefix = opts.frameworkName
+      ? opts.frameworkName.endsWith('-')
+        ? opts.frameworkName
+        : `${opts.frameworkName}-`
+      : '@eljs/service-'
 
     assert(existsSync(this.cwd), `Invalid cwd ${this.cwd}, it's not found.`)
   }
@@ -127,10 +141,12 @@ export class Service {
     pluginAPI.registerPresets = pluginAPI.registerPresets.bind(
       pluginAPI,
       opts.presets || [],
+      this._prefix,
     )
     pluginAPI.registerPlugins = pluginAPI.registerPlugins.bind(
       pluginAPI,
       opts.plugins,
+      this._prefix,
     )
 
     // merge proxy props
@@ -161,7 +177,7 @@ export class Service {
       ...proxyPluginAPIProps,
     })
 
-    const res: {
+    const ret: {
       plugins: Plugin[]
       presets: Plugin[]
     } = Object.create(null)
@@ -185,23 +201,25 @@ export class Service {
     this.keyToPluginMap[opts.plugin.key] = opts.plugin
 
     if (pluginRet?.presets) {
-      res.presets = pluginRet.presets.map(
+      ret.presets = pluginRet.presets.map(
         (preset: string) =>
           new Plugin({
             path: preset,
             type: PluginType.Preset,
             cwd: this.cwd,
+            prefix: this._prefix,
           }),
       )
     }
 
     if (pluginRet?.plugins) {
-      res.plugins = pluginRet.plugins.map(
+      ret.plugins = pluginRet.plugins.map(
         plugin =>
           new Plugin({
             path: plugin,
             type: PluginType.Plugin,
             cwd: this.cwd,
+            prefix: this._prefix,
           }),
       )
     }
@@ -212,7 +230,7 @@ export class Service {
       ...opts.plugin.config,
     }
 
-    return res
+    return ret
   }
 
   public async initPreset(opts: {
@@ -391,41 +409,46 @@ export class Service {
       await this.initPlugin({ plugin: plugins.shift() as Plugin, plugins })
     }
 
-    this.beforeModifyConfig(opts, this)
+    const configInitialValue =
+      this.beforeModifyConfig(opts, this.config, this) || this.config
 
     // applyPlugin modify config
     this.config = await this.applyPlugins({
       key: 'modifyConfig',
-      initialValue: this.config,
+      initialValue: configInitialValue,
       args: {},
     })
 
-    this.beforeModifyPaths(opts, this)
+    const defaultPaths = {
+      cwd: this.cwd,
+      absOutputPath: target,
+    }
+    const pathsInitialValue =
+      this.beforeModifyPaths(opts, defaultPaths, this) || defaultPaths
 
     // applyPlugin modify paths
     this.paths = await this.applyPlugins({
       key: 'modifyPaths',
-      initialValue: {
-        cwd: this.cwd,
-        absOutputPath: target,
-      },
+      initialValue: pathsInitialValue,
       args: {
         cwd: this.cwd,
       },
     })
 
-    this.beforeModifyAppData(opts, this)
+    const defaultAppData = {
+      cwd: this.cwd,
+      args,
+      plugins,
+      presets,
+    }
+    const appDataInitialValue =
+      this.beforeModifyAppData(opts, defaultAppData, this) || defaultAppData
 
     // applyPlugin collect app data
     this.stage = ServiceStage.CollectAppData
     this.appData = await this.applyPlugins({
       key: 'modifyAppData',
-      initialValue: {
-        cwd: this.cwd,
-        args,
-        plugins,
-        presets,
-      },
+      initialValue: appDataInitialValue,
     })
 
     this.afterRun(opts, this)
@@ -463,20 +486,43 @@ export class Service {
   /**
    * 执行 `applyPlugin('modifyConfig')` 之前的钩子
    */
-  // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-  protected beforeModifyConfig(opts: ServiceRunOpts, service: Service) {}
+  protected beforeModifyConfig<T extends Config>(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    opts: ServiceRunOpts,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    config: T,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    service: Service,
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+  ): T | void {}
 
   /**
    * 执行 `applyPlugin('modifyPaths')` 之前的钩子
    */
   // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-  protected beforeModifyPaths(opts: ServiceRunOpts, service: Service) {}
+  protected beforeModifyPaths<T extends Paths>(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    opts: ServiceRunOpts,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    paths: T,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    service: Service,
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+  ): T | void {}
 
   /**
    * 执行 `applyPlugin('modifyAppData')' 之前的钩子
    */
   // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-  protected beforeModifyAppData(opts: ServiceRunOpts, service: Service) {}
+  protected beforeModifyAppData<T extends AppData>(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    opts: ServiceRunOpts,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    appData: T,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    service: Service,
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+  ): T | void {}
   /**
    * 执行 `run` 方法之后的钩子
    */

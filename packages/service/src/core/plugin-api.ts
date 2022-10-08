@@ -63,7 +63,7 @@ export class PluginAPI<T extends Service = Service> {
     }
   }
 
-  public registerPresets(source: Plugin[], presets: unknown[]) {
+  public registerPresets(source: Plugin[], prefix: string, presets: unknown[]) {
     assert(
       this.service.stage === ServiceStage.InitPresets,
       `api.registerPresets() failed, it should only used in presets stage.`,
@@ -75,6 +75,7 @@ export class PluginAPI<T extends Service = Service> {
           path: preset as string,
           cwd: this.service.cwd,
           type: PluginType.Plugin,
+          prefix,
         }),
     )
 
@@ -83,6 +84,7 @@ export class PluginAPI<T extends Service = Service> {
 
   public registerPlugins<T extends string | Plugin>(
     source: Plugin[],
+    prefix: string,
     plugins: T[],
   ) {
     assert(
@@ -97,6 +99,7 @@ export class PluginAPI<T extends Service = Service> {
           path: plugin,
           cwd: this.service.cwd,
           type: PluginType.Plugin,
+          prefix,
         })
       } else {
         assert(

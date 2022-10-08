@@ -13,22 +13,14 @@ import {
   PresetsAndPluginsExtractor,
 } from '../types'
 
-const RE = {
-  preset: /^(@eljs\/|eljs-)create-preset-/,
-  plugin: /^(@eljs\/|eljs-)create-plugin-/,
-}
-
 export interface PluginOpts {
   path: Plugin['path']
-  cwd: Plugin['_cwd']
   type: Plugin['type']
+  cwd: Plugin['_cwd']
+  prefix?: Plugin['_prefix']
 }
 
 export class Plugin {
-  /**
-   * 当前路径
-   */
-  private _cwd: string
   /**
    * 插件类型
    */
@@ -66,11 +58,27 @@ export class Plugin {
    * 插件是否可以执行
    */
   public enableBy: EnableBy | (() => boolean) = EnableBy.Register
+  /**
+   * 当前路径
+   */
+  private _cwd: string
+  /**
+   * 当前路径
+   */
+  private _prefix: string
+  /**
+   * 插件唯一 key 正则映射表
+   */
+  private _key2RegexMap!: {
+    preset: RegExp
+    plugin: RegExp
+  }
 
   public constructor(opts: PluginOpts) {
     this.type = opts.type
     this.path = winPath(opts.path)
     this._cwd = opts.cwd
+    this._prefix = opts.prefix || '@eljs/service-'
 
     assert(
       existsSync(this.path),
@@ -116,6 +124,17 @@ export class Plugin {
       // use the default member for es modules
       return ret.__esModule ? ret.default : ret
     }
+  }
+
+  public get key2RegexMap() {
+    if (!this._key2RegexMap) {
+      this._key2RegexMap = {
+        preset: new RegExp(`^${this._prefix}preset-`),
+        plugin: new RegExp(`^${this._prefix}plugin-`),
+      }
+    }
+
+    return this._key2RegexMap
   }
 
   public merge(opts: { key?: string; enableBy?: unknown }) {
@@ -168,7 +187,7 @@ export class Plugin {
     if (isPkgEntry) {
       return nameToKey(
         Plugin.stripNoneScope(pkgJSON.name as string).replace(
-          RE[this.type],
+          this.key2RegexMap[this.type],
           '',
         ),
       )
@@ -181,10 +200,6 @@ export class Plugin {
     }
 
     return nameToKey(key)
-  }
-
-  public static isPresetOrPlugin(type: PluginType, name: string) {
-    return RE[type].test(Plugin.stripNoneScope(name))
   }
 
   public static stripNoneScope(name: string) {
