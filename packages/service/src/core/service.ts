@@ -2,18 +2,21 @@ import utils, { chalk, deepMerge } from '@eljs/utils'
 import assert from 'assert'
 import { existsSync } from 'fs'
 import { AsyncSeriesWaterfallHook } from 'tapable'
+import { ConfigManager } from '../config/manager'
 import {
   AppData,
   ApplyEvent,
   ApplyModify,
   ApplyPluginsType,
   Args,
-  Config,
   EnableBy,
+  Env,
   Paths,
+  PluginConfig,
   PluginType,
   ProxyPluginAPIPropsExtractorReturnType,
   ServiceStage,
+  UserConfig,
 } from '../types'
 import { Hook } from './hook'
 import { Plugin } from './plugin'
@@ -25,9 +28,17 @@ export interface ServiceOpts {
    */
   cwd: string
   /**
+   * 当前环境
+   */
+  env: Env
+  /**
    * 框架名称
    */
   frameworkName?: string
+  /**
+   * 默认的配置文件列表
+   */
+  defaultConfigFiles?: []
   /**
    * 预设集合
    */
@@ -53,11 +64,26 @@ export class Service {
    */
   public cwd: string
   /**
+   * 当前环境
+   */
+  public env: Env
+  /**
    * 其它执行参数
    */
   public args: Args = {
     _: [],
   }
+  /**
+   * 用户项目配置
+   */
+  public userConfig: UserConfig = {
+    presets: [],
+    plugins: [],
+  }
+  /**
+   * 配置管理器
+   */
+  public configManager: ConfigManager | null = null
   /**
    * 执行阶段
    */
@@ -75,7 +101,7 @@ export class Service {
   /**
    * 插件配置项，是否启用可通过 `modifyConfig` 方法修改
    */
-  public config: Config = {}
+  public pluginConfig: PluginConfig = {}
   /**
    * 钩子映射表
    */
@@ -99,15 +125,15 @@ export class Service {
    * 跳过插件的 ID 集合
    */
   public skipPluginIds: Set<string> = new Set<string>()
-
   /**
-   * Npm 前缀
+   * Npm 包前缀
    */
   private _prefix: string
 
   public constructor(opts: ServiceOpts) {
     this.opts = opts
     this.cwd = opts.cwd
+    this.env = opts.env
     this._prefix = opts.frameworkName
       ? opts.frameworkName.endsWith('-')
         ? opts.frameworkName
@@ -225,8 +251,8 @@ export class Service {
     }
 
     // merge plugin config
-    this.config = {
-      ...this.config,
+    this.pluginConfig = {
+      ...this.pluginConfig,
       ...opts.plugin.config,
     }
 
@@ -382,8 +408,17 @@ export class Service {
 
     this.stage = ServiceStage.Init
 
+    // get user config
+    this.configManager = new ConfigManager({
+      cwd: this.cwd,
+      env: this.env,
+      defaultConfigFiles: this.opts.defaultConfigFiles,
+    })
+    this.userConfig = this.configManager.getUserConfig().config
+
     const { plugins, presets } = Plugin.getPresetsAndPlugins({
       cwd: this.cwd,
+      userConfig: this.userConfig,
       presets: this.opts.presets || [],
       plugins: (this.opts.plugins || []) as string[],
       extractor: this.presetsAndPluginsExtractor,
@@ -409,13 +444,14 @@ export class Service {
       await this.initPlugin({ plugin: plugins.shift() as Plugin, plugins })
     }
 
-    const configInitialValue =
-      this.beforeModifyConfig(opts, this.config, this) || this.config
+    const pluginConfigInitialValue =
+      this.beforeModifyPluginConfig(opts, this.pluginConfig, this) ||
+      this.pluginConfig
 
     // applyPlugin modify config
-    this.config = await this.applyPlugins({
-      key: 'modifyConfig',
-      initialValue: configInitialValue,
+    this.pluginConfig = await this.applyPlugins({
+      key: 'modifyPluginConfig',
+      initialValue: pluginConfigInitialValue,
       args: {},
     })
 
@@ -486,7 +522,7 @@ export class Service {
   /**
    * 执行 `applyPlugin('modifyConfig')` 之前的钩子
    */
-  protected beforeModifyConfig<T extends Config>(
+  protected beforeModifyPluginConfig<T extends PluginConfig>(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     opts: ServiceRunOpts,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -591,14 +627,14 @@ export interface ServicePluginAPI {
   /**
    * 插件配置项，是否启用可通过 `modifyConfig` 方法修改
    */
-  config: typeof Service.prototype.config
+  pluginConfig: typeof Service.prototype.pluginConfig
   // #endregion
 
   // #region 插件钩子
   /**
    * 修改用户业务配置，用于控制插件启用或者其它业务逻辑
    */
-  modifyConfig: ApplyModify<Config, null>
+  modifyPluginConfig: ApplyModify<PluginConfig, null>
   /**
    * 修改项目路径
    */

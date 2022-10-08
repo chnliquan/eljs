@@ -1,0 +1,179 @@
+import { deepMerge, existsSync, register } from '@eljs/utils'
+import assert from 'assert'
+import esbuild from 'esbuild'
+import joi from 'joi'
+import { join } from 'path'
+import { DEFAULT_CONFIG_FILES, LOCAL_EXT, SHORT_ENV } from '../const'
+import { Env } from '../types'
+import { addExt, getAbsFiles } from './utils'
+
+export interface ConfigManagerOpts {
+  /**
+   * 当前路径
+   */
+  cwd: string
+  /**
+   * 当前环境
+   */
+  env: Env
+  /**
+   * 默认的配置文件列表
+   */
+  defaultConfigFiles?: string[]
+}
+
+export class ConfigManager {
+  public opts: ConfigManagerOpts
+  /**
+   * 主配置文件地址
+   */
+  public mainConfigFile: string | null
+
+  public constructor(opts: ConfigManagerOpts) {
+    this.opts = opts
+    this.mainConfigFile = ConfigManager.getMainConfigFile(this.opts)
+  }
+
+  public getUserConfig() {
+    const configFiles = ConfigManager.getConfigFiles({
+      mainConfigFile: this.mainConfigFile,
+      env: this.opts.env,
+    })
+
+    return ConfigManager.getUserConfig({
+      configFiles: getAbsFiles({
+        files: configFiles,
+        cwd: this.opts.cwd,
+      }),
+    })
+  }
+
+  public getConfig(opts: { schemas: Record<string, any> }) {
+    const { config, files } = this.getUserConfig()
+
+    ConfigManager.validateConfig({ config, schemas: opts.schemas })
+
+    return {
+      config,
+      files,
+    }
+  }
+
+  public static getMainConfigFile(opts: {
+    cwd: string
+    defaultConfigFiles?: string[]
+  }) {
+    let mainConfigFile = null
+
+    for (const configFile of opts.defaultConfigFiles || DEFAULT_CONFIG_FILES) {
+      const absConfigFile = join(opts.cwd, configFile)
+      if (existsSync(absConfigFile)) {
+        mainConfigFile = absConfigFile
+        break
+      }
+    }
+
+    return mainConfigFile
+  }
+
+  public static getConfigFiles(opts: {
+    mainConfigFile: string | null
+    env: Env
+  }) {
+    const ret: string[] = []
+    const { mainConfigFile } = opts
+
+    if (mainConfigFile) {
+      const env = SHORT_ENV[opts.env] || opts.env
+
+      ret.push(
+        ...[mainConfigFile, addExt({ file: mainConfigFile, ext: `.${env}` })],
+      )
+
+      if (opts.env === Env.development) {
+        ret.push(addExt({ file: mainConfigFile, ext: LOCAL_EXT }))
+      }
+    }
+
+    return ret
+  }
+
+  public static getUserConfig(opts: { configFiles: string[] }) {
+    const files: string[] = []
+    let config = {
+      presets: [],
+      plugins: [],
+    }
+
+    for (const configFile of opts.configFiles) {
+      if (existsSync(configFile)) {
+        register.register({
+          implementor: esbuild,
+        })
+        register.clearFiles()
+
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          config = deepMerge(config, require(configFile).default)
+        } catch (e) {
+          throw new Error(`Parse config file failed: [${configFile}]`, {
+            cause: e,
+          })
+        }
+
+        for (const file of register.getFiles()) {
+          delete require.cache[file]
+        }
+        // includes the config File
+        files.push(...register.getFiles())
+        register.restore()
+      } else {
+        files.push(configFile)
+      }
+    }
+
+    return {
+      config,
+      files,
+    }
+  }
+
+  public static validateConfig(opts: {
+    config: Record<string, any>
+    schemas: Record<string, any>
+  }) {
+    const errors = new Map<string, Error>()
+    const configKeys = new Set(Object.keys(opts.config))
+
+    for (const key of Object.keys(opts.schemas)) {
+      configKeys.delete(key)
+
+      if (!opts.config[key]) {
+        continue
+      }
+
+      const schema = opts.schemas[key](joi)
+      // invalid schema
+      assert(joi.isSchema(schema), `schema for config ${key} is not valid.`)
+      const { error } = schema.validate(opts.config[key])
+
+      if (error) {
+        errors.set(key, error)
+      }
+    }
+
+    // invalid config values
+    assert(
+      errors.size === 0,
+      `Invalid config values: ${Array.from(errors.keys()).join(', ')}
+${Array.from(errors.keys()).map(key => {
+  return `Invalid value for ${key}:\n${(errors.get(key) as Error).message}`
+})}`,
+    )
+    // invalid config keys
+    assert(
+      configKeys.size === 0,
+      `Invalid config keys: ${Array.from(configKeys).join(', ')}`,
+    )
+  }
+}

@@ -1,5 +1,11 @@
 import { NpmClientEnum } from '@eljs/utils'
 
+export enum Env {
+  development = 'development',
+  production = 'production',
+  test = 'test',
+}
+
 export enum ServiceStage {
   Uninitialized = 'uninitialized',
   Init = 'init',
@@ -8,7 +14,13 @@ export enum ServiceStage {
   CollectAppData = 'collectAppData',
 }
 
-export interface Config {
+export interface UserConfig {
+  presets: string[]
+  plugins: string[]
+  [property: string]: any
+}
+
+export interface PluginConfig {
   [property: string]: any
 }
 

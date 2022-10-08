@@ -6,11 +6,12 @@ import sum from 'hash-sum'
 import { basename, dirname, extname, join, relative } from 'path'
 import pkgUp from 'pkg-up'
 import {
-  Config,
   EnableBy,
+  PluginConfig,
   PluginReturnType,
   PluginType,
   PresetsAndPluginsExtractor,
+  UserConfig,
 } from '../types'
 
 export interface PluginOpts {
@@ -40,7 +41,7 @@ export class Plugin {
   /**
    * 插件配置项
    */
-  public config: Config = Object.create(null)
+  public config: PluginConfig = Object.create(null)
   /**
    * 插件执行时间
    */
@@ -211,6 +212,7 @@ export class Plugin {
 
   public static getPresetsAndPlugins(opts: {
     cwd: string
+    userConfig: UserConfig
     plugins?: string[]
     presets?: string[]
     extractor?: PresetsAndPluginsExtractor
@@ -221,6 +223,7 @@ export class Plugin {
 
       return [
         ...presetsOrPlugins,
+        ...(opts.userConfig[types] || []),
         ...(opts.extractor?.(presetsOrPlugins, opts.cwd, opts) || []),
       ].map(path => {
         assert(
