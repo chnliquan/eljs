@@ -6,6 +6,9 @@ import { assert } from './utils'
 
 const skipTests = argv.skipTests
 const skipBuild = argv.skipBuild
+const skipRegistryChecks = argv.skipRegistryChecks || true
+const skipOwnershipChecks = argv.skipOwnershipChecks || true
+const skipSyncCnpm = argv.skipSyncCnpm
 
 main().catch((err: Error) => {
   console.error(`release error: ${err.message}`)
@@ -14,8 +17,11 @@ main().catch((err: Error) => {
 
 async function main(): Promise<void> {
   const isGitClean = (await $`git status --porcelain`).stdout.trim().length
+  assert(!isGitClean, 'git status is not clean.')
 
-  assert(!isGitClean, 'Your git status is not clean. Aborting.')
+  await $`git fetch`
+  const gitStatus = (await $`git status --short --branch`).stdout.trim()
+  assert(!gitStatus.includes('behind'), 'git status is behind remote.')
 
   // run tests before release
   step('Running tests ...')
@@ -37,8 +43,8 @@ async function main(): Promise<void> {
 
   release({
     gitChecks: false,
-    registryChecks: false,
-    ownershipChecks: false,
-    syncCnpm: true,
+    registryChecks: !skipRegistryChecks,
+    ownershipChecks: !skipOwnershipChecks,
+    syncCnpm: !skipSyncCnpm,
   })
 }
