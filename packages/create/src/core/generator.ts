@@ -7,13 +7,12 @@ import { GenerateService } from './service'
 export interface GeneratorOpts {
   targetDir: string
   projectName: string
-  cwd: string
   args?: Record<string, any>
   isLocalTemplate?: boolean
   isGenSchema?: boolean
 }
 
-export default class Generator {
+export class Generator {
   private _opts: GeneratorOpts
 
   public constructor(opts: GeneratorOpts) {
@@ -22,8 +21,7 @@ export default class Generator {
 
   public async create(templatePath?: string) {
     assert(templatePath, 'templatePath 不允许为空')
-    const { isLocalTemplate, targetDir, projectName, cwd, isGenSchema } =
-      this._opts
+    const { isLocalTemplate, targetDir, projectName, isGenSchema } = this._opts
 
     if (templatePath) {
       if (isLocalTemplate) {
@@ -36,24 +34,23 @@ export default class Generator {
         join(templatePath, 'generators/index.js'),
       ])
 
-      const {
-        userConfig: { presets, plugins },
-        run,
-      } = new GenerateService({
-        cwd,
+      const service = new GenerateService({
+        cwd: templatePath,
         plugins: generatorFile ? [require.resolve(generatorFile)] : [],
         isGenSchema,
         env: process.env.NODE_ENV as Env,
       })
 
       assert(
-        presets.length || plugins.length || generatorFile,
+        service.userConfig?.presets.length ||
+          service.userConfig?.plugins.length ||
+          generatorFile,
         `创建项目失败，必须包含配置文件 ${chalk.red(
           '.create.ts/create.js',
         )} 或者 ${chalk.red('generators/index.ts')}`,
       )
 
-      await run({
+      await service.run({
         target: targetDir,
         args: {
           ...(this._opts.args || {}),

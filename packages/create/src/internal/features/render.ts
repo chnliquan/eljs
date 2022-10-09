@@ -17,15 +17,12 @@ export default (api: Api) => {
       if (isDirectory(srcFile)) {
         api.copyDirectory({
           from: srcFile,
-          to: api.paths.absOutputPath,
+          to: api.paths.target,
           data,
           opts,
         })
       } else {
-        const destFile = join(
-          api.paths.absOutputPath,
-          srcFile.replace(/\.tpl$/, ''),
-        )
+        const destFile = join(api.paths.target, srcFile.replace(/\.tpl$/, ''))
 
         if (srcFile.endsWith('.tpl')) {
           api.copyTpl({

@@ -10,9 +10,9 @@ function formatPkgJSON(pkg: string) {
 
   // function getPrettierConfig() {
   //   const prettierPath = tryPaths([
-  //     `${absOutputPath}/prettier.config.js`,
-  //     `${absOutputPath}/.prettierrc.js`,
-  //     `${absOutputPath}/.prettierrc`,
+  //     `${target}/prettier.config.js`,
+  //     `${target}/.prettierrc.js`,
+  //     `${target}/.prettierrc`,
   //   ])
 
   //   if (!prettierPath) {
@@ -57,7 +57,7 @@ export default (api: Api) => {
     key: 'onGenerateDone',
     stage: Number.NEGATIVE_INFINITY,
     fn() {
-      const pkgJSONPath = join(api.paths.absOutputPath, 'package.json')
+      const pkgJSONPath = join(api.paths.target, 'package.json')
       let pkgJSON = api.service.pkgJSON
 
       if (existsSync(pkgJSONPath)) {
@@ -101,7 +101,7 @@ export default (api: Api) => {
 
       installWithNpmClient({
         npmClient,
-        cwd: api.paths.absOutputPath,
+        cwd: api.paths.target,
       })
     },
   })

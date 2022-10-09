@@ -1,5 +1,9 @@
-import { PluginAPI, PluginConfig } from '@eljs/service'
-import { PkgJSON, RenderTemplateOptions } from '@eljs/utils'
+import {
+  AppData as ServiceAppData,
+  PluginAPI,
+  PluginConfig,
+} from '@eljs/service'
+import { NpmClient, PkgJSON, RenderTemplateOptions } from '@eljs/utils'
 import { GenerateService, GenerateServicePluginAPI } from './core/service'
 
 export type TemplateType = 'npm' | 'git' | 'local'
@@ -44,6 +48,21 @@ export interface CreateOpts {
    * 命令行参数
    */
   args?: Record<string, any>
+}
+
+export interface AppData extends ServiceAppData {
+  /**
+   * 当前 Cli 版本
+   */
+  version: string
+  /**
+   * 项目名
+   */
+  projectName: string
+  /**
+   * Npm 客户端
+   */
+  npmClient: NpmClient
 }
 
 export interface Prompts {

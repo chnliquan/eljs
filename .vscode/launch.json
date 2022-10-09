@@ -67,7 +67,12 @@
       "windows": {
         "program": "${workspaceFolder}/node_modules/ts-node/bin/ts-node"
       },
-      "args": ["-O", "{\"module\": \"commonjs\"}", "--files", "${workspaceFolder}/packages/create/bin/gen.js"],
+      "args": [
+        "-O",
+        "{\"module\": \"commonjs\"}",
+        "--files",
+        "${workspaceFolder}/packages/create/bin/gen.js"
+      ],
       "cwd": "/Users/ender/learning/github/templates/packages/npm-node",
       "console": "integratedTerminal"
     },
@@ -76,6 +81,7 @@
       "request": "launch",
       "name": "Create Template",
       "runtimeExecutable": "node",
+      // "program": "${workspaceFolder}/node_modules/ts-node/dist/bin.js",
       "args": [
         "${workspaceFolder}/packages/create-template/bin/create-template",
         "temp",

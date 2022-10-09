@@ -1,5 +1,3 @@
-import { NpmClientEnum } from '@eljs/utils'
-
 export enum Env {
   development = 'development',
   production = 'production',
@@ -35,26 +33,30 @@ export interface Paths {
    */
   cwd: string
   /**
-   * 项目生成输出路径
+   * 目标路径
    */
-  absOutputPath?: string
+  target: string
 
-  [property: string]: any
+  [property: string]: string
 }
 
 export interface AppData {
   /**
-   * 项目名
+   * 当前执行路径
    */
-  projectName?: string
+  cwd: string
   /**
-   * 当前版本
+   * 目标执行路径
    */
-  version?: string
+  target: string
   /**
-   * NPM 客户端
+   * 命令名称
    */
-  npmClient?: NpmClientEnum
+  name: string
+  /**
+   * 命令执行参数
+   */
+  args: any
 
   [property: string]: any
 }

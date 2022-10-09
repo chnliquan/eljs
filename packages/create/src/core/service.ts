@@ -2,7 +2,6 @@ import {
   ApplyAdd,
   ApplyEvent,
   ApplyModify,
-  Args,
   Paths,
   Service,
   ServiceOpts,
@@ -10,6 +9,7 @@ import {
 } from '@eljs/service'
 import { logger, PkgJSON, prompts, RenderTemplateOptions } from '@eljs/utils'
 import {
+  AppData,
   CopyDirectoryOpts,
   CopyFileOpts,
   CopyTplOpts,
@@ -31,14 +31,6 @@ export class GenerateService extends Service {
    * 构造函数配置项
    */
   public opts!: GenerateServiceOpts
-  /**
-   * 目标路径
-   */
-  public target = ''
-  /**
-   * 其它执行参数
-   */
-  public args!: Args
   /**
    * 执行阶段
    */
@@ -151,23 +143,11 @@ export class GenerateService extends Service {
 export interface GenerateServicePluginAPI extends ServicePluginAPI {
   // #region 服务自身属性
   /**
-   * 目标路径
+   * 存储项目相关全局数据
    */
-  target: typeof GenerateService.prototype.target
+  appData: AppData
   /**
-   * 其它执行参数
-   */
-  args: typeof GenerateService.prototype.args
-  /**
-   * 用户配置
-   */
-  userConfig: typeof GenerateService.prototype.userConfig
-  /**
-   * 存储全局数据
-   */
-  appData: typeof GenerateService.prototype.appData
-  /**
-   * 项目路径
+   * 存储项目相关路径
    */
   paths: Required<typeof GenerateService.prototype.paths>
   /**
@@ -175,7 +155,7 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
    */
   prompts: typeof GenerateService.prototype.prompts
   /**
-   * 插件启用配置，用于控制插件，是否启用可通过 `modifyConfig` 方法修改
+   * 插件启用配置，用于控制插件，是否启用可通过 `modifyPluginConfig` 方法修改
    */
   pluginConfig: typeof GenerateService.prototype.pluginConfig
   /**

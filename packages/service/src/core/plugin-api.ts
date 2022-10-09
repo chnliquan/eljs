@@ -45,7 +45,7 @@ export class PluginAPI<T extends Service = Service> {
       !this.service.pluginMethods[opts.name],
       `api.registerMethod() failed, method ${opts.name} is already exist.`,
     )
-    console.log('registerMethod', opts.name)
+
     this.service.pluginMethods[opts.name] = {
       plugin: this.plugin,
       fn:

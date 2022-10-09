@@ -14,7 +14,7 @@ export default async (api: Api) => {
       return false
     }
 
-    if (await hasProjectGit(api.paths.absOutputPath)) {
+    if (await hasProjectGit(api.paths.target)) {
       return false
     }
 
@@ -36,7 +36,7 @@ export default async (api: Api) => {
         console.log()
         api.utils.logger.info(`🗃 Initializing git repository...`)
         api.utils.run('git init', {
-          cwd: api.paths.absOutputPath,
+          cwd: api.paths.target,
         })
       }
     },

@@ -11,7 +11,7 @@ import { existsSync, readdirSync } from 'fs'
 import path from 'path'
 import { CreateOpts, TemplateInfo } from '../types'
 import { Download } from './download'
-import Generator from './generator'
+import { Generator } from './generator'
 
 export function objectToArray(
   obj: Record<string, unknown>,
@@ -66,6 +66,7 @@ export class Create {
 
   public async run(projectName: string) {
     let templatePath = ''
+
     try {
       const name =
         projectName === '.' ? path.relative('../', this.cwd) : projectName
@@ -87,7 +88,6 @@ export class Create {
         isLocalTemplate: !!this._localTemplatePath,
         projectName: name,
         targetDir,
-        cwd: this.cwd,
         args: this._opts.args,
         isGenSchema: this._opts.schema,
       })

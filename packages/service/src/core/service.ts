@@ -50,7 +50,17 @@ export interface ServiceOpts {
 }
 
 export interface ServiceRunOpts {
-  target: string
+  /**
+   * 当前执行的命令名称
+   */
+  name?: string
+  /**
+   * 目标执行路径
+   */
+  target?: string
+  /**
+   * 命令执行参数
+   */
   args?: any
 }
 
@@ -64,9 +74,17 @@ export class Service {
    */
   public cwd: string
   /**
+   * 目标执行路径
+   */
+  public target = ''
+  /**
    * 当前环境
    */
   public env: Env
+  /**
+   * 执行 `run` 函数时传入的名字
+   */
+  public name = ''
   /**
    * 其它执行参数
    */
@@ -89,31 +107,32 @@ export class Service {
    */
   public stage: string = ServiceStage.Uninitialized
   /**
+   * 插件配置项，是否启用可通过 `modifyConfig` 方法修改
+   */
+  public pluginConfig: PluginConfig = Object.create(null)
+  /**
    * 存储全局数据
    */
-  public appData: AppData = {}
+  public appData: AppData = Object.create(null)
   /**
    * 存储项目路径
    */
   public paths: Paths = {
     cwd: '',
+    target: '',
   }
-  /**
-   * 插件配置项，是否启用可通过 `modifyConfig` 方法修改
-   */
-  public pluginConfig: PluginConfig = {}
   /**
    * 钩子映射表
    */
-  public hooks: Record<string, Hook[]> = {}
+  public hooks: Record<string, Hook[]> = Object.create(null)
   /**
    * 插件集合
    */
-  public plugins: Record<string, Plugin> = {}
+  public plugins: Record<string, Plugin> = Object.create(null)
   /**
    * 插件映射表
    */
-  public keyToPluginMap: Record<string, Plugin> = {}
+  public keyToPluginMap: Record<string, Plugin> = Object.create(null)
   /**
    * 插件方法集合
    */
@@ -406,14 +425,16 @@ export class Service {
   }
 
   public async run(opts: ServiceRunOpts) {
-    const { target, args = {} } = opts
+    const { name = '', target = this.cwd, args = {} } = opts
 
     args._ = args._ || []
     // shift the command itself
-    if (args._[0] === target) {
+    if (args._[0] === name) {
       args._.shift()
     }
 
+    this.name = name
+    this.target = target
     this.args = args
 
     await this.beforeRun(opts, this)
@@ -455,7 +476,7 @@ export class Service {
       (await this.beforeModifyPluginConfig(opts, this.pluginConfig, this)) ||
       this.pluginConfig
 
-    // applyPlugin modify config
+    // applyPlugin modify plugin config
     this.pluginConfig = await this.applyPlugins({
       key: 'modifyPluginConfig',
       initialValue: pluginConfigInitialValue,
@@ -464,7 +485,7 @@ export class Service {
 
     const defaultPaths = {
       cwd: this.cwd,
-      absOutputPath: target,
+      target,
     }
     const pathsInitialValue =
       (await this.beforeModifyPaths(opts, defaultPaths, this)) || defaultPaths
@@ -480,9 +501,9 @@ export class Service {
 
     const defaultAppData = {
       cwd: this.cwd,
+      target,
+      name,
       args,
-      plugins,
-      presets,
     }
     const appDataInitialValue =
       (await this.beforeModifyAppData(opts, defaultAppData, this)) ||
@@ -522,7 +543,7 @@ export class Service {
   }
 
   /**
-   * 执行 `run` 方法之前的钩子
+   * 执行 `run` 方法之前调用的钩子
    */
   protected async beforeRun(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -533,7 +554,7 @@ export class Service {
   ): Promise<void> {}
 
   /**
-   * 执行 `applyPlugin('modifyConfig')` 之前的钩子
+   * 执行 `applyPlugin('modifyConfig')` 之前调用的钩子
    */
   protected async beforeModifyPluginConfig<T extends PluginConfig>(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -546,7 +567,7 @@ export class Service {
   ): Promise<T | void> {}
 
   /**
-   * 执行 `applyPlugin('modifyPaths')` 之前的钩子
+   * 执行 `applyPlugin('modifyPaths')` 之前调用的钩子
    */
   // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
   protected async beforeModifyPaths<T extends Paths>(
@@ -560,7 +581,7 @@ export class Service {
   ): Promise<T | void> {}
 
   /**
-   * 执行 `applyPlugin('modifyAppData')' 之前的钩子
+   * 执行 `applyPlugin('modifyAppData')' 之前调用的钩子
    */
   // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
   protected async beforeModifyAppData<T extends AppData>(
@@ -641,7 +662,15 @@ export interface ServicePluginAPI {
    */
   cwd: typeof Service.prototype.cwd
   /**
-   * 其它执行参数
+   * 命令名称
+   */
+  name: typeof Service.prototype.name
+  /**
+   * 目标路径
+   */
+  target: typeof Service.prototype.target
+  /**
+   * 命令执行传入的其他参数
    */
   args: typeof Service.prototype.args
   /**
@@ -649,17 +678,17 @@ export interface ServicePluginAPI {
    */
   userConfig: typeof Service.prototype.userConfig
   /**
-   * 存储全局数据
+   * 插件配置项，是否启用可通过 `modifyPluginConfig` 方法修改
+   */
+  pluginConfig: typeof Service.prototype.pluginConfig
+  /**
+   * 存储项目相关全局数据
    */
   appData: typeof Service.prototype.appData
   /**
-   * 项目路径
+   * 存储项目相关路径
    */
   paths: Required<typeof Service.prototype.paths>
-  /**
-   * 插件配置项，是否启用可通过 `modifyConfig` 方法修改
-   */
-  pluginConfig: typeof Service.prototype.pluginConfig
   // #endregion
 
   // #region 插件钩子
