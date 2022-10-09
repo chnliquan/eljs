@@ -62,7 +62,7 @@ export interface AppData {
 /**
  * 预设插件提取器
  */
-export interface PresetsAndPluginsExtractor {
+export interface PresetsOrPluginsExtractor {
   (presetsOrPlugins: string[], cwd: string, opts: Record<string, any>): string[]
 }
 

@@ -10,7 +10,7 @@ import {
   PluginConfig,
   PluginReturnType,
   PluginType,
-  PresetsAndPluginsExtractor,
+  PresetsOrPluginsExtractor,
   UserConfig,
 } from '../types'
 
@@ -215,16 +215,19 @@ export class Plugin {
     userConfig: UserConfig
     plugins?: string[]
     presets?: string[]
-    extractor?: PresetsAndPluginsExtractor
+    presetsExtractor?: PresetsOrPluginsExtractor
+    pluginsExtractor?: PresetsOrPluginsExtractor
   }) {
     function get(type: PluginType) {
       const types = `${type}s` as 'presets' | 'plugins'
       const presetsOrPlugins = opts[types] || []
+      const extractor =
+        type === 'preset' ? opts.presetsExtractor : opts.pluginsExtractor
 
       return [
         ...presetsOrPlugins,
         ...(opts.userConfig[types] || []),
-        ...(opts.extractor?.(presetsOrPlugins, opts.cwd, opts) || []),
+        ...(extractor?.(presetsOrPlugins, opts.cwd, opts) || []),
       ].map(path => {
         assert(
           typeof path === 'string',
