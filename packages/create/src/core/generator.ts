@@ -4,7 +4,7 @@ import assert from 'assert'
 import { join } from 'path'
 import { GenerateService } from './service'
 
-export interface GeneratorOptions {
+export interface GeneratorOpts {
   targetDir: string
   projectName: string
   cwd: string
@@ -14,9 +14,9 @@ export interface GeneratorOptions {
 }
 
 export default class Generator {
-  private _opts: GeneratorOptions
+  private _opts: GeneratorOpts
 
-  public constructor(opts: GeneratorOptions) {
+  public constructor(opts: GeneratorOpts) {
     this._opts = opts
   }
 
@@ -36,14 +36,24 @@ export default class Generator {
         join(templatePath, 'generators/index.js'),
       ])
 
-      const service = new GenerateService({
+      const {
+        userConfig: { presets, plugins },
+        run,
+      } = new GenerateService({
         cwd,
         plugins: generatorFile ? [require.resolve(generatorFile)] : [],
         isGenSchema,
         env: process.env.NODE_ENV as Env,
       })
 
-      await service.run({
+      assert(
+        presets.length || plugins.length || generatorFile,
+        `创建项目失败，必须包含配置文件 ${chalk.red(
+          '.create.ts/create.js',
+        )} 或者 ${chalk.red('generators/index.ts')}`,
+      )
+
+      await run({
         target: targetDir,
         args: {
           ...(this._opts.args || {}),

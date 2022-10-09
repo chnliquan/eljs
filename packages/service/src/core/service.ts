@@ -83,7 +83,7 @@ export class Service {
   /**
    * 配置管理器
    */
-  public configManager: ConfigManager | null = null
+  public configManager: ConfigManager
   /**
    * 执行阶段
    */
@@ -131,6 +131,11 @@ export class Service {
   private _prefix: string
 
   public constructor(opts: ServiceOpts) {
+    assert(
+      utils.existsSync(opts.cwd),
+      `Invalid cwd ${opts.cwd}, it's not found.`,
+    )
+
     this.opts = opts
     this.cwd = opts.cwd
     this.env = opts.env
@@ -140,10 +145,12 @@ export class Service {
         : `${opts.frameworkName}-`
       : '@eljs/service-'
 
-    assert(
-      utils.existsSync(this.cwd),
-      `Invalid cwd ${this.cwd}, it's not found.`,
-    )
+    this.configManager = new ConfigManager({
+      cwd: this.cwd,
+      env: this.env,
+      defaultConfigFiles: this.opts.defaultConfigFiles,
+    })
+    this.userConfig = this.configManager.getUserConfig().config
   }
 
   public async initPlugin(opts: {
@@ -412,14 +419,6 @@ export class Service {
     this.beforeRun(opts, this)
 
     this.stage = ServiceStage.Init
-
-    // get user config
-    this.configManager = new ConfigManager({
-      cwd: this.cwd,
-      env: this.env,
-      defaultConfigFiles: this.opts.defaultConfigFiles,
-    })
-    this.userConfig = this.configManager.getUserConfig().config
 
     const { plugins, presets } = Plugin.getPresetsAndPlugins({
       cwd: this.cwd,

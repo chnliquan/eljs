@@ -10,12 +10,12 @@ export const defaultTemplateConfig: TemplateConfig = {
       'template-npm-web': {
         type: 'npm',
         description: 'Web 通用模版',
-        value: '@eljs/template-npm-web',
+        value: '@eljs/create-plugin-npm-web',
       },
       'template-npm-node': {
         type: 'npm',
         description: 'Node 通用模版',
-        value: '@eljs/template-npm-node',
+        value: '@eljs/create-plugin-npm-node',
       },
     },
   },

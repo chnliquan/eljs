@@ -81,22 +81,25 @@ export class ConfigManager {
     mainConfigFile: string | null
     env: Env
   }) {
-    const ret: string[] = []
+    const configFiles: string[] = []
     const { mainConfigFile } = opts
 
     if (mainConfigFile) {
       const env = SHORT_ENV[opts.env] || opts.env
 
-      ret.push(
-        ...[mainConfigFile, addExt({ file: mainConfigFile, ext: `.${env}` })],
+      configFiles.push(
+        ...[
+          mainConfigFile,
+          env && addExt({ file: mainConfigFile, ext: `.${env}` }),
+        ].filter(Boolean),
       )
 
       if (opts.env === Env.development) {
-        ret.push(addExt({ file: mainConfigFile, ext: LOCAL_EXT }))
+        configFiles.push(addExt({ file: mainConfigFile, ext: LOCAL_EXT }))
       }
     }
 
-    return ret
+    return configFiles
   }
 
   public static getUserConfig(opts: { configFiles: string[] }) {
@@ -125,6 +128,7 @@ export class ConfigManager {
         for (const file of register.getFiles()) {
           delete require.cache[file]
         }
+
         // includes the config File
         files.push(...register.getFiles())
         register.restore()

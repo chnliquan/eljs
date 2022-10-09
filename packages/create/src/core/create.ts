@@ -95,7 +95,7 @@ export class Create {
       await generator.create(templatePath)
     } catch (err) {
       console.log()
-      logger.error('创建模版失败')
+      logger.error('创建模版失败，错误信息如下：')
       throw err
     } finally {
       this._removeTemplate(templatePath)
