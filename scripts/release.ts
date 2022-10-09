@@ -37,6 +37,8 @@ async function main(): Promise<void> {
 
   release({
     gitChecks: false,
+    registryChecks: false,
+    ownershipChecks: false,
     syncCnpm: true,
   })
 }

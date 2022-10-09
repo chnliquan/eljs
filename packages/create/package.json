@@ -19,7 +19,7 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "bin": {
-    "create": "bin/create.js"
+    "gen": "bin/gen.js"
   },
   "files": [
     "lib",
