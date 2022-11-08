@@ -36,7 +36,7 @@ async function main(): Promise<void> {
   step('Building all packages ...')
   if (!skipBuild) {
     await $`pnpm clean`
-    await $`pnpm build --no-cache`
+    await $`pnpm build --force`
   } else {
     console.log(`(skipped)`)
   }
