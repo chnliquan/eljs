@@ -1,5 +1,4 @@
 // https://github.com/vercel/next.js/blob/canary/packages/next/build/webpack/require-hook.ts
-
 import path from 'path'
 
 const hookPropertyMap = new Map([

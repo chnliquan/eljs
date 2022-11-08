@@ -108,10 +108,19 @@ export function updateDeps(opts: {
 
   const reg = /\^?(\d+\.\d+\.\d+)(-(alpha|beta|next)\.\d+)?/
 
-  Object.keys(deps).forEach(dep => {
-    if (pkgNames.includes(dep)) {
-      logger.info(`${pkgJSON.name} -> ${depType} -> ${dep}@${version}`)
-      deps[dep] = deps[dep].replace(reg, version)
+  Object.entries(deps).forEach(([depName, depValue]) => {
+    if (pkgNames.includes(depName)) {
+      if (
+        depValue.startsWith('workspace') &&
+        !/^workspace:[^\s]+/.test(depValue)
+      ) {
+        logger.printErrorAndExit(
+          `the workspace protocol ${depName} in ${pkgJSON.name} dependencies is not valid.`,
+        )
+      }
+
+      logger.info(`${pkgJSON.name} -> ${depType} -> ${depName}@${version}`)
+      deps[depName] = deps[depName].replace(reg, version)
     }
   })
 }

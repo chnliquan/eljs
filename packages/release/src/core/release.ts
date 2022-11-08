@@ -216,7 +216,8 @@ async function init(cwd: string) {
       pkgJSONs.push(pkgJSON)
 
       if (!pkgJSON.name) {
-        logger.printErrorAndExit(`can not read name field in ${pkgJSONPath}.`)
+        logger.warn(`skip publish ${pkgJSONPath}, cause no name found.`)
+        return
       } else {
         pkgNames.push(pkgJSON.name)
       }
