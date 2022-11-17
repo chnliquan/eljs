@@ -1,9 +1,9 @@
-## [Changes](https://github.com/chnliquan/eljs/compare/v0.10.0...v0.11.0) (2022-11-08)
+## [Changes](https://github.com/chnliquan/eljs/compare/v0.11.0...v0.11.1) (2022-11-17)
 
 
-### ✨ Features
+### 🐛 Bug Fixes
 
-* **release:** check workspace protocal ([c7dfe64](https://github.com/chnliquan/eljs/commit/c7dfe64e8ed6a886b3af76ddedfe8e8613c5091e))
+* **relese:** bin ([fdbb8aa](https://github.com/chnliquan/eljs/commit/fdbb8aa90953f36ca5fb3934a62b8e1e5e23c1b3))
 
 
 
