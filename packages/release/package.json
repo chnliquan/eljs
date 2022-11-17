@@ -18,6 +18,9 @@
   "author": "liquan",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
+  "bin": {
+    "release": "bin/release.js"
+  },
   "files": [
     "bin",
     "lib"
