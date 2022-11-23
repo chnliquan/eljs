@@ -1,6 +1,6 @@
 {
   "name": "@eljs/create-template",
-  "version": "0.11.1",
+  "version": "0.11.2",
   "description": "@eljs/create-template",
   "keywords": [
     "eljs",
@@ -31,8 +31,8 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@eljs/create": "0.11.1",
-    "@eljs/utils": "0.11.1",
+    "@eljs/create": "0.11.2",
+    "@eljs/utils": "0.11.2",
     "commander": "^9.4.0"
   }
 }

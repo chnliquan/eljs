@@ -1,9 +1,9 @@
-## [Changes](https://github.com/chnliquan/eljs/compare/v0.11.0...v0.11.1) (2022-11-17)
+## [Changes](https://github.com/chnliquan/eljs/compare/v0.11.1...v0.11.2) (2022-11-23)
 
 
-### 🐛 Bug Fixes
+### ♻ Code Refactoring
 
-* **relese:** bin ([fdbb8aa](https://github.com/chnliquan/eljs/commit/fdbb8aa90953f36ca5fb3934a62b8e1e5e23c1b3))
+* **release:** set default ownership checks to false ([28eadc7](https://github.com/chnliquan/eljs/commit/28eadc7eb73c2578b99bcd0beec7213f7447a4ff))
 
 
 
