@@ -61,7 +61,7 @@ export async function release(opts: Options): Promise<void> {
 
   const defaultOptions: Options = {
     registryChecks: true,
-    ownershipChecks: true,
+    ownershipChecks: false,
     syncCnpm: false,
     repoUrl: rootPkgJSON?.repository?.url || '',
     changelogPreset: '@eljs/changelog-preset',
