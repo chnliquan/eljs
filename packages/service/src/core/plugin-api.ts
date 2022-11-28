@@ -1,9 +1,14 @@
 import { isPlainObject, isString } from '@eljs/utils'
 import assert from 'assert'
 import { EnableBy, PluginType, ServiceStage } from '../types'
+import { Command, CommandOpts } from './command'
 import { Hook, HookOpts } from './hook'
 import { Plugin } from './plugin'
 import { Service } from './service'
+
+const resolveConfigModes = ['strict', 'loose'] as const
+
+export type ResolveConfigMode = typeof resolveConfigModes[number]
 
 export interface ProxyPluginAPIOpts<T = Service> {
   pluginAPI: PluginAPI
@@ -31,6 +36,43 @@ export class PluginAPI<T extends Service = Service> {
     enableBy?: EnableBy | (() => boolean)
   }) {
     this.plugin.merge(opts)
+  }
+
+  public registerCommand(
+    opts: Omit<CommandOpts, 'plugin'> & { alias?: string | string[] },
+  ) {
+    const { alias } = opts
+    Reflect.deleteProperty(opts, 'alias')
+
+    const registerCommand = (commandOpts: Omit<CommandOpts, 'plugin'>) => {
+      const { name, configResolveMode } = commandOpts
+
+      assert(
+        !configResolveMode ||
+          resolveConfigModes.indexOf(configResolveMode) >= 0,
+        `configResolveMode must be one of ${resolveConfigModes.join(
+          ',',
+        )}, but got ${configResolveMode}`,
+      )
+      assert(
+        !this.service.commands[name],
+        `api.registerCommand() failed, the command ${name} is exists from ${this.service.commands[name]?.plugin.id}.`,
+      )
+
+      this.service.commands[name] = new Command({
+        ...commandOpts,
+        plugin: this.plugin,
+      })
+    }
+
+    registerCommand(opts)
+
+    if (alias) {
+      const aliases = Array.isArray(alias) ? alias : [alias]
+      aliases.forEach(alias => {
+        registerCommand({ ...opts, name: alias })
+      })
+    }
   }
 
   public register(opts: Omit<HookOpts, 'plugin'>) {

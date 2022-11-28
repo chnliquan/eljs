@@ -1,5 +1,6 @@
 import * as utils from '@eljs/utils'
 import assert from 'assert'
+import fastestLevenshtein from 'fastest-levenshtein'
 import _ from 'lodash'
 import { AsyncSeriesWaterfallHook } from 'tapable'
 import { ConfigManager } from '../config/manager'
@@ -18,6 +19,7 @@ import {
   ServiceStage,
   UserConfig,
 } from '../types'
+import { Command } from './command'
 import { Hook } from './hook'
 import { Plugin } from './plugin'
 import { PluginAPI } from './plugin-api'
@@ -125,6 +127,10 @@ export class Service {
    * 钩子映射表
    */
   public hooks: Record<string, Hook[]> = Object.create(null)
+  /**
+   * 命令集合
+   */
+  public commands: Record<string, Command> = Object.create(null)
   /**
    * 插件集合
    */
@@ -472,6 +478,13 @@ export class Service {
       await this.initPlugin({ plugin: plugins.shift() as Plugin, plugins })
     }
 
+    if (name && !this.commands[name]) {
+      this.commandGuessHelper(Object.keys(this.commands), name)
+      throw Error(
+        `Invalid command ${utils.chalk.red(name)}, it's not registered.`,
+      )
+    }
+
     const pluginConfigInitialValue =
       (await this.beforeModifyPluginConfig(opts, this.pluginConfig, this)) ||
       this.pluginConfig
@@ -516,7 +529,27 @@ export class Service {
       initialValue: appDataInitialValue,
     })
 
+    await this.beforeRunCommand(opts, this)
+
+    // applyPlugin onCheck
+    this.stage = ServiceStage.OnCheck
+    await this.applyPlugins({
+      key: 'onCheck',
+    })
+
+    // applyPlugin onStart
+    this.stage = ServiceStage.OnStart
+    await this.applyPlugins({
+      key: 'onStart',
+    })
+
+    if (this.commands[name]) {
+      this.stage = ServiceStage.RunCommand
+      await this.commands[name].fn({ args })
+    }
+
     await this.afterRun(opts, this)
+
     this._baconPlugins()
   }
 
@@ -540,6 +573,36 @@ export class Service {
     }
 
     return this.isPluginEnableBy(plugin)
+  }
+
+  public commandGuessHelper(commands: string[], currentCmd: string) {
+    const altCommands = commands.filter(cmd => {
+      return (
+        fastestLevenshtein.distance(currentCmd, cmd) <
+          currentCmd.length * 0.6 && currentCmd !== cmd
+      )
+    })
+    const printHelper = altCommands
+      .slice(0, 3)
+      .map(cmd => {
+        return ` - ${utils.chalk.green(cmd)}`
+      })
+      .join('\n')
+
+    if (altCommands.length) {
+      console.log()
+      console.log(
+        [
+          utils.chalk.cyan(
+            altCommands.length === 1
+              ? 'Did you mean this command ?'
+              : 'Did you mean one of these commands ?',
+          ),
+          printHelper,
+        ].join('\n'),
+      )
+      console.log()
+    }
   }
 
   /**
@@ -594,11 +657,26 @@ export class Service {
     // eslint-disable-next-line @typescript-eslint/no-empty-function
   ): Promise<T | void> {}
   /**
-   * 执行 `run` 方法之后的钩子
+   * 执行命令之前的钩子
    */
   // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-  protected afterRun(opts: ServiceRunOpts, service: Service) {}
-
+  protected async beforeRunCommand(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    opts: ServiceRunOpts,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    service: Service,
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+  ): Promise<void> {}
+  /**
+   * 执行 `run` 方法之后的钩子
+   */
+  protected async afterRun(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    opts: ServiceRunOpts,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    service: Service,
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+  ): Promise<void> {}
   /**
    * 自定义的预设提取器
    */

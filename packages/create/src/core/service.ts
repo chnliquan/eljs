@@ -64,7 +64,7 @@ export class GenerateService extends Service {
     this.cliVersion = require('../../package.json').version
   }
 
-  protected async afterRun(): Promise<void> {
+  protected async beforeRunCommand(): Promise<void> {
     this.stage = GenerateServiceStage.Prompting
 
     const questions = await this.applyPlugins({
@@ -89,19 +89,9 @@ export class GenerateService extends Service {
       initialValue: {},
       args: { questions },
     })
+  }
 
-    // applyPlugin onCheck
-    this.stage = GenerateServiceStage.OnCheck
-    await this.applyPlugins({
-      key: 'onCheck',
-    })
-
-    // applyPlugin onStart
-    this.stage = GenerateServiceStage.OnStart
-    await this.applyPlugins({
-      key: 'onStart',
-    })
-
+  protected async afterRun(): Promise<void> {
     // 生成文件之前
     await this.applyPlugins({
       key: 'onBeforeGenerateFiles',

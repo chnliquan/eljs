@@ -10,6 +10,9 @@ export enum ServiceStage {
   InitPresets = 'initPresets',
   InitPlugins = 'initPlugins',
   CollectAppData = 'collectAppData',
+  OnCheck = 'onCheck',
+  OnStart = 'onStart',
+  RunCommand = 'runCommand',
 }
 
 export interface UserConfig {

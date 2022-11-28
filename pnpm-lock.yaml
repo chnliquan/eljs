@@ -147,6 +147,7 @@ importers:
       '@types/lodash': ^4.14.186
       deepmerge: ^4.2.2
       esbuild: ^0.15.5
+      fastest-levenshtein: ^1.0.16
       hash-sum: ^2.0.0
       joi: ^17.6.2
       lodash: ^4.17.21
@@ -158,6 +159,7 @@ importers:
       '@types/lodash': 4.14.186
       deepmerge: 4.2.2
       esbuild: 0.15.5
+      fastest-levenshtein: 1.0.16
       hash-sum: 2.0.0
       joi: 17.6.2
       lodash: 4.17.21
@@ -3454,6 +3456,11 @@ packages:
     dependencies:
       punycode: 1.4.1
     dev: true
+
+  /fastest-levenshtein/1.0.16:
+    resolution: {integrity: sha512-eRnCtTTtGZFpQCwhJiUOuxPQWRXVKYDn0b2PeHfXL6/Zi53SLAzAHfVhVWK2AryC/WH05kGfxhFIPvTF0SXQzg==}
+    engines: {node: '>= 4.9.1'}
+    dev: false
 
   /fastq/1.13.0:
     resolution: {integrity: sha512-YpkpUnK8od0o1hmeSc7UUs/eB/vIPWJYjKck2QKIzAf71Vm1AAQ3EbuZB3g2JIy+pg+ERD0vqI79KyZiB2e2Nw==}

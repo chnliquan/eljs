@@ -125,10 +125,10 @@ export enum GenerateServiceStage {
   InitPresets = 'initPresets',
   InitPlugins = 'initPlugins',
   CollectAppData = 'collectAppData',
-  // #endregion service stage
-  Prompting = 'prompting',
   OnCheck = 'onCheck',
   OnStart = 'onStart',
+  // #endregion service stage
+  Prompting = 'prompting',
 }
 
 export type ExtendPackageOpts = (pkg: PkgJSON) => PkgJSON | PkgJSON
