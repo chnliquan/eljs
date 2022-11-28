@@ -5,7 +5,7 @@ import esbuild from 'esbuild'
 import joi from 'joi'
 import { join } from 'path'
 import { DEFAULT_CONFIG_FILES, LOCAL_EXT, SHORT_ENV } from '../const'
-import { Env } from '../types'
+import { Env } from '../types/env'
 import { addExt, getAbsFiles } from './utils'
 
 export interface ConfigManagerOpts {

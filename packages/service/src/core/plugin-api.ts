@@ -1,6 +1,7 @@
-import { isPlainObject, isString } from '@eljs/utils'
+import { DistributiveOmit, isPlainObject, isString } from '@eljs/utils'
 import assert from 'assert'
-import { EnableBy, PluginType, ServiceStage } from '../types'
+import { EnableBy } from '../enum'
+import { Generator, PluginType, ServiceStage } from '../types'
 import { Command, CommandOpts } from './command'
 import { Hook, HookOpts } from './hook'
 import { Plugin } from './plugin'
@@ -72,6 +73,20 @@ export class PluginAPI<T extends Service = Service> {
       aliases.forEach(alias => {
         registerCommand({ ...opts, name: alias })
       })
+    }
+  }
+
+  public registerGenerator(opts: DistributiveOmit<Generator, 'plugin'>) {
+    const { key } = opts
+
+    assert(
+      !this.service.generators[key],
+      `api.registerGenerator() failed, the generator ${key} is exists from ${this.service.generators[key]?.plugin.id}.`,
+    )
+
+    this.service.generators[key] = {
+      ...opts,
+      plugin: this.plugin,
     }
   }
 

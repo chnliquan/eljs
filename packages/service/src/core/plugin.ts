@@ -5,8 +5,8 @@ import { existsSync } from 'fs'
 import sum from 'hash-sum'
 import { basename, dirname, extname, join, relative } from 'path'
 import pkgUp from 'pkg-up'
-import {
-  EnableBy,
+import { EnableBy } from '../enum'
+import type {
   PluginConfig,
   PluginReturnType,
   PluginType,

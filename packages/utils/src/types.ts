@@ -58,3 +58,7 @@ export interface GitInfo extends GitRepo {
 export interface Implementor {
   transformSync: (code: string, opts: Record<string, any>) => { code: string }
 }
+
+export type DistributiveOmit<T, K extends keyof any> = T extends any
+  ? Omit<T, K>
+  : never

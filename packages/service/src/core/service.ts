@@ -4,14 +4,15 @@ import fastestLevenshtein from 'fastest-levenshtein'
 import _ from 'lodash'
 import { AsyncSeriesWaterfallHook } from 'tapable'
 import { ConfigManager } from '../config/manager'
+import { EnableBy } from '../enum'
 import {
   AppData,
   ApplyEvent,
   ApplyModify,
   ApplyPluginsType,
   Args,
-  EnableBy,
   Env,
+  Generator,
   Paths,
   PluginConfig,
   PluginType,
@@ -37,6 +38,10 @@ export interface ServiceOpts {
    * 框架名称
    */
   frameworkName?: string
+  /**
+   * bin 名称
+   */
+  binName?: string
   /**
    * 默认的配置文件列表
    */
@@ -84,9 +89,13 @@ export class Service {
    */
   public env: Env
   /**
-   * 执行 `run` 函数时传入的名字
+   * 执行 `run` 函数时传入的名字（具体的命令）
    */
   public name = ''
+  /**
+   * bin 名称
+   */
+  public binName = ''
   /**
    * 其它执行参数
    */
@@ -132,6 +141,10 @@ export class Service {
    */
   public commands: Record<string, Command> = Object.create(null)
   /**
+   * 微生成器集合
+   */
+  public generators: Record<string, Generator> = Object.create(null)
+  /**
    * 插件集合
    */
   public plugins: Record<string, Plugin> = Object.create(null)
@@ -164,6 +177,7 @@ export class Service {
     this.opts = opts
     this.cwd = opts.cwd
     this.env = opts.env
+    this.binName = opts.binName || 'eljs'
     this._prefix = opts.frameworkName
       ? opts.frameworkName.endsWith('-')
         ? opts.frameworkName
@@ -217,10 +231,14 @@ export class Service {
       serviceProps: _.union(
         [
           'cwd',
+          'name',
+          'binName',
           'args',
           'userConfig',
           'appData',
           'paths',
+          'commands',
+          'generators',
           'pluginConfig',
           'applyPlugins',
           'isPluginEnable',
@@ -453,7 +471,9 @@ export class Service {
       presets: [require.resolve('./service-plugin')].concat(
         this.opts.presets || [],
       ),
-      plugins: (this.opts.plugins || []) as string[],
+      plugins: [require.resolve('./command-plugin')].concat(
+        this.opts.plugins || [],
+      ) as string[],
       presetsExtractor: this.presetsExtractor,
       pluginsExtractor: this.pluginsExtractor,
     })
@@ -744,6 +764,10 @@ export interface ServicePluginAPI {
    */
   name: typeof Service.prototype.name
   /**
+   * bin 名称
+   */
+  binName: typeof Service.prototype.name
+  /**
    * 目标路径
    */
   target: typeof Service.prototype.target
@@ -767,6 +791,14 @@ export interface ServicePluginAPI {
    * 存储项目相关路径
    */
   paths: Required<typeof Service.prototype.paths>
+  /**
+   * 全局命令集合
+   */
+  commands: typeof Service.prototype.commands
+  /**
+   * 全局微生成器集合
+   */
+  generators: typeof Service.prototype.generators
   // #endregion
 
   // #region 插件钩子

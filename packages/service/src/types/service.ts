@@ -1,9 +1,3 @@
-export enum Env {
-  development = 'development',
-  production = 'production',
-  test = 'test',
-}
-
 export enum ServiceStage {
   Uninitialized = 'uninitialized',
   Init = 'init',
@@ -76,25 +70,10 @@ export interface ProxyPluginAPIPropsExtractorReturnType {
   staticProps: Record<string, any>
 }
 
-export interface PluginReturnType {
-  presets?: string[]
-  plugins?: string[]
-}
-
-export enum PluginType {
-  Preset = 'preset',
-  Plugin = 'plugin',
-}
-
 export enum ApplyPluginsType {
   Add = 'add',
   Modify = 'modify',
   Event = 'event',
-}
-
-export enum EnableBy {
-  Register = 'register',
-  Prompts = 'prompts',
 }
 
 export interface ApplyEvent<T> {
