@@ -218,13 +218,16 @@ async function init(cwd: string) {
       const pkgJSONPath = path.join(pkgDir, 'package.json')
       const pkgJSON: PkgJSON = readJSONSync(pkgJSONPath)
 
-      pkgJSONPaths.push(pkgJSONPath)
-      pkgJSONs.push(pkgJSON)
-
-      if (!pkgJSON.name) {
-        logger.warn(`skip publish ${pkgJSONPath}, cause no name found.`)
+      if (!pkgJSON.name || !pkgJSON.version) {
+        logger.warn(
+          `skip publish ${chalk.cyanBright(
+            pkgPath,
+          )} cause the package.json is not valid.`,
+        )
         return
       } else {
+        pkgJSONPaths.push(pkgJSONPath)
+        pkgJSONs.push(pkgJSON)
         pkgNames.push(pkgJSON.name)
       }
 
