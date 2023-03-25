@@ -103,7 +103,7 @@ export async function release(opts: Options): Promise<void> {
 
   // bump version
   step('Bump version ...')
-  const targetVersion = await getTargetVersion({
+  let targetVersion = await getTargetVersion({
     pkgJSON: rootPkgJSON,
     isMonorepo,
     tag,
@@ -111,7 +111,13 @@ export async function release(opts: Options): Promise<void> {
   })
 
   if (!customVersion) {
-    await reconfirm(targetVersion, publishPkgNames)
+    targetVersion = await reconfirm({
+      targetVersion,
+      publishPkgNames,
+      pkgJSON: rootPkgJSON,
+      isMonorepo,
+      tag,
+    })
   }
 
   if (typeof beforeUpdateVersion === 'function') {
@@ -338,7 +344,16 @@ async function ownershipCheck(publishPkgNames: string[]) {
   }
 }
 
-async function reconfirm(targetVersion: string, publishPkgNames: string[]) {
+interface ReconfirmOpts {
+  targetVersion: string
+  publishPkgNames: string[]
+  pkgJSON: Required<PkgJSON>
+  isMonorepo: boolean
+  tag?: PublishTag
+}
+
+async function reconfirm(opts: ReconfirmOpts): Promise<string> {
+  const { targetVersion, publishPkgNames, pkgJSON, isMonorepo, tag } = opts
   let confirmMessage = ''
 
   if (publishPkgNames.length === 1) {
@@ -355,9 +370,18 @@ async function reconfirm(targetVersion: string, publishPkgNames: string[]) {
 
   const answer = await confirm(confirmMessage)
 
-  if (!answer) {
-    logger.info('Cancel')
-    process.exit(0)
+  if (answer) {
+    return targetVersion
+  } else {
+    const version = await getTargetVersion({
+      pkgJSON,
+      isMonorepo,
+      tag,
+    })
+    return reconfirm({
+      ...opts,
+      targetVersion: version,
+    })
   }
 }
 
