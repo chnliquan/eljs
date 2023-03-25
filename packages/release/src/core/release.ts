@@ -164,6 +164,7 @@ export async function release(opts: Options): Promise<void> {
   await publish({
     version: targetVersion,
     publishPkgDirs,
+    publishPkgNames,
     tag,
     gitChecks,
     changelog,
@@ -412,6 +413,7 @@ async function commit(version: string) {
 async function publish(opts: {
   version: string
   publishPkgDirs: string[]
+  publishPkgNames: string[]
   changelog: string
   tag?: PublishTag
   gitChecks?: boolean
@@ -422,6 +424,7 @@ async function publish(opts: {
   const {
     version,
     publishPkgDirs,
+    publishPkgNames,
     changelog,
     tag,
     gitChecks,
@@ -443,8 +446,24 @@ async function publish(opts: {
   }
 
   step(`Publishing package ...`)
-  for (const pkgDir of publishPkgDirs) {
-    await publishPackage(pkgDir, version, publishTag)
+  const errors: string[] = []
+  for (let i = 0; i < publishPkgDirs.length; i++) {
+    const pkgDir = publishPkgDirs[i]
+    const pkgName = publishPkgNames[i]
+
+    try {
+      await publishPackage(pkgDir, pkgName, version, publishTag)
+    } catch (error) {
+      errors.push(pkgName)
+    }
+  }
+
+  if (errors.length > 0) {
+    for (const pkgName of errors) {
+      logger.error(
+        `Published ${chalk.cyanBright.bold(`${pkgName}@${version}`)} failed.`,
+      )
+    }
   }
 
   // github release
@@ -461,10 +480,10 @@ async function publish(opts: {
 
   async function publishPackage(
     pkgDir: string,
-    targetVersion: string,
+    pkgName: string,
+    version: string,
     publishTag?: PublishTag,
   ) {
-    const pkgJSON = readJSONSync(path.join(pkgDir, 'package.json'))
     const cmd = isPnpm ? 'pnpm' : 'npm'
     const tag = publishTag ? ['--tag', publishTag] : []
 
@@ -482,7 +501,7 @@ async function publish(opts: {
 
     logger.done(
       `Published ${chalk.cyanBright.bold(
-        `${pkgJSON.name}@${targetVersion}`,
+        `${pkgName}@${version}`,
       )} successfully.`,
     )
   }
