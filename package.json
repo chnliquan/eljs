@@ -12,8 +12,8 @@
   "scripts": {
     "add-owner": "tsx scripts/add-owner",
     "boot": "tsx scripts/bootstrap",
-    "build": "turbo build",
-    "build:force": "turbo build --force",
+    "build": "turbo run build",
+    "build:force": "turbo run build --force",
     "clean": "turbo clean",
     "coverage": "codecov",
     "dev": "turbo dev",
