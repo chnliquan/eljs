@@ -1,9 +1,9 @@
-# [0.12.0-beta.2](https://github.com/chnliquan/eljs/compare/v0.12.0-beta.1...v0.12.0-beta.2) (2023-06-21)
+# [0.12.0-beta.3](https://github.com/chnliquan/eljs/compare/v0.12.0-beta.2...v0.12.0-beta.3) (2023-06-21)
 
 
-### ♻ Code Refactoring
+### 🐛 Bug Fixes
 
-* **utils:** 获取 NPM 包信息 ([460a281](https://github.com/chnliquan/eljs/commit/460a28165a89d3ae4a7b6a28c7676a7693103aa8))
+* **utils:** 索引签名类型 ([486f485](https://github.com/chnliquan/eljs/commit/486f4858ad211843a7481f36f399b4eeed5e50ca))
 
 
 
