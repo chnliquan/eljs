@@ -1,6 +1,8 @@
 import { execSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
+import { existsSync, readJSONSync } from './file'
+import { PkgJSON } from './types'
 
 let _hasPnpm: boolean
 
@@ -19,7 +21,7 @@ export function hasPnpm(): boolean {
 
 function checkPnpm(result: boolean) {
   if (result && !hasPnpm()) {
-    throw new Error(`The project seems to require npmp but it's not installed.`)
+    throw new Error(`The project seems to require pnpm but it's not installed.`)
   }
   return result
 }
@@ -91,4 +93,19 @@ export function hasProjectNpm(cwd: string): boolean {
   const lockFile = path.join(cwd, 'package-lock.json')
   const result = fs.existsSync(lockFile)
   return result
+}
+
+let _isMonorepo: boolean
+
+export function isMonorepo(cwd: string): boolean {
+  if (_isMonorepo != null) {
+    return _isMonorepo
+  }
+
+  if (hasProjectPnpm(cwd)) {
+    return (_isMonorepo = existsSync(path.join(cwd, 'pnpm-workspace.yaml')))
+  }
+
+  const pkgJSON: PkgJSON = readJSONSync(path.join(cwd, 'package.json'))
+  return (_isMonorepo = Boolean(pkgJSON?.workspaces))
 }

@@ -36,6 +36,7 @@ export interface PkgJSON {
     node: string
     [properName: string]: string
   }
+  workspaces?: string[]
   [propName: string]: any
 }
 
