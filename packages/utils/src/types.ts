@@ -63,3 +63,10 @@ export interface Implementor {
 export type DistributiveOmit<T, K extends keyof any> = T extends any
   ? Omit<T, K>
   : never
+
+export type OmitIndexSignature<ObjectType> = {
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  [KeyType in keyof ObjectType as {} extends Record<KeyType, unknown>
+    ? never
+    : KeyType]: ObjectType[KeyType]
+}

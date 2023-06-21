@@ -10,7 +10,7 @@ import { PLATFORM } from './const'
 import { existsSync, tmpdir } from './file'
 import { logger } from './logger'
 import { isString } from './type'
-import { NpmClient, PkgJSON } from './types'
+import { NpmClient, OmitIndexSignature, PkgJSON } from './types'
 
 export function getNodePrefix(): string {
   if (process.env.GLOBAL_PREFIX) {
@@ -88,7 +88,7 @@ export function installWithNpmClient({
 }
 
 // https://github.com/npm/registry/blob/master/docs/REGISTRY-API.md
-export interface NpmInfo extends PkgJSON {
+export interface NpmInfo extends OmitIndexSignature<PkgJSON> {
   version: string
   name: string
   dist: {
