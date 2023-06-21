@@ -1,5 +1,5 @@
 import { PromptObject } from 'prompts'
-import { isDirectory } from '../file'
+import { existsSync, isDirectory, mkdirSync } from '../file'
 import { isFunction } from '../type'
 import { BaseGenerator } from './base-generator'
 
@@ -70,6 +70,16 @@ export class Generator extends BaseGenerator {
   }
 
   public async writing() {
+    if (!existsSync(this.target)) {
+      mkdirSync(this.target)
+    } else {
+      const override = await this.checkTargetDir(this.target)
+
+      if (!override) {
+        return
+      }
+    }
+
     const data = {
       ...this.defaultPrompts,
       ...this.prompts,

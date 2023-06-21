@@ -1,4 +1,7 @@
+import chalk from 'chalk'
+import { readdirSync } from 'fs'
 import prompts, { Answers, PromptObject } from 'prompts'
+import { confirm } from '../cli'
 import {
   copyDirectory,
   CopyDirectoryOpts,
@@ -8,6 +11,9 @@ import {
   CopyTplOpts,
   RenderTemplateOptions,
 } from '../file'
+import { logger } from '../logger'
+
+const TARGET_DIR_WHITE_LIST = ['.git', 'LICENSE']
 
 export class BaseGenerator {
   /**
@@ -69,5 +75,20 @@ export class BaseGenerator {
       opts: this.renderTemplateOptions,
       basedir: this.basedir,
     })
+  }
+
+  public checkTargetDir(targetDir: string) {
+    const files = readdirSync(targetDir).filter(
+      file => !TARGET_DIR_WHITE_LIST.includes(file),
+    )
+
+    if (files.length) {
+      logger.warn(`当前文件夹 ${chalk.bold(targetDir)} 存在如下文件:\n`)
+      files.forEach(file => console.log(' - ' + file))
+      console.log()
+      return confirm(`确定要覆盖当前文件夹吗?`, true)
+    }
+
+    return true
   }
 }
