@@ -1,10 +1,11 @@
-import { execSync } from 'child_process'
 import { sync } from 'cross-spawn'
 import download from 'download'
 import path from 'path'
 import urllib from 'urllib'
 import which from 'which'
 
+import { execSync } from 'child_process'
+import execa from 'execa'
 import { PLATFORM } from './const'
 import { existsSync, tmpdir } from './file'
 import { logger } from './logger'
@@ -72,16 +73,21 @@ export function installWithNpmClient({
   npmClient,
   cwd,
 }: InstallWithNpmClientOpts): void {
-  const npm = sync(npmClient, [npmClient === 'yarn' ? '' : 'install'], {
-    stdio: 'inherit',
-    cwd,
-  })
+  const npm = sync(
+    npmClient,
+    [npmClient === 'yarn' || npmClient === 'pnpm' ? '' : 'install'],
+    {
+      stdio: 'inherit',
+      cwd,
+    },
+  )
 
   if (npm.error) {
     throw npm.error
   }
 }
 
+// https://github.com/npm/registry/blob/master/docs/REGISTRY-API.md
 export interface NpmInfo extends PkgJSON {
   version: string
   name: string
@@ -90,33 +96,58 @@ export interface NpmInfo extends PkgJSON {
     size: number
     tarball: string
   }
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  'dist-tags': {
+    latest?: string
+    beta?: string
+    alpha?: string
+  }
+  versions: {
+    [version: string]: Omit<NpmInfo, 'versions' | 'dist-tags'>
+  }
 }
 
+/**
+ * 获取 NPM 包信息
+ * @param name NPM 包名
+ */
 export function getNpmInfo(
   name: string,
-  opts?: {
-    registry?: string
-    version?: string
-  },
+): Promise<Omit<NpmInfo, 'version'> | null>
+/**
+ * 获取指定版本的 NPM 包信息
+ * @param name NPM 包名
+ * @param version 版本
+ */
+export function getNpmInfo(
+  name: string,
+  version: string,
+): Promise<Omit<NpmInfo, 'versions' | 'dist-tags'> | null>
+export function getNpmInfo(
+  name: string,
+  version?: string,
 ): Promise<NpmInfo | null> {
-  const { registry = 'https://registry.npmjs.org', version = 'latest' } =
-    opts || {}
-  const url = `${registry.replace(/\/+$/, '')}/${encodeURIComponent(
-    name,
-  ).replace(/^%40/, '@')}/${version}`
+  const registry = execa.sync('npm', ['get', 'registry']).stdout
+  let url = `${registry.replace(/\/+$/, '')}/${encodeURIComponent(name).replace(
+    /^%40/,
+    '@',
+  )}`
+
+  if (version) {
+    url += `/${version}`
+  }
 
   return urllib
     .request(url, { timeout: 30000, dataType: 'json' })
     .then(({ data }) => {
-      if (isString(data) || data.error) {
+      if (!data || isString(data) || data.error || data.code) {
         return null
       }
 
-      if (version === 'latest') {
-        return data.latest || data
-      } else {
-        return data?.versions?.[version] || data
-      }
+      return data
+    })
+    .catch(() => {
+      return null
     })
 }
 
