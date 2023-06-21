@@ -125,10 +125,10 @@ export function getNpmInfo(
  * @param name NPM 包名
  * @returns NPM 包信息
  * @example
- * '@eljs/utils@1.0.0'
- * 'utils@1.0.0'
- * '@eljs/utils'
- * 'utils'
+ * '@eljs/utils@1.0.0' => { name: '@eljs/utils', version: '1.0.0', scope: '@eljs', unscopedName: 'utils'  }
+ * 'utils@1.0.0' => { name: 'utils', version: '1.0.0, scope: '', unscopedName: 'utils'  }
+ * '@eljs/utils' => { name: '@eljs/utils', version: 'latest', scope: '@eljs', unscopedName: 'utils'  }
+ * 'utils' => { name: 'utils', version: 'latest', scope: '', unscopedName: 'utils'  }
  */
 export function pkgNameAnalysis(name = '') {
   try {
@@ -139,14 +139,14 @@ export function pkgNameAnalysis(name = '') {
       name: pkgName,
       version: pkgVersion,
       scope: pairs.length > 1 ? pairs[0] : '',
-      unscopeName: pairs[pairs.length],
+      unscopedName: pairs[pairs.length],
     }
   } catch (error) {
     return {
       name,
       version: 'latest',
       scope: '',
-      unscopeName: name,
+      unscopedName: name,
     }
   }
 }

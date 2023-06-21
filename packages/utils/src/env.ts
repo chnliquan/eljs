@@ -1,8 +1,8 @@
+import appRootPath from 'app-root-path'
 import { execSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import { existsSync, readJSONSync } from './file'
-import { PkgJSON } from './types'
 
 let _hasPnpm: boolean
 
@@ -97,15 +97,18 @@ export function hasProjectNpm(cwd: string): boolean {
 
 let _isMonorepo: boolean
 
-export function isMonorepo(cwd: string): boolean {
+export function isMonorepo(): boolean {
   if (_isMonorepo != null) {
     return _isMonorepo
   }
 
-  if (hasProjectPnpm(cwd)) {
-    return (_isMonorepo = existsSync(path.join(cwd, 'pnpm-workspace.yaml')))
+  if (existsSync(path.join(appRootPath.toString(), 'pnpm-workspace.yaml'))) {
+    return (_isMonorepo = true)
   }
 
-  const pkgJSON: PkgJSON = readJSONSync(path.join(cwd, 'package.json'))
+  const pkgJSON = readJSONSync(
+    path.join(appRootPath.toString(), 'package.json'),
+  )
+
   return (_isMonorepo = Boolean(pkgJSON?.workspaces))
 }

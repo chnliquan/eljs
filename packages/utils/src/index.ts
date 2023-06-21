@@ -1,3 +1,4 @@
+export { default as appRootPath } from 'app-root-path'
 export { default as chalk } from 'chalk'
 export { default as chokidar } from 'chokidar'
 export { default as crossSpawn } from 'cross-spawn'

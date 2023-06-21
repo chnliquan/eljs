@@ -184,6 +184,7 @@ importers:
       '@types/rimraf': ^2.0.3
       '@types/uuid': ^8.3.4
       '@types/which': ^2.0.1
+      app-root-path: ^3.1.0
       chalk: ^4.1.2
       chokidar: ^3.5.3
       cross-spawn: ^7.0.3
@@ -225,6 +226,7 @@ importers:
       '@types/rimraf': 2.0.5
       '@types/uuid': 8.3.4
       '@types/which': 2.0.1
+      app-root-path: 3.1.0
       chalk: 4.1.2
       chokidar: 3.5.3
       cross-spawn: 7.0.3
@@ -1778,6 +1780,11 @@ packages:
     dependencies:
       normalize-path: 3.0.0
       picomatch: 2.3.1
+
+  /app-root-path/3.1.0:
+    resolution: {integrity: sha512-biN3PwB2gUtjaYy/isrU3aNWI5w+fAfvHkSvCKeQGxhmYpwKFUxudR3Yya+KqVRHBmEDYh+/lTozYCFbmzX4nA==}
+    engines: {node: '>= 6.0.0'}
+    dev: false
 
   /aproba/2.0.0:
     resolution: {integrity: sha512-lYe4Gx7QT+MKGbDsA+Z+he/Wtef0BiwDOlK/XkBrdfsh9J/jPPXbX0tE9x9cl27Tmu5gg3QUbUrQYa/y+KOHPQ==}
