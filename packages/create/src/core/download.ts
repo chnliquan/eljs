@@ -58,7 +58,7 @@ export class Download {
     const spinner = ora(`模板下载中...`).start()
 
     try {
-      const [pkgName, pkgVersion] = pkgNameAnalysis(name)
+      const { name: pkgName, version: pkgVersion } = pkgNameAnalysis(name)
       const data = await getNpmInfo(pkgName, {
         version: pkgVersion,
       })

@@ -32,7 +32,7 @@ export function installDeps({
     fs.existsSync(path.join(process.cwd(), 'pnpm-workspace.yaml'))
   const runNpm = useYarn ? 'yarn' : usePnpm ? 'pnpm' : 'npm'
   const install = useYarn || usePnpm ? 'add' : 'install'
-  const devTag = useYarn || usePnpm ? '-D' : '--save-dev'
+  const devTag = '-D'
 
   const installDependencies = (
     deps: string[],
@@ -40,7 +40,7 @@ export function installDeps({
     insStr: string,
     devStr?: string,
   ) => {
-    console.log(`${npmStr} install dependencies packages:${deps.join(' ')}`)
+    console.log(`${npmStr} install dependencies packages: ${deps.join(' ')}.`)
     execa.sync(
       [npmStr, insStr, devStr].concat(deps).filter(Boolean).join(' '),
       {
@@ -53,7 +53,7 @@ export function installDeps({
         stdout: 'pipe',
       },
     )
-    console.log(`install dependencies packages success`)
+    console.log(`install dependencies packages success.`)
   }
 
   if (dependencies) {

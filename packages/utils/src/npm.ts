@@ -120,13 +120,34 @@ export function getNpmInfo(
     })
 }
 
+/**
+ * 解析 NPM 包名
+ * @param name NPM 包名
+ * @returns NPM 包信息
+ * @example
+ * '@eljs/utils@1.0.0'
+ * 'utils@1.0.0'
+ * '@eljs/utils'
+ * 'utils'
+ */
 export function pkgNameAnalysis(name = '') {
   try {
     const regex = /^(@?[^@]+)(?:@(.+))?$/
     const [, pkgName = name, pkgVersion = 'latest'] = name.match(regex) || []
-    return [pkgName, pkgVersion]
+    const pairs = pkgName.split('/')
+    return {
+      name: pkgName,
+      version: pkgVersion,
+      scope: pairs.length > 1 ? pairs[0] : '',
+      unscopeName: pairs[pairs.length],
+    }
   } catch (error) {
-    return [name, 'latest']
+    return {
+      name,
+      version: 'latest',
+      scope: '',
+      unscopeName: name,
+    }
   }
 }
 
