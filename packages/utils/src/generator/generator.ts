@@ -21,9 +21,9 @@ export interface GeneratorOpts {
    */
   questions?: Generator['questions']
   /**
-   * 默认的问询结果
+   * 模版渲染数据
    */
-  defaultPrompts?: Generator['defaultPrompts']
+  data?: Generator['data']
   /**
    * 模版渲染配置项
    */
@@ -44,24 +44,27 @@ export class Generator extends BaseGenerator {
    */
   public questions: PromptObject[]
   /**
-   * 默认的问询结果
+   * 模版渲染数据
    */
-  public defaultPrompts: Record<string, any>
+  public data:
+    | Record<string, any>
+    | ((prompts: Record<string, any>) => Record<string, any>)
 
   private _source = ''
+  private _data = {}
 
   public constructor({
     source,
     target,
     basedir,
     questions,
-    defaultPrompts,
+    data,
     renderTemplateOptions,
   }: GeneratorOpts) {
     super(basedir || target, renderTemplateOptions)
     this.source = source
     this.target = target
-    this.defaultPrompts = defaultPrompts || {}
+    this.data = data || {}
     this.questions = questions || []
   }
 
@@ -80,13 +83,17 @@ export class Generator extends BaseGenerator {
       }
     }
 
-    const data = {
-      ...this.defaultPrompts,
-      ...this.prompts,
+    if (isFunction(this.source)) {
+      this._source = this.source(this.prompts)
     }
 
-    if (isFunction(this.source)) {
-      this._source = this.source(data)
+    if (isFunction(this.data)) {
+      this._data = this.data(this.prompts)
+    }
+
+    const data = {
+      ...this.prompts,
+      ...this._data,
     }
 
     if (isDirectory(this._source)) {
