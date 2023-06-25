@@ -1,6 +1,6 @@
 {
   "name": "eljs",
-  "version": "0.12.0-beta.3",
+  "version": "0.12.0",
   "private": true,
   "description": "Nodejs utility monorepo",
   "repository": {
