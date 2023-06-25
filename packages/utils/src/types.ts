@@ -40,20 +40,30 @@ export interface PkgJSON {
   [propName: string]: any
 }
 
+/**
+ * git 仓库
+ */
 export interface GitRepo {
   /** 仓库名称 */
   name: string
   /** 仓库所属的组 */
   group: string
-  /** 仓库的网页 */
+  /** 仓库网页地址 */
   href: string
 }
 
+/**
+ * git 仓库信息
+ */
 export interface GitInfo extends GitRepo {
-  /** git clone url */
+  /** 仓库克隆地址 */
   url: string
-  /** git branch */
+  /** 仓库当前分支 */
   branch: string
+  /** 仓库作者 */
+  author: string
+  /** 仓库邮箱 */
+  email: string
 }
 
 export interface Implementor {

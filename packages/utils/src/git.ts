@@ -86,6 +86,12 @@ export function getGitUrl(dir: string, exact?: boolean): string {
   return ''
 }
 
+/**
+ * 获取项目的 git 信息
+ * @param dir 仓库目录
+ * @param exact git 信息是否在当前目录喜爱
+ * @returns git 信息
+ */
 export function getGitInfo(dir: string, exact?: boolean): GitInfo | null {
   const gitDir = exact ? path.join(dir, '.git') : getProjectGitDir(dir) || ''
 
@@ -99,6 +105,8 @@ export function getGitInfo(dir: string, exact?: boolean): GitInfo | null {
     href: '',
     url: '',
     branch: '',
+    author: '',
+    email: '',
   }
 
   try {
@@ -116,11 +124,17 @@ export function getGitInfo(dir: string, exact?: boolean): GitInfo | null {
         gitInfo.name = repo.name
       }
     }
+
+    if (config['user']) {
+      gitInfo.author = config['user'].name
+      gitInfo.email = config['user'].email
+    }
+
     // branch
     const gitHead = fs.readFileSync(path.join(gitDir, 'HEAD'), 'utf8')
     gitInfo.branch = gitHead.replace('ref: refs/heads/', '').replace('\n', '')
   } catch (err) {
-    // catch error
+    return null
   }
 
   return gitInfo
