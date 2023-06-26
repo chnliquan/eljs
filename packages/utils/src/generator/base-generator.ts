@@ -12,6 +12,7 @@ import {
   RenderTemplateOptions,
 } from '../file'
 import { logger } from '../logger'
+import { isFunction } from '../type'
 
 const TARGET_DIR_WHITE_LIST = ['.git', 'LICENSE']
 
@@ -19,7 +20,7 @@ export class BaseGenerator {
   /**
    * 目标文件基准路径
    */
-  public basedir: string
+  public basedir: string | ((prompts: Record<string, any>) => string)
   /**
    * 问询结果
    */
@@ -29,9 +30,11 @@ export class BaseGenerator {
    */
   public renderTemplateOptions: RenderTemplateOptions | undefined
 
+  private _basedir = ''
+
   public constructor(
-    basedir: string,
-    renderTemplateOptions?: RenderTemplateOptions,
+    basedir: BaseGenerator['basedir'],
+    renderTemplateOptions?: BaseGenerator['renderTemplateOptions'],
   ) {
     this.basedir = basedir
     this.prompts = {}
@@ -41,6 +44,13 @@ export class BaseGenerator {
   public async run() {
     const questions = this.prompting()
     this.prompts = await prompts(questions)
+
+    if (isFunction(this.basedir)) {
+      this._basedir = this.basedir(this.prompts)
+    } else {
+      this._basedir = this.basedir
+    }
+
     await this.writing()
   }
 
@@ -48,7 +58,6 @@ export class BaseGenerator {
     return []
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async writing() {
     // ...
   }
@@ -57,7 +66,7 @@ export class BaseGenerator {
     copyFile({
       ...opts,
       opts: this.renderTemplateOptions,
-      basedir: this.basedir,
+      basedir: this._basedir,
     })
   }
 
@@ -65,7 +74,7 @@ export class BaseGenerator {
     copyTpl({
       ...opts,
       opts: this.renderTemplateOptions,
-      basedir: this.basedir,
+      basedir: this._basedir,
     })
   }
 
@@ -73,7 +82,7 @@ export class BaseGenerator {
     copyDirectory({
       ...opts,
       opts: this.renderTemplateOptions,
-      basedir: this.basedir,
+      basedir: this._basedir,
     })
   }
 

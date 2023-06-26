@@ -28,6 +28,25 @@ export interface GeneratorOpts {
    * 模版渲染配置项
    */
   renderTemplateOptions?: Generator['renderTemplateOptions']
+  /**
+   * 文件写入完成回调函数
+   */
+  onGeneratorDone?: Generator['onGeneratorDone']
+}
+
+interface GeneratorDoneCtx {
+  /**
+   * 源文件路径
+   */
+  source: string
+  /**
+   * 木笔文件路径
+   */
+  target: string
+  /**
+   * 模版渲染数据
+   */
+  data: Record<string, any>
 }
 
 export class Generator extends BaseGenerator {
@@ -38,7 +57,7 @@ export class Generator extends BaseGenerator {
   /**
    * 目标文件路径
    */
-  public target: string
+  public target: string | ((prompts: Record<string, any>) => string)
   /**
    * 问询列表
    */
@@ -50,6 +69,9 @@ export class Generator extends BaseGenerator {
     | Record<string, any>
     | ((prompts: Record<string, any>) => Record<string, any>)
 
+  public onGeneratorDone?: (ctx: GeneratorDoneCtx) => void | Promise<void>
+
+  private _target = ''
   private _source = ''
   private _data = {}
 
@@ -60,23 +82,43 @@ export class Generator extends BaseGenerator {
     questions,
     data,
     renderTemplateOptions,
+    onGeneratorDone,
   }: GeneratorOpts) {
     super(basedir || target, renderTemplateOptions)
     this.source = source
     this.target = target
     this.data = data || {}
     this.questions = questions || []
+    this.onGeneratorDone = onGeneratorDone
+  }
+
+  public async run() {
+    await super.run()
+
+    if (this.onGeneratorDone) {
+      this.onGeneratorDone({
+        source: this._source,
+        target: this._target,
+        data: this._data,
+      })
+    }
   }
 
   public prompting() {
-    return this.questions
+    return this.questions || []
   }
 
   public async writing() {
-    if (!existsSync(this.target)) {
-      mkdirSync(this.target)
+    if (isFunction(this.target)) {
+      this._target = this.target(this.prompts)
     } else {
-      const override = await this.checkTargetDir(this.target)
+      this._target = this.target
+    }
+
+    if (!existsSync(this._target)) {
+      mkdirSync(this._target)
+    } else {
+      const override = await this.checkTargetDir(this._target)
 
       if (!override) {
         return
@@ -85,10 +127,14 @@ export class Generator extends BaseGenerator {
 
     if (isFunction(this.source)) {
       this._source = this.source(this.prompts)
+    } else {
+      this._source = this.source
     }
 
     if (isFunction(this.data)) {
       this._data = this.data(this.prompts)
+    } else {
+      this._data = this.data
     }
 
     const data = {
@@ -99,20 +145,20 @@ export class Generator extends BaseGenerator {
     if (isDirectory(this._source)) {
       this.copyDirectory({
         from: this._source,
-        to: this.target,
+        to: this._target,
         data,
       })
     } else {
       if (this._source.endsWith('.tpl')) {
         this.copyTpl({
           from: this._source,
-          to: this.target,
+          to: this._target,
           data,
         })
       } else {
         this.copyFile({
           from: this._source,
-          to: this.target,
+          to: this._target,
           data,
         })
       }
