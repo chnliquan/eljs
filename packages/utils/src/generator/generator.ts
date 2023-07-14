@@ -5,15 +5,15 @@ import { BaseGenerator } from './base-generator'
 
 export interface GeneratorOpts {
   /**
-   * 源文件路径
+   * 模版文件夹路径
    */
-  source: Generator['source']
+  src: Generator['src']
   /**
-   * 目标文件路径
+   * 目标文件夹路径
    */
-  target: Generator['target']
+  dest: Generator['dest']
   /**
-   * 目标文件基准路径，默认为 target
+   * 目标文件夹基准路径，默认为 `dest`
    */
   basedir?: Generator['basedir']
   /**
@@ -29,7 +29,7 @@ export interface GeneratorOpts {
    */
   renderTemplateOptions?: Generator['renderTemplateOptions']
   /**
-   * 文件写入完成回调函数
+   * 模版写入完成回调函数
    */
   onGeneratorDone?: Generator['onGeneratorDone']
 }
@@ -38,11 +38,11 @@ interface GeneratorDoneCtx {
   /**
    * 源文件路径
    */
-  source: string
+  src: string
   /**
    * 木笔文件路径
    */
-  target: string
+  dest: string
   /**
    * 模版渲染数据
    */
@@ -51,13 +51,13 @@ interface GeneratorDoneCtx {
 
 export class Generator extends BaseGenerator {
   /**
-   * 源文件路径
+   * 模版文件夹路径
    */
-  public source: string | ((prompts: Record<string, any>) => string)
+  public src: string | ((prompts: Record<string, any>) => string)
   /**
-   * 目标文件路径
+   * 目标文件夹路径
    */
-  public target: string | ((prompts: Record<string, any>) => string)
+  public dest: string | ((prompts: Record<string, any>) => string)
   /**
    * 问询列表
    */
@@ -68,25 +68,27 @@ export class Generator extends BaseGenerator {
   public data:
     | Record<string, any>
     | ((prompts: Record<string, any>) => Record<string, any>)
-
+  /**
+   * 模版写入完成回调函数
+   */
   public onGeneratorDone?: (ctx: GeneratorDoneCtx) => void | Promise<void>
 
-  private _target = ''
-  private _source = ''
+  private _dest = ''
+  private _src = ''
   private _data = {}
 
   public constructor({
-    source,
-    target,
+    src,
+    dest,
     basedir,
     questions,
     data,
     renderTemplateOptions,
     onGeneratorDone,
   }: GeneratorOpts) {
-    super(basedir || target, renderTemplateOptions)
-    this.source = source
-    this.target = target
+    super(basedir || dest, renderTemplateOptions)
+    this.src = src
+    this.dest = dest
     this.data = data || {}
     this.questions = questions || []
     this.onGeneratorDone = onGeneratorDone
@@ -97,8 +99,8 @@ export class Generator extends BaseGenerator {
 
     if (this.onGeneratorDone) {
       this.onGeneratorDone({
-        source: this._source,
-        target: this._target,
+        src: this._src,
+        dest: this._dest,
         data: this._data,
       })
     }
@@ -109,26 +111,26 @@ export class Generator extends BaseGenerator {
   }
 
   public async writing() {
-    if (isFunction(this.target)) {
-      this._target = this.target(this.prompts)
+    if (isFunction(this.dest)) {
+      this._dest = this.dest(this.prompts)
     } else {
-      this._target = this.target
+      this._dest = this.dest
     }
 
-    if (!existsSync(this._target)) {
-      mkdirSync(this._target)
+    if (!existsSync(this._dest)) {
+      mkdirSync(this._dest)
     } else {
-      const override = await this.checkTargetDir(this._target)
+      const override = await this.checkDir(this._dest)
 
       if (!override) {
         return
       }
     }
 
-    if (isFunction(this.source)) {
-      this._source = this.source(this.prompts)
+    if (isFunction(this.src)) {
+      this._src = this.src(this.prompts)
     } else {
-      this._source = this.source
+      this._src = this.src
     }
 
     if (isFunction(this.data)) {
@@ -142,23 +144,23 @@ export class Generator extends BaseGenerator {
       ...this._data,
     }
 
-    if (isDirectory(this._source)) {
+    if (isDirectory(this._src)) {
       this.copyDirectory({
-        from: this._source,
-        to: this._target,
+        from: this._src,
+        to: this._dest,
         data,
       })
     } else {
-      if (this._source.endsWith('.tpl')) {
+      if (this._src.endsWith('.tpl')) {
         this.copyTpl({
-          from: this._source,
-          to: this._target,
+          from: this._src,
+          to: this._dest,
           data,
         })
       } else {
         this.copyFile({
-          from: this._source,
-          to: this._target,
+          from: this._src,
+          to: this._dest,
           data,
         })
       }

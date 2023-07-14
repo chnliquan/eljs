@@ -86,7 +86,7 @@ export class BaseGenerator {
     })
   }
 
-  public checkTargetDir(targetDir: string) {
+  public checkDir(targetDir: string) {
     const files = readdirSync(targetDir).filter(
       file => !TARGET_DIR_WHITE_LIST.includes(file),
     )
