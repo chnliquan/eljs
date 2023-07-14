@@ -1,6 +1,6 @@
 {
   "name": "@eljs/create",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "@eljs/create",
   "keywords": [
     "eljs",
@@ -31,8 +31,8 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@eljs/service": "0.13.0",
-    "@eljs/utils": "0.13.0",
+    "@eljs/service": "0.14.0",
+    "@eljs/utils": "0.14.0",
     "@types/glob": "^7.2.0",
     "@types/prettier": "^2.7.0",
     "dayjs": "^1.11.5",
