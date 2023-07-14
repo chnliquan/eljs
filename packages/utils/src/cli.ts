@@ -20,13 +20,24 @@ export function pause(message?: string): Promise<void> {
   })
 }
 
-export function confirm(message: string, preferNo?: boolean): Promise<boolean> {
-  return prompts({
-    type: 'confirm',
-    message,
-    name: 'confirm',
-    initial: !preferNo,
-  }).then(answers => {
+export function confirm(
+  message: string,
+  preferNo?: boolean,
+  onCancel?: prompts.Options['onCancel'],
+): Promise<boolean> {
+  onCancel = onCancel || (() => process.exit(1))
+
+  return prompts(
+    {
+      type: 'confirm',
+      message,
+      name: 'confirm',
+      initial: !preferNo,
+    },
+    {
+      onCancel,
+    },
+  ).then(answers => {
     return answers.confirm
   })
 }

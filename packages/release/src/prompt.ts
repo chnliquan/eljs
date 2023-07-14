@@ -76,11 +76,11 @@ function generatePreVersionSuggestion(
 
 export async function getTargetVersion(opts: {
   pkgJSON: Required<PkgJSON>
-  isMonorepo?: boolean
+  publishPkgNames: string[]
   tag?: PublishTag
   customVersion?: string
 }): Promise<string> {
-  const { pkgJSON, isMonorepo, tag, customVersion } = opts
+  const { pkgJSON, publishPkgNames, tag, customVersion } = opts
 
   if (customVersion) {
     const isExist = await isVersionExist(pkgJSON.name, customVersion)
@@ -95,48 +95,40 @@ export async function getTargetVersion(opts: {
   }
 
   const localVersion = pkgJSON.version
-  let remoteLatestVersion: string | undefined
-  let remoteAlphaVersion: string | undefined
-  let remoteBetaVersion: string | undefined
-  let remoteNextVersion: string | undefined
+  const {
+    remoteLatestVersion,
+    remoteAlphaVersion,
+    remoteBetaVersion,
+    remoteNextVersion,
+  } = await getDistTag(publishPkgNames)
 
-  if (!isMonorepo) {
-    const distTag = await getDistTag(pkgJSON.name)
-    remoteLatestVersion = distTag.remoteLatestVersion
-    remoteAlphaVersion = distTag.remoteAlphaVersion
-    remoteBetaVersion = distTag.remoteBetaVersion
-    remoteNextVersion = distTag.remoteNextVersion
+  logger.info(`- Local version: ${chalk.cyanBright.bold(localVersion)}`)
 
-    logger.info(`- Local version: ${chalk.cyanBright.bold(localVersion)}`)
-
-    if (remoteLatestVersion) {
-      logger.info(
-        `- Remote latest version: ${chalk.cyanBright.bold(
-          remoteLatestVersion,
-        )}`,
-      )
-    }
-
-    if (remoteAlphaVersion) {
-      logger.info(
-        `- Remote alpha version:  ${chalk.cyanBright.bold(remoteAlphaVersion)}`,
-      )
-    }
-
-    if (remoteBetaVersion) {
-      logger.info(
-        `- Remote beta version:   ${chalk.cyanBright.bold(remoteBetaVersion)}`,
-      )
-    }
-
-    if (remoteNextVersion) {
-      logger.info(
-        `- Remote next version:   ${chalk.cyanBright.bold(remoteNextVersion)}`,
-      )
-    }
-
-    console.log()
+  if (remoteLatestVersion) {
+    logger.info(
+      `- Remote latest version: ${chalk.cyanBright.bold(remoteLatestVersion)}`,
+    )
   }
+
+  if (remoteAlphaVersion && (!tag || tag === 'alpha')) {
+    logger.info(
+      `- Remote alpha version: ${chalk.cyanBright.bold(remoteAlphaVersion)}`,
+    )
+  }
+
+  if (remoteBetaVersion && (!tag || tag === 'beta')) {
+    logger.info(
+      `- Remote beta version: ${chalk.cyanBright.bold(remoteBetaVersion)}`,
+    )
+  }
+
+  if (remoteNextVersion && (!tag || tag === 'next')) {
+    logger.info(
+      `- Remote next version: ${chalk.cyanBright.bold(remoteNextVersion)}`,
+    )
+  }
+
+  console.log()
 
   const latestReferenceVersion = getReferenceVersion(
     localVersion,
@@ -144,15 +136,15 @@ export async function getTargetVersion(opts: {
   )
   const alphaReferenceVersion = getReferenceVersion(
     localVersion,
-    remoteAlphaVersion,
+    remoteAlphaVersion || remoteLatestVersion,
   )
   const betaReferenceVersion = getReferenceVersion(
     localVersion,
-    remoteBetaVersion,
+    remoteBetaVersion || remoteLatestVersion,
   )
   const nextReferenceVersion = getReferenceVersion(
     localVersion,
-    remoteNextVersion,
+    remoteNextVersion || remoteLatestVersion,
   )
 
   const suggestions = {
@@ -210,29 +202,48 @@ export async function getTargetVersion(opts: {
     value: '',
   }
 
+  const onCancel = () => {
+    process.exit(1)
+  }
+
   if (!tag) {
-    answer = await prompts([
+    answer = await prompts(
+      [
+        {
+          name: 'value',
+          type: 'select',
+          message: 'Please select the version number to be upgraded:',
+          choices,
+        },
+      ],
       {
-        name: 'value',
-        type: 'select',
-        message: 'Please select the version number to be upgraded:',
-        choices,
+        onCancel,
       },
-    ])
+    )
 
     switch (answer.value) {
       case 'Beta':
-        answer = await prompts(generatePreVersionQuestions('Beta', suggestions))
+        answer = await prompts(
+          generatePreVersionQuestions('Beta', suggestions),
+          {
+            onCancel,
+          },
+        )
         break
 
       case 'Alpha':
         answer = await prompts(
           generatePreVersionQuestions('Alpha', suggestions),
+          {
+            onCancel,
+          },
         )
         break
 
       case 'Rc':
-        answer = await prompts(generatePreVersionQuestions('Rc', suggestions))
+        answer = await prompts(generatePreVersionQuestions('Rc', suggestions), {
+          onCancel,
+        })
         break
       default:
         break
@@ -240,6 +251,9 @@ export async function getTargetVersion(opts: {
   } else {
     answer = await prompts(
       generatePreVersionQuestions(tag2TypeMap[tag], suggestions),
+      {
+        onCancel,
+      },
     )
   }
 

@@ -19,48 +19,65 @@ export function isBetaVersion(version: string): boolean {
   return version.includes('-beta.')
 }
 
-export async function getDistTag(pkgName: string) {
+export async function getDistTag(pkgNames: string[]) {
   let remoteLatestVersion = ''
   let remoteAlphaVersion = ''
   let remoteBetaVersion = ''
   let remoteNextVersion = ''
 
-  try {
-    const distTags = (await run(`npm dist-tag ${pkgName}`)).stdout.split('\n')
+  for (let i = 0; i < pkgNames.length; i++) {
+    const pkgName = pkgNames[i]
 
-    distTags.forEach(tag => {
-      if (tag.startsWith('latest')) {
-        remoteLatestVersion = tag.split(': ')[1]
-      }
+    try {
+      const distTags = (
+        await run(`npm dist-tag ${pkgName}`, {
+          verbose: false,
+        })
+      ).stdout.split('\n')
 
-      if (tag.startsWith('alpha')) {
-        remoteAlphaVersion = tag.split(': ')[1]
-      }
+      // 翻转数组，保证先解析到 latest
+      distTags.reverse().forEach(tag => {
+        const version = tag.split(': ')[1]
 
-      if (tag.startsWith('beta')) {
-        remoteBetaVersion = tag.split(': ')[1]
-      }
+        if (tag.startsWith('latest')) {
+          remoteLatestVersion = version
+        }
 
-      if (tag.startsWith('next')) {
-        remoteNextVersion = tag.split(': ')[1]
+        if (tag.startsWith('alpha')) {
+          remoteAlphaVersion = version
+        }
+
+        if (tag.startsWith('beta')) {
+          remoteBetaVersion = version
+        }
+
+        if (tag.startsWith('next')) {
+          remoteNextVersion = version
+        }
+      })
+
+      return {
+        remoteLatestVersion,
+        remoteAlphaVersion,
+        remoteBetaVersion,
+        remoteNextVersion,
       }
-    })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (err: any) {
-    if (err.message.includes('command not found')) {
-      logger.error(
-        `Please make sure the ${chalk.cyanBright.bold(
-          'npm',
-        )} has been installed`,
-      )
-      process.exit(1)
-    } else {
-      logger.info(
-        `This package ${chalk.cyanBright.bold(
-          pkgName,
-        )} has never been released, this is the first release.`,
-      )
-      console.log()
+    } catch (err: any) {
+      if (err.message.includes('command not found')) {
+        logger.error(
+          `Please make sure the ${chalk.cyanBright.bold(
+            'npm',
+          )} has been installed`,
+        )
+        process.exit(1)
+      } else {
+        // logger.info(
+        //   `This package ${chalk.cyanBright.bold(
+        //     pkgName,
+        //   )} has never been released, this is the first release.`,
+        // )
+        console.log()
+      }
     }
   }
 
@@ -81,7 +98,6 @@ export async function isVersionExist(pkgName: string, version: string) {
     if (remoteInfo.trim() === '') {
       return false
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     if (err.message.includes('command not found')) {
       logger.error(

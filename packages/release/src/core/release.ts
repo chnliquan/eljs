@@ -105,7 +105,7 @@ export async function release(opts: Options): Promise<void> {
   step('Bump version ...')
   let targetVersion = await getTargetVersion({
     pkgJSON: rootPkgJSON,
-    isMonorepo,
+    publishPkgNames: isMonorepo ? publishPkgNames : [rootPkgJSON.name],
     tag,
     customVersion,
   })
@@ -379,7 +379,7 @@ async function reconfirm(opts: ReconfirmOpts): Promise<string> {
   } else {
     const version = await getTargetVersion({
       pkgJSON,
-      isMonorepo,
+      publishPkgNames: isMonorepo ? publishPkgNames : [pkgJSON.name],
       tag,
     })
     return reconfirm({

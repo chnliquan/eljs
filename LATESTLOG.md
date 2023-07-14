@@ -1,9 +1,9 @@
-## [Changes](https://github.com/chnliquan/eljs/compare/v0.12.0...v0.13.0) (2023-06-26)
+# [](https://github.com/chnliquan/eljs/compare/v0.13.0...v) (2023-07-14)
 
 
-### ✨ Features
+### ♻ Code Refactoring
 
-* **utils:** 生成器增加完成后回调函数 ([cf08dc6](https://github.com/chnliquan/eljs/commit/cf08dc6186642020634a27391534ad83b9a024b7))
+* **utils:** 模版生成类参数修改 ([4877ae8](https://github.com/chnliquan/eljs/commit/4877ae83746fc2971dfb963d137252b5e93423b6))
 
 
 
