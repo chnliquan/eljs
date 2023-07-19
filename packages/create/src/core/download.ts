@@ -21,13 +21,13 @@ export class Download {
   }
 
   public async download() {
-    const { type, value } = this._opts
+    const { type, value, registry } = this._opts
 
     switch (type) {
       case 'npm':
-        return this._downloadNpm(value)
+        return this._downloadNpm(value, registry)
       case 'git':
-        return this._downloadGitTemplate(value)
+        return this._downloadGit(value)
       default:
         logger.error('模板类型错误')
     }
@@ -54,17 +54,22 @@ export class Download {
     }
   }
 
-  private async _downloadNpm(name: string) {
+  private async _downloadNpm(name: string, registry?: string) {
     const spinner = ora(`模板下载中...`).start()
 
     try {
-      const { name: pkgName, version: pkgVersion } = pkgNameAnalysis(name)
+      const { name: pkgName, version } = pkgNameAnalysis(name)
       const data = await getNpmInfo(pkgName, {
-        version: pkgVersion,
+        version,
+        registry,
       })
 
       if (!data) {
-        throw new Error(`模板 ${chalk.cyanBright(pkgName)} 不存在`)
+        throw new Error(
+          `模板 ${chalk.cyanBright(
+            `${pkgName}${version ? `@${version}` : ''}`,
+          )} 获取失败`,
+        )
       }
 
       const { tarball } = data.dist
@@ -79,7 +84,7 @@ export class Download {
     }
   }
 
-  private async _downloadGitTemplate(url: string) {
+  private async _downloadGit(url: string) {
     const spinner = ora(`模板下载中...`).start()
 
     try {

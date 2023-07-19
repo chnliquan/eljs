@@ -110,31 +110,43 @@ export interface NpmInfo extends OmitIndexSignature<PkgJSON> {
 /**
  * 获取 NPM 包信息
  * @param name NPM 包名
+ * @param opts.registry 仓库地址
  */
 export function getNpmInfo(
   name: string,
+  opts?: {
+    registry?: string
+  },
 ): Promise<Omit<NpmInfo, 'version'> | null>
 /**
  * 获取指定版本的 NPM 包信息
  * @param name NPM 包名
- * @param version 版本
+ * @param opts.version 版本
+ * @param opts.registry 仓库地址
  */
 export function getNpmInfo(
   name: string,
-  version: string,
+  opts: {
+    version: string
+    registry?: string
+  },
 ): Promise<Omit<NpmInfo, 'versions' | 'dist-tags'> | null>
 export function getNpmInfo(
   name: string,
-  version?: string,
+  opts?: {
+    version?: string
+    registry?: string
+  },
 ): Promise<NpmInfo | null> {
-  const registry = execa.sync('npm', ['get', 'registry']).stdout
+  const registry =
+    opts?.registry || execa.sync('npm', ['get', 'registry']).stdout
   let url = `${registry.replace(/\/+$/, '')}/${encodeURIComponent(name).replace(
     /^%40/,
     '@',
   )}`
 
-  if (version) {
-    url += `/${version}`
+  if (opts?.version) {
+    url += `/${opts.version}`
   }
 
   return urllib

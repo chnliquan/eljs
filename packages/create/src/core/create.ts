@@ -153,7 +153,7 @@ export class Create {
   }
 
   private _removeTemplate(templatePath: string) {
-    if (!this._localTemplatePath) {
+    if (!this._localTemplatePath && existsSync(templatePath)) {
       removeSync(templatePath)
     }
   }

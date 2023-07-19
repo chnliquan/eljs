@@ -5,10 +5,7 @@ import { defaultTemplateConfig } from './config'
 import { CreateTemplate } from './create'
 import { TemplateConfig } from './types'
 
-cli().catch((err: Error) => {
-  console.error(`release failed, ${err.message}`)
-  console.error(err)
-})
+cli()
 
 async function cli() {
   const pkgJSON = readJSONSync(path.join(__dirname, '../package.json'))

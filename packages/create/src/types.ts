@@ -21,6 +21,10 @@ export interface TemplateInfo {
    * 模版类型对应值
    */
   value: string
+  /**
+   * 仓库地址
+   */
+  registry?: string
 }
 
 export interface CreateOpts {
