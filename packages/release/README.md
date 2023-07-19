@@ -36,7 +36,9 @@ Options:
   --no-ownership-checks                  No check the npm ownership.
   --no-github-release                    No release to github when publish down.
   --sync-cnpm                            Sync to cnpm when publish done.
-  --latest                               Generate latest changelog.
+  --verbose                              Whether print verbose message.
+  --print                                Just print published package info.
+  --latest                               Whether generate latest changelog.
   --repo-type <repo-type>                Publish type, github or gitlab.
   --repo-url <repo-url>                  Github repo url to release.
   --changelog-preset <changelog-preset>  Customize conventional changelog preset.

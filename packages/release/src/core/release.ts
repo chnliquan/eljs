@@ -3,6 +3,7 @@ import {
   confirm,
   execa,
   existsSync,
+  isMonorepo,
   logger,
   PkgJSON,
   readJSONSync,
@@ -41,7 +42,12 @@ export const step = logger.step('Release')
  * 8. Push
  */
 export async function release(opts: Options): Promise<void> {
-  const { cwd = process.cwd(), gitChecks = true } = opts
+  const {
+    cwd = process.cwd(),
+    gitChecks = true,
+    verbose = false,
+    print = false,
+  } = opts
 
   // check git status
   if (gitChecks) {
@@ -51,7 +57,7 @@ export async function release(opts: Options): Promise<void> {
   const {
     rootPkgJSONPath,
     rootPkgJSON,
-    isMonorepo,
+    monorepo,
     pkgNames,
     pkgJSONPaths,
     pkgJSONs,
@@ -105,18 +111,26 @@ export async function release(opts: Options): Promise<void> {
   step('Bump version ...')
   let targetVersion = await getTargetVersion({
     pkgJSON: rootPkgJSON,
-    publishPkgNames: isMonorepo ? publishPkgNames : [rootPkgJSON.name],
+    publishPkgNames: monorepo ? publishPkgNames : [rootPkgJSON.name],
     tag,
     customVersion,
   })
+
+  if (print) {
+    publishPkgNames.forEach(pkgName =>
+      console.log(` - ${chalk.cyanBright(`${pkgName}@${targetVersion}`)}`),
+    )
+    return
+  }
 
   if (!customVersion) {
     targetVersion = await reconfirm({
       targetVersion,
       publishPkgNames,
       pkgJSON: rootPkgJSON,
-      isMonorepo,
+      monorepo,
       tag,
+      verbose,
     })
   }
 
@@ -129,7 +143,7 @@ export async function release(opts: Options): Promise<void> {
   await updateVersions({
     rootPkgJSONPath,
     rootPkgJSON,
-    isMonorepo,
+    monorepo,
     pkgNames,
     pkgJSONPaths,
     pkgJSONs,
@@ -139,7 +153,7 @@ export async function release(opts: Options): Promise<void> {
   // update pnpm-lock.yaml or package-lock.json
   step('Updating lockfile...')
   await updateLock({
-    isMonorepo,
+    monorepo,
     version: targetVersion,
     rootDir: cwd,
   })
@@ -198,14 +212,16 @@ async function init(cwd: string) {
     )
   }
 
-  const pkgPaths = getPkgPaths(cwd)
+  const monorepo = isMonorepo(cwd)
   const pkgJSONPaths: string[] = []
   const pkgJSONs: PkgJSON[] = []
   const pkgNames: string[] = []
   const publishPkgDirs: string[] = []
   const publishPkgNames: string[] = []
 
-  if (pkgPaths.length > 0) {
+  if (monorepo) {
+    const pkgPaths = getPkgPaths(cwd)
+
     try {
       await run(`pnpm -v`)
     } catch (err) {
@@ -237,6 +253,13 @@ async function init(cwd: string) {
         publishPkgNames.push(pkgJSON.name as string)
       }
     })
+
+    if (publishPkgNames.length === 0) {
+      logger.warn(
+        `the monorepo ${chalk.bold.cyanBright(cwd)} has no published package.`,
+      )
+      process.exit(0)
+    }
   } else {
     if (rootPkgJSON.private) {
       logger.printErrorAndExit(
@@ -258,7 +281,7 @@ async function init(cwd: string) {
   return {
     rootPkgJSONPath: rootPkgJSONPath,
     rootPkgJSON: rootPkgJSON as Required<PkgJSON>,
-    isMonorepo: pkgPaths.length > 0,
+    monorepo,
     pkgNames,
     pkgJSONPaths,
     pkgJSONs: pkgJSONs as Required<PkgJSON>[],
@@ -352,18 +375,18 @@ interface ReconfirmOpts {
   targetVersion: string
   publishPkgNames: string[]
   pkgJSON: Required<PkgJSON>
-  isMonorepo: boolean
+  monorepo: boolean
   tag?: PublishTag
+  verbose?: boolean
 }
 
 async function reconfirm(opts: ReconfirmOpts): Promise<string> {
-  const { targetVersion, publishPkgNames, pkgJSON, isMonorepo, tag } = opts
+  const { targetVersion, publishPkgNames, pkgJSON, monorepo, tag, verbose } =
+    opts
   let confirmMessage = ''
 
-  if (publishPkgNames.length === 1) {
-    confirmMessage = `Are you sure to bump ${chalk.greenBright(
-      publishPkgNames[0],
-    )} to ${chalk.cyanBright(targetVersion)}`
+  if (publishPkgNames.length === 1 || !verbose) {
+    confirmMessage = `Are you sure to bump ${chalk.cyanBright(targetVersion)}`
   } else {
     console.log(chalk.bold('The package will bump is as follows:'))
     publishPkgNames.forEach(pkgName =>
@@ -379,7 +402,7 @@ async function reconfirm(opts: ReconfirmOpts): Promise<string> {
   } else {
     const version = await getTargetVersion({
       pkgJSON,
-      publishPkgNames: isMonorepo ? publishPkgNames : [pkgJSON.name],
+      publishPkgNames: monorepo ? publishPkgNames : [pkgJSON.name],
       tag,
     })
     return reconfirm({

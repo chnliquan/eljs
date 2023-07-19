@@ -95,20 +95,27 @@ export function hasProjectNpm(cwd: string): boolean {
   return result
 }
 
-let _isMonorepo: boolean
+export function isMonorepo(cwd?: string): boolean {
+  let pkgJSONPath: string
 
-export function isMonorepo(): boolean {
-  if (_isMonorepo != null) {
-    return _isMonorepo
+  if (cwd) {
+    if (existsSync(path.join(cwd, 'pnpm-workspace.yaml'))) {
+      return true
+    }
+
+    pkgJSONPath = path.join(cwd, 'package.json')
+  } else {
+    if (existsSync(path.join(appRootPath.toString(), 'pnpm-workspace.yaml'))) {
+      return true
+    }
+
+    pkgJSONPath = path.join(appRootPath.toString(), 'package.json')
   }
 
-  if (existsSync(path.join(appRootPath.toString(), 'pnpm-workspace.yaml'))) {
-    return (_isMonorepo = true)
+  if (pkgJSONPath) {
+    const pkgJSON = readJSONSync(pkgJSONPath)
+    return Boolean(pkgJSON?.workspaces)
   }
 
-  const pkgJSON = readJSONSync(
-    path.join(appRootPath.toString(), 'package.json'),
-  )
-
-  return (_isMonorepo = Boolean(pkgJSON?.workspaces))
+  return false
 }

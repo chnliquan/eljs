@@ -18,6 +18,8 @@ export interface Options {
   repoType?: RepoType
   repoUrl?: string
   changelogPreset?: string
+  verbose?: boolean
+  print?: boolean
 
   beforeUpdateVersion?: (version: string) => Promise<void>
   beforeChangelog?: () => Promise<void>

@@ -28,7 +28,9 @@ function cli() {
     .option('--no-github-release', 'No release to github when publish down.')
     .option('--sync-cnpm', 'Sync to cnpm when publish done.')
     .option('--ownership-checks', 'Check the npm ownership.')
-    .option('--latest', 'Generate latest changelog.')
+    .option('--verbose', 'Whether print verbose message.')
+    .option('--print', 'Just print published package info.')
+    .option('--latest', 'Whether generate latest changelog.')
     .option('--repo-type <repo-type>', 'Publish type, github or gitlab.')
     .option('--repo-url <repo-url>', 'Github repo url to release.')
     .option(

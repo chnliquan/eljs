@@ -3,13 +3,13 @@ import fs from 'fs'
 import path from 'path'
 
 export async function updateLock(opts: {
-  isMonorepo: boolean
+  monorepo: boolean
   rootDir: string
   version: string
 }) {
-  const { isMonorepo, rootDir, version } = opts
+  const { monorepo, rootDir, version } = opts
 
-  if (isMonorepo) {
+  if (monorepo) {
     await run(`pnpm install --prefer-offline`)
     return
   }
@@ -29,7 +29,7 @@ export async function updateLock(opts: {
 export function updateVersions(opts: {
   rootPkgJSONPath: string
   rootPkgJSON: Required<PkgJSON>
-  isMonorepo: boolean
+  monorepo: boolean
   pkgNames: string[]
   pkgJSONPaths: string[]
   pkgJSONs: Required<PkgJSON>[]
@@ -38,7 +38,7 @@ export function updateVersions(opts: {
   const {
     rootPkgJSONPath,
     rootPkgJSON,
-    isMonorepo,
+    monorepo,
     pkgNames,
     pkgJSONPaths,
     pkgJSONs,
@@ -53,7 +53,7 @@ export function updateVersions(opts: {
   })
 
   // 2. update all packages with monorepo
-  if (isMonorepo) {
+  if (monorepo) {
     pkgNames.forEach((_, index) => {
       updatePackage({
         pkgJSONPath: pkgJSONPaths[index],
