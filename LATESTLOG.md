@@ -1,9 +1,9 @@
-## [Changes](https://github.com/chnliquan/eljs/compare/v0.14.0...v0.14.1) (2023-07-19)
+## [Changes](https://github.com/chnliquan/eljs/compare/v0.14.1...v0.15.0) (2023-07-19)
 
 
-### 🐛 Bug Fixes
+### ✨ Features
 
-* **create:** 下载 npm 包 ([a5f6922](https://github.com/chnliquan/eljs/commit/a5f69226a4841eec7343b1e4036ac0e6156b0aeb))
+* **release:** 支持 verbose 和 print 参数 ([dff57f8](https://github.com/chnliquan/eljs/commit/dff57f83fcead69e98bc08292e1bcfa6e3a63b0c))
 
 
 
