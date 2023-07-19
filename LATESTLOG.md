@@ -1,14 +1,9 @@
-## [Changes](https://github.com/chnliquan/eljs/compare/v0.13.0...v0.14.0) (2023-07-14)
-
-
-### ♻ Code Refactoring
-
-* **utils:** 模版生成类参数修改 ([4877ae8](https://github.com/chnliquan/eljs/commit/4877ae83746fc2971dfb963d137252b5e93423b6))
+## [Changes](https://github.com/chnliquan/eljs/compare/v0.14.0...v0.14.1) (2023-07-19)
 
 
 ### 🐛 Bug Fixes
 
-* **release:** 支持关闭 propmt ([127835b](https://github.com/chnliquan/eljs/commit/127835b56c7599b6c75316a60cd89fcb2daa6435))
+* **create:** 下载 npm 包 ([a5f6922](https://github.com/chnliquan/eljs/commit/a5f69226a4841eec7343b1e4036ac0e6156b0aeb))
 
 
 
