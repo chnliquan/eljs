@@ -26,18 +26,28 @@ $ pnpm boot
 
 ## 脚本
 
-| 脚本      | 说明                                                                                     |
-| --------- | ---------------------------------------------------------------------------------------- |
-| add-owner | 给其他人添加 npm 包权限，用法：`pnpm add-owner zhangsan`、`pnpm add-owner zhangsan lisi` |
-| boot      | 初始化子包的项目结构，用法：`pnpm boot`、`$ pnpm boot core shared`                       |
-| build     | 编译所有子包                                                                             |
-| coverage  | 执行单元测试覆盖率                                                                       |
-| dev       | 开发所有的子包                                                                           |
-| format    | 全局运行 `prettier` 进行格式化                                                           |
-| lint      | 全局运行 `eslint` 进行代码检查                                                           |
-| release   | 发布所有子包，用法：`pnpm release`、`pnpm release --skipTests --skipBuild`               |
-| test      | 测试所有子包                                                                             |
-| test:once | 以 `watch` 模式单测所有子包                                                              |
+| 脚本             | 说明                                                                                     |
+| ---------------- | ---------------------------------------------------------------------------------------- |
+| add-owner        | 给其他人添加 npm 包权限，用法：`pnpm add-owner zhangsan`、`pnpm add-owner zhangsan lisi` |
+| boot             | 初始化子包的项目结构，用法：`pnpm boot`、`$ pnpm boot core shared`                       |
+| build            | 编译所有子包                                                                             |
+| clean            | 执行所有子包的 `clean` 方法                                                              |
+| coverage         | 执行单元测试覆盖率                                                                       |
+| dev              | 开发所有的子包                                                                           |
+| format           | 全局运行 `prettier` 进行格式化                                                           |
+| lint             | 全局运行 `eslint` 进行代码检查                                                           |
+| prerelease:alpha | 发布所有子包到 `alpha` 版本，`.alpha.x`                                                  |
+| prerelease:beta  | 发布所有子包到 `beta` 版本，`.beta.x`                                                    |
+| prerelease:next  | 发布所有子包到 `next` 版本，`.rc.x`                                                      |
+| release          | 发布所有子包到指定版本，不传参数会出现交互窗口                                           |
+| release:dry      | 打印将要发布的所有子包                                                                   |
+| release:only     | 发布所有子包到指定版本，跳过单元测试和构建流程                                           |
+| release:patch    | 发布所有子包到 `patch` 版本                                                              |
+| release:minor    | 发布所有子包到 `minor` 版本                                                              |
+| release:major    | 发布所有子包到 `major` 版本                                                              |
+| test             | 测试所有子包                                                                             |
+| test:once        | 以 `watch` 模式单测所有子包                                                              |
+
 
 ## 分支管理
 

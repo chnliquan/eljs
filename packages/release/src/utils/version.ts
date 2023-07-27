@@ -170,7 +170,11 @@ export function getVersion(opts: Options) {
           `Bump ${targetVersion} version should pass tag option.`,
         )
       }
-      return semver.inc(referenceVersion, targetVersion, tag) as string
+      return semver.inc(
+        referenceVersion,
+        targetVersion,
+        tag === 'next' ? 'rc' : tag,
+      ) as string
     default:
       break
   }

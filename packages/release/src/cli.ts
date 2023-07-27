@@ -18,7 +18,6 @@ function cli() {
       '-v, --version',
       'Output the current version.',
     )
-    .argument('[version]', 'Target bump version.', checkVersion)
     .option('--verbose', 'Whether display verbose message.')
     .option(
       '--dry',
@@ -38,6 +37,7 @@ function cli() {
       '--changelog-preset <changelog-preset>',
       'Customize conventional changelog preset.',
     )
+    .argument('[version]', 'Target bump version.', checkVersion)
 
   program.commands.forEach(c => c.on('--help', () => console.log()))
 

@@ -238,7 +238,10 @@ async function init(cwd: string) {
     const pkgPaths = getPkgPaths(cwd)
 
     try {
-      await run(`pnpm -v`)
+      // TODO: support npm yarn workspace
+      await run(`pnpm -v`, {
+        verbose: false,
+      })
     } catch (err) {
       logger.printErrorAndExit(
         'monorepo release depend on `pnpm`, please install `pnpm` first.',
@@ -321,7 +324,11 @@ async function gitCheck() {
   }
 
   await run('git fetch')
-  const gitStatus = (await run('git status --short --branch')).stdout.trim()
+  const gitStatus = (
+    await run('git status --short --branch', {
+      verbose: false,
+    })
+  ).stdout.trim()
 
   if (gitStatus.includes('behind')) {
     logger.printErrorAndExit('git status is behind remote.')
@@ -373,7 +380,11 @@ async function ownershipCheck(publishPkgNames: string[]) {
 
   for (const pkgName of publishPkgNames) {
     try {
-      const owners = (await run(`npm owner ls ${pkgName}`)).stdout
+      const owners = (
+        await run(`npm owner ls ${pkgName}`, {
+          verbose: false,
+        })
+      ).stdout
         .trim()
         .split('\n')
         .map(line => line.split(' ')[0])
@@ -434,9 +445,6 @@ async function reconfirm(opts: ReconfirmOpts): Promise<string> {
 
 async function commit(version: string) {
   step('Committing changes ...')
-  // await run(
-  //   `git commit --all --message chore:\\ bump\\ version\\ v${bumpVersion}`,
-  // )
   await execa('git', [
     'commit',
     '--all',

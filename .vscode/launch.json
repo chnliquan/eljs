@@ -51,6 +51,7 @@
         "{\"module\": \"commonjs\"}",
         "--files",
         "${workspaceFolder}/packages/release/bin/release.js",
+        "-h",
         "--no-git-checks",
         "--tag",
         "next"

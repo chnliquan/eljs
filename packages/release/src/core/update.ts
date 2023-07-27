@@ -10,6 +10,7 @@ export async function updateLock(opts: {
   const { monorepo, rootDir, version } = opts
 
   if (monorepo) {
+    // TODO: support npm yarn workspace
     await run(`pnpm install --prefer-offline`)
     return
   }

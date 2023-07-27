@@ -4,6 +4,7 @@ import 'zx/globals'
 
 import { assert } from './utils'
 
+const dry = argv.dry
 const skipTests = argv.skipTests
 const skipBuild = argv.skipBuild
 const skipRegistryChecks = argv.skipRegistryChecks || true
@@ -16,16 +17,18 @@ main().catch((err: Error) => {
 })
 
 async function main(): Promise<void> {
-  const isGitClean = (await $`git status --porcelain`).stdout.trim().length
-  assert(!isGitClean, 'git status is not clean.')
+  if (!dry) {
+    const isGitClean = (await $`git status --porcelain`).stdout.trim().length
+    assert(!isGitClean, 'git status is not clean.')
 
-  await $`git fetch`
-  const gitStatus = (await $`git status --short --branch`).stdout.trim()
-  assert(!gitStatus.includes('behind'), 'git status is behind remote.')
+    await $`git fetch`
+    const gitStatus = (await $`git status --short --branch`).stdout.trim()
+    assert(!gitStatus.includes('behind'), 'git status is behind remote.')
+  }
 
   // run tests before release
   step('Running tests ...')
-  if (!skipTests) {
+  if (!dry && !skipTests) {
     await $`${resolveBin.sync('jest')} --clearCache`
     await $`pnpm test:once --bail --passWithNoTests`
   } else {
@@ -34,7 +37,7 @@ async function main(): Promise<void> {
 
   // build all packages
   step('Building all packages ...')
-  if (!skipBuild) {
+  if (!dry && !skipBuild) {
     await $`pnpm clean`
     await $`pnpm build --force`
   } else {
@@ -42,9 +45,11 @@ async function main(): Promise<void> {
   }
 
   release({
+    ...argv,
     gitChecks: false,
     registryChecks: !skipRegistryChecks,
     ownershipChecks: !skipOwnershipChecks,
     syncCnpm: !skipSyncCnpm,
+    version: argv._[0],
   })
 }
