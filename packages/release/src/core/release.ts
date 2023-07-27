@@ -489,22 +489,29 @@ async function publish(opts: {
   }
 
   step(`Publishing package ...`)
+  const promiseArr = []
   const errors: string[] = []
+
   for (let i = 0; i < publishPkgDirs.length; i++) {
     const pkgDir = publishPkgDirs[i]
     const pkgName = publishPkgNames[i]
 
     try {
-      await publishPackage(pkgDir, pkgName, version, publishTag)
+      promiseArr.push(publishPackage(pkgDir, pkgName, version, publishTag))
     } catch (error) {
       errors.push(pkgName)
     }
   }
 
-  if (errors.length > 0) {
-    for (const pkgName of errors) {
+  const settledResults = await Promise.allSettled(promiseArr)
+
+  for (let i = 0; i < settledResults.length; i++) {
+    const settledResult = settledResults[i]
+    if (settledResult.status === 'rejected') {
       logger.error(
-        `Published ${chalk.cyanBright.bold(`${pkgName}@${version}`)} failed.`,
+        `Published ${chalk.cyanBright.bold(
+          `${publishPkgNames[i]}@${version}`,
+        )} failed.`,
       )
     }
   }
@@ -554,10 +561,17 @@ async function sync(publishPkgNames: string[]) {
   const cnpm = resolveBin.sync('cnpm')
 
   step('Sync cnpm ...')
+  const promiseArr = []
   for (const pkgName of publishPkgNames) {
+    promiseArr.push(doSync(pkgName))
+  }
+
+  async function doSync(pkgName: string) {
     await run(`${cnpm} sync ${pkgName}`, {
       verbose: false,
     })
     logger.done(`Sync ${chalk.cyanBright.bold(`${pkgName}`)} to cnpm.`)
   }
+
+  return Promise.allSettled(promiseArr)
 }
