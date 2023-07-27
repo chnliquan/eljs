@@ -25,20 +25,23 @@ $ pnpm add @eljs/release -D
 ### 3. 命令行参数
 
 ```bash
-Usage: release [options]
+Usage: release [options] [version]
+
+Arguments:
+  version                                Target release version.
 
 Options:
   -v, --version                          Output the current version.
-  --tag <tag>                            Npm publish tag.
-  --target-version <target-version>      Target release version.
+  --verbose                              Whether display verbose message.
+  --dry                                  Instead of executing, display details about the affected packages that would be publish.
+  --latest                               Whether generate latest changelog.
+  --ownership-checks                     Check the npm ownership.
+  --sync-cnpm                            Whether sync to cnpm when publish done.
+  --no-confirm                           No confirm the bump version.
   --no-git-checks                        No check the git status and remote.
   --no-registry-checks                   No check the package registry.
-  --no-ownership-checks                  No check the npm ownership.
   --no-github-release                    No release to github when publish down.
-  --sync-cnpm                            Sync to cnpm when publish done.
-  --verbose                              Whether print verbose message.
-  --print                                Just print published package info.
-  --latest                               Whether generate latest changelog.
+  --tag <tag>                            Npm publish tag.
   --repo-type <repo-type>                Publish type, github or gitlab.
   --repo-url <repo-url>                  Github repo url to release.
   --changelog-preset <changelog-preset>  Customize conventional changelog preset.

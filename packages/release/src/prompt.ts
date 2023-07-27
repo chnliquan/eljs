@@ -1,98 +1,45 @@
-import { chalk, logger, PkgJSON, prompts } from '@eljs/utils'
+import { chalk, logger, pascalCase, PkgJSON, prompts } from '@eljs/utils'
 import semver from 'semver'
+import { VERSION_TAGS } from './const'
 import { PublishTag } from './types'
 import {
   getDistTag,
   getReferenceVersion,
+  getVersion,
   isVersionExist,
 } from './utils/version'
 
-const VERSION_MAJOR = 'Major'
-const VERSION_MINOR = 'Minor'
-const VERSION_PATCH = 'Patch'
-
-const VERSION_PRE_RELEASE = 'Prerelease'
-const VERSION_PRE_MAJOR = 'Premajor'
-const VERSION_PRE_MINOR = 'Preminor'
-const VERSION_PRE_PATCH = 'Prepatch'
-
-const tag2TypeMap = {
-  alpha: 'Alpha',
-  beta: 'Beta',
-  next: 'Rc',
-} as const
-
-function generatePreVersionQuestions(
-  type: 'Alpha' | 'Beta' | 'Rc',
-  suggestions: Record<string, any>,
-): any[] {
-  return [
-    {
-      name: 'value',
-      type: 'select',
-      message: `Please select the ${type} version number to upgrade`,
-      choices: [
-        VERSION_PRE_RELEASE,
-        VERSION_PRE_PATCH,
-        VERSION_PRE_MINOR,
-        VERSION_PRE_MAJOR,
-      ].map(item => ({
-        title: `${item === VERSION_PRE_RELEASE ? item : item + '  '} (${
-          suggestions[type][item]
-        })`,
-        value: suggestions[type][item],
-      })),
-    },
-  ]
-}
-
-function generatePreVersionSuggestion(
-  type: 'Beta' | 'Alpha' | 'Rc',
+function getPreVersionPromptQuestions(
   referenceVersion: string,
-) {
+  tag: PublishTag,
+): prompts.PromptObject {
   return {
-    [VERSION_PRE_MAJOR]: semver.inc(
-      referenceVersion,
-      VERSION_PRE_MAJOR.toLocaleLowerCase() as semver.ReleaseType,
-      type.toLocaleLowerCase(),
-    ),
-    [VERSION_PRE_MINOR]: semver.inc(
-      referenceVersion,
-      VERSION_PRE_MINOR.toLocaleLowerCase() as semver.ReleaseType,
-      type.toLocaleLowerCase(),
-    ),
-    [VERSION_PRE_PATCH]: semver.inc(
-      referenceVersion,
-      VERSION_PRE_PATCH.toLocaleLowerCase() as semver.ReleaseType,
-      type.toLocaleLowerCase(),
-    ),
-    [VERSION_PRE_RELEASE]: semver.inc(
-      referenceVersion,
-      VERSION_PRE_RELEASE.toLocaleLowerCase() as semver.ReleaseType,
-      type.toLocaleLowerCase(),
-    ),
+    name: 'value',
+    type: 'select',
+    message: `Please select the ${tag} version to bump:`,
+    choices: ['prerelease', 'prepatch', 'preminor', 'premajor'].map(item => {
+      const version = getVersion({
+        referenceVersion,
+        targetVersion: item,
+        tag,
+      })
+      return {
+        title: `${
+          item === 'prerelease' ? pascalCase(item) : pascalCase(item) + '  '
+        } (${version})`,
+        value: version,
+      }
+    }),
   }
 }
 
-export async function getTargetVersion(opts: {
+export async function getBumpVersion(opts: {
   pkgJSON: Required<PkgJSON>
   publishPkgNames: string[]
   tag?: PublishTag
-  customVersion?: string
+  targetVersion?: string
 }): Promise<string> {
-  const { pkgJSON, publishPkgNames, tag, customVersion } = opts
-
-  if (customVersion) {
-    const isExist = await isVersionExist(pkgJSON.name, customVersion)
-
-    if (isExist) {
-      logger.printErrorAndExit(
-        `${pkgJSON.name} has already published v${chalk.bold(customVersion)}.`,
-      )
-    } else {
-      return customVersion
-    }
-  }
+  const { pkgJSON, publishPkgNames, tag, targetVersion } = opts
 
   const localVersion = pkgJSON.version
   const {
@@ -101,6 +48,62 @@ export async function getTargetVersion(opts: {
     remoteBetaVersion,
     remoteNextVersion,
   } = await getDistTag(publishPkgNames)
+
+  const latestReferenceVersion = getReferenceVersion(
+    localVersion,
+    remoteLatestVersion,
+  )
+  const alphaReferenceVersion = getReferenceVersion(
+    localVersion,
+    remoteAlphaVersion || remoteLatestVersion,
+  )
+  const betaReferenceVersion = getReferenceVersion(
+    localVersion,
+    remoteBetaVersion || remoteLatestVersion,
+  )
+  const nextReferenceVersion = getReferenceVersion(
+    localVersion,
+    remoteNextVersion || remoteLatestVersion,
+  )
+
+  const tag2referenceVersionMap = {
+    alpha: alphaReferenceVersion,
+    beta: betaReferenceVersion,
+    next: nextReferenceVersion,
+    latest: latestReferenceVersion,
+  }
+
+  if (targetVersion) {
+    if (VERSION_TAGS.includes(targetVersion)) {
+      return getVersion({
+        targetVersion,
+        referenceVersion: tag
+          ? tag2referenceVersionMap[tag]
+          : latestReferenceVersion,
+        tag,
+      })
+    } else {
+      if (!semver.valid(targetVersion)) {
+        logger.printErrorAndExit(
+          `${publishPkgNames[0]} has already published v${chalk.bold(
+            targetVersion,
+          )}.`,
+        )
+      }
+
+      const isExist = await isVersionExist(publishPkgNames[0], targetVersion)
+
+      if (isExist) {
+        logger.printErrorAndExit(
+          `${publishPkgNames[0]} has already published v${chalk.bold(
+            targetVersion,
+          )}.`,
+        )
+      } else {
+        return targetVersion
+      }
+    }
+  }
 
   logger.info(`- Local version: ${chalk.cyanBright.bold(localVersion)}`)
 
@@ -130,71 +133,51 @@ export async function getTargetVersion(opts: {
 
   console.log()
 
-  const latestReferenceVersion = getReferenceVersion(
-    localVersion,
-    remoteLatestVersion,
-  )
-  const alphaReferenceVersion = getReferenceVersion(
-    localVersion,
-    remoteAlphaVersion || remoteLatestVersion,
-  )
-  const betaReferenceVersion = getReferenceVersion(
-    localVersion,
-    remoteBetaVersion || remoteLatestVersion,
-  )
-  const nextReferenceVersion = getReferenceVersion(
-    localVersion,
-    remoteNextVersion || remoteLatestVersion,
-  )
+  const patchVersion = getVersion({
+    referenceVersion: latestReferenceVersion,
+    targetVersion: 'patch',
+  })
 
-  const suggestions = {
-    [VERSION_MAJOR]: semver.inc(
-      latestReferenceVersion,
-      VERSION_MAJOR.toLowerCase() as semver.ReleaseType,
-    ),
-    [VERSION_MINOR]: semver.inc(
-      latestReferenceVersion,
-      VERSION_MINOR.toLowerCase() as semver.ReleaseType,
-    ),
-    [VERSION_PATCH]: semver.inc(
-      latestReferenceVersion,
-      VERSION_PATCH.toLowerCase() as semver.ReleaseType,
-    ),
-    Alpha: generatePreVersionSuggestion('Alpha', alphaReferenceVersion),
-    Beta: generatePreVersionSuggestion('Beta', betaReferenceVersion),
-    Rc: generatePreVersionSuggestion('Rc', nextReferenceVersion),
-  }
+  const minorVersion = getVersion({
+    referenceVersion: latestReferenceVersion,
+    targetVersion: 'minor',
+  })
+
+  const majorVersion = getVersion({
+    referenceVersion: latestReferenceVersion,
+    targetVersion: 'major',
+  })
 
   const choices = [
     {
-      title: `${VERSION_PATCH} (${suggestions[VERSION_PATCH]})`,
-      value: suggestions[VERSION_PATCH] as string,
+      title: `Patch (${patchVersion})`,
+      value: patchVersion,
       description: chalk.grey(`Bug Fix`),
     },
     {
-      title: `${VERSION_MINOR} (${suggestions[VERSION_MINOR]})`,
-      value: suggestions[VERSION_MINOR] as string,
+      title: `Minor (${minorVersion})`,
+      value: minorVersion,
       description: chalk.grey(`New Feature`),
     },
     {
-      title: `${VERSION_MAJOR} (${suggestions[VERSION_MAJOR]})`,
-      value: suggestions[VERSION_MAJOR] as string,
+      title: `Major (${majorVersion})`,
+      value: majorVersion,
       description: chalk.grey(`Breaking Change`),
     },
     {
-      title: `Beta`,
-      value: 'Beta',
-      description: chalk.grey(`External Test Version`),
-    },
-    {
       title: `Alpha`,
-      value: 'Alpha',
+      value: 'alpha',
       description: chalk.grey(`Internal Test Version`),
     },
     {
-      title: `Rc`,
-      value: 'Rc',
-      description: chalk.grey(`Release candidate`),
+      title: `Beta`,
+      value: 'beta',
+      description: chalk.grey(`External Test Version`),
+    },
+    {
+      title: `Next`,
+      value: 'next',
+      description: chalk.grey(`Candidate Version`),
     },
   ]
 
@@ -221,40 +204,39 @@ export async function getTargetVersion(opts: {
       },
     )
 
-    switch (answer.value) {
-      case 'Beta':
-        answer = await prompts(
-          generatePreVersionQuestions('Beta', suggestions),
-          {
-            onCancel,
-          },
-        )
-        break
-
-      case 'Alpha':
-        answer = await prompts(
-          generatePreVersionQuestions('Alpha', suggestions),
-          {
-            onCancel,
-          },
-        )
-        break
-
-      case 'Rc':
-        answer = await prompts(generatePreVersionQuestions('Rc', suggestions), {
+    if (['alpha', 'beta', 'next'].includes(answer.value)) {
+      const referenceVersion = tag2referenceVersionMap[answer.value as 'alpha']
+      answer = await prompts(
+        getPreVersionPromptQuestions(referenceVersion, answer.value),
+        {
           onCancel,
-        })
-        break
-      default:
-        break
+        },
+      )
     }
   } else {
-    answer = await prompts(
-      generatePreVersionQuestions(tag2TypeMap[tag], suggestions),
-      {
-        onCancel,
-      },
-    )
+    if (tag === 'latest') {
+      answer = await prompts(
+        [
+          {
+            name: 'value',
+            type: 'select',
+            message: 'Please select the version to bump:',
+            choices: choices.slice(0, 3),
+          },
+        ],
+        {
+          onCancel,
+        },
+      )
+    } else {
+      const referenceVersion = tag2referenceVersionMap[tag]
+      answer = await prompts(
+        getPreVersionPromptQuestions(referenceVersion, tag),
+        {
+          onCancel,
+        },
+      )
+    }
   }
 
   return answer.value

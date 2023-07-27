@@ -1,5 +1,6 @@
 import { chalk, logger, run } from '@eljs/utils'
 import semver from 'semver'
+import { PublishTag } from '../types'
 
 export function isPrerelease(version: string): boolean {
   return (
@@ -92,7 +93,9 @@ export async function getDistTag(pkgNames: string[]) {
 export async function isVersionExist(pkgName: string, version: string) {
   try {
     const remoteInfo = (
-      await run(`npm view ${pkgName}@${version} version`)
+      await run(`npm view ${pkgName}@${version} version`, {
+        verbose: false,
+      })
     ).stdout.replace(/\W*/, '')
 
     if (remoteInfo.trim() === '') {
@@ -142,4 +145,35 @@ export function getReferenceVersion(
   }
 
   return semver.gt(remoteVersion, localVersion) ? remoteVersion : localVersion
+}
+
+interface Options {
+  referenceVersion: string
+  targetVersion?: string
+  tag?: PublishTag
+}
+
+export function getVersion(opts: Options) {
+  const { referenceVersion, targetVersion, tag } = opts
+
+  switch (targetVersion) {
+    case 'major':
+    case 'minor':
+    case 'patch':
+      return semver.inc(referenceVersion, targetVersion) as string
+    case 'premajor':
+    case 'preminor':
+    case 'prepatch':
+    case 'prerelease':
+      if (!tag || tag === 'latest') {
+        logger.printErrorAndExit(
+          `Bump ${targetVersion} version should pass tag option.`,
+        )
+      }
+      return semver.inc(referenceVersion, targetVersion, tag) as string
+    default:
+      break
+  }
+
+  return referenceVersion
 }

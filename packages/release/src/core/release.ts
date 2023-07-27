@@ -15,7 +15,7 @@ import path from 'path'
 import resolveBin from 'resolve-bin'
 import { URL } from 'url'
 
-import { getTargetVersion } from '../prompt'
+import { getBumpVersion } from '../prompt'
 import { Options, PublishTag } from '../types'
 import { getPkgPaths } from '../utils/pkg'
 import {
@@ -46,7 +46,8 @@ export async function release(opts: Options): Promise<void> {
     cwd = process.cwd(),
     gitChecks = true,
     verbose = false,
-    print = false,
+    dry = false,
+    confirm = true,
   } = opts
 
   // check git status
@@ -76,7 +77,7 @@ export async function release(opts: Options): Promise<void> {
   }
 
   const {
-    targetVersion: customVersion,
+    version,
     registryChecks,
     ownershipChecks,
     tag,
@@ -94,7 +95,7 @@ export async function release(opts: Options): Promise<void> {
     customRepoType || (repoUrl?.includes('github') ? 'github' : 'gitlab')
 
   // check registry
-  if (registryChecks) {
+  if (registryChecks && !dry) {
     await registryCheck({
       repoType,
       repoUrl,
@@ -103,29 +104,43 @@ export async function release(opts: Options): Promise<void> {
   }
 
   // check ownership
-  if (ownershipChecks) {
+  if (ownershipChecks && !dry) {
     await ownershipCheck(publishPkgNames)
   }
 
-  // bump version
-  step('Bump version ...')
-  let targetVersion = await getTargetVersion({
-    pkgJSON: rootPkgJSON,
-    publishPkgNames: monorepo ? publishPkgNames : [rootPkgJSON.name],
-    tag,
-    customVersion,
-  })
+  if (dry) {
+    console.log()
+    console.log(
+      chalk.cyanBright.bold(`Running in ${publishPkgNames.length} packages`),
+    )
+    const maxPadLength = publishPkgNames
+      .slice()
+      .sort((a, b) => b.length - a.length)[0].length
+    console.log(`${'PackageName'.padEnd(maxPadLength)} Path`)
 
-  if (print) {
-    publishPkgNames.forEach(pkgName =>
-      console.log(` - ${chalk.cyanBright(`${pkgName}@${targetVersion}`)}`),
+    publishPkgNames.forEach((pkgName, index) =>
+      console.log(
+        `${pkgName.padEnd(maxPadLength)} ${path.relative(
+          cwd,
+          publishPkgDirs[index],
+        )}`,
+      ),
     )
     return
   }
 
-  if (!customVersion) {
-    targetVersion = await reconfirm({
-      targetVersion,
+  // bump version
+  step('Bump version ...')
+  let bumpVersion = await getBumpVersion({
+    pkgJSON: rootPkgJSON,
+    publishPkgNames: monorepo ? publishPkgNames : [rootPkgJSON.name],
+    tag,
+    targetVersion: version,
+  })
+
+  if (confirm) {
+    bumpVersion = await reconfirm({
+      bumpVersion,
       publishPkgNames,
       pkgJSON: rootPkgJSON,
       monorepo,
@@ -135,7 +150,7 @@ export async function release(opts: Options): Promise<void> {
   }
 
   if (typeof beforeUpdateVersion === 'function') {
-    await beforeUpdateVersion(targetVersion)
+    await beforeUpdateVersion(bumpVersion)
   }
 
   // update all package versions and inter-dependencies
@@ -147,14 +162,14 @@ export async function release(opts: Options): Promise<void> {
     pkgNames,
     pkgJSONPaths,
     pkgJSONs,
-    version: targetVersion,
+    version: bumpVersion,
   })
 
   // update pnpm-lock.yaml or package-lock.json
   step('Updating lockfile...')
   await updateLock({
     monorepo,
-    version: targetVersion,
+    version: bumpVersion,
     rootDir: cwd,
   })
 
@@ -172,11 +187,11 @@ export async function release(opts: Options): Promise<void> {
   })
 
   // commit git changes
-  await commit(targetVersion)
+  await commit(bumpVersion)
 
   // publish package
   await publish({
-    version: targetVersion,
+    version: bumpVersion,
     publishPkgDirs,
     publishPkgNames,
     tag,
@@ -235,13 +250,19 @@ async function init(cwd: string) {
       const pkgJSONPath = path.join(pkgDir, 'package.json')
       const pkgJSON: PkgJSON = readJSONSync(pkgJSONPath)
 
-      if (!pkgJSON.name || !pkgJSON.version) {
+      if (!pkgJSON.name) {
         logger.warn(
           `skip publish ${chalk.cyanBright(
             pkgPath,
-          )} cause the package.json is not valid.`,
+          )} cause there is no name field the package.json.`,
         )
         return
+      } else if (!pkgJSON.version) {
+        logger.warn(
+          `skip publish ${chalk.cyanBright(
+            pkgPath,
+          )} cause there is no version field the package.json.`,
+        )
       } else {
         pkgJSONPaths.push(pkgJSONPath)
         pkgJSONs.push(pkgJSON)
@@ -372,7 +393,7 @@ async function ownershipCheck(publishPkgNames: string[]) {
 }
 
 interface ReconfirmOpts {
-  targetVersion: string
+  bumpVersion: string
   publishPkgNames: string[]
   pkgJSON: Required<PkgJSON>
   monorepo: boolean
@@ -381,16 +402,15 @@ interface ReconfirmOpts {
 }
 
 async function reconfirm(opts: ReconfirmOpts): Promise<string> {
-  const { targetVersion, publishPkgNames, pkgJSON, monorepo, tag, verbose } =
-    opts
+  const { bumpVersion, publishPkgNames, pkgJSON, monorepo, tag, verbose } = opts
   let confirmMessage = ''
 
   if (publishPkgNames.length === 1 || !verbose) {
-    confirmMessage = `Are you sure to bump ${chalk.cyanBright(targetVersion)}`
+    confirmMessage = `Are you sure to bump ${chalk.cyanBright(bumpVersion)}`
   } else {
     console.log(chalk.bold('The package will bump is as follows:'))
     publishPkgNames.forEach(pkgName =>
-      console.log(` - ${chalk.cyanBright(`${pkgName}@${targetVersion}`)}`),
+      console.log(` - ${chalk.cyanBright(`${pkgName}@${bumpVersion}`)}`),
     )
     confirmMessage = 'Are you sure to bump?'
   }
@@ -398,16 +418,16 @@ async function reconfirm(opts: ReconfirmOpts): Promise<string> {
   const answer = await confirm(confirmMessage)
 
   if (answer) {
-    return targetVersion
+    return bumpVersion
   } else {
-    const version = await getTargetVersion({
+    const version = await getBumpVersion({
       pkgJSON,
       publishPkgNames: monorepo ? publishPkgNames : [pkgJSON.name],
       tag,
     })
     return reconfirm({
       ...opts,
-      targetVersion: version,
+      bumpVersion: version,
     })
   }
 }
@@ -415,7 +435,7 @@ async function reconfirm(opts: ReconfirmOpts): Promise<string> {
 async function commit(version: string) {
   step('Committing changes ...')
   // await run(
-  //   `git commit --all --message chore:\\ bump\\ version\\ v${targetVersion}`,
+  //   `git commit --all --message chore:\\ bump\\ version\\ v${bumpVersion}`,
   // )
   await execa('git', [
     'commit',

@@ -52,7 +52,9 @@
         "--files",
         "${workspaceFolder}/packages/release/bin/release.js",
         "--no-git-checks",
-        "--print"
+        "--tag",
+        "next"
+        // "patch"
       ],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"

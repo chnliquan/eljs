@@ -1,7 +1,8 @@
-import { chalk, logger, readJSONSync } from '@eljs/utils'
-import { InvalidOptionArgumentError, program } from 'commander'
+import { chalk, logger, minimist, readJSONSync } from '@eljs/utils'
+import { InvalidArgumentError, program } from 'commander'
 import path from 'path'
 import semver from 'semver'
+import { VERSION_TAGS } from './const'
 import { release } from './core/release'
 
 cli().catch((err: Error) => {
@@ -17,20 +18,20 @@ function cli() {
       '-v, --version',
       'Output the current version.',
     )
-    .option('--tag <tag>', 'Npm publish tag.')
+    .argument('[version]', 'Target bump version.', checkVersion)
+    .option('--verbose', 'Whether display verbose message.')
     .option(
-      '--target-version <target-version>',
-      'Target release version.',
-      checkVersion,
+      '--dry',
+      'Instead of executing, display details about the affected packages that would be publish.',
     )
+    .option('--latest', 'Whether generate latest changelog.')
+    .option('--ownership-checks', 'Check the npm ownership.')
+    .option('--sync-cnpm', 'Whether sync to cnpm when publish done.')
+    .option('--no-confirm', 'No confirm the bump version.')
     .option('--no-git-checks', 'No check the git status and remote.')
     .option('--no-registry-checks', 'No check the package registry.')
     .option('--no-github-release', 'No release to github when publish down.')
-    .option('--sync-cnpm', 'Sync to cnpm when publish done.')
-    .option('--ownership-checks', 'Check the npm ownership.')
-    .option('--verbose', 'Whether print verbose message.')
-    .option('--print', 'Just print published package info.')
-    .option('--latest', 'Whether generate latest changelog.')
+    .option('--tag <tag>', 'Npm publish tag.')
     .option('--repo-type <repo-type>', 'Publish type, github or gitlab.')
     .option('--repo-url <repo-url>', 'Github repo url to release.')
     .option(
@@ -57,7 +58,14 @@ function cli() {
 
   program.parse(process.argv)
 
+  if (minimist(process.argv.slice(3))._.length > 1) {
+    logger.info(
+      'You provided more than one argument. The first one will be used as the bump version, the rest are ignored.',
+    )
+  }
+
   const opts = program.opts()
+  const version = program.args[0]
 
   if (opts.repoType && !['github', 'gitlab'].includes(opts.repoType)) {
     logger.printErrorAndExit(
@@ -71,7 +79,10 @@ function cli() {
     )
   }
 
-  return release(opts).then(() => process.exit(0))
+  return release({
+    ...opts,
+    version,
+  }).then(() => process.exit(0))
 }
 
 function enhanceErrorMessages(
@@ -93,12 +104,14 @@ function enhanceErrorMessages(
 }
 
 function checkVersion(value: string) {
+  if (VERSION_TAGS.includes(value as any)) {
+    return value
+  }
+
   const isValid = Boolean(semver.valid(value))
 
   if (!isValid) {
-    throw new InvalidOptionArgumentError(
-      '--target-version need a valid semantic version.',
-    )
+    throw new InvalidArgumentError('should be a valid semantic version.')
   }
 
   // if startsWith 'v', need to remove it
