@@ -73,6 +73,34 @@ export async function getBumpVersion(opts: {
     latest: latestReferenceVersion,
   }
 
+  logger.info(`- Local version: ${chalk.cyanBright.bold(localVersion)}`)
+
+  if (remoteLatestVersion) {
+    logger.info(
+      `- Remote latest version: ${chalk.cyanBright.bold(remoteLatestVersion)}`,
+    )
+  }
+
+  if (remoteAlphaVersion && (!tag || tag === 'alpha')) {
+    logger.info(
+      `- Remote alpha version: ${chalk.cyanBright.bold(remoteAlphaVersion)}`,
+    )
+  }
+
+  if (remoteBetaVersion && (!tag || tag === 'beta')) {
+    logger.info(
+      `- Remote beta version: ${chalk.cyanBright.bold(remoteBetaVersion)}`,
+    )
+  }
+
+  if (remoteNextVersion && (!tag || tag === 'next')) {
+    logger.info(
+      `- Remote next version: ${chalk.cyanBright.bold(remoteNextVersion)}`,
+    )
+  }
+
+  console.log()
+
   if (targetVersion) {
     if (VERSION_TAGS.includes(targetVersion)) {
       return getVersion({
@@ -104,34 +132,6 @@ export async function getBumpVersion(opts: {
       }
     }
   }
-
-  logger.info(`- Local version: ${chalk.cyanBright.bold(localVersion)}`)
-
-  if (remoteLatestVersion) {
-    logger.info(
-      `- Remote latest version: ${chalk.cyanBright.bold(remoteLatestVersion)}`,
-    )
-  }
-
-  if (remoteAlphaVersion && (!tag || tag === 'alpha')) {
-    logger.info(
-      `- Remote alpha version: ${chalk.cyanBright.bold(remoteAlphaVersion)}`,
-    )
-  }
-
-  if (remoteBetaVersion && (!tag || tag === 'beta')) {
-    logger.info(
-      `- Remote beta version: ${chalk.cyanBright.bold(remoteBetaVersion)}`,
-    )
-  }
-
-  if (remoteNextVersion && (!tag || tag === 'next')) {
-    logger.info(
-      `- Remote next version: ${chalk.cyanBright.bold(remoteNextVersion)}`,
-    )
-  }
-
-  console.log()
 
   const patchVersion = getVersion({
     referenceVersion: latestReferenceVersion,
@@ -195,7 +195,7 @@ export async function getBumpVersion(opts: {
         {
           name: 'value',
           type: 'select',
-          message: 'Please select the version number to be upgraded:',
+          message: 'Please select the version to bump:',
           choices,
         },
       ],

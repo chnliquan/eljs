@@ -51,11 +51,11 @@
         "{\"module\": \"commonjs\"}",
         "--files",
         "${workspaceFolder}/packages/release/bin/release.js",
-        "-h",
+        // "-h",
         "--no-git-checks",
-        "--tag",
-        "next"
-        // "patch"
+        // "--tag",
+        // "next",
+        "minor"
       ],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"

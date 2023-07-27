@@ -133,7 +133,7 @@ export async function release(opts: Options): Promise<void> {
   step('Bump version ...')
   let bumpVersion = await getBumpVersion({
     pkgJSON: rootPkgJSON,
-    publishPkgNames: monorepo ? publishPkgNames : [rootPkgJSON.name],
+    publishPkgNames,
     tag,
     targetVersion: version,
   })
@@ -143,7 +143,6 @@ export async function release(opts: Options): Promise<void> {
       bumpVersion,
       publishPkgNames,
       pkgJSON: rootPkgJSON,
-      monorepo,
       tag,
       verbose,
     })
@@ -407,19 +406,20 @@ interface ReconfirmOpts {
   bumpVersion: string
   publishPkgNames: string[]
   pkgJSON: Required<PkgJSON>
-  monorepo: boolean
   tag?: PublishTag
   verbose?: boolean
 }
 
 async function reconfirm(opts: ReconfirmOpts): Promise<string> {
-  const { bumpVersion, publishPkgNames, pkgJSON, monorepo, tag, verbose } = opts
+  const { bumpVersion, publishPkgNames, pkgJSON, tag, verbose } = opts
   let confirmMessage = ''
 
   if (publishPkgNames.length === 1 || !verbose) {
-    confirmMessage = `Are you sure to bump ${chalk.cyanBright(bumpVersion)}`
+    confirmMessage = `Are you sure to bump the version to ${chalk.cyanBright(
+      bumpVersion,
+    )}`
   } else {
-    console.log(chalk.bold('The package will bump is as follows:'))
+    console.log(chalk.bold('The packages to be bumped are as follows:'))
     publishPkgNames.forEach(pkgName =>
       console.log(` - ${chalk.cyanBright(`${pkgName}@${bumpVersion}`)}`),
     )
@@ -433,7 +433,7 @@ async function reconfirm(opts: ReconfirmOpts): Promise<string> {
   } else {
     const version = await getBumpVersion({
       pkgJSON,
-      publishPkgNames: monorepo ? publishPkgNames : [pkgJSON.name],
+      publishPkgNames,
       tag,
     })
     return reconfirm({
