@@ -1,6 +1,6 @@
 {
   "name": "@eljs/release",
-  "version": "0.16.0",
+  "version": "0.16.1",
   "description": "release npm package easily",
   "keywords": [
     "eljs",
@@ -31,8 +31,8 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@eljs/changelog-preset": "0.16.0",
-    "@eljs/utils": "0.16.0",
+    "@eljs/changelog-preset": "0.16.1",
+    "@eljs/utils": "0.16.1",
     "@types/conventional-changelog": "^3.1.1",
     "@types/glob": "^7.2.0",
     "@types/js-yaml": "^4.0.5",

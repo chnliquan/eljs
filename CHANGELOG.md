@@ -1,5 +1,16 @@
 # ChangeLog 
 
+## [0.16.1](https://github.com/chnliquan/eljs/compare/v0.16.0...v0.16.1) (2023-08-10)
+
+
+### ♻ Code Refactoring
+
+* **release:** 只推送当前的标签 ([efbf582](https://github.com/chnliquan/eljs/commit/efbf582aaa0e05616f375f4a71acbf836867ed07))
+
+
+
+ 
+
 # [0.16.0](https://github.com/chnliquan/eljs/compare/v0.15.2-beta.0...v0.16.0) (2023-07-27)
 
 
