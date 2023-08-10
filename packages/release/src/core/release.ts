@@ -454,11 +454,13 @@ async function commit(version: string) {
 
   step('Pushing to git remote ...')
   await run(`git tag v${version}`)
-  const branch = (await run(`git rev-parse --abbrev-ref HEAD`)).stdout.replace(
-    /\n|\r|\t/,
-    '',
-  )
-  await run(`git push --set-upstream origin ${branch} --tags`)
+  const branch = (
+    await run(`git rev-parse --abbrev-ref HEAD`, {
+      verbose: false,
+    })
+  ).stdout.replace(/\n|\r|\t/, '')
+  await run(`git push origin refs/tags/v${version}`)
+  await run(`git push --set-upstream origin ${branch}`)
 }
 
 async function publish(opts: {
