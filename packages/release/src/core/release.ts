@@ -15,6 +15,7 @@ import path from 'path'
 import resolveBin from 'resolve-bin'
 import { URL } from 'url'
 
+import { readFileSync } from 'fs'
 import { getBumpVersion } from '../prompt'
 import { Options, PublishTag } from '../types'
 import { getPkgPaths } from '../utils/pkg'
@@ -45,10 +46,11 @@ export async function release(opts: Options): Promise<void> {
   const {
     cwd = process.cwd(),
     gitChecks = true,
+    branch,
     verbose = false,
     dry = false,
     confirm = true,
-    branch,
+    onlyPublish = false,
   } = opts
 
   // check git status
@@ -135,70 +137,76 @@ export async function release(opts: Options): Promise<void> {
     return
   }
 
-  // bump version
-  step('Bump version ...')
-  let bumpVersion = await getBumpVersion({
-    pkgJSON: rootPkgJSON,
-    publishPkgNames,
-    tag,
-    targetVersion: version,
-  })
+  let bumpVersion = rootPkgJSON.version
+  let changelog = ''
 
-  if (confirm) {
-    bumpVersion = await reconfirm({
-      bumpVersion,
-      publishPkgNames,
+  if (!onlyPublish) {
+    // bump version
+    step('Bump version ...')
+    bumpVersion = await getBumpVersion({
       pkgJSON: rootPkgJSON,
+      publishPkgNames,
       tag,
-      verbose,
+      targetVersion: version,
     })
+
+    if (confirm) {
+      bumpVersion = await reconfirm({
+        bumpVersion,
+        publishPkgNames,
+        pkgJSON: rootPkgJSON,
+        tag,
+        verbose,
+      })
+    }
+
+    if (typeof beforeUpdateVersion === 'function') {
+      await beforeUpdateVersion(bumpVersion)
+    }
+
+    // update all package versions and inter-dependencies
+    step('Updating versions ...')
+    await updateVersions({
+      rootPkgJSONPath,
+      rootPkgJSON,
+      monorepo,
+      pkgNames,
+      pkgJSONPaths,
+      pkgJSONs,
+      version: bumpVersion,
+    })
+
+    // update pnpm-lock.yaml or package-lock.json
+    step('Updating lockfile...')
+    await updateLock({
+      monorepo,
+      version: bumpVersion,
+      rootDir: cwd,
+    })
+
+    if (typeof beforeChangelog === 'function') {
+      await beforeChangelog()
+    }
+
+    // generate changelog
+    step(`Generating changelog ...`)
+    changelog = await generateChangelog({
+      changelogPreset: changelogPreset as string,
+      latest,
+      pkgName: rootPkgJSON.name as string,
+      cwd,
+    })
+
+    // commit git changes
+    await commit(bumpVersion)
   }
-
-  if (typeof beforeUpdateVersion === 'function') {
-    await beforeUpdateVersion(bumpVersion)
-  }
-
-  // update all package versions and inter-dependencies
-  step('Updating versions ...')
-  await updateVersions({
-    rootPkgJSONPath,
-    rootPkgJSON,
-    monorepo,
-    pkgNames,
-    pkgJSONPaths,
-    pkgJSONs,
-    version: bumpVersion,
-  })
-
-  // update pnpm-lock.yaml or package-lock.json
-  step('Updating lockfile...')
-  await updateLock({
-    monorepo,
-    version: bumpVersion,
-    rootDir: cwd,
-  })
-
-  if (typeof beforeChangelog === 'function') {
-    await beforeChangelog()
-  }
-
-  // generate changelog
-  step(`Generating changelog ...`)
-  const changelog = await generateChangelog({
-    changelogPreset: changelogPreset as string,
-    latest,
-    pkgName: rootPkgJSON.name as string,
-    cwd,
-  })
-
-  // commit git changes
-  await commit(bumpVersion)
 
   // publish package
   await publish({
     version: bumpVersion,
     publishPkgDirs,
     publishPkgNames,
+    cwd,
     tag,
     gitChecks,
     changelog,
@@ -489,7 +497,8 @@ async function publish(opts: {
   version: string
   publishPkgDirs: string[]
   publishPkgNames: string[]
-  changelog: string
+  cwd?: string
+  changelog?: string
   tag?: PublishTag
   gitChecks?: boolean
   repoType: string
@@ -500,6 +509,7 @@ async function publish(opts: {
     version,
     publishPkgDirs,
     publishPkgNames,
+    cwd = process.cwd(),
     changelog,
     tag,
     gitChecks,
@@ -550,10 +560,22 @@ async function publish(opts: {
 
   // github release
   if (githubRelease && repoType === 'github' && repoUrl) {
+    let body = ''
+
+    if (changelog) {
+      body = changelog
+    } else {
+      try {
+        body = readFileSync(path.join(cwd, 'LATESTLOG.md'), 'utf-8')
+      } catch (error) {
+        //
+      }
+    }
+
     const url = await githubReleaseUrl({
       repoUrl,
       tag: `v${version}`,
-      body: changelog,
+      body,
       isPrerelease: isPrerelease(version),
     })
 
