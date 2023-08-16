@@ -141,7 +141,6 @@ export function getGitInfo(dir: string, exact?: boolean): GitInfo | null {
 }
 
 export interface DownloadGitRepoOpts {
-  url: string
   branch?: string
   dest?: string
 }
