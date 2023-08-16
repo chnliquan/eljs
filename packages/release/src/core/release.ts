@@ -48,11 +48,17 @@ export async function release(opts: Options): Promise<void> {
     verbose = false,
     dry = false,
     confirm = true,
+    branch,
   } = opts
 
   // check git status
   if (gitChecks) {
     await gitCheck()
+  }
+
+  // check branch
+  if (branch) {
+    await branchCheck(branch)
   }
 
   const {
@@ -331,6 +337,22 @@ async function gitCheck() {
 
   if (gitStatus.includes('behind')) {
     logger.printErrorAndExit('git status is behind remote.')
+  }
+}
+
+async function branchCheck(branch: string) {
+  step('Checking branch ...')
+
+  const currentBranch = (
+    await run(`git rev-parse --abbrev-ref HEAD`, {
+      verbose: false,
+    })
+  ).stdout.replace(/\n|\r|\t/, '')
+
+  if (currentBranch !== branch) {
+    logger.printErrorAndExit(
+      `current branch ${currentBranch} does not match branch ${branch}.`,
+    )
   }
 }
 

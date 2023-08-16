@@ -16,20 +16,22 @@ export type Version =
 
 export interface Options {
   cwd?: string
-  tag?: PublishTag
+  dry?: boolean
+  verbose?: boolean
+  latest?: boolean
+  onlyPublish?: boolean
+  ownershipChecks?: boolean
+  syncCnpm?: boolean
+  confirm?: boolean
   gitChecks?: boolean
   registryChecks?: boolean
-  ownershipChecks?: boolean
   githubRelease?: boolean
-  syncCnpm?: boolean
-  latest?: boolean
+  branch?: string
+  tag?: PublishTag
   repoType?: RepoType
   repoUrl?: string
   changelogPreset?: string
-  verbose?: boolean
-  dry?: boolean
   version?: string
-  confirm?: boolean
 
   beforeUpdateVersion?: (version: string) => Promise<void>
   beforeChangelog?: () => Promise<void>

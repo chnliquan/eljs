@@ -18,21 +18,29 @@ function cli() {
       '-v, --version',
       'Output the current version.',
     )
-    .option('--verbose', 'Whether display verbose message.')
     .option(
       '--dry',
       'Instead of executing, display details about the affected packages that would be publish.',
     )
+    .option('--verbose', 'Whether display verbose message.')
     .option('--latest', 'Whether generate latest changelog.')
+    .option('--only-publish', 'Only publish.')
     .option('--ownership-checks', 'Check the npm ownership.')
     .option('--sync-cnpm', 'Whether sync to cnpm when publish done.')
     .option('--no-confirm', 'No confirm the bump version.')
     .option('--no-git-checks', 'No check the git status and remote.')
     .option('--no-registry-checks', 'No check the package registry.')
     .option('--no-github-release', 'No release to github when publish down.')
-    .option('--tag <tag>', 'Npm publish tag.')
-    .option('--repo-type <repo-type>', 'Publish type, github or gitlab.')
-    .option('--repo-url <repo-url>', 'Github repo url to release.')
+    .option(
+      '--branch <branch>',
+      'Specify the branch that is allowed to publish.',
+    )
+    .option('--tag <tag>', 'Specify the publish tag.')
+    .option(
+      '--repo-type <repo-type>',
+      'Specify the publish type, github or gitlab.',
+    )
+    .option('--repo-url <repo-url>', 'Specify the github repo url to release.')
     .option(
       '--changelog-preset <changelog-preset>',
       'Customize conventional changelog preset.',

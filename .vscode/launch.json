@@ -55,7 +55,9 @@
         "--no-git-checks",
         // "--tag",
         // "next",
-        "minor"
+        // "minor"
+        "--branch",
+        "develop"
       ],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
