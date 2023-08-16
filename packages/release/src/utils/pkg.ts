@@ -44,6 +44,7 @@ export function getPublishPkgInfo(opts: {
   const publishPkgDirs: string[] = []
   const publishPkgNames: string[] = []
 
+  // TODO：check the validity of package.json
   if (pkgPaths.length > 0) {
     pkgPaths.forEach(pkgPath => {
       const pkgDir = path.join(cwd, pkgPath)
