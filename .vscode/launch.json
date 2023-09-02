@@ -55,11 +55,10 @@
         "--no-git-checks",
         // "--tag",
         // "next",
-        // "minor"
-        "--branch",
-        "develop"
+        "patch"
       ],
-      "cwd": "${workspaceFolder}",
+      // "cwd": "${workspaceFolder}",
+      "cwd": "/Users/ender/workspace/technology/release-test",
       "console": "integratedTerminal"
     },
     {

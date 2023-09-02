@@ -38,11 +38,6 @@ export function run(
   return execa.command(command, opts)
 }
 
-const targetVersion = '0.2.2'
-run(`git commit --message chore:\\ bump\\ version\\ v${targetVersion}`, {
-  verbose: false,
-})
-
 export function getPid(cmd: string): Promise<number | null> {
   const parse = (data: string, cmd: string): number | null => {
     const reg = new RegExp('/' + cmd + '$')

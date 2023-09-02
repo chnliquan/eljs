@@ -475,12 +475,9 @@ async function reconfirm(opts: ReconfirmOpts): Promise<string> {
 
 async function commit(version: string) {
   step('Committing changes ...')
-  await execa('git', [
-    'commit',
-    '--all',
-    '--message',
-    `chore: bump version v${version}`,
-  ])
+
+  await run(`git add -A`)
+  await run(`git commit -m chore:\\ bump\\ version\\ v${version}`)
 
   step('Pushing to git remote ...')
   await run(`git tag v${version}`)
