@@ -55,7 +55,8 @@
         "--no-git-checks",
         // "--tag",
         // "next",
-        "patch"
+        "patch",
+        "--only-publish"
       ],
       // "cwd": "${workspaceFolder}",
       "cwd": "/Users/ender/workspace/technology/release-test",

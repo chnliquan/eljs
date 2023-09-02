@@ -552,6 +552,12 @@ async function publish(opts: {
           `${publishPkgNames[i]}@${version}`,
         )} failed.`,
       )
+
+      if (settledResult.reason?.message) {
+        console.log(`Error: ${settledResult.reason.message}`)
+      } else {
+        console.log(settledResult.reason)
+      }
     }
   }
 
