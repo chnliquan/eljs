@@ -2,6 +2,7 @@ import chalk from 'chalk'
 import ora from 'ora'
 
 const spinner = ora()
+
 let lastMsg = null as {
   symbol: string
   text: string

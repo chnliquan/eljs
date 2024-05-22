@@ -1,4 +1,8 @@
-import { extractCallDir, isDirectory, RenderTemplateOptions } from '@eljs/utils'
+import {
+  extractCallDir,
+  isDirectory,
+  type RenderTemplateOpts,
+} from '@eljs/utils'
 import { join, resolve } from 'path'
 import { Api } from '../../types'
 
@@ -9,7 +13,7 @@ export default (api: Api) => {
     fn(
       path: string,
       data: Record<string, any> = {},
-      opts?: RenderTemplateOptions,
+      opts?: RenderTemplateOpts,
     ) {
       const baseDir = extractCallDir(3)
       const srcFile = resolve(baseDir, path)

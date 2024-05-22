@@ -1,4 +1,4 @@
-import { chalk, logger, run } from '@eljs/utils'
+import { chalk, getNpmDistTag, logger, run } from '@eljs/utils'
 import semver from 'semver'
 import { PublishTag } from '../types'
 
@@ -21,54 +21,24 @@ export function isBetaVersion(version: string): boolean {
 }
 
 export async function getDistTag(pkgNames: string[]) {
-  let remoteLatestVersion = ''
-  let remoteAlphaVersion = ''
-  let remoteBetaVersion = ''
-  let remoteNextVersion = ''
-
   for (let i = 0; i < pkgNames.length; i++) {
     const pkgName = pkgNames[i]
 
     try {
-      const distTags = (
-        await run(`npm dist-tag ${pkgName}`, {
-          verbose: false,
-        })
-      ).stdout.split('\n')
-
-      // 翻转数组，保证先解析到 latest
-      distTags.reverse().forEach(tag => {
-        const version = tag.split(': ')[1]
-
-        if (tag.startsWith('latest')) {
-          remoteLatestVersion = version
-        }
-
-        if (tag.startsWith('alpha')) {
-          remoteAlphaVersion = version
-        }
-
-        if (tag.startsWith('beta')) {
-          remoteBetaVersion = version
-        }
-
-        if (tag.startsWith('next')) {
-          remoteNextVersion = version
-        }
-      })
+      const distTag = await getNpmDistTag(pkgName)
 
       return {
-        remoteLatestVersion,
-        remoteAlphaVersion,
-        remoteBetaVersion,
-        remoteNextVersion,
+        remoteLatestVersion: distTag['latest'],
+        remoteAlphaVersion: distTag['alpha'],
+        remoteBetaVersion: distTag['beta'],
+        remoteNextVersion: distTag['next'],
       }
     } catch (err: any) {
       if (err.message.includes('command not found')) {
         logger.error(
           `Please make sure the ${chalk.cyanBright.bold(
             'npm',
-          )} has been installed`,
+          )} has been installed.`,
         )
         process.exit(1)
       } else {
@@ -83,10 +53,10 @@ export async function getDistTag(pkgNames: string[]) {
   }
 
   return {
-    remoteLatestVersion,
-    remoteAlphaVersion,
-    remoteBetaVersion,
-    remoteNextVersion,
+    remoteLatestVersion: '',
+    remoteAlphaVersion: '',
+    remoteBetaVersion: '',
+    remoteNextVersion: '',
   }
 }
 

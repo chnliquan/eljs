@@ -3,7 +3,7 @@ import {
   PluginAPI,
   PluginConfig,
 } from '@eljs/service'
-import { NpmClient, PkgJSON, RenderTemplateOptions } from '@eljs/utils'
+import type { PackageManager, PkgJSON, RenderTemplateOpts } from '@eljs/utils'
 import { GenerateService, GenerateServicePluginAPI } from './core/service'
 
 export type TemplateType = 'npm' | 'git' | 'local'
@@ -64,9 +64,9 @@ export interface AppData extends ServiceAppData {
    */
   projectName: string
   /**
-   * Npm 客户端
+   * 包管理器
    */
-  npmClient: NpmClient
+  packageManager: PackageManager
 }
 
 export interface Prompts {
@@ -153,7 +153,7 @@ export interface CopyFileOpts {
   /**
    * 渲染引擎的参数
    */
-  opts?: RenderTemplateOptions
+  opts?: RenderTemplateOpts
 }
 
 export interface CopyTplOpts extends CopyFileOpts {

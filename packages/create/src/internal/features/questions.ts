@@ -55,7 +55,7 @@ export default async (api: Api) => {
       return [
         {
           type: 'select',
-          name: 'npmClient',
+          name: 'packageManager',
           message: '包管理器',
           choices: [
             { title: 'npm', value: 'npm' },

@@ -1,12 +1,21 @@
-export type NpmClient = 'npm' | 'cnpm' | 'tnpm' | 'yarn' | 'pnpm'
-
-export enum NpmClientEnum {
-  pnpm = 'pnpm',
-  cnpm = 'cnpm',
-  yarn = 'yarn',
+/**
+ * 包管理器枚举
+ */
+export enum PackageManagerEnum {
   npm = 'npm',
+  yarn = 'yarn',
+  pnpm = 'pnpm',
+  bun = 'bun',
 }
 
+/**
+ * 包管理器
+ */
+export type PackageManager = `${PackageManagerEnum}`
+
+/**
+ * PackageJSON 信息
+ */
 export interface PkgJSON {
   name?: string
   version?: string
@@ -38,36 +47,6 @@ export interface PkgJSON {
   }
   workspaces?: string[]
   [propName: string]: any
-}
-
-/**
- * git 仓库
- */
-export interface GitRepo {
-  /** 仓库名称 */
-  name: string
-  /** 仓库所属的组 */
-  group: string
-  /** 仓库网页地址 */
-  href: string
-}
-
-/**
- * git 仓库信息
- */
-export interface GitInfo extends GitRepo {
-  /** 仓库克隆地址 */
-  url: string
-  /** 仓库当前分支 */
-  branch: string
-  /** 仓库作者 */
-  author: string
-  /** 仓库邮箱 */
-  email: string
-}
-
-export interface Implementor {
-  transformSync: (code: string, opts: Record<string, any>) => { code: string }
 }
 
 export type DistributiveOmit<T, K extends keyof any> = T extends any

@@ -1,4 +1,4 @@
-import { chalk, installWithNpmClient, isFunction, logger } from '@eljs/utils'
+import { chalk, install, isFunction, logger } from '@eljs/utils'
 import { existsSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import prettier from 'prettier'
@@ -92,17 +92,13 @@ export default (api: Api) => {
   api.registerMethod({
     name: 'installDeps',
     fn() {
-      const { npmClient = 'pnpm' } = api.appData
+      const { packageManager = 'pnpm' } = api.appData
 
       logger.info('📦 Installing additional dependencies...')
       console.log()
 
       api.appData.installDeps = true
-
-      installWithNpmClient({
-        npmClient,
-        cwd: api.paths.target,
-      })
+      install(api.paths.target, packageManager)
     },
   })
 }

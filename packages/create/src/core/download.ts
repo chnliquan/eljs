@@ -1,7 +1,7 @@
 import {
   chalk,
   downloadGitRepo,
-  downloadNpmRepo,
+  downloadNpmTarball,
   getNpmInfo,
   logger,
   ora,
@@ -25,7 +25,7 @@ export class Download {
 
     switch (type) {
       case 'npm':
-        return this._downloadNpm(value, registry)
+        return this._downloadNpmTarball(value, registry)
       case 'git':
         return this._downloadGit(value)
       default:
@@ -54,7 +54,7 @@ export class Download {
     }
   }
 
-  private async _downloadNpm(name: string, registry?: string) {
+  private async _downloadNpmTarball(name: string, registry?: string) {
     const spinner = ora(`模板下载中...`).start()
 
     try {
@@ -73,7 +73,7 @@ export class Download {
       }
 
       const { tarball } = data.dist
-      const templateDir = await downloadNpmRepo(tarball)
+      const templateDir = await downloadNpmTarball(tarball)
 
       await this._installDependencies(templateDir, spinner)
       spinner.succeed('模板下载成功')

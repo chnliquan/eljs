@@ -9,7 +9,7 @@ import {
   CopyFileOpts,
   copyTpl,
   CopyTplOpts,
-  RenderTemplateOptions,
+  type RenderTemplateOpts,
 } from '../file'
 import { logger } from '../logger'
 import { isFunction } from '../type'
@@ -28,7 +28,7 @@ export class BaseGenerator {
   /**
    * 模版渲染配置项
    */
-  public renderTemplateOptions: RenderTemplateOptions | undefined
+  public renderTemplateOptions: RenderTemplateOpts | undefined
 
   private _basedir = ''
 

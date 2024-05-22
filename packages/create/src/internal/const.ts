@@ -1,10 +1,6 @@
-import {
-  getGitUrl as gitUrl,
-  getUserAccount,
-  normalizeGitRepo,
-} from '@eljs/utils'
+import { getGitUrl as gitUrl, getGitUser, gitUrlAnalysis } from '@eljs/utils'
 
-const account = getUserAccount()
+const account = getGitUser()
 
 export const author = account.name
 export const email = account.email
@@ -29,6 +25,6 @@ export function getGitHref(targetDir: string, gitUrl?: string) {
 
   gitUrl = gitUrl || getGitUrl(targetDir)
 
-  _gitHref = normalizeGitRepo(gitUrl).href
+  _gitHref = gitUrlAnalysis(gitUrl).href
   return _gitHref
 }

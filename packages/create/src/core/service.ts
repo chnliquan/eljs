@@ -7,7 +7,8 @@ import {
   ServiceOpts,
   ServicePluginAPI,
 } from '@eljs/service'
-import { logger, PkgJSON, prompts, RenderTemplateOptions } from '@eljs/utils'
+import type { PkgJSON, RenderTemplateOpts } from '@eljs/utils'
+import { logger, prompts } from '@eljs/utils'
 import {
   AppData,
   CopyDirectoryOpts,
@@ -218,7 +219,7 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
   render: (
     path: string,
     data: Record<string, any>,
-    opts?: RenderTemplateOptions,
+    opts?: RenderTemplateOpts,
   ) => Promise<void>
   /**
    * 更新 package.json

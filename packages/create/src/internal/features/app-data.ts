@@ -6,7 +6,7 @@ export default (api: Api) => {
     const version = require('../../../package.json').version
     memo.version = version
     memo.projectName = api.args.projectName || ''
-    memo.npmClient = api.prompts.npmClient || 'pnpm'
+    memo.packageManager = api.prompts.packageManager || 'pnpm'
     return memo
   })
 }

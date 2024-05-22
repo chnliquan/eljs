@@ -1,5 +1,5 @@
 import { PromptObject } from 'prompts'
-import { existsSync, isDirectory, mkdirSync } from '../file'
+import { existsSync, isDirectory, mkdirSync } from '../file/'
 import { isFunction } from '../type'
 import { BaseGenerator } from './base-generator'
 

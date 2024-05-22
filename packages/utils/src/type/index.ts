@@ -23,17 +23,25 @@ function isTypeOf(target: unknown, type: string): boolean {
   }
 }
 
+/**
+ * 是否是 undefined
+ * @param target 目标对象
+ */
 export function isUndefined(target: unknown): target is undefined {
   return isTypeOf(target, 'undefined')
 }
 
+/**
+ * 是否是 Null
+ * @param target 目标对象
+ */
 export function isNull(target: unknown): target is undefined {
   return isTypeOf(target, 'null')
 }
 
 /**
  * 是否是字符串
- * @param target
+ * @param target 目标对象
  */
 export function isString(target: unknown): target is string {
   return isTypeOf(target, 'string')
@@ -41,7 +49,7 @@ export function isString(target: unknown): target is string {
 
 /**
  * 是否是对象
- * @param target
+ * @param target 目标对象
  */
 export function isObject<T = Record<string, unknown>>(
   target: unknown,
@@ -51,24 +59,32 @@ export function isObject<T = Record<string, unknown>>(
 
 /**
  * 是否是数组
- * @param target
+ * @param target 目标对象
  */
 export function isArray<T = Array<unknown>>(target: unknown): target is T {
   return isTypeOf(target, 'array')
 }
 
+/**
+ * 是否是函数
+ * @param target 目标对象
+ */
 // eslint-disable-next-line @typescript-eslint/ban-types
 export function isFunction<T = Function>(target: unknown): target is T {
   return isTypeOf(target, 'function')
 }
 
+/**
+ * 是否是布尔值
+ * @param target 目标对象
+ */
 export function isBoolean(target: unknown): target is boolean {
   return isTypeOf(target, 'boolean')
 }
 
 /**
  * 是否由 Object 扩展的对象
- * @param target
+ * @param target 目标对象
  */
 export function isPlainObject<T = Record<string, unknown>>(
   target: unknown,
@@ -95,7 +111,7 @@ export function isPlainObject<T = Record<string, unknown>>(
 
 /**
  * 是否是 Promise 实例
- * @param target
+ * @param target 目标对象
  */
 export function isPromise<T = Promise<unknown>>(target: unknown): target is T {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -104,7 +120,7 @@ export function isPromise<T = Promise<unknown>>(target: unknown): target is T {
 
 /**
  * 是否是 Generator 函数
- * @param target
+ * @param target 目标对象
  */
 export function isGeneratorFunc(
   target: unknown,
@@ -117,7 +133,7 @@ export function isGeneratorFunc(
 
 /**
  * 是否是 Async 函数
- * @param target
+ * @param target 目标对象
  */
 export function isAsyncFunc(target: unknown): target is AsyncGeneratorFunction {
   return (

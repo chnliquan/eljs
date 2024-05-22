@@ -1,9 +1,9 @@
 import chalk from 'chalk'
 import cp from 'child_process'
 import execa from 'execa'
+import path from 'path'
 import read from 'read'
-
-import { getExecutableCmd } from './file'
+import { existsSync } from '../file'
 
 const SPACES_REGEXP = / +/g
 
@@ -125,4 +125,23 @@ export function sudo(args: string[], opts?: SudoOptions): void {
       })
     })
   }
+}
+
+export function getExecutableCmd(
+  target: string,
+  dirs?: string[],
+): string | null {
+  if (!dirs) {
+    dirs = (process.env.PATH || '').split(':')
+  }
+
+  for (const dir of dirs) {
+    const p = path.join(dir, target)
+
+    if (existsSync(p)) {
+      return p
+    }
+  }
+
+  return null
 }

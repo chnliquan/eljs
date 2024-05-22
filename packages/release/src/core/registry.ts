@@ -1,4 +1,4 @@
-import { chalk, logger, run } from '@eljs/utils'
+import { chalk, getNpmRegistry, logger } from '@eljs/utils'
 import { step } from '../utils'
 
 export async function registryCheck(opts: {
@@ -31,10 +31,10 @@ export async function registryCheck(opts: {
   }
 
   if (registry) {
-    const userRegistry = (await run(`npm config get registry`)).stdout.trim()
+    const userRegistry = await getNpmRegistry()
 
     if (!userRegistry.includes(registry)) {
-      logger.printErrorAndExit(`npm registry is not ${chalk.blue(registry)}`)
+      logger.printErrorAndExit(`npm registry is not ${chalk.blue(registry)}.`)
     }
   }
 }

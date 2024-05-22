@@ -1,25 +1,12 @@
 import prompts, { Choice, PromptObject } from 'prompts'
-import readline from 'readline'
-import { isNull } from './type'
+import { isNull } from '../type'
 
-export function pause(message?: string): Promise<void> {
-  return new Promise(resolve => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    })
-
-    if (!message) {
-      message = 'Press ENTER key to continue...'
-    }
-
-    rl.question(message, () => {
-      resolve()
-      rl.close()
-    })
-  })
-}
-
+/**
+ * 确认问询
+ * @param message 闻讯信息
+ * @param preferNo 是否默认 false
+ * @param onCancel 取消回调函数
+ */
 export function confirm(
   message: string,
   preferNo?: boolean,
@@ -42,6 +29,12 @@ export function confirm(
   })
 }
 
+/**
+ * 选择问询
+ * @param message 问询信息
+ * @param choices 问询选项
+ * @param initial 问询初始化数据
+ */
 export function select<T extends Choice>(
   message: string,
   choices: T[],
@@ -61,7 +54,13 @@ export function select<T extends Choice>(
     return answers.name
   })
 }
-export function ask<T extends PromptObject, U extends Record<string, any>>(
+
+/**
+ * 问询
+ * @param questions 问询问题列表
+ * @param initials 问询初始化数据
+ */
+export function prompt<T extends PromptObject, U extends Record<string, any>>(
   questions: T[],
   initials: U = Object.create(null),
 ): Promise<U> {
@@ -81,11 +80,16 @@ export function ask<T extends PromptObject, U extends Record<string, any>>(
   return prompts(questions) as Promise<U>
 }
 
-export function loopAsk<
+/**
+ * 循环问询
+ * @param questions 问询问题列表
+ * @param initials 问询初始化数据
+ */
+export function loopPrompt<
   T extends PromptObject,
   U extends Record<string, any> = Record<string, any>,
 >(questions: T[], initials: U = Object.create(null)): Promise<U> {
-  return ask(questions, initials).then(answers => {
+  return prompt(questions, initials).then(answers => {
     console.log()
     console.log('The information you entered is as follows:')
     console.log(JSON.stringify(answers, null, 2))
@@ -97,7 +101,7 @@ export function loopAsk<
       if (isOK) {
         return answers
       } else {
-        return loopAsk(questions, answers)
+        return loopPrompt(questions, answers)
       }
     })
   })

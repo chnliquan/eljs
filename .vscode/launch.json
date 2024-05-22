@@ -52,11 +52,11 @@
         "--files",
         "${workspaceFolder}/packages/release/bin/release.js",
         // "-h",
-        "--no-git-checks",
+        "--no-git-checks"
         // "--tag",
         // "next",
-        "patch",
-        "--only-publish"
+        // "patch",
+        // "--only-publish"
       ],
       // "cwd": "${workspaceFolder}",
       "cwd": "/Users/ender/workspace/technology/release-test",

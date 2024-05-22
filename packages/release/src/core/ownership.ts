@@ -1,10 +1,10 @@
-import { logger, run } from '@eljs/utils'
+import { getNpmUser, logger, run } from '@eljs/utils'
 import { step } from '../utils'
 
 export async function ownershipCheck(publishPkgNames: string[]) {
   step('Checking npm ownership ...')
 
-  const whoami = (await run('npm whoami')).stdout.trim()
+  const user = await getNpmUser()
 
   for (const pkgName of publishPkgNames) {
     try {
@@ -17,8 +17,8 @@ export async function ownershipCheck(publishPkgNames: string[]) {
         .split('\n')
         .map(line => line.split(' ')[0])
 
-      if (!owners.includes(whoami)) {
-        logger.printErrorAndExit(`${pkgName} is not owned by ${whoami}.`)
+      if (!owners.includes(user)) {
+        logger.printErrorAndExit(`${pkgName} is not owned by ${user}.`)
       }
     } catch (err) {
       if ((err as Error).message.indexOf('Not Found') > -1) {
