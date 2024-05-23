@@ -1,4 +1,10 @@
-import { logger, PkgJSON, readJSONSync, run } from '@eljs/utils'
+import {
+  isPathExistSync,
+  logger,
+  PkgJSON,
+  readJSONSync,
+  run,
+} from '@eljs/utils'
 import fs from 'fs'
 import path from 'path'
 
@@ -17,7 +23,7 @@ export async function updateLock(opts: {
 
   const pkgLockJSONPath = path.resolve(rootDir, 'package-lock.json')
 
-  if (!fs.existsSync(pkgLockJSONPath)) {
+  if (!isPathExistSync(pkgLockJSONPath)) {
     return
   }
 

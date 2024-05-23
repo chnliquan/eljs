@@ -2,7 +2,7 @@ import { chalk, logger, minimist, readJSONSync } from '@eljs/utils'
 import { InvalidArgumentError, program } from 'commander'
 import path from 'path'
 import semver from 'semver'
-import { VERSION_TAGS } from './const'
+import { VERSION_TAGS } from './constants'
 import { release } from './core/release'
 
 cli().catch((err: Error) => {
@@ -24,12 +24,12 @@ function cli() {
     )
     .option('--verbose', 'Whether display verbose message.')
     .option('--latest', 'Whether generate latest changelog.')
-    .option('--only-publish', 'Only publish.')
-    .option('--ownership-checks', 'Check the npm ownership.')
+    .option('--publish-only', 'Whether publish only.')
+    .option('--ownership-check', 'Check the npm ownership.')
     .option('--sync-cnpm', 'Whether sync to cnpm when publish done.')
     .option('--no-confirm', 'No confirm the bump version.')
-    .option('--no-git-checks', 'No check the git status and remote.')
-    .option('--no-registry-checks', 'No check the package registry.')
+    .option('--no-git-check', 'No check the git status and remote.')
+    .option('--no-registry-check', 'No check the package registry.')
     .option('--no-github-release', 'No release to github when publish down.')
     .option(
       '--branch <branch>',

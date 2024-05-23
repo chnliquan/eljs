@@ -4,7 +4,7 @@ import glob from 'glob'
 import path from 'path'
 
 import { mkdirSync } from './dir'
-import { isDirectory } from './is'
+import { isDirectorySync } from './is'
 import { renderTemplate, type RenderTemplateOpts } from './render'
 
 /**
@@ -114,7 +114,7 @@ export function copyDirectory(opts: CopyDirectoryOpts) {
   files.forEach(file => {
     const srcFile = path.join(opts.from, file)
 
-    if (isDirectory(srcFile)) {
+    if (isDirectorySync(srcFile)) {
       return
     }
 

@@ -1,4 +1,4 @@
-import { logger } from '@eljs/utils'
+import { isPathExistSync, logger } from '@eljs/utils'
 import conventionalChangelog from 'conventional-changelog'
 import fs from 'fs'
 import os from 'os'
@@ -44,7 +44,7 @@ export async function generateChangelog(opts: {
           )
         }
 
-        if (fs.existsSync(CHANGELOG)) {
+        if (isPathExistSync(CHANGELOG)) {
           const remain = fs.readFileSync(CHANGELOG, 'utf8').trim()
           changelog = remain.length
             ? remain.replace(/# Change\s?Log/, '# ChangeLog \n\n' + data)

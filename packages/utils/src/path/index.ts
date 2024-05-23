@@ -1,5 +1,6 @@
 import path from 'path'
-import { existsSync } from '../file/is'
+
+import { isPathExistSync } from '../file'
 
 /**
  * 解析 windows 系统地址
@@ -21,7 +22,7 @@ export function winPath(path: string) {
  */
 export function tryPaths(paths: string[]) {
   for (const path of paths) {
-    if (existsSync(path)) {
+    if (isPathExistSync(path)) {
       return path
     }
   }

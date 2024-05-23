@@ -1,7 +1,7 @@
 import { getNpmUser, logger, run } from '@eljs/utils'
 import { step } from '../utils'
 
-export async function ownershipCheck(publishPkgNames: string[]) {
+export async function checkOwnership(publishPkgNames: string[]) {
   step('Checking npm ownership ...')
 
   const user = await getNpmUser()

@@ -2,12 +2,13 @@ import {
   chalk,
   confirm,
   isDirectory,
+  isPathExistSync,
   logger,
   mkdirSync,
   removeSync,
 } from '@eljs/utils'
 import assert from 'assert'
-import { existsSync, readdirSync } from 'fs'
+import { readdirSync } from 'fs'
 import path from 'path'
 import { CreateOpts, TemplateInfo } from '../types'
 import { Download } from './download'
@@ -72,7 +73,7 @@ export class Create {
         projectName === '.' ? path.relative('../', this.cwd) : projectName
       const targetDir = path.resolve(this.cwd, projectName)
 
-      if (!existsSync(targetDir)) {
+      if (!isPathExistSync(targetDir)) {
         mkdirSync(targetDir)
       } else {
         const override = await this._checkTargetDir(targetDir)
@@ -110,7 +111,7 @@ export class Create {
     this._localTemplatePath = path.join(this._cwd, localTemplatePath)
 
     assert(
-      existsSync(this._localTemplatePath),
+      isPathExistSync(this._localTemplatePath),
       `传入的自定义模板 ${chalk.cyan(
         this._localTemplatePath,
       )} 不存在, 请检查输入`,
@@ -153,7 +154,7 @@ export class Create {
   }
 
   private _removeTemplate(templatePath: string) {
-    if (!this._localTemplatePath && existsSync(templatePath)) {
+    if (!this._localTemplatePath && isPathExistSync(templatePath)) {
       removeSync(templatePath)
     }
   }

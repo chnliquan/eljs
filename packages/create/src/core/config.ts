@@ -1,4 +1,4 @@
-import { existsSync, logger, resolve } from '@eljs/utils'
+import { isPathExistSync, logger, resolve } from '@eljs/utils'
 import { join } from 'path'
 
 function getGenConfig(configFile: string) {
@@ -10,7 +10,7 @@ function getGenConfig(configFile: string) {
 }
 
 export function isGenConfigExist(cwd: string) {
-  return existsSync(join(cwd, 'gen.json'))
+  return isPathExistSync(join(cwd, 'gen.json'))
 }
 
 export function getPresetsAndPlugins(cwd: string) {

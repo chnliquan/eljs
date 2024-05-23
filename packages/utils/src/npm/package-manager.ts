@@ -1,7 +1,7 @@
 import { resolve } from 'path'
 
 import { hasGlobalInstallation } from '../env'
-import { existsSync } from '../file'
+import { isPathExist } from '../file'
 import { PackageManager } from '../types'
 
 const cache = new Map()
@@ -44,7 +44,7 @@ export async function getPackageManager(
  * 获取 lock 文件类型
  * @param cwd 当前工作目录
  */
-export function getTypeofLockFile(
+export async function getTypeofLockFile(
   cwd = process.cwd(),
 ): Promise<PackageManager | null> {
   const key = `has_lockfile_${cwd}`
@@ -54,10 +54,10 @@ export function getTypeofLockFile(
   }
 
   return Promise.all([
-    existsSync(resolve(cwd, 'yarn.lock')),
-    existsSync(resolve(cwd, 'pnpm-lock.yaml')),
-    existsSync(resolve(cwd, 'bun.lockb')),
-    existsSync(resolve(cwd, 'package-lock.json')),
+    isPathExist(resolve(cwd, 'yarn.lock')),
+    isPathExist(resolve(cwd, 'pnpm-lock.yaml')),
+    isPathExist(resolve(cwd, 'bun.lockb')),
+    isPathExist(resolve(cwd, 'package-lock.json')),
   ]).then(([isYarn, isPnpm, isBun, isNpm]) => {
     let value: PackageManager | null = null
 

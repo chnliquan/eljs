@@ -1,4 +1,4 @@
-import { existsSync, register } from '@eljs/utils'
+import { isPathExistSync, register } from '@eljs/utils'
 import assert from 'assert'
 import deepMerge from 'deepmerge'
 import esbuild from 'esbuild'
@@ -68,7 +68,7 @@ export class ConfigManager {
 
     for (const configFile of opts.defaultConfigFiles || DEFAULT_CONFIG_FILES) {
       const absConfigFile = join(opts.cwd, configFile)
-      if (existsSync(absConfigFile)) {
+      if (isPathExistSync(absConfigFile)) {
         mainConfigFile = absConfigFile
         break
       }
@@ -110,7 +110,7 @@ export class ConfigManager {
     }
 
     for (const configFile of opts.configFiles) {
-      if (existsSync(configFile)) {
+      if (isPathExistSync(configFile)) {
         register.register({
           implementor: esbuild,
         })

@@ -3,7 +3,7 @@ import cp from 'child_process'
 import execa from 'execa'
 import path from 'path'
 import read from 'read'
-import { existsSync } from '../file'
+import { isPathExistSync } from '../file'
 
 const SPACES_REGEXP = / +/g
 
@@ -138,7 +138,7 @@ export function getExecutableCmd(
   for (const dir of dirs) {
     const p = path.join(dir, target)
 
-    if (existsSync(p)) {
+    if (isPathExistSync(p)) {
       return p
     }
   }

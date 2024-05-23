@@ -1,7 +1,7 @@
 import {
   chalk,
-  existsSync,
   isMonorepo,
+  isPathExistSync,
   logger,
   PkgJSON,
   readJSONSync,
@@ -13,7 +13,7 @@ import { getPkgPaths } from '../utils'
 export async function init(cwd: string) {
   const rootPkgJSONPath = path.join(cwd, 'package.json')
 
-  if (!existsSync(rootPkgJSONPath)) {
+  if (!isPathExistSync(rootPkgJSONPath)) {
     logger.printErrorAndExit(
       `unable to find the ${rootPkgJSONPath} file, make sure execute the command in the root directory.`,
     )

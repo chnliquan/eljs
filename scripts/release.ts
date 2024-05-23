@@ -1,29 +1,26 @@
-import { release, resolveBin, step } from '@eljs/release'
-import { argv } from 'zx'
+import { release, resolveBin, step, utils } from '@eljs/release'
+import { $, argv } from 'zx'
 import 'zx/globals'
 
 import { assert } from './utils'
 
 const dry = argv.dry
+const skipGit = argv.skipGit
 const skipTests = argv.skipTests
 const skipBuild = argv.skipBuild
-const skipRegistryChecks = argv.skipRegistryChecks || true
-const skipOwnershipChecks = argv.skipOwnershipChecks || true
+const skipRegistryCheck = argv.skipRegistryCheck || true
+const skipOwnershipCheck = argv.skipOwnershipCheck || true
 const skipSyncCnpm = argv.skipSyncCnpm
 
 main().catch((err: Error) => {
-  console.error(`release error: ${err.message}`)
+  console.error(`release error: ${err.message}.`)
   process.exit(1)
 })
 
 async function main(): Promise<void> {
-  if (!dry) {
-    const isGitClean = (await $`git status --porcelain`).stdout.trim().length
-    assert(!isGitClean, 'git status is not clean.')
-
-    await $`git fetch`
-    const gitStatus = (await $`git status --short --branch`).stdout.trim()
-    assert(!gitStatus.includes('behind'), 'git status is behind remote.')
+  if (!skipGit && !dry) {
+    assert(!(await utils.isGitClean()), 'git is not clean.')
+    assert(await utils.isGitBehindRemote(), 'git is behind remote.')
   }
 
   // run tests before release
@@ -46,9 +43,9 @@ async function main(): Promise<void> {
 
   release({
     ...argv,
-    gitChecks: false,
-    registryChecks: !skipRegistryChecks,
-    ownershipChecks: !skipOwnershipChecks,
+    gitCheck: false,
+    registryCheck: !skipRegistryCheck,
+    ownershipCheck: !skipOwnershipCheck,
     syncCnpm: !skipSyncCnpm,
     version: argv._[0],
   })

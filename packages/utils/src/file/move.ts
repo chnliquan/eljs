@@ -1,5 +1,5 @@
 import fs from 'fs'
-import { existsSync } from './is'
+import { isPathExistSync } from './is'
 import { removeSync } from './remove'
 
 /**
@@ -15,7 +15,7 @@ export function moveSync(src: string, dest: string, overwrite?: boolean): void {
     return
   }
 
-  if (existsSync(dest)) {
+  if (isPathExistSync(dest)) {
     throw Error(`The dest ${dest} already exists.`)
   } else {
     fs.renameSync(src, dest)

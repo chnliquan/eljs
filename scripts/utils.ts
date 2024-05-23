@@ -1,9 +1,9 @@
+import { utils } from '@eljs/release'
 import path from 'path'
 import { chalk, fs } from 'zx'
-import { logger } from './logger'
 
 export const targets = fs.readdirSync('packages').filter(file => {
-  if (!isDirectory(`packages/${file}`)) {
+  if (!utils.isDirectory(`packages/${file}`)) {
     return false
   }
 
@@ -12,7 +12,7 @@ export const targets = fs.readdirSync('packages').filter(file => {
     `../packages/${file}/package.json`,
   )
 
-  if (!fs.existsSync(pkgJSONPath)) {
+  if (!fs.isPathExistSync(pkgJSONPath)) {
     return false
   }
 
@@ -46,19 +46,14 @@ export function fuzzyMatchTarget(
   if (matched.length) {
     return matched
   } else {
-    logger.printErrorAndExit(
+    utils.logger.printErrorAndExit(
       `Target ${chalk.underline(partialTargets)} not found!`,
     )
   }
 }
 
-export function isDirectory(file: string): boolean {
-  const stats = fs.statSync(file)
-  return stats.isDirectory()
-}
-
 export function assert(v: unknown, message: string) {
   if (!v) {
-    logger.printErrorAndExit(message)
+    utils.logger.printErrorAndExit(message)
   }
 }

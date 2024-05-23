@@ -1,5 +1,5 @@
+export * as utils from '@eljs/utils'
 export { default as resolveBin } from 'resolve-bin'
-export { generateChangelog } from './core/changelog'
-export { release } from './core/release'
+export { generateChangelog, release } from './core'
 export * from './types'
 export { step } from './utils'

@@ -1,13 +1,13 @@
 import { chalk, logger, pascalCase, PkgJSON, prompts } from '@eljs/utils'
 import semver from 'semver'
-import { VERSION_TAGS } from './const'
-import { PublishTag } from './types'
+import { VERSION_TAGS } from '../constants'
+import { PublishTag } from '../types'
 import {
   getDistTag,
   getReferenceVersion,
   getVersion,
   isVersionExist,
-} from './utils/version'
+} from './version'
 
 function getPreVersionPromptQuestions(
   referenceVersion: string,

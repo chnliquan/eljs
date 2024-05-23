@@ -1,7 +1,7 @@
 import appRootPath from 'app-root-path'
 import execa from 'execa'
 import path from 'path'
-import { existsSync, readJSONSync } from '../file'
+import { isPathExistSync, readJSONSync } from '../file'
 
 const cache = new Map()
 
@@ -35,13 +35,15 @@ export function isMonorepo(cwd?: string): boolean {
   let pkgJSONPath: string
 
   if (cwd) {
-    if (existsSync(path.join(cwd, 'pnpm-workspace.yaml'))) {
+    if (isPathExistSync(path.join(cwd, 'pnpm-workspace.yaml'))) {
       return true
     }
 
     pkgJSONPath = path.join(cwd, 'package.json')
   } else {
-    if (existsSync(path.join(appRootPath.toString(), 'pnpm-workspace.yaml'))) {
+    if (
+      isPathExistSync(path.join(appRootPath.toString(), 'pnpm-workspace.yaml'))
+    ) {
       return true
     }
 

@@ -1,7 +1,13 @@
-import { camelCase, PkgJSON, register, resolve, winPath } from '@eljs/utils'
+import {
+  camelCase,
+  isPathExistSync,
+  PkgJSON,
+  register,
+  resolve,
+  winPath,
+} from '@eljs/utils'
 import assert from 'assert'
 import esbuild from 'esbuild'
-import { existsSync } from 'fs'
 import sum from 'hash-sum'
 import { basename, dirname, extname, join, relative } from 'path'
 import pkgUp from 'pkg-up'
@@ -82,7 +88,7 @@ export class Plugin {
     this._prefix = opts.prefix || '@eljs/service-'
 
     assert(
-      existsSync(this.path),
+      isPathExistSync(this.path),
       `Invalid ${this.type} ${this.path}, it's not exists.`,
     )
 

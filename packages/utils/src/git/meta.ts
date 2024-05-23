@@ -4,6 +4,7 @@ import ini from 'ini'
 import os from 'os'
 import path from 'path'
 import { URL } from 'url'
+import { isPathExistSync } from '../file'
 
 /**
  * 基础 git 仓库信息
@@ -53,7 +54,7 @@ export interface GitRepoInfo extends BaseGitRepoInfo {
 export function getGitUrl(dir: string, exact?: boolean): string {
   const gitDir = exact ? path.join(dir, '.git') : getProjectGitDir(dir) || ''
 
-  if (!fs.existsSync(gitDir)) {
+  if (!isPathExistSync(gitDir)) {
     return ''
   }
 
@@ -70,6 +71,20 @@ export function getGitUrl(dir: string, exact?: boolean): string {
   }
 
   return ''
+}
+
+/**
+ * 获取指定工作目录的 git 分支
+ * @param cwd 当前工作目录
+ * @returns 当前分支
+ */
+export async function getGitBranch(cwd?: string): Promise<string> {
+  return execa('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+    cwd,
+  }).then(data => {
+    // .replace(/\n|\r|\t/, '')
+    return data.stdout.trim()
+  })
 }
 
 /**
@@ -125,7 +140,7 @@ export function getGitRepoInfo(
 ): GitRepoInfo | null {
   const gitDir = exact ? path.join(dir, '.git') : getProjectGitDir(dir) || ''
 
-  if (!fs.existsSync(gitDir)) {
+  if (!isPathExistSync(gitDir)) {
     return null
   }
 
@@ -256,7 +271,7 @@ function getProjectGitDir(dir: string): string | undefined {
 
   while (cur) {
     // 如果配置存在，说明是 .git 目录
-    if (fs.existsSync(path.join(cur, '.git', 'config'))) {
+    if (isPathExistSync(path.join(cur, '.git', 'config'))) {
       return path.join(cur, '.git')
     }
 

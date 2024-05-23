@@ -19,7 +19,7 @@ export async function publish(opts: {
   cwd?: string
   changelog?: string
   tag?: PublishTag
-  gitChecks?: boolean
+  gitCheck?: boolean
   repoType: string
   repoUrl?: string
   githubRelease?: boolean
@@ -31,7 +31,7 @@ export async function publish(opts: {
     cwd = process.cwd(),
     changelog,
     tag,
-    gitChecks,
+    gitCheck,
     repoType,
     repoUrl,
     githubRelease,
@@ -121,7 +121,7 @@ export async function publish(opts: {
       ...tag,
       '--access',
       'public',
-      isPnpm && !gitChecks ? '--no-git-checks' : '',
+      isPnpm && !gitCheck ? '--no-git-checks' : '',
     ].filter(Boolean)
 
     await execa(cmd, cliArgs, {

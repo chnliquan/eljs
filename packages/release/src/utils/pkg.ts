@@ -1,4 +1,4 @@
-import { existsSync, PkgJSON, readJSONSync } from '@eljs/utils'
+import { isPathExistSync, PkgJSON, readJSONSync } from '@eljs/utils'
 import fs from 'fs'
 import glob from 'glob'
 import yaml from 'js-yaml'
@@ -23,7 +23,7 @@ export function getPkgPaths(cwd = process.cwd()) {
             ignore: '*/*.*',
           })
           pkgPaths.push(...partialPkgPaths)
-        } else if (existsSync(path.resolve(cwd, matcher))) {
+        } else if (isPathExistSync(path.resolve(cwd, matcher))) {
           pkgPaths.push(matcher)
         }
       })

@@ -170,7 +170,7 @@ export class Service {
 
   public constructor(opts: ServiceOpts) {
     assert(
-      utils.existsSync(opts.cwd),
+      utils.isPathExistSync(opts.cwd),
       `Invalid cwd ${opts.cwd}, it's not found.`,
     )
 

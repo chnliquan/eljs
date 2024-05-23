@@ -1,17 +1,22 @@
-import { chalk } from '@eljs/utils'
+import {
+  chalk,
+  isGitBehindRemote,
+  isGitBranch,
+  isGitClean,
+  logger,
+} from '@eljs/utils'
 import path from 'path'
 
-import { getBumpVersion } from '../prompt'
 import { Options } from '../types'
 import { step } from '../utils'
+import { getBumpVersion } from '../utils/prompt'
 import { generateChangelog } from './changelog'
 import { commit } from './commit'
-import { branchCheck, gitCheck } from './git'
 import { init } from './init'
-import { ownershipCheck } from './ownership'
+import { checkOwnership } from './ownership'
 import { publish } from './publish'
 import { reconfirm } from './reconfirm'
-import { registryCheck } from './registry'
+import { checkRegistry } from './registry'
 import { sync } from './sync'
 import { updateLock, updateVersions } from './update'
 
@@ -30,22 +35,36 @@ import { updateLock, updateVersions } from './update'
 export async function release(opts: Options): Promise<void> {
   const {
     cwd = process.cwd(),
-    gitChecks = true,
+    gitCheck = true,
     branch,
     verbose = false,
     dry = false,
     confirm = true,
-    onlyPublish = false,
+    publishOnly = false,
   } = opts
 
   // check git status
-  if (gitChecks) {
-    await gitCheck()
+  if (gitCheck) {
+    step('Checking git ...')
+
+    if (!(await isGitClean())) {
+      logger.printErrorAndExit('git is not clean.')
+    }
+
+    if (await isGitBehindRemote()) {
+      logger.printErrorAndExit('git is behind remote.')
+    }
   }
 
   // check branch
   if (branch) {
-    await branchCheck(branch)
+    step('Checking branch ...')
+
+    if (!(await isGitBranch(branch))) {
+      logger.printErrorAndExit(
+        `current branch does not match branch ${branch}.`,
+      )
+    }
   }
 
   const {
@@ -60,8 +79,8 @@ export async function release(opts: Options): Promise<void> {
   } = await init(cwd)
 
   const defaultOptions: Options = {
-    registryChecks: true,
-    ownershipChecks: false,
+    registryCheck: true,
+    ownershipCheck: false,
     syncCnpm: false,
     repoUrl: rootPkgJSON?.repository?.url || '',
     changelogPreset: '@eljs/changelog-preset',
@@ -71,8 +90,8 @@ export async function release(opts: Options): Promise<void> {
 
   const {
     version,
-    registryChecks,
-    ownershipChecks,
+    registryCheck,
+    ownershipCheck,
     tag,
     syncCnpm,
     repoType: customRepoType,
@@ -88,8 +107,8 @@ export async function release(opts: Options): Promise<void> {
     customRepoType || (repoUrl?.includes('github') ? 'github' : 'gitlab')
 
   // check registry
-  if (registryChecks && !dry) {
-    await registryCheck({
+  if (registryCheck && !dry) {
+    await checkRegistry({
       repoType,
       repoUrl,
       pkgRegistry: rootPkgJSON?.publishConfig?.registry,
@@ -97,8 +116,8 @@ export async function release(opts: Options): Promise<void> {
   }
 
   // check ownership
-  if (ownershipChecks && !dry) {
-    await ownershipCheck(publishPkgNames)
+  if (ownershipCheck && !dry) {
+    await checkOwnership(publishPkgNames)
   }
 
   if (dry) {
@@ -125,7 +144,7 @@ export async function release(opts: Options): Promise<void> {
   let bumpVersion = rootPkgJSON.version
   let changelog = ''
 
-  if (!onlyPublish) {
+  if (!publishOnly) {
     // bump version
     step('Bump version ...')
     bumpVersion = await getBumpVersion({
@@ -193,7 +212,7 @@ export async function release(opts: Options): Promise<void> {
     publishPkgNames,
     cwd,
     tag,
-    gitChecks,
+    gitCheck,
     changelog,
     repoType,
     repoUrl,

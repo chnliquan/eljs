@@ -1,4 +1,4 @@
-import { chalk, existsSync, logger, readJSONSync } from '@eljs/utils'
+import { chalk, isPathExistSync, logger, readJSONSync } from '@eljs/utils'
 import { program } from 'commander'
 import path from 'path'
 import { defaultTemplateConfig } from './config'
@@ -47,7 +47,7 @@ async function cli() {
   let templateConfig: TemplateConfig = defaultTemplateConfig
 
   if (opts.templateConfig) {
-    if (!existsSync(opts.templateConfig)) {
+    if (!isPathExistSync(opts.templateConfig)) {
       logger.printErrorAndExit(`${opts.templateConfig} is not exist.`)
     }
 

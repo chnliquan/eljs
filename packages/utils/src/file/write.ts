@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { v4 } from 'uuid'
 import { PkgJSON } from '../types'
+import { isPathExistSync } from './is'
 import { readJSONSync } from './read'
 
 /**
@@ -46,7 +47,7 @@ export function safeWriteJSONSync<T extends Record<string, unknown>>(
     fs.renameSync(tmpFile, file)
   } catch (err) {
     // 如果发生异常, 就将 tmpFile 删除掉
-    if (fs.existsSync(tmpFile)) {
+    if (isPathExistSync(tmpFile)) {
       fs.unlinkSync(tmpFile)
     }
   }
@@ -65,7 +66,7 @@ export function safeWriteFileSync(file: string, content: string): void {
     fs.renameSync(tmpFile, file)
   } catch (err) {
     // 如果发生异常, 就将 tmpFile 删除掉
-    if (fs.existsSync(tmpFile)) {
+    if (isPathExistSync(tmpFile)) {
       fs.unlinkSync(tmpFile)
     }
   }

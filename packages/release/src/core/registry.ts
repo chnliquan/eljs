@@ -1,7 +1,7 @@
 import { chalk, getNpmRegistry, logger } from '@eljs/utils'
 import { step } from '../utils'
 
-export async function registryCheck(opts: {
+export async function checkRegistry(opts: {
   repoType: string
   repoUrl?: string
   pkgRegistry?: string
