@@ -114,15 +114,15 @@ export function isPlainObject<T = Record<string, unknown>>(
  * @param target 目标对象
  */
 export function isPromise<T = Promise<unknown>>(target: unknown): target is T {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (target && typeof (target as any).then === 'function') as boolean
+  return (target &&
+    typeof (target as Promise<unknown>).then === 'function') as boolean
 }
 
 /**
  * 是否是 Generator 函数
  * @param target 目标对象
  */
-export function isGeneratorFunc(
+export function isGeneratorFunction(
   target: unknown,
 ): target is AsyncGeneratorFunction {
   return (
@@ -135,7 +135,9 @@ export function isGeneratorFunc(
  * 是否是 Async 函数
  * @param target 目标对象
  */
-export function isAsyncFunc(target: unknown): target is AsyncGeneratorFunction {
+export function isAsyncFunction(
+  target: unknown,
+): target is AsyncGeneratorFunction {
   return (
     typeof target === 'function' && target.constructor.name === 'AsyncFunction'
   )

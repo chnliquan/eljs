@@ -27,25 +27,25 @@ export interface InstallDepsOpts {
 export async function installDeps(opts: InstallDepsOpts): Promise<void> {
   const { dependencies, devDependencies, cwd = process.cwd() } = opts
   const packageManager = await getPackageManager(cwd)
-  const devTag = '-D'
 
   if (dependencies) {
-    installDependencies(dependencies)
+    await installDependencies(dependencies)
   }
 
   if (devDependencies) {
-    installDependencies(devDependencies, devTag)
+    await installDependencies(devDependencies, '-D')
   }
 
-  function installDependencies(deps: string[], devStr?: string) {
+  async function installDependencies(deps: string[], devStr?: string) {
     console.log(
       `${packageManager} install dependencies packages: ${deps.join(' ')}.`,
     )
-    execa.sync(
-      [packageManager, packageManager === 'npm' ? 'install' : 'add', devStr]
+
+    await execa(
+      packageManager,
+      [packageManager === 'npm' ? 'install' : 'add', devStr]
         .concat(deps)
-        .filter(Boolean)
-        .join(' '),
+        .filter(Boolean) as string[],
       {
         encoding: 'utf8',
         cwd,
