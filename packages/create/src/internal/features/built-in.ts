@@ -2,7 +2,7 @@ import {
   chalk,
   install,
   isFunction,
-  isPathExistSync,
+  isPathExistsSync,
   logger,
 } from '@eljs/utils'
 import { writeFileSync } from 'fs'
@@ -66,7 +66,7 @@ export default (api: Api) => {
       const pkgJSONPath = join(api.paths.target, 'package.json')
       let pkgJSON = api.service.pkgJSON
 
-      if (isPathExistSync(pkgJSONPath)) {
+      if (isPathExistsSync(pkgJSONPath)) {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const originPkgJSON = require(pkgJSONPath)
         pkgJSON = api.lodash.merge(originPkgJSON, pkgJSON)

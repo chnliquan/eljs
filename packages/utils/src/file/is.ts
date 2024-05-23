@@ -62,7 +62,7 @@ export async function isSymlink(link: string): Promise<boolean> {
  * 指定路径是否存在
  * @param file 文件路径
  */
-export function isPathExistSync(file: string): boolean {
+export function isPathExistsSync(file: string): boolean {
   return Boolean(fstatSync(file))
 }
 
@@ -70,7 +70,7 @@ export function isPathExistSync(file: string): boolean {
  * 指定路径是否存在
  * @param file 文件路径
  */
-export async function isPathExist(file: string): Promise<boolean> {
+export async function isPathExists(file: string): Promise<boolean> {
   return fstat(file).then(Boolean)
 }
 

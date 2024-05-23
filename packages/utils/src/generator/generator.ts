@@ -1,5 +1,5 @@
 import { PromptObject } from 'prompts'
-import { isDirectorySync, isPathExistSync, mkdirSync } from '../file/'
+import { isDirectorySync, isPathExistsSync, mkdirSync } from '../file/'
 import { isFunction } from '../type'
 import { BaseGenerator } from './base-generator'
 
@@ -117,7 +117,7 @@ export class Generator extends BaseGenerator {
       this._dest = this.dest
     }
 
-    if (!isPathExistSync(this._dest)) {
+    if (!isPathExistsSync(this._dest)) {
       mkdirSync(this._dest)
     } else {
       const override = await this.checkDir(this._dest)

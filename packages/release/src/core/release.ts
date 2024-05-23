@@ -70,7 +70,6 @@ export async function release(opts: Options): Promise<void> {
   const {
     rootPkgJSONPath,
     rootPkgJSON,
-    monorepo,
     pkgNames,
     pkgJSONPaths,
     pkgJSONs,
@@ -173,7 +172,6 @@ export async function release(opts: Options): Promise<void> {
     await updateVersions({
       rootPkgJSONPath,
       rootPkgJSON,
-      monorepo,
       pkgNames,
       pkgJSONPaths,
       pkgJSONs,
@@ -182,11 +180,7 @@ export async function release(opts: Options): Promise<void> {
 
     // update pnpm-lock.yaml or package-lock.json
     step('Updating lockfile...')
-    await updateLock({
-      monorepo,
-      version: bumpVersion,
-      rootDir: cwd,
-    })
+    await updateLock(cwd)
 
     if (typeof beforeChangelog === 'function') {
       await beforeChangelog()

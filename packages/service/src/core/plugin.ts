@@ -1,6 +1,6 @@
 import {
   camelCase,
-  isPathExistSync,
+  isPathExistsSync,
   PkgJSON,
   register,
   resolve,
@@ -88,7 +88,7 @@ export class Plugin {
     this._prefix = opts.prefix || '@eljs/service-'
 
     assert(
-      isPathExistSync(this.path),
+      isPathExistsSync(this.path),
       `Invalid ${this.type} ${this.path}, it's not exists.`,
     )
 

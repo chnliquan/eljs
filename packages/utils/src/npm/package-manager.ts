@@ -1,7 +1,7 @@
 import { resolve } from 'path'
 
 import { hasGlobalInstallation } from '../env'
-import { isPathExist } from '../file'
+import { isPathExists } from '../file'
 import { PackageManager } from '../types'
 
 const cache = new Map()
@@ -54,10 +54,10 @@ export async function getTypeofLockFile(
   }
 
   return Promise.all([
-    isPathExist(resolve(cwd, 'yarn.lock')),
-    isPathExist(resolve(cwd, 'pnpm-lock.yaml')),
-    isPathExist(resolve(cwd, 'bun.lockb')),
-    isPathExist(resolve(cwd, 'package-lock.json')),
+    isPathExists(resolve(cwd, 'yarn.lock')),
+    isPathExists(resolve(cwd, 'pnpm-lock.yaml')),
+    isPathExists(resolve(cwd, 'bun.lockb')),
+    isPathExists(resolve(cwd, 'package-lock.json')),
   ]).then(([isYarn, isPnpm, isBun, isNpm]) => {
     let value: PackageManager | null = null
 

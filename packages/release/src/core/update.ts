@@ -1,42 +1,31 @@
 import {
-  isPathExistSync,
+  getPackageManager,
   logger,
   PkgJSON,
-  readJSONSync,
   run,
+  writeJSONSync,
 } from '@eljs/utils'
-import fs from 'fs'
-import path from 'path'
 
-export async function updateLock(opts: {
-  monorepo: boolean
-  rootDir: string
-  version: string
-}) {
-  const { monorepo, rootDir, version } = opts
+export async function updateLock(cwd: string) {
+  const packageManager = await getPackageManager(cwd)
+  let command = ''
 
-  if (monorepo) {
-    // TODO: support npm yarn workspace
-    await run(`pnpm install --prefer-offline`)
-    return
+  if (packageManager === 'pnpm') {
+    command = 'pnpm install --prefer-offline'
+  } else if (packageManager === 'yarn') {
+    command = 'yarn install --frozen-lockfile'
+  } else if (packageManager === 'bun') {
+    command = 'bun install --frozen-lockfile'
+  } else {
+    command = 'npm install --package-lock-only'
   }
 
-  const pkgLockJSONPath = path.resolve(rootDir, 'package-lock.json')
-
-  if (!isPathExistSync(pkgLockJSONPath)) {
-    return
-  }
-
-  const pkgJSON: PkgJSON = readJSONSync(pkgLockJSONPath)
-  pkgJSON.version = version
-
-  fs.writeFileSync(pkgLockJSONPath, JSON.stringify(pkgJSON, null, 2) + '\n')
+  await run(command)
 }
 
 export function updateVersions(opts: {
   rootPkgJSONPath: string
   rootPkgJSON: Required<PkgJSON>
-  monorepo: boolean
   pkgNames: string[]
   pkgJSONPaths: string[]
   pkgJSONs: Required<PkgJSON>[]
@@ -45,29 +34,28 @@ export function updateVersions(opts: {
   const {
     rootPkgJSONPath,
     rootPkgJSON,
-    monorepo,
     pkgNames,
     pkgJSONPaths,
     pkgJSONs,
     version,
   } = opts
 
-  // 1. update root package.json
-  updatePackage({
-    pkgJSONPath: rootPkgJSONPath,
-    pkgJSON: rootPkgJSON,
-    version,
+  // update all packages
+  pkgNames.forEach((_, index) => {
+    updatePackage({
+      pkgJSONPath: pkgJSONPaths[index],
+      pkgJSON: pkgJSONs[index],
+      pkgNames,
+      version,
+    })
   })
 
-  // 2. update all packages with monorepo
-  if (monorepo) {
-    pkgNames.forEach((_, index) => {
-      updatePackage({
-        pkgJSONPath: pkgJSONPaths[index],
-        pkgJSON: pkgJSONs[index],
-        pkgNames,
-        version,
-      })
+  if (pkgJSONPaths[0] !== rootPkgJSONPath) {
+    // update polyrepo root package.json
+    updatePackage({
+      pkgJSONPath: rootPkgJSONPath,
+      pkgJSON: rootPkgJSON,
+      version,
     })
   }
 }
@@ -97,7 +85,7 @@ export function updatePackage(opts: {
     })
   }
 
-  fs.writeFileSync(pkgJSONPath, JSON.stringify(pkgJSON, null, 2) + '\n')
+  writeJSONSync(pkgJSONPath, pkgJSON)
 }
 
 export function updateDeps(opts: {

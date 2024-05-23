@@ -9,7 +9,7 @@ import {
   removeSync,
 } from '@eljs/utils'
 import assert from 'assert'
-import { isPathExistSync } from 'fs'
+import { isPathExistsSync } from 'fs'
 import path from 'path'
 import { Download } from './download'
 import Generator from './generator'
@@ -87,7 +87,7 @@ export class Create {
       const name = isCurrent ? path.relative('../', this.cwd) : projectName
       const targetDir = path.resolve(this.cwd, projectName)
 
-      if (isPathExistSync(targetDir)) {
+      if (isPathExistsSync(targetDir)) {
         if (this._opts.force) {
           removeSync(targetDir)
         } else if (isCurrent) {
@@ -169,7 +169,7 @@ export class Create {
   private async _validateTemplate() {
     if (this._isCustomTemplate && this._customTemplatePath) {
       assert(
-        isPathExistSync(this._customTemplatePath),
+        isPathExistsSync(this._customTemplatePath),
         `传入的自定义模板 ${chalk.cyan(
           this._customTemplatePath,
         )} 不存在, 请检查输入`,

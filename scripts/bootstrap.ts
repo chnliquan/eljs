@@ -32,7 +32,7 @@ files.forEach(shortName => {
 
 function ensurePkgJson(name: string, shortName: string): void {
   const pkgJSONPath = path.join(packagesDir, shortName, `package.json`)
-  const pkgJSONExists = utils.isPathExistSync(pkgJSONPath)
+  const pkgJSONExists = utils.isPathExistsSync(pkgJSONPath)
 
   if (pkgJSONExists) {
     const pkg = require(pkgJSONPath)
@@ -96,7 +96,7 @@ function ensurePkgJson(name: string, shortName: string): void {
 function ensureReadme(name: string, shortName: string): void {
   const readmePath = path.join(packagesDir, shortName, `README.md`)
 
-  if (!utils.isPathExistSync(readmePath)) {
+  if (!utils.isPathExistsSync(readmePath)) {
     fs.writeFileSync(
       readmePath,
       `
@@ -168,8 +168,8 @@ function ensureSrcIndex(shortName: string): void {
   const srcDir = path.join(packagesDir, shortName, `src`)
   const indexPath = path.join(packagesDir, shortName, `src/index.ts`)
 
-  if (!utils.isPathExistSync(indexPath)) {
-    if (!utils.isPathExistSync(srcDir)) {
+  if (!utils.isPathExistsSync(indexPath)) {
+    if (!utils.isPathExistsSync(srcDir)) {
       fs.mkdirSync(srcDir)
     }
 
@@ -185,7 +185,7 @@ export {}
 function ensureTsconfig(shortName: string): void {
   const tsconfigPath = path.join(packagesDir, shortName, `tsconfig.json`)
 
-  if (!utils.isPathExistSync(tsconfigPath)) {
+  if (!utils.isPathExistsSync(tsconfigPath)) {
     fs.writeFileSync(
       tsconfigPath,
       `

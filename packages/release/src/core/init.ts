@@ -1,113 +1,72 @@
 import {
   chalk,
-  isMonorepo,
-  isPathExistSync,
+  getPkgPaths,
+  isPathExists,
   logger,
   PkgJSON,
+  readJSON,
   readJSONSync,
-  run,
 } from '@eljs/utils'
 import path from 'path'
-import { getPkgPaths } from '../utils'
 
 export async function init(cwd: string) {
   const rootPkgJSONPath = path.join(cwd, 'package.json')
 
-  if (!isPathExistSync(rootPkgJSONPath)) {
+  if (!(await isPathExists(rootPkgJSONPath))) {
     logger.printErrorAndExit(
-      `unable to find the ${rootPkgJSONPath} file, make sure execute the command in the root directory.`,
+      `Detect ${chalk.bold.cyanBright(cwd)} has no package.json.`,
     )
   }
 
-  const rootPkgJSON: PkgJSON =
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    require(rootPkgJSONPath)
+  const rootPkgJSON: PkgJSON = await readJSON(rootPkgJSONPath)
 
   if (!rootPkgJSON.version) {
     logger.printErrorAndExit(
-      `can not read version field in ${rootPkgJSONPath}.`,
+      `Detect ${chalk.bold.cyanBright(rootPkgJSONPath)} has no version field.`,
     )
   }
 
-  const monorepo = isMonorepo(cwd)
   const pkgJSONPaths: string[] = []
   const pkgJSONs: PkgJSON[] = []
   const pkgNames: string[] = []
   const publishPkgDirs: string[] = []
   const publishPkgNames: string[] = []
 
-  if (monorepo) {
-    const pkgPaths = getPkgPaths(cwd)
+  const pkgPaths = await getPkgPaths(cwd)
 
-    try {
-      // TODO: support npm yarn workspace
-      await run(`pnpm -v`, {
-        verbose: false,
-      })
-    } catch (err) {
-      logger.printErrorAndExit(
-        'monorepo release depend on `pnpm`, please install `pnpm` first.',
-      )
-    }
+  pkgPaths.forEach(pkgPath => {
+    const pkgJSONPath = path.join(pkgPath, 'package.json')
+    const pkgJSON: PkgJSON = readJSONSync(pkgJSONPath)
 
-    pkgPaths.forEach(pkgPath => {
-      const pkgDir = path.join(cwd, pkgPath)
-      const pkgJSONPath = path.join(pkgDir, 'package.json')
-      const pkgJSON: PkgJSON = readJSONSync(pkgJSONPath)
-
-      if (!pkgJSON.name) {
-        logger.warn(
-          `skip publish ${chalk.cyanBright(
-            pkgPath,
-          )} cause there is no name field the package.json.`,
-        )
-        return
-      } else if (!pkgJSON.version) {
-        logger.warn(
-          `skip publish ${chalk.cyanBright(
-            pkgPath,
-          )} cause there is no version field the package.json.`,
-        )
-      } else {
-        pkgJSONPaths.push(pkgJSONPath)
-        pkgJSONs.push(pkgJSON)
-        pkgNames.push(pkgJSON.name)
-      }
-
-      if (!pkgJSON.private) {
-        publishPkgDirs.push(pkgDir)
-        publishPkgNames.push(pkgJSON.name as string)
-      }
-    })
-
-    if (publishPkgNames.length === 0) {
+    if (!pkgJSON.name) {
+      logger.warn(`Detect ${chalk.cyanBright(pkgJSONPath)} has no name field.`)
+      return
+    } else if (!pkgJSON.version) {
       logger.warn(
-        `the monorepo ${chalk.bold.cyanBright(cwd)} has no published package.`,
+        `Detect ${chalk.cyanBright(pkgJSONPath)} has no version field.`,
       )
-      process.exit(0)
-    }
-  } else {
-    if (rootPkgJSON.private) {
-      logger.printErrorAndExit(
-        `can not publish private package ${rootPkgJSONPath}.`,
-      )
+    } else {
+      pkgJSONPaths.push(pkgJSONPath)
+      pkgJSONs.push(pkgJSON)
+      pkgNames.push(pkgJSON.name)
     }
 
-    if (!rootPkgJSON.name) {
-      logger.printErrorAndExit(`can not read name field in ${rootPkgJSONPath}.`)
+    if (!pkgJSON.private) {
+      publishPkgDirs.push(pkgPath)
+      publishPkgNames.push(pkgJSON.name as string)
     }
+  })
 
-    pkgNames.push(rootPkgJSON.name as string)
-    pkgJSONPaths.push(rootPkgJSONPath)
-    pkgJSONs.push(rootPkgJSON)
-    publishPkgDirs.push(cwd)
-    publishPkgNames.push(rootPkgJSON.name as string)
+  if (publishPkgNames.length === 0) {
+    logger.warn(
+      `Detect ${chalk.bold.cyanBright(cwd)} has no available package.`,
+    )
+    process.exit(0)
   }
 
   return {
     rootPkgJSONPath: rootPkgJSONPath,
     rootPkgJSON: rootPkgJSON as Required<PkgJSON>,
-    monorepo,
     pkgNames,
     pkgJSONPaths,
     pkgJSONs: pkgJSONs as Required<PkgJSON>[],

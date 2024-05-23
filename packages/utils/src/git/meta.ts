@@ -4,7 +4,7 @@ import ini from 'ini'
 import os from 'os'
 import path from 'path'
 import { URL } from 'url'
-import { isPathExistSync } from '../file'
+import { isPathExistsSync } from '../file'
 
 /**
  * 基础 git 仓库信息
@@ -54,7 +54,7 @@ export interface GitRepoInfo extends BaseGitRepoInfo {
 export function getGitUrl(dir: string, exact?: boolean): string {
   const gitDir = exact ? path.join(dir, '.git') : getProjectGitDir(dir) || ''
 
-  if (!isPathExistSync(gitDir)) {
+  if (!isPathExistsSync(gitDir)) {
     return ''
   }
 
@@ -140,7 +140,7 @@ export function getGitRepoInfo(
 ): GitRepoInfo | null {
   const gitDir = exact ? path.join(dir, '.git') : getProjectGitDir(dir) || ''
 
-  if (!isPathExistSync(gitDir)) {
+  if (!isPathExistsSync(gitDir)) {
     return null
   }
 
@@ -271,7 +271,7 @@ function getProjectGitDir(dir: string): string | undefined {
 
   while (cur) {
     // 如果配置存在，说明是 .git 目录
-    if (isPathExistSync(path.join(cur, '.git', 'config'))) {
+    if (isPathExistsSync(path.join(cur, '.git', 'config'))) {
       return path.join(cur, '.git')
     }
 

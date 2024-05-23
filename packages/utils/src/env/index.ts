@@ -1,7 +1,4 @@
-import appRootPath from 'app-root-path'
 import execa from 'execa'
-import path from 'path'
-import { isPathExistSync, readJSONSync } from '../file'
 
 const cache = new Map()
 
@@ -25,35 +22,4 @@ export function hasGlobalInstallation(bin: string): Promise<boolean> {
       return value
     })
     .catch(() => false)
-}
-
-/**
- * 是否是多仓库
- * @param cwd 当前工作目录
- */
-export function isMonorepo(cwd?: string): boolean {
-  let pkgJSONPath: string
-
-  if (cwd) {
-    if (isPathExistSync(path.join(cwd, 'pnpm-workspace.yaml'))) {
-      return true
-    }
-
-    pkgJSONPath = path.join(cwd, 'package.json')
-  } else {
-    if (
-      isPathExistSync(path.join(appRootPath.toString(), 'pnpm-workspace.yaml'))
-    ) {
-      return true
-    }
-
-    pkgJSONPath = path.join(appRootPath.toString(), 'package.json')
-  }
-
-  if (pkgJSONPath) {
-    const pkgJSON = readJSONSync(pkgJSONPath)
-    return Boolean(pkgJSON?.workspaces)
-  }
-
-  return false
 }

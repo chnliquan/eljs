@@ -4,7 +4,7 @@ import path from 'path'
 import util from 'util'
 
 import { PLATFORM } from '../constants'
-import { isPathExist, isPathExistSync } from './is'
+import { isPathExists, isPathExistsSync } from './is'
 
 /**
  * 同步创建文件夹
@@ -12,7 +12,7 @@ import { isPathExist, isPathExistSync } from './is'
  * @param mode 文件夹类型
  */
 export function mkdirSync(dir: string, mode?: mkdirp.Mode): string {
-  if (!isPathExistSync(dir)) {
+  if (!isPathExistsSync(dir)) {
     return mkdirp.sync(dir, mode) as string
   }
 
@@ -25,7 +25,7 @@ export function mkdirSync(dir: string, mode?: mkdirp.Mode): string {
  * @param mode 文件夹类型
  */
 export async function mkdir(dir: string, mode?: mkdirp.Mode): Promise<string> {
-  if (!(await isPathExist(dir))) {
+  if (!(await isPathExists(dir))) {
     return mkdirp(dir, mode) as Promise<string>
   }
 

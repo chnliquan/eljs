@@ -12,7 +12,7 @@ export const targets = fs.readdirSync('packages').filter(file => {
     `../packages/${file}/package.json`,
   )
 
-  if (!fs.isPathExistSync(pkgJSONPath)) {
+  if (!utils.isPathExistsSync(pkgJSONPath)) {
     return false
   }
 
