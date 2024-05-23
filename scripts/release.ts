@@ -19,8 +19,8 @@ main().catch((err: Error) => {
 
 async function main(): Promise<void> {
   if (!skipGit && !dry) {
-    assert(!(await utils.isGitClean()), 'git is not clean.')
-    assert(await utils.isGitBehindRemote(), 'git is behind remote.')
+    assert(await utils.isGitClean(), 'git is not clean.')
+    assert(!(await utils.isGitBehindRemote()), 'git is behind remote.')
   }
 
   // run tests before release
