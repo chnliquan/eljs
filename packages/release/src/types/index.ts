@@ -19,7 +19,7 @@ export type Version =
  */
 export interface Options {
   /**
-   * 当前工作目录
+   * 工作目录
    */
   cwd?: string
   /**
@@ -43,11 +43,6 @@ export interface Options {
    */
   publishOnly?: boolean
   /**
-   * 是否检查用户发布权限
-   * @default false
-   */
-  ownershipCheck?: boolean
-  /**
    * 是否同步到 Cnpm
    * @default false
    */
@@ -57,6 +52,11 @@ export interface Options {
    * @default false
    */
   confirm?: boolean
+  /**
+   * 是否检查用户发布权限
+   * @default true
+   */
+  ownershipCheck?: boolean
   /**
    * 是否检查 git
    * @default true
@@ -74,7 +74,6 @@ export interface Options {
   githubRelease?: boolean
   /**
    * 是否检查当前分支
-   * @default null
    */
   branch?: string
   /**

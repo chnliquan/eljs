@@ -26,7 +26,7 @@
     "bin"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "npm run clean && tsc",
     "clean": "rimraf lib",
     "dev": "tsc --watch"
   },
