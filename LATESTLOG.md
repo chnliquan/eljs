@@ -1,9 +1,9 @@
-## [Changes](https://github.com/chnliquan/eljs/compare/v0.20.0...v0.21.0) (2024-05-23)
+## [Changes](https://github.com/chnliquan/eljs/compare/v0.21.0...v0.21.1) (2024-05-23)
 
 
-### ✨ Features
+### 🐛 Bug Fixes
 
-* **utils:** add promise & file ([e1a309f](https://github.com/chnliquan/eljs/commit/e1a309fce7d7166b14c14239d26ee11de92b3f92))
+* lib cache ([1c52cd5](https://github.com/chnliquan/eljs/commit/1c52cd53fb90bdad56d7247e96f2ee5250eb4fa9))
 
 
 

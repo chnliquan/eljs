@@ -1,6 +1,6 @@
 {
   "name": "@eljs/utils",
-  "version": "0.21.0",
+  "version": "0.21.1",
   "description": "工具函数库",
   "keywords": [
     "eljs",
