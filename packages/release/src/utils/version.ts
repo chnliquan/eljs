@@ -1,4 +1,4 @@
-import { chalk, getNpmDistTag, logger, run } from '@eljs/utils'
+import { chalk, getNpmDistTag, logger, run, timeout } from '@eljs/utils'
 import semver from 'semver'
 
 import { PublishTag } from '../types'
@@ -21,43 +21,65 @@ export function isBetaVersion(version: string): boolean {
   return version.includes('-beta.')
 }
 
-export async function getDistTag(pkgNames: string[]) {
-  for (let i = 0; i < pkgNames.length; i++) {
-    const pkgName = pkgNames[i]
+interface RemoteDistTag {
+  remoteLatestVersion: string
+  remoteAlphaVersion: string
+  remoteBetaVersion: string
+  remoteNextVersion: string
+}
 
-    try {
-      const distTag = await getNpmDistTag(pkgName)
+export async function getDistTag(pkgNames: string[]): Promise<RemoteDistTag> {
+  try {
+    const distTag = await timeout(
+      (async () => {
+        for (let i = 0; i < pkgNames.length; i++) {
+          const pkgName = pkgNames[i]
 
-      return {
-        remoteLatestVersion: distTag['latest'],
-        remoteAlphaVersion: distTag['alpha'],
-        remoteBetaVersion: distTag['beta'],
-        remoteNextVersion: distTag['next'],
-      }
-    } catch (err: any) {
-      if (err.message.includes('command not found')) {
-        logger.error(
-          `Please make sure the ${chalk.cyanBright.bold(
-            'npm',
-          )} has been installed.`,
-        )
-        process.exit(1)
-      } else {
-        // logger.info(
-        //   `This package ${chalk.cyanBright.bold(
-        //     pkgName,
-        //   )} has never been released, this is the first release.`,
-        // )
-        console.log()
-      }
+          try {
+            const distTag = await getNpmDistTag(pkgName)
+
+            return {
+              remoteLatestVersion: distTag['latest'],
+              remoteAlphaVersion: distTag['alpha'],
+              remoteBetaVersion: distTag['beta'],
+              remoteNextVersion: distTag['next'],
+            }
+          } catch (err: any) {
+            if (err.message.includes('command not found')) {
+              logger.error(
+                `Please make sure the ${chalk.cyanBright.bold(
+                  'npm',
+                )} has been installed.`,
+              )
+              process.exit(1)
+            } else {
+              // logger.info(
+              //   `This package ${chalk.cyanBright.bold(
+              //     pkgName,
+              //   )} has never been released, this is the first release.`,
+              // )
+              console.log()
+            }
+          }
+        }
+
+        return {
+          remoteLatestVersion: '',
+          remoteAlphaVersion: '',
+          remoteBetaVersion: '',
+          remoteNextVersion: '',
+        }
+      })(),
+      pkgNames.length * 2000,
+    )
+    return distTag
+  } catch (err) {
+    return {
+      remoteLatestVersion: '',
+      remoteAlphaVersion: '',
+      remoteBetaVersion: '',
+      remoteNextVersion: '',
     }
-  }
-
-  return {
-    remoteLatestVersion: '',
-    remoteAlphaVersion: '',
-    remoteBetaVersion: '',
-    remoteNextVersion: '',
   }
 }
 
