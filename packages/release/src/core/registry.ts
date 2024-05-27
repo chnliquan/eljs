@@ -1,5 +1,4 @@
 import { chalk, getNpmRegistry, logger } from '@eljs/utils'
-import { step } from '../utils'
 
 export async function checkRegistry(opts: {
   repoType: string
@@ -8,7 +7,6 @@ export async function checkRegistry(opts: {
 }) {
   const { repoType, repoUrl, pkgRegistry } = opts
 
-  step('Checking registry ...')
   let registry = ''
 
   if (repoType === 'github') {

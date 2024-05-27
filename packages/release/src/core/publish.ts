@@ -9,7 +9,6 @@ import {
   isBetaVersion,
   isPrerelease,
   isRcVersion,
-  step,
 } from '../utils'
 
 export async function publish(opts: {
@@ -49,7 +48,6 @@ export async function publish(opts: {
     publishTag = 'next'
   }
 
-  step(`Publishing package ...`)
   const promiseArr = []
   const errors: string[] = []
 

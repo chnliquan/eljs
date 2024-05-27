@@ -1,11 +1,9 @@
 import { chalk, logger, run } from '@eljs/utils'
 import resolveBin from 'resolve-bin'
-import { step } from '../utils'
 
 export async function sync(publishPkgNames: string[]) {
   const cnpm = resolveBin.sync('cnpm')
 
-  step('Sync cnpm ...')
   const promiseArr = []
   for (const pkgName of publishPkgNames) {
     promiseArr.push(doSync(pkgName))

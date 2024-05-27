@@ -8,7 +8,6 @@ import {
 import path from 'path'
 
 import { Options } from '../types'
-import { step } from '../utils'
 import { getBumpVersion } from '../utils/prompt'
 import { generateChangelog } from './changelog'
 import { commit } from './commit'
@@ -51,6 +50,7 @@ export async function release(opts: Options): Promise<void> {
     repoType: customRepoType,
     changelogPreset = '@eljs/changelog-preset',
     version,
+    stepLogger: step = logger.step('Release'),
     beforeUpdateVersion,
     beforeChangelog,
   } = opts
@@ -58,7 +58,6 @@ export async function release(opts: Options): Promise<void> {
   // check git status
   if (gitCheck) {
     step('Checking git ...')
-
     if (!(await isGitClean())) {
       logger.printErrorAndExit('git is not clean.')
     }
@@ -71,7 +70,6 @@ export async function release(opts: Options): Promise<void> {
   // check branch
   if (branch) {
     step('Checking branch ...')
-
     if (!(await isGitBranch(branch))) {
       logger.printErrorAndExit(
         `current branch does not match branch ${branch}.`,
@@ -95,6 +93,7 @@ export async function release(opts: Options): Promise<void> {
 
   // check registry
   if (registryCheck && !dry) {
+    step('Checking registry ...')
     await checkRegistry({
       repoType,
       repoUrl,
@@ -104,6 +103,7 @@ export async function release(opts: Options): Promise<void> {
 
   // check ownership
   if (ownershipCheck && !dry) {
+    step('Checking npm ownership ...')
     await checkOwnership(publishPkgNames)
   }
 
@@ -133,6 +133,7 @@ export async function release(opts: Options): Promise<void> {
 
   if (!publishOnly) {
     // bump version
+
     step('Bump version ...')
     bumpVersion = await getBumpVersion({
       pkgJSON: rootPkgJSON,
@@ -156,6 +157,7 @@ export async function release(opts: Options): Promise<void> {
     }
 
     // update all package versions and inter-dependencies
+
     step('Updating versions ...')
     await updateVersions({
       rootPkgJSONPath,
@@ -167,6 +169,7 @@ export async function release(opts: Options): Promise<void> {
     })
 
     // update pnpm-lock.yaml or package-lock.json
+
     step('Updating lockfile...')
     await updateLock(cwd)
 
@@ -175,6 +178,7 @@ export async function release(opts: Options): Promise<void> {
     }
 
     // generate changelog
+
     step(`Generating changelog ...`)
     changelog = await generateChangelog({
       changelogPreset: changelogPreset as string,
@@ -184,10 +188,12 @@ export async function release(opts: Options): Promise<void> {
     })
 
     // commit git changes
+    step('Committing changes ...')
     await commit(bumpVersion, gitPush)
   }
 
   // publish package
+  step(`Publishing package ...`)
   await publish({
     version: bumpVersion,
     publishPkgDirs,
@@ -203,6 +209,7 @@ export async function release(opts: Options): Promise<void> {
 
   // sync cnpm
   if (syncCnpm) {
+    step('Sync cnpm ...')
     await sync(publishPkgNames)
   }
 }
