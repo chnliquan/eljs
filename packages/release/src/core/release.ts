@@ -37,7 +37,7 @@ export async function release(opts: Options): Promise<void> {
     dry = false,
     verbose = false,
     latest = true,
-    publishOnly = true,
+    publishOnly = false,
     syncCnpm = false,
     confirm = true,
     registryCheck = true,
@@ -133,7 +133,6 @@ export async function release(opts: Options): Promise<void> {
 
   if (!publishOnly) {
     // bump version
-
     step('Bump version ...')
     bumpVersion = await getBumpVersion({
       pkgJSON: rootPkgJSON,
