@@ -52,14 +52,17 @@
         "--files",
         "${workspaceFolder}/packages/release/bin/release.js",
         // "-h",
-        "--no-git-checks"
+        "--no-git-check",
+        "--no-registry-check"
+        // "ownership-check"
         // "--tag",
         // "next",
         // "patch",
         // "--only-publish"
       ],
       // "cwd": "${workspaceFolder}",
-      "cwd": "/Users/ender/workspace/technology/release-test",
+      // "cwd": "/Users/ender/workspace/technology/release-test",
+      "cwd": "/Users/ender/workspace/technology/drow/report-engine/packages/material",
       "console": "integratedTerminal"
     },
     {

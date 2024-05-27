@@ -1,7 +1,9 @@
-import { resolve } from 'path'
-
-import { hasGlobalInstallation } from '../env'
-import { isPathExists } from '../file'
+import {
+  getNpmWorkspaceRoot,
+  getPnpmWorkspaceRoot,
+  getYarnWorkspaceRoot,
+  hasGlobalInstallation,
+} from '../env'
 import { PackageManager } from '../types'
 
 const cache = new Map()
@@ -19,22 +21,17 @@ export async function getPackageManager(
     return type
   }
 
-  const [hasYarn, hasPnpm, hasBun] = await Promise.all([
-    hasGlobalInstallation('yarn'),
+  const [hasPnpm, hasYarn] = await Promise.all([
     hasGlobalInstallation('pnpm'),
-    hasGlobalInstallation('bun'),
+    hasGlobalInstallation('yarn'),
   ])
-
-  if (hasYarn) {
-    return 'yarn'
-  }
 
   if (hasPnpm) {
     return 'pnpm'
   }
 
-  if (hasBun) {
-    return 'bun'
+  if (hasYarn) {
+    return 'yarn'
   }
 
   return 'npm'
@@ -54,19 +51,16 @@ export async function getTypeofLockFile(
   }
 
   return Promise.all([
-    isPathExists(resolve(cwd, 'yarn.lock')),
-    isPathExists(resolve(cwd, 'pnpm-lock.yaml')),
-    isPathExists(resolve(cwd, 'bun.lockb')),
-    isPathExists(resolve(cwd, 'package-lock.json')),
-  ]).then(([isYarn, isPnpm, isBun, isNpm]) => {
+    getPnpmWorkspaceRoot(cwd),
+    getYarnWorkspaceRoot(cwd),
+    getNpmWorkspaceRoot(cwd),
+  ]).then(([isPnpm, isYarn, isNpm]) => {
     let value: PackageManager | null = null
 
-    if (isYarn) {
-      value = 'yarn'
-    } else if (isPnpm) {
+    if (isPnpm) {
       value = 'pnpm'
-    } else if (isBun) {
-      value = 'bun'
+    } else if (isYarn) {
+      value = 'yarn'
     } else if (isNpm) {
       value = 'npm'
     }
