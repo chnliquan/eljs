@@ -1,16 +1,14 @@
-import { release, resolveBin, step, utils } from '@eljs/release'
+import { release, resolveBin, step } from '@eljs/release'
 import { $, argv } from 'zx'
 import 'zx/globals'
 
+import { isGitBehindRemote, isGitClean } from '@eljs/utils'
 import { assert } from './utils'
 
 const dry = argv.dry
 const skipGit = argv.skipGit
 const skipTests = argv.skipTests
 const skipBuild = argv.skipBuild
-const skipRegistryCheck = argv.skipRegistryCheck || true
-const skipOwnershipCheck = argv.skipOwnershipCheck || true
-const skipSyncCnpm = argv.skipSyncCnpm
 
 main().catch((err: Error) => {
   console.error(`release error: ${err.message}.`)
@@ -19,12 +17,12 @@ main().catch((err: Error) => {
 
 async function main(): Promise<void> {
   if (!skipGit && !dry) {
-    assert(await utils.isGitClean(), 'git is not clean.')
-    assert(!(await utils.isGitBehindRemote()), 'git is behind remote.')
+    assert(await isGitClean(), 'git is not clean.')
+    assert(!(await isGitBehindRemote()), 'git is behind remote.')
   }
 
   // run tests before release
-  step('Running tests ...')
+  step('Release Running tests ...')
   if (!dry && !skipTests) {
     await $`${resolveBin.sync('jest')} --clearCache`
     await $`pnpm test:once --bail --passWithNoTests`
@@ -44,9 +42,9 @@ async function main(): Promise<void> {
   release({
     ...argv,
     gitCheck: false,
-    registryCheck: !skipRegistryCheck,
-    ownershipCheck: !skipOwnershipCheck,
-    syncCnpm: !skipSyncCnpm,
+    registryCheck: false,
+    ownershipCheck: false,
+    syncCnpm: true,
     version: argv._[0],
   })
 }

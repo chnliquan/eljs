@@ -1,15 +1,14 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-import { utils } from '@eljs/release'
+import { logger } from '@eljs/utils'
 import path from 'path'
 import { $, argv } from 'zx'
-import 'zx/globals'
 
 import { targets } from './utils'
 
 const owners = argv._
 
 if (!owners.length) {
-  utils.logger.printErrorAndExit('please entry owner name.')
+  logger.printErrorAndExit('please entry owner name.')
 }
 
 ;(async (): Promise<void> => {
@@ -19,7 +18,7 @@ if (!owners.length) {
       const pkg = require(`${pkgDir}/package.json`)
 
       await $`pnpm owner add owner ${pkg.name}`
-      utils.logger.done(`${owner} now has the owner permission of ${pkg.name}.`)
+      logger.done(`${owner} now has the owner permission of ${pkg.name}.`)
     }
   }
 })()

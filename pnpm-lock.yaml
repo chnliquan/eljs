@@ -20,6 +20,9 @@ importers:
       '@eljs/release':
         specifier: workspace:*
         version: link:packages/release
+      '@eljs/utils':
+        specifier: workspace:*
+        version: link:packages/utils
       '@types/jest':
         specifier: ^27.4.1
         version: 27.5.2

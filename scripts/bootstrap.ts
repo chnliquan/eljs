@@ -1,11 +1,10 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 // create package.json, README, etc. for packages that don't have them yet.
-
-import { utils } from '@eljs/release'
+import { isDirectorySync, isPathExistsSync, logger } from '@eljs/utils'
 import path from 'path'
 import { argv, chalk, fs } from 'zx'
 
-const step = utils.logger.step('Bootstrap')
+const step = logger.step('Bootstrap')
 const version = require('../package.json').version
 
 const packagesDir = path.resolve(__dirname, '../packages')
@@ -16,7 +15,7 @@ if (argv._.length) {
 }
 
 files.forEach(shortName => {
-  if (!utils.isDirectorySync(path.join(packagesDir, shortName))) {
+  if (!isDirectorySync(path.join(packagesDir, shortName))) {
     return
   }
 
@@ -32,7 +31,7 @@ files.forEach(shortName => {
 
 function ensurePkgJson(name: string, shortName: string): void {
   const pkgJSONPath = path.join(packagesDir, shortName, `package.json`)
-  const pkgJSONExists = utils.isPathExistsSync(pkgJSONPath)
+  const pkgJSONExists = isPathExistsSync(pkgJSONPath)
 
   if (pkgJSONExists) {
     const pkg = require(pkgJSONPath)
@@ -96,7 +95,7 @@ function ensurePkgJson(name: string, shortName: string): void {
 function ensureReadme(name: string, shortName: string): void {
   const readmePath = path.join(packagesDir, shortName, `README.md`)
 
-  if (!utils.isPathExistsSync(readmePath)) {
+  if (!isPathExistsSync(readmePath)) {
     fs.writeFileSync(
       readmePath,
       `
@@ -168,8 +167,8 @@ function ensureSrcIndex(shortName: string): void {
   const srcDir = path.join(packagesDir, shortName, `src`)
   const indexPath = path.join(packagesDir, shortName, `src/index.ts`)
 
-  if (!utils.isPathExistsSync(indexPath)) {
-    if (!utils.isPathExistsSync(srcDir)) {
+  if (!isPathExistsSync(indexPath)) {
+    if (!isPathExistsSync(srcDir)) {
       fs.mkdirSync(srcDir)
     }
 
@@ -185,7 +184,7 @@ export {}
 function ensureTsconfig(shortName: string): void {
   const tsconfigPath = path.join(packagesDir, shortName, `tsconfig.json`)
 
-  if (!utils.isPathExistsSync(tsconfigPath)) {
+  if (!isPathExistsSync(tsconfigPath)) {
     fs.writeFileSync(
       tsconfigPath,
       `
