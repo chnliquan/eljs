@@ -27,10 +27,11 @@ function cli() {
     .option('--publish-only', 'Whether publish only.')
     .option('--sync-cnpm', 'Whether sync to cnpm when publish done.')
     .option('--no-confirm', 'No confirm the bump version.')
-    .option('--ownership-check', 'Check the npm ownership.')
-    .option('--no-git-check', 'No check the git status and remote.')
+    .option('--no-ownership-check', 'No check the npm ownership.')
     .option('--no-registry-check', 'No check the package registry.')
-    .option('--no-github-release', 'No release to github when publish down.')
+    .option('--no-git-check', 'No check the git status.')
+    .option('--no-git-push', 'No push commit to remote.')
+    .option('--no-github-release', 'No release to github.')
     .option(
       '--branch <branch>',
       'Specify the branch that is allowed to publish.',
@@ -40,7 +41,6 @@ function cli() {
       '--repo-type <repo-type>',
       'Specify the publish type, github or gitlab.',
     )
-    .option('--repo-url <repo-url>', 'Specify the github repo url to release.')
     .option(
       '--changelog-preset <changelog-preset>',
       'Customize conventional changelog preset.',

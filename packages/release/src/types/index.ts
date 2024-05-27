@@ -58,15 +58,20 @@ export interface Options {
    */
   ownershipCheck?: boolean
   /**
+   * 是否检查 NPM 仓库
+   * @default true
+   */
+  registryCheck?: boolean
+  /**
    * 是否检查 git
    * @default true
    */
   gitCheck?: boolean
   /**
-   * 是否检查 NPM 仓库
+   * 是否推送 commit 到远端
    * @default true
    */
-  registryCheck?: boolean
+  gitPush?: boolean
   /**
    * 是否提交到 github release
    * @default true
@@ -84,10 +89,6 @@ export interface Options {
    * 仓库类型
    */
   repoType?: RepoType
-  /**
-   * 仓库 url
-   */
-  repoUrl?: string
   /**
    * 更新日志预设
    * @default '@eljs/changelog-preset'

@@ -35,12 +35,24 @@ import { updateLock, updateVersions } from './update'
 export async function release(opts: Options): Promise<void> {
   const {
     cwd = process.cwd(),
-    gitCheck = true,
-    branch,
-    verbose = false,
     dry = false,
+    verbose = false,
+    latest = true,
+    publishOnly = true,
+    syncCnpm = false,
     confirm = true,
-    publishOnly = false,
+    registryCheck = true,
+    ownershipCheck = true,
+    gitCheck = true,
+    gitPush = true,
+    githubRelease = true,
+    branch = '',
+    tag,
+    repoType: customRepoType,
+    changelogPreset = '@eljs/changelog-preset',
+    version,
+    beforeUpdateVersion,
+    beforeChangelog,
   } = opts
 
   // check git status
@@ -77,31 +89,7 @@ export async function release(opts: Options): Promise<void> {
     publishPkgNames,
   } = await init(cwd)
 
-  const defaultOptions: Options = {
-    registryCheck: true,
-    ownershipCheck: true,
-    syncCnpm: false,
-    repoUrl: rootPkgJSON?.repository?.url || '',
-    changelogPreset: '@eljs/changelog-preset',
-    latest: true,
-    githubRelease: true,
-  }
-
-  const {
-    version,
-    registryCheck,
-    ownershipCheck,
-    tag,
-    syncCnpm,
-    repoType: customRepoType,
-    repoUrl,
-    changelogPreset,
-    latest,
-    githubRelease,
-    beforeUpdateVersion,
-    beforeChangelog,
-  } = Object.assign(defaultOptions, opts)
-
+  const repoUrl = rootPkgJSON?.repository?.url || ''
   const repoType =
     customRepoType || (repoUrl?.includes('github') ? 'github' : 'gitlab')
 
@@ -196,7 +184,7 @@ export async function release(opts: Options): Promise<void> {
     })
 
     // commit git changes
-    await commit(bumpVersion)
+    await commit(bumpVersion, gitPush)
   }
 
   // publish package
