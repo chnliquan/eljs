@@ -2,7 +2,7 @@ import {
   getPackageManager,
   logger,
   PkgJSON,
-  run,
+  runCommand,
   writeJSONSync,
 } from '@eljs/utils'
 
@@ -20,7 +20,7 @@ export async function updateLock(cwd: string) {
     command = 'npm install --package-lock-only'
   }
 
-  await run(command)
+  await runCommand(command)
 }
 
 export function updateVersions(opts: {

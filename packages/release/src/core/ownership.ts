@@ -6,7 +6,7 @@ export async function checkOwnership(publishPkgNames: string[]) {
   for (const pkgName of publishPkgNames) {
     try {
       const owners = (
-        await run(`npm owner ls ${pkgName}`, {
+        await run('npm', ['owner', 'ls', pkgName], {
           verbose: false,
         })
       ).stdout

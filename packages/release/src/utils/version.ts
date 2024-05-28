@@ -86,7 +86,7 @@ export async function getDistTag(pkgNames: string[]): Promise<RemoteDistTag> {
 export async function isVersionExist(pkgName: string, version: string) {
   try {
     const remoteInfo = (
-      await run(`npm view ${pkgName}@${version} version`, {
+      await run('npm', ['view', `${pkgName}@${version}`, version], {
         verbose: false,
       })
     ).stdout.replace(/\W*/, '')

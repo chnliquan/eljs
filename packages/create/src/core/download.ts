@@ -8,7 +8,7 @@ import {
   PkgJSON,
   pkgNameAnalysis,
   readJSONSync,
-  run,
+  runCommand,
 } from '@eljs/utils'
 import path from 'path'
 import { TemplateInfo } from '../types'
@@ -42,7 +42,7 @@ export class Download {
         Object.keys(pkgJSON.dependencies).length > 0
       ) {
         spinner.start('安装模板依赖...')
-        await run('npm install --production', {
+        await runCommand('npm install --production', {
           cwd: dist,
           verbose: false,
         })

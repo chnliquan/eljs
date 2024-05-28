@@ -3,6 +3,7 @@ import cp from 'child_process'
 import execa from 'execa'
 import path from 'path'
 import read from 'read'
+
 import { isPathExistsSync } from '../file'
 
 const SPACES_REGEXP = / +/g
@@ -24,18 +25,39 @@ export function parseCommand(command: string) {
   return tokens
 }
 
+/**
+ * 执行命令
+ * @param cmd 可执行命令
+ * @param args 命令可传入的参数
+ * @param opts 选项
+ */
 export function run(
-  command: string,
+  cmd: string,
+  args: readonly string[],
   opts?: execa.Options & {
     verbose?: boolean
   },
 ): execa.ExecaChildProcess {
   if (opts?.verbose !== false) {
-    const [cmd, ...args] = parseCommand(command)
     console.log('$', chalk.greenBright(cmd), ...args)
   }
 
-  return execa.command(command, opts)
+  return execa(cmd, args, opts)
+}
+
+/**
+ * 执行命令
+ * @param command 命令字符串
+ * @param opts 选项
+ */
+export function runCommand(
+  command: string,
+  opts?: execa.Options & {
+    verbose?: boolean
+  },
+): execa.ExecaChildProcess {
+  const [cmd, ...args] = parseCommand(command)
+  return run(cmd, args, opts)
 }
 
 export function getPid(cmd: string): Promise<number | null> {
@@ -61,7 +83,7 @@ export function getPid(cmd: string): Promise<number | null> {
   }
 
   return new Promise((resolve, reject) => {
-    run('ps -eo pid,comm')
+    runCommand('ps -eo pid,comm')
       .then(value => {
         const pid = parse(value.stdout, cmd)
         resolve(pid)

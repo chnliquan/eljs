@@ -28,7 +28,7 @@ export async function downloadGitRepo(
 ): Promise<string> {
   const { branch = 'master', dest = tmpdir(true) } = opts || {}
 
-  const command = [
+  const args = [
     'git',
     'clone',
     url,
@@ -41,7 +41,7 @@ export async function downloadGitRepo(
   ]
 
   try {
-    await run(`${command.join(' ')}`, {
+    await run('git', args, {
       cwd: dest,
     })
   } catch (err) {

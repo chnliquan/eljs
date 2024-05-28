@@ -10,7 +10,8 @@ import {
 import assert from 'assert'
 import { readdirSync } from 'fs'
 import path from 'path'
-import { CreateOpts, TemplateInfo } from '../types'
+
+import type { CreateOpts, TemplateInfo } from '../types'
 import { Download } from './download'
 import { Generator } from './generator'
 

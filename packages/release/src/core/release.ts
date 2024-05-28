@@ -7,8 +7,8 @@ import {
 } from '@eljs/utils'
 import path from 'path'
 
-import { Options } from '../types'
-import { getBumpVersion } from '../utils/prompt'
+import type { Options } from '../types'
+import { getBumpVersion, step } from '../utils'
 import { generateChangelog } from './changelog'
 import { commit } from './commit'
 import { init } from './init'
@@ -50,7 +50,6 @@ export async function release(opts: Options): Promise<void> {
     repoType: customRepoType,
     changelogPreset = '@eljs/changelog-preset',
     version,
-    stepLogger: step = logger.step('Release'),
     beforeUpdateVersion,
     beforeChangelog,
   } = opts

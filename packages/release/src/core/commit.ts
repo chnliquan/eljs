@@ -1,14 +1,17 @@
-import { getGitBranch, run } from '@eljs/utils'
+import { gitCommit, gitPushCommit, gitPushTag, gitTag } from '@eljs/utils'
+
+import { step } from '../utils'
 
 export async function commit(version: string, gitPush: boolean) {
-  await run(`git add -A`)
-  await run(`git commit -m chore:\\ bump\\ version\\ v${version}`)
+  version = `v${version}`
 
-  await run(`git tag v${version}`)
-  await run(`git push origin refs/tags/v${version}`)
+  await gitCommit(`chore: bump version ${version}`)
+
+  await gitTag(version)
+  await gitPushTag(version)
 
   if (gitPush) {
-    const branch = await getGitBranch()
-    await run(`git push --set-upstream origin ${branch}`)
+    step('Pushing commit to remote ...')
+    await gitPushCommit()
   }
 }

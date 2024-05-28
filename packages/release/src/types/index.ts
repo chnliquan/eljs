@@ -100,10 +100,6 @@ export interface Options {
   version?: string
 
   /**
-   * 打印执行步骤日志
-   */
-  stepLogger?: (msg: string) => void
-  /**
    * 更新版本前执行的钩子函数
    * @param version 版本号
    */

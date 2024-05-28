@@ -10,7 +10,7 @@ export async function sync(publishPkgNames: string[]) {
   }
 
   async function doSync(pkgName: string) {
-    await run(`${cnpm} sync ${pkgName}`, {
+    await run(cnpm, ['sync', pkgName], {
       verbose: false,
     })
     logger.done(`Sync ${chalk.cyanBright.bold(`${pkgName}`)} to cnpm.`)
