@@ -1,8 +1,7 @@
 import { release, resolveBin, step } from '@eljs/release'
-import { $, argv } from 'zx'
-import 'zx/globals'
-
 import { isGitBehindRemote, isGitClean } from '@eljs/utils'
+import { $, argv } from 'zx'
+
 import { assert } from './utils'
 
 const dry = argv.dry

@@ -66,7 +66,7 @@ export async function release(opts: Options): Promise<void> {
     }
   }
 
-  // check branch
+  // check git branch
   if (branch) {
     step('Checking branch ...')
     if (!(await isGitBranch(branch))) {
@@ -90,7 +90,7 @@ export async function release(opts: Options): Promise<void> {
   const repoType =
     customRepoType || (repoUrl?.includes('github') ? 'github' : 'gitlab')
 
-  // check registry
+  // check npm registry
   if (registryCheck && !dry) {
     step('Checking registry ...')
     await checkRegistry({
@@ -155,7 +155,6 @@ export async function release(opts: Options): Promise<void> {
     }
 
     // update all package versions and inter-dependencies
-
     step('Updating versions ...')
     await updateVersions({
       rootPkgJSONPath,
@@ -167,7 +166,6 @@ export async function release(opts: Options): Promise<void> {
     })
 
     // update pnpm-lock.yaml or package-lock.json
-
     step('Updating lockfile...')
     await updateLock(cwd)
 
@@ -176,7 +174,6 @@ export async function release(opts: Options): Promise<void> {
     }
 
     // generate changelog
-
     step(`Generating changelog ...`)
     changelog = await generateChangelog({
       changelogPreset: changelogPreset as string,
