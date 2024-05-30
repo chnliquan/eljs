@@ -111,10 +111,10 @@ importers:
   packages/create:
     dependencies:
       '@eljs/service':
-        specifier: 0.23.0
+        specifier: 0.23.1
         version: link:../service
       '@eljs/utils':
-        specifier: 0.23.0
+        specifier: 0.23.1
         version: link:../utils
       '@types/glob':
         specifier: ^7.2.0
@@ -138,10 +138,10 @@ importers:
   packages/create-template:
     dependencies:
       '@eljs/create':
-        specifier: 0.23.0
+        specifier: 0.23.1
         version: link:../create
       '@eljs/utils':
-        specifier: 0.23.0
+        specifier: 0.23.1
         version: link:../utils
       commander:
         specifier: ^9.4.0
@@ -150,10 +150,10 @@ importers:
   packages/release:
     dependencies:
       '@eljs/changelog-preset':
-        specifier: 0.23.0
+        specifier: 0.23.1
         version: link:../changelog-preset
       '@eljs/utils':
-        specifier: 0.23.0
+        specifier: 0.23.1
         version: link:../utils
       '@types/conventional-changelog':
         specifier: ^3.1.1
@@ -204,7 +204,7 @@ importers:
   packages/service:
     dependencies:
       '@eljs/utils':
-        specifier: 0.23.0
+        specifier: 0.23.1
         version: link:../utils
       '@types/hash-sum':
         specifier: ^1.0.0
