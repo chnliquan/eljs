@@ -14,12 +14,13 @@ let revert: () => void = () => {}
 export interface Implementor {
   /**
    * 文件转换函数
-   * @param code 源代码
+   * @param input 源代码
    * @param opts 转换选项
    */
   transformSync: (
-    code: string,
-    opts: Record<string, any>,
+    input: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    opts: any,
   ) => {
     code: string
   }

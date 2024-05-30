@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import fs from 'fs'
 import parseJSON from 'parse-json'
 
@@ -30,11 +31,9 @@ export function readFile(
  * 读取 JSON 文件
  * @param file 文件路径
  */
-export function readJSONSync<T extends Record<string, unknown>>(
-  file: string,
-): T {
+export function readJSONSync<T extends Record<string, any>>(file: string): T {
   try {
-    return parseJSON(fs.readFileSync(file, 'utf8'))
+    return parseJSON(fs.readFileSync(file, 'utf-8'))
   } catch (err) {
     return Object.create(null)
   }
@@ -44,7 +43,7 @@ export function readJSONSync<T extends Record<string, unknown>>(
  * 读取 JSON 文件
  * @param file 文件路径
  */
-export async function readJSON<T extends Record<string, unknown>>(
+export async function readJSON<T extends Record<string, any>>(
   file: string,
 ): Promise<T> {
   try {

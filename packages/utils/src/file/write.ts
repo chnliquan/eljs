@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import deepmerge from 'deepmerge'
 import fs from 'fs'
 import path from 'path'
@@ -13,7 +14,7 @@ const fsp = fs.promises
  * @param file 文件路径
  * @param content 文件内容
  */
-export function writeJSONSync<T extends Record<string, unknown>>(
+export function writeJSONSync<T extends Record<string, any>>(
   file: string,
   content: T,
 ): void {
@@ -25,7 +26,7 @@ export function writeJSONSync<T extends Record<string, unknown>>(
  * @param file 文件路径
  * @param content 文件内容
  */
-export function writeJSON<T extends Record<string, unknown>>(
+export function writeJSON<T extends Record<string, any>>(
   file: string,
   content: T,
 ): Promise<void> {
@@ -69,7 +70,7 @@ export async function updatePkgJSON(
  * @param file 文件路径
  * @param json 文件内容
  */
-export function safeWriteJSONSync<T extends Record<string, unknown>>(
+export function safeWriteJSONSync<T extends Record<string, any>>(
   file: string,
   json: T,
 ): void {
@@ -91,7 +92,7 @@ export function safeWriteJSONSync<T extends Record<string, unknown>>(
  * @param file 文件路径
  * @param json 文件内容
  */
-export async function safeWriteJSON<T extends Record<string, unknown>>(
+export async function safeWriteJSON<T extends Record<string, any>>(
   file: string,
   json: T,
 ): Promise<void> {
