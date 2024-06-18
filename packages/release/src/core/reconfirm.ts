@@ -4,6 +4,7 @@ import { PublishTag } from '../types'
 import { getBumpVersion } from '../utils/prompt'
 
 export interface ReconfirmOpts {
+  cwd: string
   bumpVersion: string
   publishPkgNames: string[]
   pkgJSON: Required<PkgJSON>
@@ -12,7 +13,7 @@ export interface ReconfirmOpts {
 }
 
 export async function reconfirm(opts: ReconfirmOpts): Promise<string> {
-  const { bumpVersion, publishPkgNames, pkgJSON, tag, verbose } = opts
+  const { cwd, bumpVersion, publishPkgNames, pkgJSON, tag, verbose } = opts
   let confirmMessage = ''
 
   if (publishPkgNames.length === 1 || !verbose) {
@@ -33,6 +34,7 @@ export async function reconfirm(opts: ReconfirmOpts): Promise<string> {
     return bumpVersion
   } else {
     const version = await getBumpVersion({
+      cwd,
       pkgJSON,
       publishPkgNames,
       tag,

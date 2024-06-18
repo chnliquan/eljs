@@ -34,12 +34,13 @@ function getPreVersionPromptQuestions(
 }
 
 export async function getBumpVersion(opts: {
+  cwd: string
   pkgJSON: Required<PkgJSON>
   publishPkgNames: string[]
   tag?: PublishTag
   targetVersion?: string
 }): Promise<string> {
-  const { pkgJSON, publishPkgNames, tag, targetVersion } = opts
+  const { cwd, pkgJSON, publishPkgNames, tag, targetVersion } = opts
 
   const localVersion = pkgJSON.version
   const {
@@ -47,7 +48,7 @@ export async function getBumpVersion(opts: {
     remoteAlphaVersion,
     remoteBetaVersion,
     remoteNextVersion,
-  } = await getDistTag(publishPkgNames)
+  } = await getDistTag(publishPkgNames, cwd)
 
   const latestReferenceVersion = getReferenceVersion(
     localVersion,

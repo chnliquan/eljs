@@ -1,13 +1,14 @@
 import { getNpmUser, logger, run } from '@eljs/utils'
 
-export async function checkOwnership(publishPkgNames: string[]) {
-  const user = await getNpmUser()
+export async function checkOwnership(publishPkgNames: string[], cwd: string) {
+  const user = await getNpmUser(cwd)
 
   for (const pkgName of publishPkgNames) {
     try {
       const owners = (
         await run('npm', ['owner', 'ls', pkgName], {
           verbose: false,
+          cwd,
         })
       ).stdout
         .trim()

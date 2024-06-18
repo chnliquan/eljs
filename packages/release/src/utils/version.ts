@@ -28,7 +28,10 @@ interface RemoteDistTag {
   remoteNextVersion: string
 }
 
-export async function getDistTag(pkgNames: string[]): Promise<RemoteDistTag> {
+export async function getDistTag(
+  pkgNames: string[],
+  cwd: string,
+): Promise<RemoteDistTag> {
   try {
     const distTag = await timeout(
       (async () => {
@@ -36,7 +39,9 @@ export async function getDistTag(pkgNames: string[]): Promise<RemoteDistTag> {
           const pkgName = pkgNames[i]
 
           try {
-            const distTag = await getNpmDistTag(pkgName)
+            const distTag = await getNpmDistTag(pkgName, {
+              cwd,
+            })
 
             return {
               remoteLatestVersion: distTag['latest'],

@@ -52,11 +52,11 @@ export interface GitRepoInfo extends BaseGitRepoInfo {
 
 /**
  * 获取指定目录的 git 地址
- * @param dir 目录
+ * @param cwd 当前工作目录
  * @param exact 是否在当前目录下提取
  */
-export function getGitUrl(dir: string, exact?: boolean): string {
-  const gitDir = exact ? path.join(dir, '.git') : getProjectGitDir(dir) || ''
+export function getGitUrl(cwd: string, exact?: boolean): string {
+  const gitDir = exact ? path.join(cwd, '.git') : getProjectGitDir(cwd) || ''
 
   if (!isPathExistsSync(gitDir)) {
     return ''

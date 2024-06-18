@@ -1,11 +1,12 @@
 import { chalk, getNpmRegistry, logger } from '@eljs/utils'
 
 export async function checkRegistry(opts: {
+  cwd: string
   repoType: string
   repoUrl?: string
   pkgRegistry?: string
 }) {
-  const { repoType, repoUrl, pkgRegistry } = opts
+  const { cwd, repoType, repoUrl, pkgRegistry } = opts
 
   let registry = ''
 
@@ -29,7 +30,7 @@ export async function checkRegistry(opts: {
   }
 
   if (registry) {
-    const userRegistry = await getNpmRegistry()
+    const userRegistry = await getNpmRegistry(cwd)
 
     if (!userRegistry.includes(registry)) {
       logger.printErrorAndExit(`npm registry is not ${chalk.blue(registry)}.`)

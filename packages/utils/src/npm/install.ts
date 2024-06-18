@@ -1,5 +1,6 @@
 import execa from 'execa'
-import { PackageManager } from '../types'
+
+import type { PackageManager } from '../types'
 import { getPackageManager } from './package-manager'
 
 /**
@@ -66,7 +67,7 @@ export async function installDeps(opts: InstallDepsOpts): Promise<void> {
  * @param packageManager 包管理器
  */
 export async function install(
-  cwd: string,
+  cwd = process.cwd(),
   packageManager?: PackageManager,
 ): Promise<void> {
   if (!packageManager) {

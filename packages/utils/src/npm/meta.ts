@@ -11,18 +11,24 @@ import type { OmitIndexSignature, PkgJSON } from '../types'
 
 /**
  * 获取 NPM 仓库
+ * @param cwd 工作目录
  */
-export async function getNpmRegistry(): Promise<string> {
-  return execa('npm', ['config', 'get', 'registry']).then(data => {
+export async function getNpmRegistry(cwd = process.cwd()): Promise<string> {
+  return execa('npm', ['config', 'get', 'registry'], {
+    cwd,
+  }).then(data => {
     return data.stdout.trim()
   })
 }
 
 /**
  * 获取 NPM 用户
+ * @param cwd 工作目录
  */
-export async function getNpmUser(): Promise<string> {
-  return execa('npm', ['whoami']).then(data => {
+export async function getNpmUser(cwd = process.cwd()): Promise<string> {
+  return execa('npm', ['whoami'], {
+    cwd,
+  }).then(data => {
     return data.stdout.trim()
   })
 }
@@ -56,11 +62,13 @@ export interface NpmInfo extends OmitIndexSignature<PkgJSON> {
  * 获取 NPM 包信息
  * @param name NPM 包名
  * @param opts.registry 仓库地址
+ * @param opts.cwd 工作目录
  */
 export async function getNpmInfo(
   name: string,
   opts?: {
     registry?: string
+    cwd?: string
   },
 ): Promise<Omit<NpmInfo, 'version'> | null>
 /**
@@ -68,12 +76,14 @@ export async function getNpmInfo(
  * @param name NPM 包名
  * @param opts.version 版本
  * @param opts.registry 仓库地址
+ * @param opts.cwd 工作目录
  */
 export async function getNpmInfo(
   name: string,
   opts: {
     version: string
     registry?: string
+    cwd?: string
   },
 ): Promise<Omit<NpmInfo, 'versions' | 'dist-tags'> | null>
 export async function getNpmInfo(
@@ -81,9 +91,10 @@ export async function getNpmInfo(
   opts?: {
     version?: string
     registry?: string
+    cwd?: string
   },
 ): Promise<NpmInfo | null> {
-  const registry = opts?.registry || (await getNpmRegistry())
+  const registry = opts?.registry || (await getNpmRegistry(opts?.cwd))
   let url = `${registry.replace(/\/+$/, '')}/${encodeURIComponent(name).replace(
     /^%40/,
     '@',
@@ -110,19 +121,25 @@ export async function getNpmInfo(
 /**
  * 获取 NPM 包标签
  * @param name NPM 包名
- * @param registry 仓库地址
+ * @param opts.cwd 工作目录
+ * @param opts.registry 仓库地址
  */
 export async function getNpmDistTag(
   name: string,
-  registry?: string,
+  opts?: {
+    cwd?: string
+    registry?: string
+  },
 ): Promise<NpmInfo['dist-tags']> {
   const args = ['dist-tag', 'ls', name]
 
-  if (registry) {
-    args.push('--registry', registry)
+  if (opts?.registry) {
+    args.push('--registry', opts.registry)
   }
 
-  return execa('npm', args).then(data => {
+  return execa('npm', args, {
+    cwd: opts?.cwd,
+  }).then(data => {
     const distTag = {
       latest: '',
       beta: '',

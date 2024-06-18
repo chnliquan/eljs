@@ -57,11 +57,11 @@ export async function release(opts: Options): Promise<void> {
   // check git status
   if (gitCheck) {
     step('Checking git ...')
-    if (!(await isGitClean())) {
+    if (!(await isGitClean(cwd))) {
       logger.printErrorAndExit('git is not clean.')
     }
 
-    if (await isGitBehindRemote()) {
+    if (await isGitBehindRemote(cwd)) {
       logger.printErrorAndExit('git is behind remote.')
     }
   }
@@ -69,7 +69,7 @@ export async function release(opts: Options): Promise<void> {
   // check git branch
   if (branch) {
     step('Checking branch ...')
-    if (!(await isGitBranch(branch))) {
+    if (!(await isGitBranch(branch, cwd))) {
       logger.printErrorAndExit(
         `current branch does not match branch ${branch}.`,
       )
@@ -94,6 +94,7 @@ export async function release(opts: Options): Promise<void> {
   if (registryCheck && !dry) {
     step('Checking registry ...')
     await checkRegistry({
+      cwd,
       repoType,
       repoUrl,
       pkgRegistry: rootPkgJSON?.publishConfig?.registry,
@@ -103,7 +104,7 @@ export async function release(opts: Options): Promise<void> {
   // check ownership
   if (ownershipCheck && !dry) {
     step('Checking npm ownership ...')
-    await checkOwnership(publishPkgNames)
+    await checkOwnership(publishPkgNames, cwd)
   }
 
   if (dry) {
@@ -134,6 +135,7 @@ export async function release(opts: Options): Promise<void> {
     // bump version
     step('Bump version ...')
     bumpVersion = await getBumpVersion({
+      cwd,
       pkgJSON: rootPkgJSON,
       publishPkgNames,
       tag,
@@ -142,6 +144,7 @@ export async function release(opts: Options): Promise<void> {
 
     if (confirm) {
       bumpVersion = await reconfirm({
+        cwd,
         bumpVersion,
         publishPkgNames,
         pkgJSON: rootPkgJSON,
