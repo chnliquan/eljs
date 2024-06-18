@@ -1,6 +1,7 @@
 import execa from 'execa'
 
 import { run } from '../cp'
+import { isGitClean } from './is'
 import { getGitBranch } from './meta'
 
 /**
@@ -14,6 +15,9 @@ export async function gitCommit(
     verbose?: boolean
   },
 ): Promise<void> {
+  if (await isGitClean(opts?.cwd)) {
+    return
+  }
   await run('git', ['add', '-A'], opts)
   await run('git', ['commit', '-m', msg], opts)
 }
@@ -27,6 +31,9 @@ export async function gitPushCommit(
     verbose?: boolean
   },
 ): Promise<void> {
+  if (await isGitClean(opts?.cwd)) {
+    return
+  }
   const branch = await getGitBranch()
   await run('git', ['push', '--set-upstream', 'origin', branch], opts)
 }
