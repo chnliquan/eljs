@@ -22,6 +22,10 @@ export interface BaseGitRepoInfo {
    * git 仓库网页地址
    */
   href: string
+  /**
+   * git url
+   */
+  url: string
 }
 
 /**
@@ -126,6 +130,7 @@ export function gitUrlAnalysis(url: string): BaseGitRepoInfo {
     name,
     group,
     href: `https://${hostname}/${group}/${name}`,
+    url: `git@${hostname}:${group}/${name}.git`,
   }
 }
 
@@ -163,10 +168,7 @@ export function getGitRepoInfo(
       gitRepoInfo.url = config['remote "origin"'].url
 
       if (gitRepoInfo.url) {
-        const repo = gitUrlAnalysis(gitRepoInfo.url)
-        gitRepoInfo.href = repo.href
-        gitRepoInfo.group = repo.group
-        gitRepoInfo.name = repo.name
+        Object.assign(gitRepoInfo, gitUrlAnalysis(gitRepoInfo.url))
       }
     }
 
