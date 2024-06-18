@@ -32,6 +32,22 @@ export async function isGitBehindRemote(cwd?: string): Promise<boolean> {
 }
 
 /**
+ * 指定工作目录的 git 是否超前远程
+ * @param cwd 工作目录
+ */
+export async function isGitAheadRemote(cwd?: string): Promise<boolean> {
+  return execa('git', ['fetch'], {
+    cwd,
+  }).then(() => {
+    return execa('git', ['status', '--short', '--branch'], {
+      cwd,
+    }).then(data => {
+      return data.stdout.trim().includes('ahead')
+    })
+  })
+}
+
+/**
  * 当前分支是否为传入的分支
  * @param branch 分支名
  * @param cwd 工作目录

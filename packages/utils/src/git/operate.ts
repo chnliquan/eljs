@@ -1,7 +1,7 @@
 import execa from 'execa'
 
 import { run } from '../cp'
-import { isGitClean } from './is'
+import { isGitAheadRemote, isGitClean } from './is'
 import { getGitBranch } from './meta'
 
 /**
@@ -31,7 +31,7 @@ export async function gitPushCommit(
     verbose?: boolean
   },
 ): Promise<void> {
-  if (await isGitClean(opts?.cwd)) {
+  if (!(await isGitAheadRemote(opts?.cwd))) {
     return
   }
   const branch = await getGitBranch()
