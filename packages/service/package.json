@@ -1,6 +1,6 @@
 {
   "name": "@eljs/service",
-  "version": "0.24.0",
+  "version": "0.25.0",
   "description": "@eljs/service",
   "keywords": [
     "eljs",
@@ -27,7 +27,7 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@eljs/utils": "0.24.0",
+    "@eljs/utils": "0.25.0",
     "@types/hash-sum": "^1.0.0",
     "@types/lodash": "^4.14.186",
     "deepmerge": "^4.2.2",
