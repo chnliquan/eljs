@@ -8,12 +8,11 @@ import {
 import { writeFileSync } from 'fs'
 import { join } from 'path'
 import prettier from 'prettier'
-import sortPackageJson from 'sort-package-json'
-import { Api, ExtendPackageOpts } from '../../types'
+import type { Api, ExtendPackageOpts } from '../../types'
 
-function formatPkgJSON(pkg: string) {
-  const sortPkg = sortPackageJson(pkg)
-
+async function formatPkgJSON(pkgJSONPath: string) {
+  // esm 语法需要使用动态 import 引入
+  const { default: sortPackageJson } = await import('sort-package-json')
   // function getPrettierConfig() {
   //   const prettierPath = tryPaths([
   //     `${target}/prettier.config.js`,
@@ -42,14 +41,13 @@ function formatPkgJSON(pkg: string) {
   //   }
   // }
 
-  return prettier.format(sortPkg, {
+  return prettier.format(sortPackageJson(pkgJSONPath), {
     tabWidth: 2,
     parser: 'json',
   })
 }
 
 export default (api: Api) => {
-  // #region  更新package.json 的内容
   api.registerMethod({
     name: 'extendPackage',
     async fn(opts: ExtendPackageOpts) {
@@ -62,7 +60,7 @@ export default (api: Api) => {
   api.register({
     key: 'onGenerateDone',
     stage: Number.NEGATIVE_INFINITY,
-    fn() {
+    async fn() {
       const pkgJSONPath = join(api.paths.target, 'package.json')
       let pkgJSON = api.service.pkgJSON
 
@@ -78,7 +76,7 @@ export default (api: Api) => {
 
       writeFileSync(
         pkgJSONPath,
-        formatPkgJSON(JSON.stringify(pkgJSON, null, 2)),
+        await formatPkgJSON(JSON.stringify(pkgJSON, null, 2)),
       )
     },
   })

@@ -91,7 +91,6 @@ export class Create {
         projectName: name,
         targetDir,
         args: this._opts.args,
-        isGenSchema: this._opts.schema,
       })
 
       await generator.create(templatePath)

@@ -3,8 +3,8 @@ import { Api } from '../types'
 export default (api: Api) => {
   ;[
     'addQuestions',
-    'onGenerateSchema',
     'modifyPrompts',
+    'modifyTSConfig',
     'onBeforeGenerateFiles',
     'onGenerateFiles',
     'onGenerateDone',

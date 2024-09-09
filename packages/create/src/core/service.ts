@@ -8,7 +8,7 @@ import {
   ServicePluginAPI,
 } from '@eljs/service'
 import type { PkgJSON, RenderTemplateOpts } from '@eljs/utils'
-import { logger, prompts } from '@eljs/utils'
+import { prompts } from '@eljs/utils'
 
 import {
   AppData,
@@ -46,6 +46,10 @@ export class GenerateService extends Service {
    */
   public prompts: Prompts = Object.create(null)
   /**
+   * tsconfig 配置
+   */
+  public tsconfig = Object.create(null)
+  /**
    * 项目的 package.json 对象
    */
   public pkgJSON: PkgJSON = Object.create(null)
@@ -75,21 +79,16 @@ export class GenerateService extends Service {
       args: { cwd: this.cwd },
     })
 
-    // 是否生成 schema 用于 vscode 创建项目使用
-    if (this.opts.isGenSchema) {
-      await this.applyPlugins({
-        key: 'onGenerateSchema',
-        args: {
-          questions,
-        },
-      })
-    }
-
     // 修改用户提示
     this.prompts = await this.applyPlugins({
       key: 'modifyPrompts',
       initialValue: {},
       args: { questions },
+    })
+
+    this.tsconfig = await this.applyPlugins({
+      key: 'modifyTSConfig',
+      initialValue: {},
     })
   }
 
@@ -102,12 +101,6 @@ export class GenerateService extends Service {
         paths: this.paths,
       },
     })
-
-    // 生成 schema 不做 文件生成
-    if (this.opts.isGenSchema) {
-      logger.info('跳过文件生成, 仅生成 schema')
-      return
-    }
 
     await this.applyPlugins({
       key: 'onGenerateFiles',
@@ -177,13 +170,13 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
     { questions: prompts.PromptObject[] }
   >
   /**
+   * 修改用户输入数据
+   */
+  modifyTSConfig: ApplyModify<typeof GenerateService.prototype.tsconfig, null>
+  /**
    * 添加命令行问询
    */
   addQuestions: ApplyAdd<{ cwd: string }, prompts.PromptObject[]>
-  /**
-   * 生成 Schema 事件
-   */
-  onGenerateSchema: ApplyEvent<{ questions: prompts.PromptObject[] }>
   /**
    * 生成文件之前事件
    */

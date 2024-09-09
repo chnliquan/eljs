@@ -21,7 +21,7 @@ export class Generator {
 
   public async create(templatePath?: string) {
     assert(templatePath, 'templatePath 不允许为空')
-    const { isLocalTemplate, targetDir, projectName, isGenSchema } = this._opts
+    const { isLocalTemplate, targetDir, projectName } = this._opts
 
     if (templatePath) {
       if (isLocalTemplate) {
@@ -37,7 +37,6 @@ export class Generator {
       const service = new GenerateService({
         cwd: templatePath,
         plugins: generatorFile ? [require.resolve(generatorFile)] : [],
-        isGenSchema,
         env: process.env.NODE_ENV as Env,
       })
 

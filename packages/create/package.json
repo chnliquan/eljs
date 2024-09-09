@@ -34,10 +34,10 @@
     "@eljs/service": "0.24.0",
     "@eljs/utils": "0.24.0",
     "@types/glob": "^7.2.0",
-    "@types/prettier": "^2.7.0",
-    "dayjs": "^1.11.5",
+    "@types/prettier": "^3.0.0",
+    "dayjs": "^1.11.12",
     "glob": "^8.0.3",
-    "prettier": "^2.7.1",
-    "sort-package-json": "^1.57.0"
+    "prettier": "^3.3.3",
+    "sort-package-json": "^2.10.0"
   }
 }

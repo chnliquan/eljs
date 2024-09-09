@@ -45,10 +45,6 @@ export interface CreateOpts {
    */
   cwd?: string
   /**
-   * 是否生成 schema
-   */
-  schema?: boolean
-  /**
    * 命令行参数
    */
   args?: Record<string, any>
@@ -106,7 +102,9 @@ export interface Prompts {
    * 创建时使用的文件夹名称
    */
   dirname: string
-
+  /**
+   * 扩展字段
+   */
   [property: string]: any
 }
 
@@ -115,7 +113,7 @@ export interface GeneratePluginConfig extends PluginConfig {
    *
    * 是否启用默认问询
    */
-  defaultPrompts?: boolean
+  defaultQuestions?: boolean
   /**
    * 是否启用 git 初始化
    */
@@ -156,6 +154,9 @@ export interface CopyFileOpts {
   opts?: RenderTemplateOpts
 }
 
+/**
+ * 拷贝文件选项
+ */
 export interface CopyTplOpts extends CopyFileOpts {
   /**
    * 模板渲染需要的参数
@@ -163,6 +164,9 @@ export interface CopyTplOpts extends CopyFileOpts {
   data: Record<string, any>
 }
 
+/**
+ * 拷贝文件夹选项
+ */
 export interface CopyDirectoryOpts extends CopyFileOpts {
   /**
    * 模板渲染需要的参数

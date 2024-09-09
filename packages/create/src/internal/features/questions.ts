@@ -4,9 +4,9 @@ import { author, email, getGitUrl } from '../const'
 
 export default async (api: Api) => {
   api.describe({
-    key: 'defaultPrompts',
+    key: 'defaultQuestions',
     enableBy() {
-      return api.pluginConfig.defaultPrompts === true
+      return api.pluginConfig.defaultQuestions === true
     },
   })
 

@@ -1,8 +1,6 @@
 import { chalk, prompts } from '@eljs/utils'
 import { execSync } from 'child_process'
 import dayjs from 'dayjs'
-import { writeFileSync } from 'fs'
-import { join } from 'path'
 import { Api } from '../../types'
 import { author, email, getGitHref, getGitUrl } from '../const'
 
@@ -57,34 +55,5 @@ export default (api: Api) => {
       },
       ...memo,
     }
-  })
-
-  api.onGenerateSchema(({ questions }) => {
-    writeFileSync(
-      join(api.cwd, 'schema.json'),
-      JSON.stringify(
-        questions.map(question => {
-          const copied: Record<string, any> = { ...question }
-          // 生成 Schema 时，mail 和 author 的配置项不需要默认值
-          if (copied.name === 'mail' || copied.name === 'author') {
-            delete copied.initial
-          }
-
-          copied.message = copied.message.replace(/\033\[[0-9;]*m/g, '')
-
-          // 增加 isRequired
-          if (copied.initial) {
-            copied.isRequired = true
-          }
-
-          // initial 换成 value
-          if (copied.type === 'select' && typeof copied.initial === 'number') {
-            copied.initial = copied.choices?.[copied.initial]?.value ?? ''
-          }
-
-          return copied
-        }),
-      ),
-    )
   })
 }
