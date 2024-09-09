@@ -140,6 +140,10 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
    */
   prompts: typeof GenerateService.prototype.prompts
   /**
+   * tsconfig 配置
+   */
+  tsconfig: typeof GenerateService.prototype.tsconfig
+  /**
    * 插件启用配置，用于控制插件，是否启用可通过 `modifyPluginConfig` 方法修改
    */
   pluginConfig: typeof GenerateService.prototype.pluginConfig
