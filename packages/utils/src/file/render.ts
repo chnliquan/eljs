@@ -41,21 +41,17 @@ export interface EjsRenderTemplateOpts {
 export function renderTemplate(
   template: string,
   data: Record<string, unknown>,
-  opts?: RenderTemplateOpts,
-) {
-  const { type = 'mustache' } = opts || {}
+  opts: RenderTemplateOpts = {},
+): string {
+  const { type = 'mustache', options } = opts as EjsRenderTemplateOpts
+  const { partials, tagsOrOptions } = opts as MustacheRenderTemplateOpts
 
   if (type === 'ejs') {
     return ejs.render(template, data, {
-      ...(opts as EjsRenderTemplateOpts).options,
+      ...options,
       async: false,
     })
   } else {
-    return Mustache.render(
-      template,
-      data,
-      (opts as MustacheRenderTemplateOpts).partials,
-      (opts as MustacheRenderTemplateOpts).tagsOrOptions,
-    )
+    return Mustache.render(template, data, partials, tagsOrOptions)
   }
 }
