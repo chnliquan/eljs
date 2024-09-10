@@ -115,6 +115,7 @@ export function updateDeps(opts: {
       }
 
       logger.info(`${pkgJSON.name} -> ${depType} -> ${depName}@${version}`)
+      // 只替换固定版本，不替换 workspace
       deps[depName] = deps[depName].replace(reg, version)
     }
   })

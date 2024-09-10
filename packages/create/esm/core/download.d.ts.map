@@ -1,1 +1,0 @@
-{"version":3,"file":"download.d.ts","sourceRoot":"","sources":["../../src/core/download.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,YAAY,EAAE,iBAAe;AAe3C,qBAAa,QAAQ;IACnB,OAAO,CAAC,KAAK,CAAc;gBAER,IAAI,EAAE,YAAY;IAIxB,QAAQ;YAaP,oBAAoB;YAqBpB,mBAAmB;YA8BnB,YAAY;CAc3B"}

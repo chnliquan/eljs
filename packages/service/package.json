@@ -16,6 +16,7 @@
   },
   "license": "MIT",
   "author": "liquan",
+  "main": "lib/index.js",
   "module": "esm/index.js",
   "types": "esm/index.d.ts",
   "files": [

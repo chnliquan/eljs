@@ -33,8 +33,8 @@
     "dev": "father dev"
   },
   "dependencies": {
-    "@eljs/service": "0.26.1",
-    "@eljs/utils": "0.26.1",
+    "@eljs/service": "workspace:*",
+    "@eljs/utils": "workspace:*",
     "@types/glob": "^7.2.0",
     "@types/prettier": "^3.0.0",
     "dayjs": "^1.11.12",
