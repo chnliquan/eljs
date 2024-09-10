@@ -114,10 +114,10 @@ importers:
   packages/create:
     dependencies:
       '@eljs/service':
-        specifier: 0.26.1
+        specifier: workspace:*
         version: link:../service
       '@eljs/utils':
-        specifier: 0.26.1
+        specifier: workspace:*
         version: link:../utils
       '@types/glob':
         specifier: ^7.2.0
