@@ -5,6 +5,8 @@ export default (api: Api) => {
     'addQuestions',
     'modifyPrompts',
     'modifyTSConfig',
+    'modifyJestConfig',
+    'modifyPrettierConfig',
     'onBeforeGenerateFiles',
     'onGenerateFiles',
     'onGenerateDone',

@@ -46,9 +46,17 @@ export class GenerateService extends Service {
    */
   public prompts: Prompts = Object.create(null)
   /**
-   * tsconfig 配置
+   * tsConfig 配置
    */
-  public tsconfig = Object.create(null)
+  public tsConfig = Object.create(null)
+  /**
+   * jestConfig 配置
+   */
+  public jestConfig = Object.create(null)
+  /**
+   * prettierConfig 配置
+   */
+  public prettierConfig = Object.create(null)
   /**
    * 项目的 package.json 对象
    */
@@ -86,8 +94,21 @@ export class GenerateService extends Service {
       args: { questions },
     })
 
-    this.tsconfig = await this.applyPlugins({
+    // 修改 tsConfig
+    this.tsConfig = await this.applyPlugins({
       key: 'modifyTSConfig',
+      initialValue: {},
+    })
+
+    // 修改 jestConfig
+    this.jestConfig = await this.applyPlugins({
+      key: 'modifyJestConfig',
+      initialValue: {},
+    })
+
+    // 修改 prettierConfig
+    this.prettierConfig = await this.applyPlugins({
+      key: 'modifyPrettierConfig',
       initialValue: {},
     })
   }
@@ -117,7 +138,14 @@ export class GenerateService extends Service {
 
   protected proxyPluginAPIPropsExtractor() {
     return {
-      serviceProps: ['target', 'args', 'prompts'],
+      serviceProps: [
+        'target',
+        'args',
+        'prompts',
+        'tsConfig',
+        'jestConfig',
+        'prettierConfig',
+      ],
       staticProps: {
         Stage: GenerateServiceStage,
       },
@@ -140,9 +168,17 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
    */
   prompts: typeof GenerateService.prototype.prompts
   /**
-   * tsconfig 配置
+   * tsConfig 配置
    */
-  tsconfig: typeof GenerateService.prototype.tsconfig
+  tsConfig: typeof GenerateService.prototype.tsConfig
+  /**
+   * jestConfig 配置
+   */
+  jestConfig: typeof GenerateService.prototype.jestConfig
+  /**
+   * prettierConfig 配置
+   */
+  prettierConfig: typeof GenerateService.prototype.prettierConfig
   /**
    * 插件启用配置，用于控制插件，是否启用可通过 `modifyPluginConfig` 方法修改
    */
@@ -174,9 +210,23 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
     { questions: prompts.PromptObject[] }
   >
   /**
-   * 修改用户输入数据
+   * 修改 tsConfig
    */
-  modifyTSConfig: ApplyModify<typeof GenerateService.prototype.tsconfig, null>
+  modifyTSConfig: ApplyModify<typeof GenerateService.prototype.tsConfig, null>
+  /**
+   * 修改 jestConfig
+   */
+  modifyJestConfig: ApplyModify<
+    typeof GenerateService.prototype.jestConfig,
+    null
+  >
+  /**
+   * 修改 prettierConfig
+   */
+  modifyPrettierConfig: ApplyModify<
+    typeof GenerateService.prototype.prettierConfig,
+    null
+  >
   /**
    * 添加命令行问询
    */
@@ -200,15 +250,15 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
 
   // #region 插件工具方法
   /**
-   * 复制文件
+   * 拷贝文件
    */
   copyFile: (opts: CopyFileOpts) => void
   /**
-   * 将文件从模板文件复制到目录文件
+   * 拷贝模版
    */
   copyTpl: (opts: CopyTplOpts) => void
   /**
-   * 将文件夹从模板文件夹复制到目标文件夹
+   * 拷贝文件夹
    */
   copyDirectory: (opts: CopyDirectoryOpts) => void
   /**
@@ -220,7 +270,7 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
     opts?: RenderTemplateOpts,
   ) => Promise<void>
   /**
-   * 更新 package.json
+   * 扩展 package.json
    */
   extendPackage: (opts: ExtendPackageOpts) => void
   /**
