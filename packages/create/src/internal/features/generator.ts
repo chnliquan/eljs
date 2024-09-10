@@ -10,7 +10,7 @@ export default (api: Api) => {
     },
   })
 
-  // 复制文件
+  // 拷贝文件
   api.registerMethod({
     name: 'copyFile',
     fn(opts: CopyFileOpts) {
@@ -21,7 +21,7 @@ export default (api: Api) => {
     },
   })
 
-  // 复制模板文件
+  // 拷贝模板文件
   api.registerMethod({
     name: 'copyTpl',
     fn(opts: CopyTplOpts) {
@@ -32,7 +32,7 @@ export default (api: Api) => {
     },
   })
 
-  // 复制文件夹
+  // 拷贝文件夹
   api.registerMethod({
     name: 'copyDirectory',
     fn(opts: CopyDirectoryOpts) {
@@ -40,6 +40,16 @@ export default (api: Api) => {
         ...opts,
         basedir: api.target,
       })
+    },
+  })
+
+  // 格式化 JSON
+  api.registerMethod({
+    name: 'formatJSON',
+    async fn(json: string | Record<any, any>) {
+      // esm 语法需要使用动态 import 引入
+      const { default: sortPackageJson } = await import('sort-package-json')
+      return sortPackageJson(json as string)
     },
   })
 }

@@ -1,4 +1,14 @@
 import {
+  GenerateServiceStage,
+  type AppData,
+  type CopyDirectoryOpts,
+  type CopyFileOpts,
+  type CopyTplOpts,
+  type ExtendPackageOpts,
+  type GeneratePluginConfig,
+  type Prompts,
+} from '@/types'
+import {
   Service,
   type ApplyAdd,
   type ApplyEvent,
@@ -9,17 +19,6 @@ import {
 } from '@eljs/service'
 import type { PkgJSON, RenderTemplateOpts } from '@eljs/utils'
 import { prompts } from '@eljs/utils'
-
-import {
-  GenerateServiceStage,
-  type AppData,
-  type CopyDirectoryOpts,
-  type CopyFileOpts,
-  type CopyTplOpts,
-  type ExtendPackageOpts,
-  type GeneratePluginConfig,
-  type Prompts,
-} from '@/types'
 
 export interface GenerateServiceOpts extends ServiceOpts {
   /**
@@ -261,6 +260,10 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
    * 拷贝文件夹
    */
   copyDirectory: (opts: CopyDirectoryOpts) => void
+  /**
+   * 格式化 JSON
+   */
+  formatJSON: (json: string | Record<any, any>) => Record<any, any>
   /**
    * 将模板文件渲染到目标文件对象中
    */

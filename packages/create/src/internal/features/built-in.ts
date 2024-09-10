@@ -1,51 +1,13 @@
+import type { Api, ExtendPackageOpts } from '@/types'
 import {
   chalk,
   install,
   isFunction,
   isPathExistsSync,
   logger,
+  writeJSON,
 } from '@eljs/utils'
-import { writeFileSync } from 'fs'
 import { join } from 'path'
-import prettier from 'prettier'
-import type { Api, ExtendPackageOpts } from '../../types'
-
-async function formatPkgJSON(pkgJSONPath: string) {
-  // esm 语法需要使用动态 import 引入
-  const { default: sortPackageJson } = await import('sort-package-json')
-  // function getPrettierConfig() {
-  //   const prettierPath = tryPaths([
-  //     `${target}/prettier.config.js`,
-  //     `${target}/.prettierrc.js`,
-  //     `${target}/.prettierrc`,
-  //   ])
-
-  //   if (!prettierPath) {
-  //     return {
-  //       tabWidth: 2,
-  //       parser: 'json',
-  //     }
-  //   }
-
-  //   try {
-  //     // eslint-disable-next-line @typescript-eslint/no-var-requires
-  //     const configOrConfigGen = require(prettierPath)
-
-  //     if (typeof configOrConfigGen === 'function') {
-  //       return configOrConfigGen.call(null)
-  //     }
-
-  //     return configOrConfigGen
-  //   } catch (e) {
-  //     return readJSONSync(prettierPath)
-  //   }
-  // }
-
-  return prettier.format(sortPackageJson(pkgJSONPath), {
-    tabWidth: 2,
-    parser: 'json',
-  })
-}
 
 export default (api: Api) => {
   api.registerMethod({
@@ -74,9 +36,9 @@ export default (api: Api) => {
         return
       }
 
-      writeFileSync(
+      await writeJSON(
         pkgJSONPath,
-        await formatPkgJSON(JSON.stringify(pkgJSON, null, 2)),
+        await api.formatJSON(pkgJSON as Record<any, any>),
       )
     },
   })
