@@ -1,8 +1,8 @@
-import ejs, { Options } from 'ejs'
+import ejs, { type Options } from 'ejs'
 import Mustache, {
-  OpeningAndClosingTags,
-  PartialsOrLookupFn,
-  RenderOptions,
+  type OpeningAndClosingTags,
+  type PartialsOrLookupFn,
+  type RenderOptions,
 } from 'mustache'
 
 /**

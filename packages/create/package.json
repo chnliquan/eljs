@@ -17,18 +17,20 @@
   "license": "MIT",
   "author": "liquan",
   "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "module": "esm/index.js",
+  "types": "esm/index.d.ts",
   "bin": {
     "gen": "bin/gen.js"
   },
   "files": [
-    "lib",
-    "bin"
+    "esm/*",
+    "lib/*",
+    "bin/*"
   ],
   "scripts": {
-    "build": "npm run clean && tsc",
-    "clean": "rimraf lib",
-    "dev": "tsc --watch"
+    "build": "father build",
+    "clean": "rimraf lib && rimraf esm && rimraf node_modules/.cache/father",
+    "dev": "father dev"
   },
   "dependencies": {
     "@eljs/service": "0.26.0",

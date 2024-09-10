@@ -3,9 +3,9 @@ import {
   getPkgPaths,
   isPathExists,
   logger,
-  PkgJSON,
   readJSON,
   readJSONSync,
+  type PkgJSON,
 } from '@eljs/utils'
 import path from 'path'
 

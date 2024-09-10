@@ -1,6 +1,6 @@
+import type { Api, CopyDirectoryOpts, CopyFileOpts, CopyTplOpts } from '@/types'
 import { copyDirectory, copyFile, copyTpl } from '@eljs/utils'
 import { resolve } from 'path'
-import { Api, CopyDirectoryOpts, CopyFileOpts, CopyTplOpts } from '../../types'
 
 export default (api: Api) => {
   api.registerMethod({

@@ -17,22 +17,24 @@
   "license": "MIT",
   "author": "liquan",
   "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "module": "esm/index.js",
+  "types": "esm/index.d.ts",
   "bin": {
     "create-template": "bin/create-template.js"
   },
   "files": [
-    "lib",
-    "bin"
+    "esm/*",
+    "lib/*",
+    "bin/*"
   ],
   "scripts": {
-    "build": "npm run clean && tsc",
-    "clean": "rimraf lib",
-    "dev": "tsc --watch"
+    "build": "father build",
+    "clean": "rimraf lib && rimraf esm && rimraf node_modules/.cache/father",
+    "dev": "father dev"
   },
   "dependencies": {
-    "@eljs/create": "0.26.0",
-    "@eljs/utils": "0.26.0",
+    "@eljs/create": "workspace:*",
+    "@eljs/utils": "workspace:*",
     "commander": "^9.4.0"
   }
 }

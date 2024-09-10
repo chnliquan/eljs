@@ -2,9 +2,9 @@ import { glob } from 'glob'
 import yaml from 'js-yaml'
 import path from 'path'
 
-import { isPathExists, isPathExistsSync, readFile, readJSON } from '../file'
-import { getPackageManager } from '../npm'
-import { PkgJSON } from '../types'
+import { isPathExists, isPathExistsSync, readFile, readJSON } from '@/file'
+import { getPackageManager } from '@/npm'
+import type { PkgJSON } from '@/types'
 
 const cache = new Map()
 

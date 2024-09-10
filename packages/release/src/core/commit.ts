@@ -1,6 +1,5 @@
+import { step } from '@/utils'
 import { gitCommit, gitPushCommit, gitPushTag, gitTag } from '@eljs/utils'
-
-import { step } from '../utils'
 
 export async function commit(version: string, gitPush: boolean) {
   version = `v${version}`

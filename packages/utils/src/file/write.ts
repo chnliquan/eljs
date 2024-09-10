@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import type { PkgJSON } from '@/types'
 import deepmerge from 'deepmerge'
 import fs from 'fs'
 import path from 'path'
 import { v4 } from 'uuid'
-import { PkgJSON } from '../types'
 import { isPathExists, isPathExistsSync } from './is'
 import { readJSON, readJSONSync } from './read'
 

@@ -1,0 +1,1 @@
+{"version":3,"file":"command-plugin.d.ts","sourceRoot":"","sources":["../../src/core/command-plugin.ts"],"names":[],"mappings":"AAWA,OAAO,EAAE,SAAS,EAAE,MAAM,cAAc,CAAA;AACxC,OAAO,KAAK,EAAE,gBAAgB,EAAE,MAAM,WAAW,CAAA;8BAE5B,SAAS,GAAG,gBAAgB;AAAjD,wBAsJC"}

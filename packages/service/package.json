@@ -1,7 +1,7 @@
 {
   "name": "@eljs/service",
   "version": "0.26.0",
-  "description": "@eljs/service",
+  "description": "NodeJS 插件服务",
   "keywords": [
     "eljs",
     "service"
@@ -16,18 +16,19 @@
   },
   "license": "MIT",
   "author": "liquan",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "module": "esm/index.js",
+  "types": "esm/index.d.ts",
   "files": [
-    "lib"
+    "esm/*",
+    "lib/*"
   ],
   "scripts": {
-    "build": "npm run clean && tsc",
-    "clean": "rimraf lib",
-    "dev": "tsc --watch"
+    "build": "father build",
+    "clean": "rimraf lib && rimraf esm && rimraf node_modules/.cache/father",
+    "dev": "father dev"
   },
   "dependencies": {
-    "@eljs/utils": "0.26.0",
+    "@eljs/utils": "workspace:*",
     "@types/hash-sum": "^1.0.0",
     "@types/lodash": "^4.14.186",
     "deepmerge": "^4.2.2",

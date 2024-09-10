@@ -1,7 +1,7 @@
-import { Create, TemplateInfo } from '@eljs/create'
+import { Create, type TemplateInfo } from '@eljs/create'
 import { prompts } from '@eljs/utils'
 import assert from 'assert'
-import { CreateTemplateOpts } from './types'
+import type { CreateTemplateOpts } from './types'
 
 export function objectToArray(
   obj: Record<string, unknown>,

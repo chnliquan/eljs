@@ -1,7 +1,7 @@
+import type { Api } from '@/types'
 import { chalk, prompts } from '@eljs/utils'
 import { execSync } from 'child_process'
 import dayjs from 'dayjs'
-import { Api } from '../../types'
 import { author, email, getGitHref, getGitUrl } from '../const'
 
 export default (api: Api) => {

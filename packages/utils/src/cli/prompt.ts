@@ -1,4 +1,4 @@
-import prompts, { Choice, PromptObject } from 'prompts'
+import prompts, { type Choice, type PromptObject } from 'prompts'
 import { isNull } from '../type'
 
 /**

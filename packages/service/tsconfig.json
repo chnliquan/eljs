@@ -1,9 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
+  "include": ["src", "../../global.d.ts"],
   "compilerOptions": {
-    "rootDir": "./src",
-    "outDir": "./lib",
-    "lib": ["esnext", "DOM"]
-  },
-  "include": ["src"]
+    "declarationDir": "esm",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
 }

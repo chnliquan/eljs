@@ -1,11 +1,10 @@
+import type { Api } from '@/types'
 import {
   extractCallDir,
   isDirectorySync,
   type RenderTemplateOpts,
 } from '@eljs/utils'
 import { join, resolve } from 'path'
-
-import { Api } from '../../types'
 
 export default (api: Api) => {
   // 复制文件夹

@@ -1,7 +1,6 @@
-import { chalk, confirm, PkgJSON } from '@eljs/utils'
-
-import { PublishTag } from '../types'
-import { getBumpVersion } from '../utils/prompt'
+import type { PublishTag } from '@/types'
+import { getBumpVersion } from '@/utils'
+import { chalk, confirm, type PkgJSON } from '@eljs/utils'
 
 export interface ReconfirmOpts {
   cwd: string

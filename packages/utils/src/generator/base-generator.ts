@@ -1,18 +1,18 @@
-import chalk from 'chalk'
-import { readdirSync } from 'fs'
-import prompts, { Answers, PromptObject } from 'prompts'
-import { confirm } from '../cli'
+import { confirm } from '@/cli'
 import {
   copyDirectory,
-  CopyDirectoryOpts,
   copyFile,
-  CopyFileOpts,
   copyTpl,
-  CopyTplOpts,
+  type CopyDirectoryOpts,
+  type CopyFileOpts,
+  type CopyTplOpts,
   type RenderTemplateOpts,
-} from '../file'
-import { logger } from '../logger'
-import { isFunction } from '../type'
+} from '@/file'
+import { logger } from '@/logger'
+import { isFunction } from '@/type'
+import chalk from 'chalk'
+import { readdirSync } from 'fs'
+import prompts, { type Answers, type PromptObject } from 'prompts'
 
 const TARGET_DIR_WHITE_LIST = ['.git', 'LICENSE']
 

@@ -3,7 +3,7 @@ import { program } from 'commander'
 import path from 'path'
 import { defaultTemplateConfig } from './config'
 import { CreateTemplate } from './create'
-import { TemplateConfig } from './types'
+import type { TemplateConfig } from './types'
 
 cli()
 

@@ -1,6 +1,6 @@
-import { Args } from '../types'
+import type { Args } from '@/types'
 import { Plugin } from './plugin'
-import { ResolveConfigMode } from './plugin-api'
+import type { ResolveConfigMode } from './plugin-api'
 
 export interface CommandOpts {
   /**

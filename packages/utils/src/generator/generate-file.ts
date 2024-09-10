@@ -1,4 +1,4 @@
-import { Generator, GeneratorOpts } from './generator'
+import { Generator, type GeneratorOpts } from './generator'
 
 export async function generateFile(opts: GeneratorOpts) {
   const generator = new Generator(opts)

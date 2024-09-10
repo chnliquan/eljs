@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { TemplateConfig } from './types'
+import type { TemplateConfig } from './types'
 
 export const defaultTemplateConfig: TemplateConfig = {
   appType: {

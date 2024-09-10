@@ -1,9 +1,9 @@
-import { DistributiveOmit, isPlainObject, isString } from '@eljs/utils'
+import { PluginType, ServiceStage, type Generator } from '@/types'
+import { isPlainObject, isString, type DistributiveOmit } from '@eljs/utils'
 import assert from 'assert'
 import { EnableBy } from '../enum'
-import { Generator, PluginType, ServiceStage } from '../types'
-import { Command, CommandOpts } from './command'
-import { Hook, HookOpts } from './hook'
+import { Command, type CommandOpts } from './command'
+import { Hook, type HookOpts } from './hook'
 import { Plugin } from './plugin'
 import { Service } from './service'
 

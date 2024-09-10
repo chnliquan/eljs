@@ -1,3 +1,4 @@
+import type { TemplateInfo } from '@/types'
 import {
   chalk,
   downloadGitRepo,
@@ -5,13 +6,12 @@ import {
   getNpmInfo,
   logger,
   ora,
-  PkgJSON,
   pkgNameAnalysis,
   readJSONSync,
   runCommand,
+  type PkgJSON,
 } from '@eljs/utils'
 import path from 'path'
-import { TemplateInfo } from '../types'
 
 export class Download {
   private _opts: TemplateInfo

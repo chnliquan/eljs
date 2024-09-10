@@ -1,0 +1,1 @@
+{"version":3,"file":"download.d.ts","sourceRoot":"","sources":["../../src/git/download.ts"],"names":[],"mappings":"AAKA;;GAEG;AACH,MAAM,WAAW,mBAAmB;IAClC;;OAEG;IACH,MAAM,CAAC,EAAE,MAAM,CAAA;IACf;;OAEG;IACH,IAAI,CAAC,EAAE,MAAM,CAAA;CACd;AAED;;;;GAIG;AACH,wBAAsB,eAAe,CACnC,GAAG,EAAE,MAAM,EACX,IAAI,CAAC,EAAE,mBAAmB,GACzB,OAAO,CAAC,MAAM,CAAC,CA0BjB"}

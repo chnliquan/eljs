@@ -1,3 +1,18 @@
+import {
+  ApplyPluginsType,
+  Env,
+  PluginType,
+  ServiceStage,
+  type AppData,
+  type ApplyEvent,
+  type ApplyModify,
+  type Args,
+  type Generator,
+  type Paths,
+  type PluginConfig,
+  type ProxyPluginAPIPropsExtractorReturnType,
+  type UserConfig,
+} from '@/types'
 import * as utils from '@eljs/utils'
 import assert from 'assert'
 import fastestLevenshtein from 'fastest-levenshtein'
@@ -5,21 +20,6 @@ import _ from 'lodash'
 import { AsyncSeriesWaterfallHook } from 'tapable'
 import { ConfigManager } from '../config/manager'
 import { EnableBy } from '../enum'
-import {
-  AppData,
-  ApplyEvent,
-  ApplyModify,
-  ApplyPluginsType,
-  Args,
-  Env,
-  Generator,
-  Paths,
-  PluginConfig,
-  PluginType,
-  ProxyPluginAPIPropsExtractorReturnType,
-  ServiceStage,
-  UserConfig,
-} from '../types'
 import { Command } from './command'
 import { Hook } from './hook'
 import { Plugin } from './plugin'

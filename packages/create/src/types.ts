@@ -1,10 +1,10 @@
 import {
-  AppData as ServiceAppData,
   PluginAPI,
-  PluginConfig,
+  type AppData as ServiceAppData,
+  type PluginConfig,
 } from '@eljs/service'
 import type { PackageManager, PkgJSON, RenderTemplateOpts } from '@eljs/utils'
-import { GenerateService, GenerateServicePluginAPI } from './core/service'
+import { GenerateService, type GenerateServicePluginAPI } from './core/service'
 
 export type TemplateType = 'npm' | 'git' | 'local'
 

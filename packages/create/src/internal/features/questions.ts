@@ -1,5 +1,5 @@
+import type { Api } from '@/types'
 import path from 'path'
-import { Api } from '../../types'
 import { author, email, getGitUrl } from '../const'
 
 export default async (api: Api) => {

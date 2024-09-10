@@ -1,25 +1,25 @@
 import {
-  ApplyAdd,
-  ApplyEvent,
-  ApplyModify,
-  Paths,
   Service,
-  ServiceOpts,
-  ServicePluginAPI,
+  type ApplyAdd,
+  type ApplyEvent,
+  type ApplyModify,
+  type Paths,
+  type ServiceOpts,
+  type ServicePluginAPI,
 } from '@eljs/service'
 import type { PkgJSON, RenderTemplateOpts } from '@eljs/utils'
 import { prompts } from '@eljs/utils'
 
 import {
-  AppData,
-  CopyDirectoryOpts,
-  CopyFileOpts,
-  CopyTplOpts,
-  ExtendPackageOpts,
-  GeneratePluginConfig,
   GenerateServiceStage,
-  Prompts,
-} from '../types'
+  type AppData,
+  type CopyDirectoryOpts,
+  type CopyFileOpts,
+  type CopyTplOpts,
+  type ExtendPackageOpts,
+  type GeneratePluginConfig,
+  type Prompts,
+} from '@/types'
 
 export interface GenerateServiceOpts extends ServiceOpts {
   /**

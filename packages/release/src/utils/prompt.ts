@@ -1,7 +1,7 @@
-import { chalk, logger, pascalCase, PkgJSON, prompts } from '@eljs/utils'
+import { VERSION_TAGS } from '@/constants'
+import type { PublishTag } from '@/types'
+import { chalk, logger, pascalCase, prompts, type PkgJSON } from '@eljs/utils'
 import semver from 'semver'
-import { VERSION_TAGS } from '../constants'
-import { PublishTag } from '../types'
 import {
   getDistTag,
   getReferenceVersion,

@@ -1,7 +1,6 @@
+import type { PublishTag } from '@/types'
 import { chalk, getNpmDistTag, logger, run, timeout } from '@eljs/utils'
 import semver from 'semver'
-
-import { PublishTag } from '../types'
 
 export function isPrerelease(version: string): boolean {
   return (

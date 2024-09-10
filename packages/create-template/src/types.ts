@@ -1,4 +1,4 @@
-import { TemplateInfo } from '@eljs/create'
+import type { TemplateInfo } from '@eljs/create'
 
 export interface CreateTemplateOpts {
   /**

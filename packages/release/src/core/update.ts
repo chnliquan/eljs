@@ -1,9 +1,9 @@
 import {
   getPackageManager,
   logger,
-  PkgJSON,
   runCommand,
   writeJSONSync,
+  type PkgJSON,
 } from '@eljs/utils'
 
 export async function updateLock(cwd: string) {

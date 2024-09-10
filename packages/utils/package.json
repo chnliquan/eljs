@@ -1,9 +1,10 @@
 {
   "name": "@eljs/utils",
   "version": "0.26.0",
-  "description": "工具函数库",
+  "description": "NodeJS 工具库",
   "keywords": [
     "eljs",
+    "node",
     "utils"
   ],
   "homepage": "https://github.com/chnliquan/eljs/tree/master/packages/utils#readme",
@@ -17,14 +18,16 @@
   "license": "MIT",
   "author": "liquan",
   "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "module": "esm/index.js",
+  "types": "esm/index.d.ts",
   "files": [
-    "lib"
+    "esm/*",
+    "lib/*"
   ],
   "scripts": {
-    "build": "npm run clean && tsc",
-    "clean": "rimraf lib",
-    "dev": "tsc --watch"
+    "build": "father build",
+    "clean": "rimraf lib && rimraf esm && rimraf node_modules/.cache/father",
+    "dev": "father dev"
   },
   "dependencies": {
     "@types/cross-spawn": "^6.0.6",
@@ -51,8 +54,8 @@
     "deepmerge": "^4.3.1",
     "download": "^8.0.0",
     "ejs": "^3.1.10",
-    "find-up": "^5.0.0",
     "execa": "^5.1.1",
+    "find-up": "^5.0.0",
     "glob": "^8.0.3",
     "ini": "^2.0.0",
     "js-yaml": "^4.1.0",

@@ -53,6 +53,7 @@
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-dirs": "^0.0.4",
     "eslint-plugin-prettier": "^4.2.1",
+    "father": "^4.5.0",
     "husky": "^8.0.1",
     "jest": "^27.5.1",
     "lint-staged": "^12.3.4",

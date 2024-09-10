@@ -3,21 +3,21 @@
     "sourceMap": false,
     "target": "es2016",
     "useDefineForClassFields": false,
-    "module": "CommonJS",
+    "module": "esnext",
     "moduleResolution": "node",
     "allowJs": false,
     "declaration": true,
     "declarationMap": true,
     "strict": true,
     "noUnusedLocals": true,
-    "isolatedModules": true,
     "experimentalDecorators": true,
+    "verbatimModuleSyntax": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "removeComments": false,
+    "skipLibCheck": true,
     "jsx": "react",
     "lib": ["esnext"]
   },
-  "include": ["packages/global.d.ts"],
-  "exclude": ["node_modules", "lib"]
+  "exclude": ["node_modules", "lib", "esm"]
 }

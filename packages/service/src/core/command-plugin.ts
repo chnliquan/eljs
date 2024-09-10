@@ -10,7 +10,7 @@ import _ from 'lodash'
 import { GeneratorType } from '../enum'
 import type { Generator } from '../types'
 import { PluginAPI } from './plugin-api'
-import { ServicePluginAPI } from './service'
+import type { ServicePluginAPI } from './service'
 
 export default (api: PluginAPI & ServicePluginAPI) => {
   api.registerCommand({

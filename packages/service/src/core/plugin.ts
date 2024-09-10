@@ -1,10 +1,10 @@
 import {
   camelCase,
   isPathExistsSync,
-  PkgJSON,
   register,
   resolve,
   winPath,
+  type PkgJSON,
 } from '@eljs/utils'
 import assert from 'assert'
 import esbuild from 'esbuild'
