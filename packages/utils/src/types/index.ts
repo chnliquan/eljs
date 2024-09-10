@@ -21,6 +21,11 @@ export interface PkgJSON {
   version?: string
   private?: boolean
   description?: string
+  keywords?: string[]
+  homepage?: string
+  bugs?: {
+    url: string
+  }
   repository?: {
     type: string
     url: string
@@ -31,18 +36,19 @@ export interface PkgJSON {
   module?: string
   browser?: string
   types?: string
+  bin?: Record<string, string> | string
   files?: string[]
   scripts?: Record<string, string>
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  'lint-staged'?: Record<string, string>
+  'lint-staged'?: Record<string, string | string[]>
   dependencies?: Record<string, string>
   devDependencies?: Record<string, string>
   peerDependencies?: Record<string, string>
   publishConfig?: {
     registry: string
+    [properName: string]: string
   }
   engines?: {
-    node: string
     [properName: string]: string
   }
   workspaces?: string[]
