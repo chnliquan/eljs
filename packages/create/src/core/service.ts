@@ -261,10 +261,6 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
    */
   copyDirectory: (opts: CopyDirectoryOpts) => void
   /**
-   * 格式化 JSON
-   */
-  formatJSON: (json: string | Record<any, any>) => Record<any, any>
-  /**
    * 将模板文件渲染到目标文件对象中
    */
   render: (

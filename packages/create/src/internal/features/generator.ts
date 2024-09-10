@@ -42,14 +42,4 @@ export default (api: Api) => {
       })
     },
   })
-
-  // 格式化 JSON
-  api.registerMethod({
-    name: 'formatJSON',
-    async fn(json: string | Record<any, any>) {
-      // esm 语法需要使用动态 import 引入
-      const { default: sortPackageJson } = await import('sort-package-json')
-      return sortPackageJson(json as string)
-    },
-  })
 }

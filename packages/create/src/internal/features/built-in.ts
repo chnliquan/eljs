@@ -3,8 +3,9 @@ import {
   chalk,
   install,
   isFunction,
-  isPathExistsSync,
+  isPathExists,
   logger,
+  readJSON,
   writeJSON,
 } from '@eljs/utils'
 import { join } from 'path'
@@ -26,9 +27,8 @@ export default (api: Api) => {
       const pkgJSONPath = join(api.paths.target, 'package.json')
       let pkgJSON = api.service.pkgJSON
 
-      if (isPathExistsSync(pkgJSONPath)) {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const originPkgJSON = require(pkgJSONPath)
+      if (await isPathExists(pkgJSONPath)) {
+        const originPkgJSON = await readJSON(pkgJSONPath)
         pkgJSON = api.lodash.merge(originPkgJSON, pkgJSON)
       }
 
@@ -36,10 +36,9 @@ export default (api: Api) => {
         return
       }
 
-      await writeJSON(
-        pkgJSONPath,
-        await api.formatJSON(pkgJSON as Record<any, any>),
-      )
+      // esm 语法需要使用动态 import 引入
+      const { default: sortPackageJson } = await import('sort-package-json')
+      await writeJSON(pkgJSONPath, sortPackageJson(pkgJSON as Record<any, any>))
     },
   })
 
