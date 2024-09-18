@@ -1,7 +1,6 @@
 import download from 'download'
 
 import { tmpdir } from '../file'
-import { logger } from '../logger'
 
 /**
  * 下载 NPM 压缩文件
@@ -24,9 +23,7 @@ export async function downloadNpmTarball(
       ...opts,
     })
   } catch (err) {
-    logger.printErrorAndExit(
-      `Failed to download template repository ${url}，\n ${err}.`,
-    )
+    throw new Error(`Failed to download ${url}，\n ${err}.`)
   }
 
   return dest

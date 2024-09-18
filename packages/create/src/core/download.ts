@@ -15,9 +15,11 @@ import path from 'path'
 
 export class Download {
   private _opts: TemplateInfo
+  private _spinner: ora.Ora
 
   public constructor(opts: TemplateInfo) {
     this._opts = opts
+    this._spinner = ora()
   }
 
   public async download() {
@@ -33,7 +35,51 @@ export class Download {
     }
   }
 
-  private async _installDependencies(dist: string, spinner: ora.Ora) {
+  private async _downloadNpmTarball(name: string, registry?: string) {
+    const { name: pkgName, version } = pkgNameAnalysis(name)
+    const data = await getNpmInfo(pkgName, {
+      version,
+      registry,
+    })
+
+    if (!data) {
+      throw new Error(
+        `模板 ${chalk.cyanBright(
+          `${pkgName}${version ? `@${version}` : ''}`,
+        )} 获取失败`,
+      )
+    }
+
+    const pkgSpec = chalk.cyanBright(`${pkgName}@${data.version}`)
+    this._spinner.start(`Downloading ${pkgSpec}`)
+
+    try {
+      const { tarball } = data.dist
+      const templateDir = await downloadNpmTarball(tarball)
+      this._spinner.succeed()
+      await this._installDependencies(templateDir, pkgSpec)
+      return templateDir
+    } catch (err) {
+      this._spinner.fail()
+      throw new Error((err as Error).message)
+    }
+  }
+
+  private async _downloadGit(url: string) {
+    this._spinner.start(`Downloading ${url}`)
+
+    try {
+      const templateDir = await downloadGitRepo(url)
+      this._spinner.succeed()
+      await this._installDependencies(templateDir, url)
+      return templateDir
+    } catch (err) {
+      this._spinner.fail()
+      throw new Error((err as Error).message)
+    }
+  }
+
+  private async _installDependencies(dist: string, pkgSpec: string) {
     try {
       const pkgJSON: PkgJSON = readJSONSync(path.join(dist, './package.json'))
 
@@ -41,60 +87,16 @@ export class Download {
         pkgJSON.dependencies &&
         Object.keys(pkgJSON.dependencies).length > 0
       ) {
-        spinner.start('安装模板依赖...')
+        this._spinner.start(`Installing ${pkgSpec}`)
         await runCommand('npm install --production', {
           cwd: dist,
           verbose: false,
         })
-        spinner.succeed('模板依赖安装成功')
+        this._spinner.succeed()
       }
     } catch (err) {
       console.log()
-      logger.error(`模板依赖安装失败：${(err as Error).message}`)
-    }
-  }
-
-  private async _downloadNpmTarball(name: string, registry?: string) {
-    const spinner = ora(`模板下载中...`).start()
-
-    try {
-      const { name: pkgName, version } = pkgNameAnalysis(name)
-      const data = await getNpmInfo(pkgName, {
-        version,
-        registry,
-      })
-
-      if (!data) {
-        throw new Error(
-          `模板 ${chalk.cyanBright(
-            `${pkgName}${version ? `@${version}` : ''}`,
-          )} 获取失败`,
-        )
-      }
-
-      const { tarball } = data.dist
-      const templateDir = await downloadNpmTarball(tarball)
-
-      await this._installDependencies(templateDir, spinner)
-      spinner.succeed('模板下载成功')
-      return templateDir
-    } catch (err) {
-      spinner.fail('模板下载失败')
-      throw new Error((err as Error).message)
-    }
-  }
-
-  private async _downloadGit(url: string) {
-    const spinner = ora(`模板下载中...`).start()
-
-    try {
-      const templateDir = await downloadGitRepo(url)
-
-      spinner.succeed('模板下载成功')
-      await this._installDependencies(templateDir, spinner)
-      return templateDir
-    } catch (err) {
-      spinner.fail('模板下载失败')
+      this._spinner.fail()
       throw new Error((err as Error).message)
     }
   }

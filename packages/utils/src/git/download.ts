@@ -1,7 +1,6 @@
 import path from 'path'
 import { run } from '../cp'
 import { tmpdir } from '../file'
-import { logger } from '../logger'
 
 /**
  * 下载选项
@@ -45,9 +44,7 @@ export async function downloadGitRepo(
       cwd: dest,
     })
   } catch (err) {
-    logger.printErrorAndExit(
-      `Failed to download template repository ${url}，\n ${err}.`,
-    )
+    throw new Error(`Failed to download ${url}，\n ${err}.`)
   }
 
   return path.join(dest, 'package')

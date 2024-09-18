@@ -110,7 +110,6 @@ export async function getNpmInfo(
       if (!data || isString(data) || data.error || data.code) {
         return null
       }
-      console.log(data['dist-tags'])
       return data
     })
     .catch(() => {
