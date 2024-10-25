@@ -1,5 +1,5 @@
 import { VERSION_TAGS } from '@/constants'
-import type { PublishTag } from '@/types'
+import type { DistTag } from '@/types'
 import { chalk, logger, pascalCase, prompts, type PkgJSON } from '@eljs/utils'
 import semver from 'semver'
 import {
@@ -11,17 +11,17 @@ import {
 
 function getPreVersionPromptQuestions(
   referenceVersion: string,
-  tag: PublishTag,
+  distTag: DistTag,
 ): prompts.PromptObject {
   return {
     name: 'value',
     type: 'select',
-    message: `Please select the ${tag} version to bump:`,
+    message: `Please select the ${distTag} version to bump:`,
     choices: ['prerelease', 'prepatch', 'preminor', 'premajor'].map(item => {
       const version = getVersion({
         referenceVersion,
         targetVersion: item,
-        tag,
+        distTag,
       })
       return {
         title: `${
@@ -37,10 +37,10 @@ export async function getBumpVersion(opts: {
   cwd: string
   pkgJSON: Required<PkgJSON>
   publishPkgNames: string[]
-  tag?: PublishTag
+  distTag?: DistTag
   targetVersion?: string
 }): Promise<string> {
-  const { cwd, pkgJSON, publishPkgNames, tag, targetVersion } = opts
+  const { cwd, pkgJSON, publishPkgNames, distTag, targetVersion } = opts
 
   const localVersion = pkgJSON.version
   const {
@@ -82,19 +82,19 @@ export async function getBumpVersion(opts: {
     )
   }
 
-  if (remoteAlphaVersion && (!tag || tag === 'alpha')) {
+  if (remoteAlphaVersion && (!distTag || distTag === 'alpha')) {
     logger.info(
       `- Remote alpha version: ${chalk.cyanBright.bold(remoteAlphaVersion)}`,
     )
   }
 
-  if (remoteBetaVersion && (!tag || tag === 'beta')) {
+  if (remoteBetaVersion && (!distTag || distTag === 'beta')) {
     logger.info(
       `- Remote beta version: ${chalk.cyanBright.bold(remoteBetaVersion)}`,
     )
   }
 
-  if (remoteNextVersion && (!tag || tag === 'next')) {
+  if (remoteNextVersion && (!distTag || distTag === 'next')) {
     logger.info(
       `- Remote next version: ${chalk.cyanBright.bold(remoteNextVersion)}`,
     )
@@ -106,10 +106,10 @@ export async function getBumpVersion(opts: {
     if (VERSION_TAGS.includes(targetVersion)) {
       return getVersion({
         targetVersion,
-        referenceVersion: tag
-          ? tag2referenceVersionMap[tag]
+        referenceVersion: distTag
+          ? tag2referenceVersionMap[distTag]
           : latestReferenceVersion,
-        tag,
+        distTag,
       })
     } else {
       if (!semver.valid(targetVersion)) {
@@ -190,7 +190,7 @@ export async function getBumpVersion(opts: {
     process.exit(1)
   }
 
-  if (!tag) {
+  if (!distTag) {
     answer = await prompts(
       [
         {
@@ -215,7 +215,7 @@ export async function getBumpVersion(opts: {
       )
     }
   } else {
-    if (tag === 'latest') {
+    if (distTag === 'latest') {
       answer = await prompts(
         [
           {
@@ -230,9 +230,9 @@ export async function getBumpVersion(opts: {
         },
       )
     } else {
-      const referenceVersion = tag2referenceVersionMap[tag]
+      const referenceVersion = tag2referenceVersionMap[distTag]
       answer = await prompts(
-        getPreVersionPromptQuestions(referenceVersion, tag),
+        getPreVersionPromptQuestions(referenceVersion, distTag),
         {
           onCancel,
         },

@@ -1,4 +1,4 @@
-import type { PublishTag } from '@/types'
+import type { DistTag } from '@/types'
 import { chalk, getNpmDistTag, logger, run, timeout } from '@eljs/utils'
 import semver from 'semver'
 
@@ -147,11 +147,11 @@ export function getReferenceVersion(
 interface Options {
   referenceVersion: string
   targetVersion?: string
-  tag?: PublishTag
+  distTag?: DistTag
 }
 
 export function getVersion(opts: Options) {
-  const { referenceVersion, targetVersion, tag } = opts
+  const { referenceVersion, targetVersion, distTag } = opts
 
   switch (targetVersion) {
     case 'major':
@@ -162,15 +162,15 @@ export function getVersion(opts: Options) {
     case 'preminor':
     case 'prepatch':
     case 'prerelease':
-      if (!tag || tag === 'latest') {
+      if (!distTag || distTag === 'latest') {
         logger.printErrorAndExit(
-          `Bump ${targetVersion} version should pass tag option.`,
+          `Bump ${targetVersion} version should pass distTag option.`,
         )
       }
       return semver.inc(
         referenceVersion,
         targetVersion,
-        tag === 'next' ? 'rc' : tag,
+        distTag === 'next' ? 'rc' : distTag,
       ) as string
     default:
       break

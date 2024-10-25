@@ -44,17 +44,17 @@ export async function release(opts: Options): Promise<void> {
     ownershipCheck = true,
     gitCheck = true,
     gitPush = true,
-    githubRelease = true,
+    createRelease = true,
+    independent = false,
     branch = '',
-    tag,
+    distTag,
     repoType: customRepoType,
-    changelogPreset = '@eljs/changelog-preset',
     version,
     beforeUpdateVersion,
     beforeChangelog,
   } = opts
 
-  // check git status
+  // 1. check git status
   if (gitCheck) {
     step('Checking git ...')
     if (!(await isGitClean(cwd))) {
@@ -66,7 +66,7 @@ export async function release(opts: Options): Promise<void> {
     }
   }
 
-  // check git branch
+  // 2. check git branch
   if (branch) {
     step('Checking branch ...')
     if (!(await isGitBranch(branch, cwd))) {
@@ -90,7 +90,7 @@ export async function release(opts: Options): Promise<void> {
   const repoType =
     customRepoType || (repoUrl?.includes('github') ? 'github' : 'gitlab')
 
-  // check npm registry
+  // 3. check npm registry
   if (registryCheck && !dry) {
     step('Checking registry ...')
     await checkRegistry({
@@ -101,7 +101,7 @@ export async function release(opts: Options): Promise<void> {
     })
   }
 
-  // check ownership
+  // 4. check ownership
   if (ownershipCheck && !dry) {
     step('Checking npm ownership ...')
     await checkOwnership(publishPkgNames, cwd)
@@ -132,13 +132,13 @@ export async function release(opts: Options): Promise<void> {
   let changelog = ''
 
   if (!publishOnly) {
-    // bump version
+    // 5. bump version
     step('Bump version ...')
     bumpVersion = await getBumpVersion({
       cwd,
       pkgJSON: rootPkgJSON,
       publishPkgNames,
-      tag,
+      distTag,
       targetVersion: version,
     })
 
@@ -148,7 +148,7 @@ export async function release(opts: Options): Promise<void> {
         bumpVersion,
         publishPkgNames,
         pkgJSON: rootPkgJSON,
-        tag,
+        distTag,
         verbose,
       })
     }
@@ -157,7 +157,7 @@ export async function release(opts: Options): Promise<void> {
       await beforeUpdateVersion(bumpVersion)
     }
 
-    // update all package versions and inter-dependencies
+    // 6. update all package versions and inter-dependencies
     step('Updating versions ...')
     await updateVersions({
       rootPkgJSONPath,
@@ -168,7 +168,7 @@ export async function release(opts: Options): Promise<void> {
       version: bumpVersion,
     })
 
-    // update pnpm-lock.yaml or package-lock.json
+    // 7. update pnpm-lock.yaml or package-lock.json
     step('Updating lockfile...')
     await updateLock(cwd)
 
@@ -176,36 +176,41 @@ export async function release(opts: Options): Promise<void> {
       await beforeChangelog()
     }
 
-    // generate changelog
+    // 8. generate changelog
     step(`Generating changelog ...`)
     changelog = await generateChangelog({
-      changelogPreset: changelogPreset as string,
-      latest,
-      pkgName: rootPkgJSON.name as string,
       cwd,
+      pkgName: rootPkgJSON.name as string,
+      latest,
+      independent,
     })
 
-    // commit git changes
+    // 9. commit git changes
     step('Committing changes ...')
-    await commit(bumpVersion, gitPush)
+    await commit({
+      version: bumpVersion,
+      gitPush,
+      independent,
+      pkgNames,
+    })
   }
 
-  // publish package
+  // 10. publish package
   step(`Publishing package ...`)
   await publish({
     version: bumpVersion,
     publishPkgDirs,
     publishPkgNames,
     cwd,
-    tag,
+    distTag,
     gitCheck,
     changelog,
     repoType,
     repoUrl,
-    githubRelease,
+    createRelease,
   })
 
-  // sync cnpm
+  // 11. sync cnpm
   if (syncCnpm) {
     step('Sync cnpm ...')
     await sync(publishPkgNames)

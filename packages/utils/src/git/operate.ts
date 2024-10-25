@@ -31,11 +31,19 @@ export async function gitPushCommit(
     verbose?: boolean
   },
 ): Promise<void> {
-  if (!(await isGitAheadRemote(opts?.cwd))) {
+  const isAheadRemote = await isGitAheadRemote(opts?.cwd)
+
+  if (!isAheadRemote) {
     return
   }
+
   const branch = await getGitBranch()
-  await run('git', ['push', '--set-upstream', 'origin', branch], opts)
+
+  await run(
+    'git',
+    ['push', '--follow-tags', '--set-upstream', 'origin', branch],
+    opts,
+  )
 }
 
 /**
@@ -49,7 +57,7 @@ export async function gitTag(
     verbose?: boolean
   },
 ): Promise<void> {
-  await run('git', ['tag', tag], opts)
+  await run('git', ['tag', tag, '-m', tag], opts)
 }
 
 /**

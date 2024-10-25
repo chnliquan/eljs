@@ -23,10 +23,10 @@ export async function isGitBehindRemote(cwd?: string): Promise<boolean> {
   return execa('git', ['fetch'], {
     cwd,
   }).then(() => {
-    return execa('git', ['status', '--short', '--branch'], {
+    return execa('git', ['rev-list', '--count', 'HEAD...@{u}'], {
       cwd,
     }).then(data => {
-      return data.stdout.trim().includes('behind')
+      return parseInt(data.stdout.trim(), 10) > 0
     })
   })
 }
@@ -39,10 +39,10 @@ export async function isGitAheadRemote(cwd?: string): Promise<boolean> {
   return execa('git', ['fetch'], {
     cwd,
   }).then(() => {
-    return execa('git', ['status', '--short', '--branch'], {
+    return execa('git', ['rev-list', '--count', 'HEAD', '@{u}...HEAD'], {
       cwd,
     }).then(data => {
-      return data.stdout.trim().includes('ahead')
+      return parseInt(data.stdout.trim(), 10) > 0
     })
   })
 }

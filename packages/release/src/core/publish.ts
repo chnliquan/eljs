@@ -3,7 +3,7 @@ import fs from 'fs'
 import githubReleaseUrl from 'new-github-release-url'
 import open from 'open'
 import path from 'path'
-import type { PublishTag } from '../types'
+import type { DistTag } from '../types'
 import {
   isAlphaVersion,
   isBetaVersion,
@@ -17,11 +17,11 @@ export async function publish(opts: {
   publishPkgNames: string[]
   cwd?: string
   changelog?: string
-  tag?: PublishTag
+  distTag?: DistTag
   gitCheck?: boolean
   repoType: string
   repoUrl?: string
-  githubRelease?: boolean
+  createRelease?: boolean
 }) {
   const {
     version,
@@ -29,23 +29,23 @@ export async function publish(opts: {
     publishPkgNames,
     cwd = process.cwd(),
     changelog,
-    tag,
+    distTag,
     gitCheck,
     repoType,
     repoUrl,
-    githubRelease,
+    createRelease,
   } = opts
   const isPnpm = publishPkgDirs.length > 1
-  let publishTag: PublishTag | undefined
+  let resolvedDistTag: DistTag | undefined
 
-  if (tag) {
-    publishTag = tag
+  if (distTag) {
+    resolvedDistTag = distTag
   } else if (isAlphaVersion(version)) {
-    publishTag = 'alpha'
+    resolvedDistTag = 'alpha'
   } else if (isBetaVersion(version)) {
-    publishTag = 'beta'
+    resolvedDistTag = 'beta'
   } else if (isRcVersion(version)) {
-    publishTag = 'next'
+    resolvedDistTag = 'next'
   }
 
   const promiseArr = []
@@ -56,7 +56,7 @@ export async function publish(opts: {
     const pkgName = publishPkgNames[i]
 
     try {
-      promiseArr.push(publishPackage(pkgDir, pkgName, version, publishTag))
+      promiseArr.push(publishPackage(pkgDir, pkgName, version, resolvedDistTag))
     } catch (error) {
       errors.push(pkgName)
     }
@@ -82,7 +82,7 @@ export async function publish(opts: {
   }
 
   // github release
-  if (githubRelease && repoType === 'github' && repoUrl) {
+  if (createRelease && repoType === 'github' && repoUrl) {
     let body = ''
 
     if (changelog) {
@@ -109,10 +109,10 @@ export async function publish(opts: {
     pkgDir: string,
     pkgName: string,
     version: string,
-    publishTag?: PublishTag,
+    distTag?: DistTag,
   ) {
     const cmd = isPnpm ? 'pnpm' : 'npm'
-    const tag = publishTag ? ['--tag', publishTag] : []
+    const tag = distTag ? ['--tag', distTag] : []
 
     const cliArgs = [
       'publish',

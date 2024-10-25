@@ -1,34 +1,100 @@
 import { isPathExistsSync, logger } from '@eljs/utils'
-import conventionalChangelog from 'conventional-changelog'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
 
 export async function generateChangelog(opts: {
   pkgName: string
-  changelogPreset: string
   latest?: boolean
   cwd?: string
+  independent?: boolean
 }): Promise<string> {
-  const { pkgName, changelogPreset, latest = true, cwd = process.cwd() } = opts
+  const {
+    pkgName,
+    latest = true,
+    cwd = process.cwd(),
+    independent = false,
+  } = opts
   const CHANGELOG = path.join(cwd, 'CHANGELOG.md')
   const LATESTLOG = path.join(cwd, 'LATESTLOG.md')
   let hasError = false
 
+  const conventionalChangelog = (await import('conventional-changelog')).default
+  const config = (await import('@eljs/conventional-changelog-preset')).default
+
   return new Promise((resolve, reject) => {
-    let config
+    const stream = conventionalChangelog(
+      // https://github.com/conventional-changelog/conventional-changelog/tree/master/packages/conventional-changelog-core#conventionalchangelogcoreoptions-context-gitrawcommitsopts-parseropts-writeropts
+      {
+        config,
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        tagPrefix: independent ? /^.+@/ : '',
+        // tagPrefix: independent ? `${pkgName}@` : '',
+      },
+      {
+        commit: 'commit',
+      },
+      undefined,
+      undefined,
+      {
+        // https://github.com/conventional-changelog/conventional-changelog/blob/master/packages/conventional-changelog-core/lib/merge-config.js#L305
+        finalizeContext: function (
+          context: any,
+          writerOpts: any,
+          filteredCommits: any,
+          keyCommit: any,
+          originalCommits: any,
+        ) {
+          const semverTags = context.gitSemverTags
+          const firstCommit = originalCommits[0]
+          const lastCommit = originalCommits[originalCommits.length - 1]
+          const firstCommitHash = firstCommit ? firstCommit.hash : null
+          const lastCommitHash = lastCommit ? lastCommit.hash : null
 
-    try {
-      config = require(changelogPreset)
-    } catch (err) {
-      logger.printErrorAndExit(
-        `can not resolve the changelog preset ${changelogPreset}.`,
-      )
-    }
+          if ((!context.currentTag || !context.previousTag) && keyCommit) {
+            const match = /tag:\s*(.+?)[,)]/gi.exec(keyCommit.gitTags)
+            const currentTag = context.currentTag
+            context.currentTag = currentTag || match ? match?.[1] : null
+            const index = semverTags.indexOf(context.currentTag)
 
-    const stream = conventionalChangelog({
-      config,
-    })
+            // if `keyCommit.gitTags` is not a semver
+            if (index === -1) {
+              context.currentTag = currentTag || null
+            } else {
+              const previousTag = (context.previousTag = semverTags[index + 1])
+
+              if (!previousTag) {
+                context.previousTag = context.previousTag || lastCommitHash
+              }
+            }
+          } else {
+            context.previousTag = context.previousTag || semverTags[0]
+
+            if (context.version === 'Unreleased') {
+              context.currentTag = context.currentTag || firstCommitHash
+            } else if (!context.currentTag) {
+              context.currentTag = independent
+                ? context.previousTag.replace(
+                    /(\d+\.\d+\.\d+)/,
+                    context.version,
+                  )
+                : guessNextTag(context.previousTag, context.version)
+            }
+          }
+
+          if (
+            typeof context.linkCompare !== 'boolean' &&
+            context.previousTag &&
+            context.currentTag
+          ) {
+            context.linkCompare = true
+          }
+
+          return context
+        },
+      },
+    )
 
     let changelog = ''
     let latestLog = ''
@@ -101,4 +167,24 @@ export async function generateChangelog(opts: {
       resolve(latestLog)
     })
   })
+}
+
+function guessNextTag(previousTag: string, version: string) {
+  if (previousTag) {
+    if (previousTag[0] === 'v' && version[0] !== 'v') {
+      return 'v' + version
+    }
+
+    if (previousTag[0] !== 'v' && version[0] === 'v') {
+      return version.replace(/^v/, '')
+    }
+
+    return version
+  }
+
+  if (version[0] !== 'v') {
+    return 'v' + version
+  }
+
+  return version
 }

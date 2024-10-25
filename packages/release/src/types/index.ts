@@ -2,7 +2,7 @@ import conventionalChangelog from 'conventional-changelog'
 
 export type ChangelogConfig = conventionalChangelog.Options['config']
 
-export type PublishTag = 'latest' | 'alpha' | 'beta' | 'next'
+export type DistTag = 'latest' | 'alpha' | 'beta' | 'next'
 export type RepoType = 'github' | 'gitlab'
 
 export type Version =
@@ -22,6 +22,11 @@ export interface Options {
    * 工作目录
    */
   cwd?: string
+  /**
+   * 是否生成独立的 git tag
+   * @default false
+   */
+  independent?: boolean
   /**
    * 是否只打印信息
    * @default false
@@ -76,24 +81,19 @@ export interface Options {
    * 是否提交到 github release
    * @default true
    */
-  githubRelease?: boolean
+  createRelease?: boolean
   /**
-   * 是否检查当前分支
+   * 指定发布分支
    */
   branch?: string
   /**
-   * 自定义 tag
+   * 自定义 npm dist tag
    */
-  tag?: PublishTag
+  distTag?: DistTag
   /**
    * 仓库类型
    */
   repoType?: RepoType
-  /**
-   * 更新日志预设
-   * @default '@eljs/changelog-preset'
-   */
-  changelogPreset?: string
   /**
    * 自定义版本
    */

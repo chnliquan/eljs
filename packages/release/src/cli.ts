@@ -18,6 +18,7 @@ function cli() {
       '-v, --version',
       'Output the current version.',
     )
+    .option('--independent', 'Tag published package independent.')
     .option(
       '--dry',
       'Instead of executing, display details about the affected packages that would be publish.',
@@ -30,22 +31,18 @@ function cli() {
     .option('--no-ownership-check', 'No check the npm ownership.')
     .option('--no-registry-check', 'No check the package registry.')
     .option('--no-git-check', 'No check the git status.')
-    .option('--no-git-push', 'No push commit to remote.')
-    .option('--no-github-release', 'No release to github.')
+    .option('--no-git-push', 'No push commit to git remote.')
+    .option('--no-create-release', 'No release to git client.')
+    .option('--branch <branch>', 'Limit the branch  allowed to publish.')
     .option(
-      '--branch <branch>',
-      'Specify the branch that is allowed to publish.',
+      '--dist-tag <dist-tag>',
+      'Publish packages with the specified npm dist-tag.',
     )
-    .option('--tag <tag>', 'Specify the publish tag.')
     .option(
       '--repo-type <repo-type>',
-      'Specify the publish type, github or gitlab.',
+      'Publish packages with the specified git type.',
     )
-    .option(
-      '--changelog-preset <changelog-preset>',
-      'Customize conventional changelog preset.',
-    )
-    .argument('[version]', 'Target bump version.', checkVersion)
+    .argument('[version]', 'Customize bump version.', checkVersion)
 
   program.commands.forEach(c => c.on('--help', () => console.log()))
 
