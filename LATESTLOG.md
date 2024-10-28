@@ -1,14 +1,14 @@
-## [Changes](https://github.com/chnliquan/eljs/compare/v0.26.3...v0.27.0) (2024-09-18)
+## [Changes](https://github.com/chnliquan/eljs/compare/v0.27.0...v0.28.0) (2024-10-28)
 
 
-### ♻ Code Refactoring
+### ✨ Features
 
-* **create:** download ora ([619d1a6](https://github.com/chnliquan/eljs/commit/619d1a624b1cbd684b3812356a25d6be825ad6d9))
+* **release:** support independent tag ([c412348](https://github.com/chnliquan/eljs/commit/c4123487890a10d295f0774babdcc6670cb91acf))
 
 
 ### 🐛 Bug Fixes
 
-* **create:** delete format json ([2459936](https://github.com/chnliquan/eljs/commit/24599362ef4996f3b7e15d3c6739605f227daac3))
+* **utils:** git status ahead & git stauts behind ([a7a3ba2](https://github.com/chnliquan/eljs/commit/a7a3ba2c9933892ac530f47729e52d6c569fe65d))
 
 
 
