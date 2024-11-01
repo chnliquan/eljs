@@ -34,6 +34,8 @@ import { updateLock, updateVersions } from './update'
 export async function release(opts: Options): Promise<void> {
   const {
     cwd = process.cwd(),
+    preid,
+    independent = false,
     dry = false,
     verbose = false,
     latest = true,
@@ -45,9 +47,7 @@ export async function release(opts: Options): Promise<void> {
     gitCheck = true,
     gitPush = true,
     createRelease = true,
-    independent = false,
     branch = '',
-    distTag,
     repoType: customRepoType,
     version,
     beforeUpdateVersion,
@@ -136,19 +136,19 @@ export async function release(opts: Options): Promise<void> {
     step('Bump version ...')
     bumpVersion = await getBumpVersion({
       cwd,
+      preid,
       pkgJSON: rootPkgJSON,
       publishPkgNames,
-      distTag,
-      targetVersion: version,
+      releaseTypeOrVersion: version,
     })
 
     if (confirm) {
       bumpVersion = await reconfirm({
         cwd,
+        preid,
         bumpVersion,
         publishPkgNames,
         pkgJSON: rootPkgJSON,
-        distTag,
         verbose,
       })
     }
@@ -198,11 +198,11 @@ export async function release(opts: Options): Promise<void> {
   // 10. publish package
   step(`Publishing package ...`)
   await publish({
+    cwd,
+    preid,
     version: bumpVersion,
     publishPkgDirs,
     publishPkgNames,
-    cwd,
-    distTag,
     gitCheck,
     changelog,
     repoType,

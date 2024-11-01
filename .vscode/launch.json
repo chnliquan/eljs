@@ -55,14 +55,13 @@
         "--no-registry-check",
         "--no-ownership-check"
         // "--independent"
-        // "--tag",
-        // "next",
-        // "patch",
-        // "--only-publish"
+        // "--preid",
+        // "canary",
+        // "patch"
       ],
       // "cwd": "${workspaceFolder}",
-      "cwd": "/Users/ender/kwai/technology/monorepo-release",
-      // "cwd": "/Users/ender/kwai/technology/polyrepo-release",
+      "cwd": "/Users/ender/kwai/technology/polyrepo-release",
+      // "cwd": "/Users/ender/kwai/technology/monorepo-release",
       "console": "integratedTerminal"
     },
     {

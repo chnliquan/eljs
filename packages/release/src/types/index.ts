@@ -1,18 +1,12 @@
-import conventionalChangelog from 'conventional-changelog'
+/**
+ * 预发布 ID
+ */
+export type Preid = 'alpha' | 'beta' | 'rc' | 'canary'
 
-export type ChangelogConfig = conventionalChangelog.Options['config']
-
-export type DistTag = 'latest' | 'alpha' | 'beta' | 'next'
+/**
+ * 仓库类型
+ */
 export type RepoType = 'github' | 'gitlab'
-
-export type Version =
-  | 'major'
-  | 'minor'
-  | 'patch'
-  | 'premajor'
-  | 'preminor'
-  | 'prepatch'
-  | 'prerelease'
 
 /**
  * 发布选项
@@ -22,6 +16,10 @@ export interface Options {
    * 工作目录
    */
   cwd?: string
+  /**
+   * 预发布 ID
+   */
+  preid?: Preid
   /**
    * 是否生成独立的 git tag
    * @default false
@@ -86,10 +84,6 @@ export interface Options {
    * 指定发布分支
    */
   branch?: string
-  /**
-   * 自定义 npm dist tag
-   */
-  distTag?: DistTag
   /**
    * 仓库类型
    */

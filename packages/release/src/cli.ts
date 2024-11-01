@@ -1,8 +1,7 @@
 import { chalk, logger, minimist, readJSONSync } from '@eljs/utils'
 import { InvalidArgumentError, program } from 'commander'
 import path from 'path'
-import semver from 'semver'
-import { VERSION_TAGS } from './constants'
+import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
 import { release } from './core/release'
 
 cli().catch((err: Error) => {
@@ -17,6 +16,10 @@ function cli() {
       pkgJSON.version as string,
       '-v, --version',
       'Output the current version.',
+    )
+    .option(
+      '--preid <preid>',
+      'Specify the prerelease identifier when publishing a prerelease.',
     )
     .option('--independent', 'Tag published package independent.')
     .option(
@@ -33,16 +36,12 @@ function cli() {
     .option('--no-git-check', 'No check the git status.')
     .option('--no-git-push', 'No push commit to git remote.')
     .option('--no-create-release', 'No release to git client.')
-    .option('--branch <branch>', 'Limit the branch  allowed to publish.')
-    .option(
-      '--dist-tag <dist-tag>',
-      'Publish packages with the specified npm dist-tag.',
-    )
+    .option('--branch <branch>', 'Limit the branch allowed to publish.')
     .option(
       '--repo-type <repo-type>',
       'Publish packages with the specified git type.',
     )
-    .argument('[version]', 'Customize bump version.', checkVersion)
+    .argument('[version]', 'Specify the bump version.', checkVersion)
 
   program.commands.forEach(c => c.on('--help', () => console.log()))
 
@@ -72,15 +71,15 @@ function cli() {
   const opts = program.opts()
   const version = program.args[0]
 
-  if (opts.repoType && !['github', 'gitlab'].includes(opts.repoType)) {
+  if (opts.preid && !['alpha', 'beta', 'rc', 'canary'].includes(opts.preid)) {
     logger.printErrorAndExit(
-      `Expected the --repo-type as github or gitlab, but got ${opts.repoType}.`,
+      `Expected the --preid as alpha beta rc or canary, but got ${opts.preid}.`,
     )
   }
 
-  if (opts.tag && !['alpha', 'beta', 'next'].includes(opts.tag)) {
+  if (opts.repoType && !['github', 'gitlab'].includes(opts.repoType)) {
     logger.printErrorAndExit(
-      `Expected the --tag as alpha beta or next, but got ${opts.tag}.`,
+      `Expected the --repo-type as github or gitlab, but got ${opts.repoType}.`,
     )
   }
 
@@ -108,14 +107,12 @@ function enhanceErrorMessages(
   }
 }
 
-function checkVersion(value: string) {
-  if (VERSION_TAGS.includes(value as any)) {
+function checkVersion(value: ReleaseType) {
+  if (RELEASE_TYPES.includes(value)) {
     return value
   }
 
-  const isValid = Boolean(semver.valid(value))
-
-  if (!isValid) {
+  if (!semver.valid(value)) {
     throw new InvalidArgumentError('should be a valid semantic version.')
   }
 

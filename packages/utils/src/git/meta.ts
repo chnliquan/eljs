@@ -92,6 +92,18 @@ export async function getGitBranch(cwd?: string): Promise<string> {
 }
 
 /**
+ * 获取指定工作目录的 git commit 哈希值
+ * @param cwd 当前工作目录
+ * @returns sha
+ */
+export async function getGitCommitShortSha(cwd?: string): Promise<string> {
+  return execa('git', ['rev-parse', '--short', 'HEAD'], {
+    cwd,
+  }).then(data => {
+    return data.stdout.trim()
+  })
+}
+/**
  * 解析 git 地址
  * @param url git 地址
  */

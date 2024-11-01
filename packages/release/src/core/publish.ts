@@ -1,15 +1,16 @@
+import type { Preid } from '@/types'
+import {
+  isAlphaVersion,
+  isBetaVersion,
+  isCanaryVersion,
+  isPrerelease,
+  isRcVersion,
+} from '@/utils'
 import { chalk, execa, logger } from '@eljs/utils'
 import fs from 'fs'
 import githubReleaseUrl from 'new-github-release-url'
 import open from 'open'
 import path from 'path'
-import type { DistTag } from '../types'
-import {
-  isAlphaVersion,
-  isBetaVersion,
-  isPrerelease,
-  isRcVersion,
-} from '../utils'
 
 export async function publish(opts: {
   version: string
@@ -17,7 +18,7 @@ export async function publish(opts: {
   publishPkgNames: string[]
   cwd?: string
   changelog?: string
-  distTag?: DistTag
+  preid?: Preid
   gitCheck?: boolean
   repoType: string
   repoUrl?: string
@@ -29,23 +30,26 @@ export async function publish(opts: {
     publishPkgNames,
     cwd = process.cwd(),
     changelog,
-    distTag,
+    preid,
     gitCheck,
     repoType,
     repoUrl,
     createRelease,
   } = opts
+  // TODO：支持 yarn
   const isPnpm = publishPkgDirs.length > 1
-  let resolvedDistTag: DistTag | undefined
+  let distTag = ''
 
-  if (distTag) {
-    resolvedDistTag = distTag
+  if (preid) {
+    distTag = preid
   } else if (isAlphaVersion(version)) {
-    resolvedDistTag = 'alpha'
+    distTag = 'alpha'
   } else if (isBetaVersion(version)) {
-    resolvedDistTag = 'beta'
+    distTag = 'beta'
   } else if (isRcVersion(version)) {
-    resolvedDistTag = 'next'
+    distTag = 'rc'
+  } else if (isCanaryVersion(version)) {
+    distTag = 'canary'
   }
 
   const promiseArr = []
@@ -56,7 +60,7 @@ export async function publish(opts: {
     const pkgName = publishPkgNames[i]
 
     try {
-      promiseArr.push(publishPackage(pkgDir, pkgName, version, resolvedDistTag))
+      promiseArr.push(publishPackage(pkgDir, pkgName, version, distTag))
     } catch (error) {
       errors.push(pkgName)
     }
@@ -109,8 +113,9 @@ export async function publish(opts: {
     pkgDir: string,
     pkgName: string,
     version: string,
-    distTag?: DistTag,
+    distTag?: string,
   ) {
+    // TODO：支持 yarn
     const cmd = isPnpm ? 'pnpm' : 'npm'
     const tag = distTag ? ['--tag', distTag] : []
 

@@ -1,4 +1,4 @@
-import type { DistTag } from '@/types'
+import type { Preid } from '@/types'
 import { getBumpVersion } from '@/utils'
 import { chalk, confirm, type PkgJSON } from '@eljs/utils'
 
@@ -7,12 +7,12 @@ export interface ReconfirmOpts {
   bumpVersion: string
   publishPkgNames: string[]
   pkgJSON: Required<PkgJSON>
-  distTag?: DistTag
+  preid?: Preid
   verbose?: boolean
 }
 
 export async function reconfirm(opts: ReconfirmOpts): Promise<string> {
-  const { cwd, bumpVersion, publishPkgNames, pkgJSON, distTag, verbose } = opts
+  const { cwd, bumpVersion, publishPkgNames, pkgJSON, preid, verbose } = opts
   let confirmMessage = ''
 
   if (publishPkgNames.length === 1 || !verbose) {
@@ -36,7 +36,7 @@ export async function reconfirm(opts: ReconfirmOpts): Promise<string> {
       cwd,
       pkgJSON,
       publishPkgNames,
-      distTag,
+      preid,
     })
     return reconfirm({
       ...opts,

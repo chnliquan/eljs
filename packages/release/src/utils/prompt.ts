@@ -1,27 +1,27 @@
-import { VERSION_TAGS } from '@/constants'
-import type { DistTag } from '@/types'
+import type { Preid } from '@/types'
 import { chalk, logger, pascalCase, prompts, type PkgJSON } from '@eljs/utils'
-import semver from 'semver'
+import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
 import {
-  getDistTag,
+  getCanaryVersion,
   getReferenceVersion,
-  getVersion,
+  getReleaseVersion,
+  getRemoteDistTag,
   isVersionExist,
 } from './version'
 
 function getPreVersionPromptQuestions(
   referenceVersion: string,
-  distTag: DistTag,
+  preid: Preid,
 ): prompts.PromptObject {
   return {
     name: 'value',
     type: 'select',
-    message: `Please select the ${distTag} version to bump:`,
+    message: `Please select the ${preid} version to bump:`,
     choices: ['prerelease', 'prepatch', 'preminor', 'premajor'].map(item => {
-      const version = getVersion({
+      const version = getReleaseVersion({
         referenceVersion,
-        targetVersion: item,
-        distTag,
+        releaseType: item as ReleaseType,
+        preid,
       })
       return {
         title: `${
@@ -37,116 +37,111 @@ export async function getBumpVersion(opts: {
   cwd: string
   pkgJSON: Required<PkgJSON>
   publishPkgNames: string[]
-  distTag?: DistTag
-  targetVersion?: string
+  preid?: Preid
+  releaseTypeOrVersion?: ReleaseType | string
 }): Promise<string> {
-  const { cwd, pkgJSON, publishPkgNames, distTag, targetVersion } = opts
+  const { cwd, pkgJSON, publishPkgNames, preid, releaseTypeOrVersion } = opts
+
+  if (
+    releaseTypeOrVersion &&
+    !RELEASE_TYPES.includes(releaseTypeOrVersion as ReleaseType)
+  ) {
+    if (!semver.valid(releaseTypeOrVersion)) {
+      logger.printErrorAndExit(
+        `Invalid semantic version ${chalk.bold(releaseTypeOrVersion)}.`,
+      )
+    }
+
+    const isExist = await isVersionExist(
+      publishPkgNames[0],
+      releaseTypeOrVersion,
+    )
+
+    if (isExist) {
+      logger.printErrorAndExit(
+        `${publishPkgNames[0]} has published v${chalk.bold(
+          releaseTypeOrVersion,
+        )} already.`,
+      )
+    } else {
+      return releaseTypeOrVersion
+    }
+  }
 
   const localVersion = pkgJSON.version
-  const {
-    remoteLatestVersion,
-    remoteAlphaVersion,
-    remoteBetaVersion,
-    remoteNextVersion,
-  } = await getDistTag(publishPkgNames, cwd)
-
-  const latestReferenceVersion = getReferenceVersion(
-    localVersion,
-    remoteLatestVersion,
-  )
-  const alphaReferenceVersion = getReferenceVersion(
-    localVersion,
-    remoteAlphaVersion || remoteLatestVersion,
-  )
-  const betaReferenceVersion = getReferenceVersion(
-    localVersion,
-    remoteBetaVersion || remoteLatestVersion,
-  )
-  const nextReferenceVersion = getReferenceVersion(
-    localVersion,
-    remoteNextVersion || remoteLatestVersion,
+  const { latest, alpha, beta, rc } = await getRemoteDistTag(
+    publishPkgNames,
+    cwd,
   )
 
-  const tag2referenceVersionMap = {
-    alpha: alphaReferenceVersion,
-    beta: betaReferenceVersion,
-    next: nextReferenceVersion,
-    latest: latestReferenceVersion,
+  const referenceVersionMap = {
+    latest: getReferenceVersion(localVersion, latest),
+    alpha: getReferenceVersion(localVersion, alpha || latest),
+    beta: getReferenceVersion(localVersion, beta || latest),
+    rc: getReferenceVersion(localVersion, rc || latest),
   }
 
-  logger.info(`- Local version: ${chalk.cyanBright.bold(localVersion)}`)
-
-  if (remoteLatestVersion) {
-    logger.info(
-      `- Remote latest version: ${chalk.cyanBright.bold(remoteLatestVersion)}`,
-    )
+  if (RELEASE_TYPES.includes(releaseTypeOrVersion as ReleaseType)) {
+    return getReleaseVersion({
+      releaseType: releaseTypeOrVersion as ReleaseType,
+      referenceVersion: preid
+        ? referenceVersionMap[preid as keyof typeof referenceVersionMap]
+        : referenceVersionMap.latest,
+      preid,
+    })
   }
 
-  if (remoteAlphaVersion && (!distTag || distTag === 'alpha')) {
-    logger.info(
-      `- Remote alpha version: ${chalk.cyanBright.bold(remoteAlphaVersion)}`,
-    )
-  }
+  if (preid === 'canary') {
+    return getCanaryVersion(referenceVersionMap.latest, cwd)
+  } else {
+    logger.info(`- Local version: ${chalk.cyanBright.bold(localVersion)}`)
 
-  if (remoteBetaVersion && (!distTag || distTag === 'beta')) {
-    logger.info(
-      `- Remote beta version: ${chalk.cyanBright.bold(remoteBetaVersion)}`,
-    )
-  }
+    if (referenceVersionMap.latest) {
+      logger.info(
+        `- Remote latest version: ${chalk.cyanBright.bold(
+          referenceVersionMap.latest,
+        )}`,
+      )
+    }
 
-  if (remoteNextVersion && (!distTag || distTag === 'next')) {
-    logger.info(
-      `- Remote next version: ${chalk.cyanBright.bold(remoteNextVersion)}`,
-    )
+    if (referenceVersionMap.alpha && (!preid || preid === 'alpha')) {
+      logger.info(
+        `- Remote alpha version: ${chalk.cyanBright.bold(
+          referenceVersionMap.alpha,
+        )}`,
+      )
+    }
+
+    if (referenceVersionMap.beta && (!preid || preid === 'beta')) {
+      logger.info(
+        `- Remote beta version: ${chalk.cyanBright.bold(
+          referenceVersionMap.beta,
+        )}`,
+      )
+    }
+
+    if (referenceVersionMap.rc && (!preid || preid === 'rc')) {
+      logger.info(
+        `- Remote rc version: ${chalk.cyanBright.bold(referenceVersionMap.rc)}`,
+      )
+    }
   }
 
   console.log()
 
-  if (targetVersion) {
-    if (VERSION_TAGS.includes(targetVersion)) {
-      return getVersion({
-        targetVersion,
-        referenceVersion: distTag
-          ? tag2referenceVersionMap[distTag]
-          : latestReferenceVersion,
-        distTag,
-      })
-    } else {
-      if (!semver.valid(targetVersion)) {
-        logger.printErrorAndExit(
-          `${publishPkgNames[0]} has already published v${chalk.bold(
-            targetVersion,
-          )}.`,
-        )
-      }
-
-      const isExist = await isVersionExist(publishPkgNames[0], targetVersion)
-
-      if (isExist) {
-        logger.printErrorAndExit(
-          `${publishPkgNames[0]} has already published v${chalk.bold(
-            targetVersion,
-          )}.`,
-        )
-      } else {
-        return targetVersion
-      }
-    }
-  }
-
-  const patchVersion = getVersion({
-    referenceVersion: latestReferenceVersion,
-    targetVersion: 'patch',
+  const patchVersion = getReleaseVersion({
+    referenceVersion: referenceVersionMap.latest,
+    releaseType: 'patch',
   })
 
-  const minorVersion = getVersion({
-    referenceVersion: latestReferenceVersion,
-    targetVersion: 'minor',
+  const minorVersion = getReleaseVersion({
+    referenceVersion: referenceVersionMap.latest,
+    releaseType: 'minor',
   })
 
-  const majorVersion = getVersion({
-    referenceVersion: latestReferenceVersion,
-    targetVersion: 'major',
+  const majorVersion = getReleaseVersion({
+    referenceVersion: referenceVersionMap.latest,
+    releaseType: 'major',
   })
 
   const choices = [
@@ -176,9 +171,14 @@ export async function getBumpVersion(opts: {
       description: chalk.grey(`External Test Version`),
     },
     {
-      title: `Next`,
-      value: 'next',
-      description: chalk.grey(`Candidate Version`),
+      title: `Rc`,
+      value: 'rc',
+      description: chalk.grey(`Release Candidate Version`),
+    },
+    {
+      title: `Canary`,
+      value: 'canary',
+      description: chalk.grey(`Canary Version`),
     },
   ]
 
@@ -190,13 +190,15 @@ export async function getBumpVersion(opts: {
     process.exit(1)
   }
 
-  if (!distTag) {
+  let resolvedPreid: Preid | undefined = preid
+
+  if (!resolvedPreid) {
     answer = await prompts(
       [
         {
           name: 'value',
           type: 'select',
-          message: 'Please select the version to bump:',
+          message: 'Please select the release type to bump:',
           choices,
         },
       ],
@@ -205,40 +207,25 @@ export async function getBumpVersion(opts: {
       },
     )
 
-    if (['alpha', 'beta', 'next'].includes(answer.value)) {
-      const referenceVersion = tag2referenceVersionMap[answer.value as 'alpha']
-      answer = await prompts(
-        getPreVersionPromptQuestions(referenceVersion, answer.value),
-        {
-          onCancel,
-        },
-      )
+    resolvedPreid = answer.value
+
+    if (resolvedPreid === 'canary') {
+      return getCanaryVersion(referenceVersionMap.latest, cwd)
     }
-  } else {
-    if (distTag === 'latest') {
-      answer = await prompts(
-        [
-          {
-            name: 'value',
-            type: 'select',
-            message: 'Please select the version to bump:',
-            choices: choices.slice(0, 3),
-          },
-        ],
-        {
-          onCancel,
-        },
-      )
-    } else {
-      const referenceVersion = tag2referenceVersionMap[distTag]
-      answer = await prompts(
-        getPreVersionPromptQuestions(referenceVersion, distTag),
-        {
-          onCancel,
-        },
-      )
+
+    if (!['alpha', 'beta', 'rc'].includes(resolvedPreid as Preid)) {
+      return answer.value
     }
   }
+
+  const referenceVersion =
+    referenceVersionMap[answer.value as keyof typeof referenceVersionMap]
+  answer = await prompts(
+    getPreVersionPromptQuestions(referenceVersion, resolvedPreid as Preid),
+    {
+      onCancel,
+    },
+  )
 
   return answer.value
 }

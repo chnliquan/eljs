@@ -1,10 +1,20 @@
-import type { DistTag } from '@/types'
-import { chalk, getNpmDistTag, logger, run, timeout } from '@eljs/utils'
-import semver from 'semver'
+import type { Preid } from '@/types'
+import {
+  chalk,
+  getGitCommitShortSha,
+  getNpmDistTag,
+  logger,
+  run,
+  timeout,
+} from '@eljs/utils'
+import semver, { type ReleaseType } from 'semver'
 
 export function isPrerelease(version: string): boolean {
   return (
-    isAlphaVersion(version) || isBetaVersion(version) || isRcVersion(version)
+    isAlphaVersion(version) ||
+    isBetaVersion(version) ||
+    isRcVersion(version) ||
+    isCanaryVersion(version)
   )
 }
 
@@ -12,22 +22,28 @@ export function isAlphaVersion(version: string): boolean {
   return version.includes('-alpha.')
 }
 
-export function isRcVersion(version: string): boolean {
-  return version.includes('-rc.')
-}
-
 export function isBetaVersion(version: string): boolean {
   return version.includes('-beta.')
 }
 
-interface RemoteDistTag {
-  remoteLatestVersion: string
-  remoteAlphaVersion: string
-  remoteBetaVersion: string
-  remoteNextVersion: string
+export function isRcVersion(version: string): boolean {
+  return version.includes('-rc.')
 }
 
-export async function getDistTag(
+export function isCanaryVersion(version: string): boolean {
+  return version.includes('-canary.')
+}
+/**
+ * 远程 NPM dist tag
+ */
+export interface RemoteDistTag {
+  latest: string
+  alpha: string
+  beta: string
+  rc: string
+}
+
+export async function getRemoteDistTag(
   pkgNames: string[],
   cwd: string,
 ): Promise<RemoteDistTag> {
@@ -43,10 +59,10 @@ export async function getDistTag(
             })
 
             return {
-              remoteLatestVersion: distTag['latest'],
-              remoteAlphaVersion: distTag['alpha'],
-              remoteBetaVersion: distTag['beta'],
-              remoteNextVersion: distTag['next'],
+              latest: distTag['latest'],
+              alpha: distTag['alpha'],
+              beta: distTag['beta'],
+              rc: distTag['rc'],
             }
           } catch (err: any) {
             if (err.message.includes('command not found')) {
@@ -68,10 +84,10 @@ export async function getDistTag(
         }
 
         return {
-          remoteLatestVersion: '',
-          remoteAlphaVersion: '',
-          remoteBetaVersion: '',
-          remoteNextVersion: '',
+          latest: '',
+          alpha: '',
+          beta: '',
+          rc: '',
         }
       })(),
       pkgNames.length * 2000,
@@ -79,10 +95,10 @@ export async function getDistTag(
     return distTag
   } catch (err) {
     return {
-      remoteLatestVersion: '',
-      remoteAlphaVersion: '',
-      remoteBetaVersion: '',
-      remoteNextVersion: '',
+      latest: '',
+      alpha: '',
+      beta: '',
+      rc: '',
     }
   }
 }
@@ -125,7 +141,12 @@ export function getReferenceVersion(
   remoteVersion?: string,
 ): string {
   if (!remoteVersion) {
-    return localVersion
+    const {
+      major = '0',
+      minor = '0',
+      patch = '0',
+    } = semver.parse(localVersion) || {}
+    return `${major}.${minor}.${patch}`
   }
 
   const baseRemoteVersion = remoteVersion.split('-')[0]
@@ -146,35 +167,35 @@ export function getReferenceVersion(
 
 interface Options {
   referenceVersion: string
-  targetVersion?: string
-  distTag?: DistTag
+  releaseType?: ReleaseType
+  preid?: Preid
 }
 
-export function getVersion(opts: Options) {
-  const { referenceVersion, targetVersion, distTag } = opts
+export function getReleaseVersion(opts: Options) {
+  const { referenceVersion, releaseType, preid = 'alpha' } = opts
 
-  switch (targetVersion) {
+  switch (releaseType) {
     case 'major':
     case 'minor':
     case 'patch':
-      return semver.inc(referenceVersion, targetVersion) as string
+      return semver.inc(referenceVersion, releaseType) as string
     case 'premajor':
     case 'preminor':
     case 'prepatch':
     case 'prerelease':
-      if (!distTag || distTag === 'latest') {
-        logger.printErrorAndExit(
-          `Bump ${targetVersion} version should pass distTag option.`,
-        )
-      }
-      return semver.inc(
-        referenceVersion,
-        targetVersion,
-        distTag === 'next' ? 'rc' : distTag,
-      ) as string
+      return semver.inc(referenceVersion, releaseType, preid) as string
     default:
       break
   }
 
   return referenceVersion
+}
+
+export async function getCanaryVersion(referenceVersion: string, cwd: string) {
+  const date = new Date()
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const sha = await getGitCommitShortSha(cwd)
+  return `${referenceVersion}-canary.${year}${month}${day}+${sha}`
 }
