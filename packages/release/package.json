@@ -1,6 +1,6 @@
 {
   "name": "@eljs/release",
-  "version": "0.28.0",
+  "version": "0.29.0",
   "description": "NPM 包发布工具",
   "keywords": [
     "eljs",
