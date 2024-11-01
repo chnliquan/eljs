@@ -12,7 +12,6 @@ export async function commit(opts: {
     ? pkgNames.map(pkgName => `${pkgName}@${version}`)
     : [`v${version}`]
 
-  console.log('tags', tags)
   await gitCommit(`chore: bump version v${version}`)
 
   for await (const tag of tags) {
