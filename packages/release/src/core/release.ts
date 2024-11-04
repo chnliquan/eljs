@@ -1,3 +1,5 @@
+import type { Options } from '@/types'
+import { step } from '@/utils'
 import {
   chalk,
   isGitBehindRemote,
@@ -6,9 +8,7 @@ import {
   logger,
 } from '@eljs/utils'
 import path from 'path'
-
-import type { Options } from '../types'
-import { getBumpVersion, step } from '../utils'
+import { getBumpVersion } from './bump'
 import { generateChangelog } from './changelog'
 import { commit } from './commit'
 import { init } from './init'
@@ -35,6 +35,7 @@ export async function release(opts: Options): Promise<void> {
   const {
     cwd = process.cwd(),
     preid,
+    canary = false,
     independent = false,
     dry = false,
     verbose = false,
@@ -137,6 +138,7 @@ export async function release(opts: Options): Promise<void> {
     bumpVersion = await getBumpVersion({
       cwd,
       preid,
+      canary,
       pkgJSON: rootPkgJSON,
       publishPkgNames,
       releaseTypeOrVersion: version,
@@ -146,6 +148,7 @@ export async function release(opts: Options): Promise<void> {
       bumpVersion = await reconfirm({
         cwd,
         preid,
+        canary,
         bumpVersion,
         publishPkgNames,
         pkgJSON: rootPkgJSON,

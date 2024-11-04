@@ -1,9 +1,10 @@
 import type { Preid } from '@/types'
-import { getBumpVersion } from '@/utils'
 import { chalk, confirm, type PkgJSON } from '@eljs/utils'
+import { getBumpVersion } from './bump'
 
 export interface ReconfirmOpts {
   cwd: string
+  canary: boolean
   bumpVersion: string
   publishPkgNames: string[]
   pkgJSON: Required<PkgJSON>
@@ -12,7 +13,8 @@ export interface ReconfirmOpts {
 }
 
 export async function reconfirm(opts: ReconfirmOpts): Promise<string> {
-  const { cwd, bumpVersion, publishPkgNames, pkgJSON, preid, verbose } = opts
+  const { cwd, preid, canary, bumpVersion, publishPkgNames, pkgJSON, verbose } =
+    opts
   let confirmMessage = ''
 
   if (publishPkgNames.length === 1 || !verbose) {
@@ -34,6 +36,7 @@ export async function reconfirm(opts: ReconfirmOpts): Promise<string> {
   } else {
     const version = await getBumpVersion({
       cwd,
+      canary,
       pkgJSON,
       publishPkgNames,
       preid,

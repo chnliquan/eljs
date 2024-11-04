@@ -1,7 +1,12 @@
 /**
- * 预发布 ID
+ * 预发布版本
  */
-export type Preid = 'alpha' | 'beta' | 'rc' | 'canary'
+export type Preid = 'alpha' | 'beta' | 'rc'
+
+/**
+ * NPM dist tag
+ */
+export type DistTag = Preid | 'latest'
 
 /**
  * 仓库类型
@@ -14,12 +19,19 @@ export type RepoType = 'github' | 'gitlab'
 export interface Options {
   /**
    * 工作目录
+   * @default process.cwd()
    */
   cwd?: string
   /**
-   * 预发布 ID
+   * 预发布版本
+   * @default undefined
    */
   preid?: Preid
+  /**
+   * 是否发布金丝雀版本
+   * @default false
+   */
+  canary?: boolean
   /**
    * 是否生成独立的 git tag
    * @default false
@@ -51,8 +63,8 @@ export interface Options {
    */
   syncCnpm?: boolean
   /**
-   * 是否需要再次确认
-   * @default false
+   * 是否需要确认发布内容
+   * @default true
    */
   confirm?: boolean
   /**

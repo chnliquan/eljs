@@ -1,7 +1,7 @@
-import type { Preid } from '@/types'
+import type { DistTag, Preid } from '@/types'
 import {
   chalk,
-  getGitCommitShortSha,
+  getGitCommitSha,
   getNpmDistTag,
   logger,
   run,
@@ -136,33 +136,44 @@ export async function isVersionExist(pkgName: string, version: string) {
   return true
 }
 
+export function getStableVersion(version: string) {
+  const prerelease = semver.prerelease(version)
+
+  if (prerelease) {
+    return semver.clean(
+      version.replace(`-${prerelease.join('.')}`, ''),
+    ) as string
+  }
+
+  return version
+}
+
 export function getReferenceVersion(
   localVersion: string,
-  remoteVersion?: string,
+  remoteVersion: string,
+  distTag: DistTag,
 ): string {
   if (!remoteVersion) {
-    const {
-      major = '0',
-      minor = '0',
-      patch = '0',
-    } = semver.parse(localVersion) || {}
-    return `${major}.${minor}.${patch}`
+    return localVersion
   }
 
-  const baseRemoteVersion = remoteVersion.split('-')[0]
-  const baseLocalVersion = localVersion.split('-')[0]
+  const referenceVersion = semver.gt(remoteVersion, localVersion)
+    ? remoteVersion
+    : localVersion
 
-  if (
-    (isAlphaVersion(remoteVersion) && isBetaVersion(localVersion)) ||
-    ((isBetaVersion(remoteVersion) || isAlphaVersion(remoteVersion)) &&
-      isRcVersion(localVersion))
-  ) {
-    if (baseRemoteVersion === baseLocalVersion) {
-      return remoteVersion
+  switch (distTag) {
+    case 'latest':
+      return referenceVersion
+    case 'alpha':
+    case 'beta':
+    case 'rc': {
+      const stableLocalVersion = getStableVersion(localVersion)
+      const stableRemoteVersion = getStableVersion(remoteVersion)
+      return stableLocalVersion === stableRemoteVersion
+        ? remoteVersion
+        : referenceVersion
     }
   }
-
-  return semver.gt(remoteVersion, localVersion) ? remoteVersion : localVersion
 }
 
 interface Options {
@@ -193,9 +204,17 @@ export function getReleaseVersion(opts: Options) {
 
 export async function getCanaryVersion(referenceVersion: string, cwd: string) {
   const date = new Date()
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const sha = await getGitCommitShortSha(cwd)
-  return `${referenceVersion}-canary.${year}${month}${day}+${sha}`
+  const yyyy = date.getUTCFullYear()
+  const MM = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const dd = String(date.getUTCDate()).padStart(2, '0')
+  const dateStamp = `${yyyy}${MM}${dd}`
+  const sha = await getGitCommitSha(cwd, true)
+  const stableVersion = getStableVersion(referenceVersion)
+  const nextVersion =
+    isAlphaVersion(referenceVersion) ||
+    isBetaVersion(referenceVersion) ||
+    isCanaryVersion(referenceVersion)
+      ? stableVersion
+      : semver.inc(stableVersion, 'patch')
+  return `${nextVersion}-canary.${dateStamp}-${sha}`
 }
