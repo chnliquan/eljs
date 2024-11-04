@@ -1,6 +1,6 @@
 {
   "name": "@eljs/service",
-  "version": "0.29.1",
+  "version": "0.30.0",
   "description": "NodeJS 插件服务",
   "keywords": [
     "eljs",
