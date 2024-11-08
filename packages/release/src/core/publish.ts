@@ -13,6 +13,7 @@ import open from 'open'
 import path from 'path'
 
 export async function publish(opts: {
+  registry: string
   version: string
   publishPkgDirs: string[]
   publishPkgNames: string[]
@@ -20,11 +21,11 @@ export async function publish(opts: {
   changelog?: string
   preid?: Preid
   gitCheck?: boolean
-  repoType: string
-  repoUrl?: string
   createRelease?: boolean
+  repositoryUrl?: string
 }) {
   const {
+    registry,
     version,
     publishPkgDirs,
     publishPkgNames,
@@ -32,9 +33,8 @@ export async function publish(opts: {
     changelog,
     preid,
     gitCheck,
-    repoType,
-    repoUrl,
     createRelease,
+    repositoryUrl,
   } = opts
   // TODO：支持 yarn
   const isPnpm = publishPkgDirs.length > 1
@@ -60,7 +60,9 @@ export async function publish(opts: {
     const pkgName = publishPkgNames[i]
 
     try {
-      promiseArr.push(publishPackage(pkgDir, pkgName, version, distTag))
+      promiseArr.push(
+        publishPackage(pkgDir, pkgName, version, registry, distTag),
+      )
     } catch (error) {
       errors.push(pkgName)
     }
@@ -86,7 +88,7 @@ export async function publish(opts: {
   }
 
   // github release
-  if (createRelease && repoType === 'github' && repoUrl) {
+  if (createRelease && repositoryUrl) {
     let body = ''
 
     if (changelog) {
@@ -100,7 +102,7 @@ export async function publish(opts: {
     }
 
     const url = await githubReleaseUrl({
-      repoUrl,
+      repoUrl: repositoryUrl,
       tag: `v${version}`,
       body,
       isPrerelease: isPrerelease(version),
@@ -113,6 +115,7 @@ export async function publish(opts: {
     pkgDir: string,
     pkgName: string,
     version: string,
+    registry: string,
     distTag?: string,
   ) {
     // TODO：支持 yarn
@@ -121,6 +124,8 @@ export async function publish(opts: {
 
     const cliArgs = [
       'publish',
+      '--registry',
+      registry,
       ...tag,
       '--access',
       'public',

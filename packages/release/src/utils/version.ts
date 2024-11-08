@@ -46,6 +46,7 @@ export interface RemoteDistTag {
 export async function getRemoteDistTag(
   pkgNames: string[],
   cwd: string,
+  registry: string,
 ): Promise<RemoteDistTag> {
   try {
     const distTag = await timeout(
@@ -56,6 +57,7 @@ export async function getRemoteDistTag(
           try {
             const distTag = await getNpmDistTag(pkgName, {
               cwd,
+              registry,
             })
 
             return {

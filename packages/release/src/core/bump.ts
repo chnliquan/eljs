@@ -35,14 +35,22 @@ function getPreVersionPromptQuestions(
 
 export async function getBumpVersion(opts: {
   cwd: string
+  registry: string
   canary: boolean
   pkgJSON: Required<PkgJSON>
   publishPkgNames: string[]
   preid?: Preid
   releaseTypeOrVersion?: ReleaseType | string
 }): Promise<string> {
-  const { cwd, canary, pkgJSON, publishPkgNames, preid, releaseTypeOrVersion } =
-    opts
+  const {
+    cwd,
+    registry,
+    canary,
+    pkgJSON,
+    publishPkgNames,
+    preid,
+    releaseTypeOrVersion,
+  } = opts
 
   // #region 用户传入版本
   if (
@@ -77,7 +85,7 @@ export async function getBumpVersion(opts: {
     alpha: remoteAlphaVersion,
     beta: remoteBetaVersion,
     rc: remoteRcVersion,
-  } = await getRemoteDistTag(publishPkgNames, cwd)
+  } = await getRemoteDistTag(publishPkgNames, cwd, registry)
 
   const referenceVersionMap = {
     latest: getReferenceVersion(localVersion, remoteLatestVersion, 'latest'),

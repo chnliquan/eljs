@@ -18,6 +18,10 @@ function cli() {
       'Output the current version.',
     )
     .option(
+      '--registry <registry>',
+      'Specify the npm registry when publishing.',
+    )
+    .option(
       '--preid <preid>',
       'Specify the prerelease identifier when publishing a prerelease.',
     )
@@ -32,7 +36,6 @@ function cli() {
     .option('--sync-cnpm', 'Whether sync to cnpm when publish done.')
     .option('--no-confirm', 'No confirm the bump version.')
     .option('--no-ownership-check', 'No check the npm ownership.')
-    .option('--no-registry-check', 'No check the package registry.')
     .option('--no-git-check', 'No check the git status.')
     .option('--no-git-push', 'No push commit to git remote.')
     .option('--no-create-release', 'No release to git client.')
@@ -74,12 +77,6 @@ function cli() {
   if (opts.preid && !['alpha', 'beta', 'rc', 'canary'].includes(opts.preid)) {
     logger.printErrorAndExit(
       `Expected the --preid as alpha beta rc or canary, but got ${opts.preid}.`,
-    )
-  }
-
-  if (opts.repoType && !['github', 'gitlab'].includes(opts.repoType)) {
-    logger.printErrorAndExit(
-      `Expected the --repo-type as github or gitlab, but got ${opts.repoType}.`,
     )
   }
 

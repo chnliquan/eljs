@@ -33,7 +33,11 @@ export async function checkRegistry(opts: {
     const userRegistry = await getNpmRegistry(cwd)
 
     if (!userRegistry.includes(registry)) {
-      logger.printErrorAndExit(`npm registry is not ${chalk.blue(registry)}.`)
+      logger.printErrorAndExit(
+        `Expect the registry is ${chalk.blue(
+          userRegistry,
+        )}, but got ${chalk.blue(registry)}.`,
+      )
     }
   }
 }

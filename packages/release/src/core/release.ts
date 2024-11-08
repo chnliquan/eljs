@@ -2,6 +2,7 @@ import type { Options } from '@/types'
 import { step } from '@/utils'
 import {
   chalk,
+  getNpmRegistry,
   isGitBehindRemote,
   isGitBranch,
   isGitClean,
@@ -15,7 +16,6 @@ import { init } from './init'
 import { checkOwnership } from './ownership'
 import { publish } from './publish'
 import { reconfirm } from './reconfirm'
-import { checkRegistry } from './registry'
 import { sync } from './sync'
 import { updateLock, updateVersions } from './update'
 
@@ -43,13 +43,11 @@ export async function release(opts: Options): Promise<void> {
     publishOnly = false,
     syncCnpm = false,
     confirm = true,
-    registryCheck = true,
     ownershipCheck = true,
     gitCheck = true,
     gitPush = true,
     createRelease = true,
     branch = '',
-    repoType: customRepoType,
     version,
     beforeUpdateVersion,
     beforeChangelog,
@@ -87,22 +85,12 @@ export async function release(opts: Options): Promise<void> {
     publishPkgNames,
   } = await init(cwd)
 
-  const repoUrl = rootPkgJSON?.repository?.url || ''
-  const repoType =
-    customRepoType || (repoUrl?.includes('github') ? 'github' : 'gitlab')
+  const registry =
+    opts.registry ||
+    rootPkgJSON?.publishConfig?.registry ||
+    (await getNpmRegistry(cwd))
 
-  // 3. check npm registry
-  if (registryCheck && !dry) {
-    step('Checking registry ...')
-    await checkRegistry({
-      cwd,
-      repoType,
-      repoUrl,
-      pkgRegistry: rootPkgJSON?.publishConfig?.registry,
-    })
-  }
-
-  // 4. check ownership
+  // 3. check ownership
   if (ownershipCheck && !dry) {
     step('Checking npm ownership ...')
     await checkOwnership(publishPkgNames, cwd)
@@ -133,20 +121,22 @@ export async function release(opts: Options): Promise<void> {
   let changelog = ''
 
   if (!publishOnly) {
-    // 5. bump version
+    // 4. bump version
     step('Bump version ...')
     bumpVersion = await getBumpVersion({
       cwd,
-      preid,
+      registry,
       canary,
       pkgJSON: rootPkgJSON,
       publishPkgNames,
+      preid,
       releaseTypeOrVersion: version,
     })
 
     if (confirm) {
       bumpVersion = await reconfirm({
         cwd,
+        registry,
         preid,
         canary,
         bumpVersion,
@@ -160,7 +150,7 @@ export async function release(opts: Options): Promise<void> {
       await beforeUpdateVersion(bumpVersion)
     }
 
-    // 6. update all package versions and inter-dependencies
+    // 5. update all package versions and inter-dependencies
     step('Updating versions ...')
     await updateVersions({
       rootPkgJSONPath,
@@ -171,7 +161,7 @@ export async function release(opts: Options): Promise<void> {
       version: bumpVersion,
     })
 
-    // 7. update pnpm-lock.yaml or package-lock.json
+    // 6. update pnpm-lock.yaml or package-lock.json
     step('Updating lockfile...')
     await updateLock(cwd)
 
@@ -179,7 +169,7 @@ export async function release(opts: Options): Promise<void> {
       await beforeChangelog()
     }
 
-    // 8. generate changelog
+    // 7. generate changelog
     step(`Generating changelog ...`)
     changelog = await generateChangelog({
       cwd,
@@ -188,7 +178,7 @@ export async function release(opts: Options): Promise<void> {
       independent,
     })
 
-    // 9. commit git changes
+    // 8. commit git changes
     step('Committing changes ...')
     await commit({
       version: bumpVersion,
@@ -198,22 +188,22 @@ export async function release(opts: Options): Promise<void> {
     })
   }
 
-  // 10. publish package
+  // 9. publish packages
   step(`Publishing package ...`)
   await publish({
     cwd,
+    registry,
     preid,
     version: bumpVersion,
     publishPkgDirs,
     publishPkgNames,
     gitCheck,
     changelog,
-    repoType,
-    repoUrl,
     createRelease,
+    repositoryUrl: rootPkgJSON?.repository?.url,
   })
 
-  // 11. sync cnpm
+  // 10. sync cnpm
   if (syncCnpm) {
     step('Sync cnpm ...')
     await sync(publishPkgNames)

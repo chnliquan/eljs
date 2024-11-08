@@ -23,6 +23,11 @@ export interface Options {
    */
   cwd?: string
   /**
+   * NPM 注册表
+   * @default cwd registry
+   */
+  registry?: string
+  /**
    * 预发布版本
    * @default undefined
    */

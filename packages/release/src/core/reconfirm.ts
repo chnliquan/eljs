@@ -4,6 +4,7 @@ import { getBumpVersion } from './bump'
 
 export interface ReconfirmOpts {
   cwd: string
+  registry: string
   canary: boolean
   bumpVersion: string
   publishPkgNames: string[]
@@ -13,8 +14,16 @@ export interface ReconfirmOpts {
 }
 
 export async function reconfirm(opts: ReconfirmOpts): Promise<string> {
-  const { cwd, preid, canary, bumpVersion, publishPkgNames, pkgJSON, verbose } =
-    opts
+  const {
+    cwd,
+    registry,
+    canary,
+    bumpVersion,
+    publishPkgNames,
+    pkgJSON,
+    preid,
+    verbose,
+  } = opts
   let confirmMessage = ''
 
   if (publishPkgNames.length === 1 || !verbose) {
@@ -36,6 +45,7 @@ export async function reconfirm(opts: ReconfirmOpts): Promise<string> {
   } else {
     const version = await getBumpVersion({
       cwd,
+      registry,
       canary,
       pkgJSON,
       publishPkgNames,

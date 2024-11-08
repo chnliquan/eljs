@@ -51,8 +51,9 @@
         "{\"module\": \"commonjs\"}",
         "--files",
         "${workspaceFolder}/packages/release/bin/release.js",
+        "--registry",
+        "https://npm.corp.kuaishou.com/",
         "--no-git-check",
-        "--no-registry-check",
         "--no-ownership-check"
         // "--independent"
         // "--preid",
@@ -60,6 +61,7 @@
         // "patch"
       ],
       // "cwd": "${workspaceFolder}",
+      // "cwd": "/Users/ender/kwai/technology/drow/ad-create-comps/pc-components/create",
       "cwd": "/Users/ender/kwai/technology/polyrepo-release",
       // "cwd": "/Users/ender/kwai/technology/monorepo-release",
       "console": "integratedTerminal"
