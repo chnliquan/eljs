@@ -39,27 +39,27 @@ export async function init(cwd: string) {
     const pkgJSON: PkgJSON = readJSONSync(pkgJSONPath)
 
     if (!pkgJSON.name) {
-      logger.warn(`Detect ${chalk.cyanBright(pkgJSONPath)} has no name field.`)
-      return
-    } else if (!pkgJSON.version) {
       logger.warn(
-        `Detect ${chalk.cyanBright(pkgJSONPath)} has no version field.`,
+        `Detect ${chalk.cyanBright(pkgJSONPath)} has no name field, skipped.`,
       )
-    } else {
-      pkgJSONPaths.push(pkgJSONPath)
-      pkgJSONs.push(pkgJSON)
-      pkgNames.push(pkgJSON.name)
+      return
     }
 
     if (!pkgJSON.private) {
       publishPkgDirs.push(pkgPath)
       publishPkgNames.push(pkgJSON.name as string)
     }
+
+    pkgJSONPaths.push(pkgJSONPath)
+    pkgJSONs.push(pkgJSON)
+    pkgNames.push(pkgJSON.name)
   })
 
   if (publishPkgNames.length === 0) {
     logger.warn(
-      `Detect ${chalk.bold.cyanBright(cwd)} has no available package.`,
+      `Detect ${chalk.bold.cyanBright(
+        cwd,
+      )} has no available package to publish.`,
     )
     process.exit(0)
   }

@@ -14,7 +14,7 @@ const cache = new Map()
  * @param relative 是否展示相对路径
  */
 export async function getPkgPaths(
-  cwd = process.cwd(),
+  cwd: string,
   relative = false,
 ): Promise<string[]> {
   const cacheKey = `pkg_paths_${cwd}`
@@ -43,7 +43,7 @@ export async function getPkgPaths(
       // yarn | npm | bun
       const pkgJSONPath = path.resolve(cwd, 'package.json')
       const pkgJSON = await readJSON<PkgJSON>(pkgJSONPath)
-      workspaces = (pkgJSON.workspaces as string[]) || []
+      workspaces = (pkgJSON?.workspaces as string[]) || []
     }
 
     if (workspaces?.length > 0) {
