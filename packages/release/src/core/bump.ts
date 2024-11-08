@@ -1,7 +1,7 @@
 import type { Preid } from '@/types'
 import {
   getCanaryVersion,
-  getReferenceVersion,
+  getMaxVersion,
   getReleaseVersion,
   getRemoteDistTag,
   isVersionExist,
@@ -57,26 +57,8 @@ export async function getBumpVersion(opts: {
     releaseTypeOrVersion &&
     !RELEASE_TYPES.includes(releaseTypeOrVersion as ReleaseType)
   ) {
-    if (!semver.valid(releaseTypeOrVersion)) {
-      logger.printErrorAndExit(
-        `Invalid semantic version ${chalk.bold(releaseTypeOrVersion)}.`,
-      )
-    }
-
-    const isExist = await isVersionExist(
-      publishPkgNames[0],
-      releaseTypeOrVersion,
-    )
-
-    if (isExist) {
-      logger.printErrorAndExit(
-        `${publishPkgNames[0]} has published v${chalk.bold(
-          releaseTypeOrVersion,
-        )} already.`,
-      )
-    } else {
-      return releaseTypeOrVersion
-    }
+    await checkVersion(releaseTypeOrVersion)
+    return releaseTypeOrVersion
   }
 
   const localVersion = pkgJSON.version
@@ -88,22 +70,10 @@ export async function getBumpVersion(opts: {
   } = await getRemoteDistTag(publishPkgNames, cwd, registry)
 
   const referenceVersionMap = {
-    latest: getReferenceVersion(localVersion, remoteLatestVersion, 'latest'),
-    alpha: getReferenceVersion(
-      localVersion,
-      remoteAlphaVersion || remoteLatestVersion,
-      'alpha',
-    ),
-    beta: getReferenceVersion(
-      localVersion,
-      remoteBetaVersion || remoteLatestVersion,
-      'beta',
-    ),
-    rc: getReferenceVersion(
-      localVersion,
-      remoteRcVersion || remoteLatestVersion,
-      'rc',
-    ),
+    latest: getMaxVersion(localVersion, remoteLatestVersion),
+    alpha: getMaxVersion(localVersion, remoteLatestVersion, remoteAlphaVersion),
+    beta: getMaxVersion(localVersion, remoteLatestVersion, remoteBetaVersion),
+    rc: getMaxVersion(localVersion, remoteLatestVersion, remoteRcVersion),
   }
 
   if (RELEASE_TYPES.includes(releaseTypeOrVersion as ReleaseType)) {
@@ -125,30 +95,26 @@ export async function getBumpVersion(opts: {
     if (remoteLatestVersion) {
       logger.info(
         `- Remote latest version: ${chalk.cyanBright.bold(
-          referenceVersionMap.latest,
+          remoteLatestVersion,
         )}`,
       )
     }
 
     if (remoteAlphaVersion && (!preid || preid === 'alpha')) {
       logger.info(
-        `- Remote alpha version: ${chalk.cyanBright.bold(
-          referenceVersionMap.alpha,
-        )}`,
+        `- Remote alpha version: ${chalk.cyanBright.bold(remoteAlphaVersion)}`,
       )
     }
 
     if (remoteBetaVersion && (!preid || preid === 'beta')) {
       logger.info(
-        `- Remote beta version: ${chalk.cyanBright.bold(
-          referenceVersionMap.beta,
-        )}`,
+        `- Remote beta version: ${chalk.cyanBright.bold(remoteBetaVersion)}`,
       )
     }
 
     if (remoteRcVersion && (!preid || preid === 'rc')) {
       logger.info(
-        `- Remote rc version: ${chalk.cyanBright.bold(referenceVersionMap.rc)}`,
+        `- Remote rc version: ${chalk.cyanBright.bold(remoteRcVersion)}`,
       )
     }
   }
@@ -252,11 +218,8 @@ export async function getBumpVersion(opts: {
         initial: pkgJSON.version,
       })
 
-      if (!semver.valid(answer.value)) {
-        logger.printErrorAndExit(
-          `Invalid semantic version ${chalk.bold(answer.value)}.`,
-        )
-      }
+      await checkVersion(answer.value)
+      return answer.value
     }
 
     if (!['alpha', 'beta', 'rc'].includes(releaseType as Preid)) {
@@ -264,6 +227,7 @@ export async function getBumpVersion(opts: {
     }
   }
 
+  // preid version
   const referenceVersion = referenceVersionMap[answer.value as Preid]
   answer = await prompts(
     getPreVersionPromptQuestions(referenceVersion, releaseType as Preid),
@@ -273,4 +237,20 @@ export async function getBumpVersion(opts: {
   )
 
   return answer.value
+
+  async function checkVersion(version: string) {
+    if (!semver.valid(version)) {
+      logger.printErrorAndExit(
+        `Invalid semantic version ${chalk.bold(version)}.`,
+      )
+    }
+
+    const isExist = await isVersionExist(publishPkgNames[0], version as string)
+
+    if (isExist) {
+      logger.printErrorAndExit(
+        `${publishPkgNames[0]} has published v${chalk.bold(version)} already.`,
+      )
+    }
+  }
 }

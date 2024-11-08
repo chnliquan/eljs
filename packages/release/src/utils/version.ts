@@ -178,6 +178,16 @@ export function getReferenceVersion(
   }
 }
 
+export function getMaxVersion(...versions: string[]) {
+  return versions.reduce((maxVersion: string, version: string) => {
+    if (!version) {
+      return maxVersion
+    }
+
+    return semver.gt(maxVersion, version) ? maxVersion : version
+  })
+}
+
 interface Options {
   referenceVersion: string
   releaseType?: ReleaseType
