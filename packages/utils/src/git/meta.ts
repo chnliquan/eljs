@@ -19,23 +19,23 @@ export interface BaseGitRepoInfo {
    */
   group: string
   /**
-   * git 仓库网页地址
+   * git 网页地址
    */
   href: string
   /**
-   * git url
+   * git https url
    */
-  url: string
+  https: string
+  /**
+   * git ssh url
+   */
+  ssh: string
 }
 
 /**
  * git 仓库信息
  */
 export interface GitRepoInfo extends BaseGitRepoInfo {
-  /**
-   * git 仓库克隆地址
-   */
-  url: string
   /**
    * git 仓库分支
    */
@@ -112,42 +112,51 @@ export async function getGitCommitSha(
  * 解析 git 地址
  * @param url git 地址
  */
-export function gitUrlAnalysis(url: string): BaseGitRepoInfo {
-  let repo = ''
-  let hostname = ''
-
-  if (url.startsWith('git')) {
-    // git@git.corp.xxx.com:group/eljs.git
-    // git@github.com:chnliquan/eljs.git
-    const pieces = url.split(':')
-    hostname = pieces[0].split('@')[1]
-    repo = pieces[1].replace(/\.git$/, '')
-  } else if (url.startsWith('http')) {
-    // https://git.corp.xxx.com/group/eljs.git
-    // https://github.com/chnliquan/eljs.git
-    const parsedUrl = new URL(url)
-    hostname = parsedUrl.hostname || ''
-    repo = parsedUrl.pathname?.slice(1)?.replace(/\.git$/, '') || ''
+export function gitUrlAnalysis(url: string): BaseGitRepoInfo | null {
+  if (!url) {
+    return null
   }
 
-  let group = ''
-  let name = ''
+  try {
+    let repo = ''
+    let hostname = ''
 
-  repo.split('/').forEach((str, index, arr) => {
-    if (index === arr.length - 1) {
-      name = str
-    } else {
-      group += `/${str}`
+    if (url.startsWith('git')) {
+      // git@git.corp.xxx.com:group/eljs.git
+      // git@github.com:chnliquan/eljs.git
+      const pieces = url.split(':')
+      hostname = pieces[0].split('@')[1]
+      repo = pieces[1].replace(/\.git$/, '')
+    } else if (url.startsWith('http')) {
+      // https://git.corp.xxx.com/group/eljs.git
+      // https://github.com/chnliquan/eljs.git
+      const parsedUrl = new URL(url)
+      hostname = parsedUrl.hostname || ''
+      repo = parsedUrl.pathname?.slice(1)?.replace(/\.git$/, '') || ''
     }
-  })
 
-  group = group.substring(1)
+    let group = ''
+    let name = ''
 
-  return {
-    name,
-    group,
-    href: `https://${hostname}/${group}/${name}`,
-    url: `git@${hostname}:${group}/${name}.git`,
+    repo.split('/').forEach((str, index, arr) => {
+      if (index === arr.length - 1) {
+        name = str
+      } else {
+        group += `/${str}`
+      }
+    })
+
+    group = group.substring(1)
+
+    return {
+      name,
+      group,
+      href: `https://${hostname}/${group}/${name}`,
+      https: `https://${hostname}/${group}/${name}.git`,
+      ssh: `git@${hostname}:${group}/${name}.git`,
+    }
+  } catch (err) {
+    return null
   }
 }
 
@@ -170,7 +179,8 @@ export function getGitRepoInfo(
     name: '',
     group: '',
     href: '',
-    url: '',
+    https: '',
+    ssh: '',
     branch: '',
     author: '',
     email: '',
@@ -182,10 +192,10 @@ export function getGitRepoInfo(
     )
     // remote
     if (config['remote "origin"']) {
-      gitRepoInfo.url = config['remote "origin"'].url
+      gitRepoInfo.ssh = config['remote "origin"'].url
 
-      if (gitRepoInfo.url) {
-        Object.assign(gitRepoInfo, gitUrlAnalysis(gitRepoInfo.url))
+      if (gitRepoInfo.ssh) {
+        Object.assign(gitRepoInfo, gitUrlAnalysis(gitRepoInfo.ssh))
       }
     }
 

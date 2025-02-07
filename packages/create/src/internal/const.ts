@@ -1,4 +1,4 @@
-import { getGitUrl as gitUrl, getGitUser, gitUrlAnalysis } from '@eljs/utils'
+import { getGitUser, getGitUrl as gitUrl, gitUrlAnalysis } from '@eljs/utils'
 
 const account = getGitUser()
 
@@ -25,6 +25,6 @@ export function getGitHref(targetDir: string, gitUrl?: string) {
 
   gitUrl = gitUrl || getGitUrl(targetDir)
 
-  _gitHref = gitUrlAnalysis(gitUrl).href
+  _gitHref = gitUrlAnalysis(gitUrl)?.href || ''
   return _gitHref
 }
