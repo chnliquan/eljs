@@ -60,6 +60,7 @@ export function select<T extends Choice>(
  * @param questions 问询问题列表
  * @param initials 问询初始化数据
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function prompt<T extends PromptObject, U extends Record<string, any>>(
   questions: T[],
   initials: U = Object.create(null),
@@ -87,6 +88,7 @@ export function prompt<T extends PromptObject, U extends Record<string, any>>(
  */
 export function loopPrompt<
   T extends PromptObject,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   U extends Record<string, any> = Record<string, any>,
 >(questions: T[], initials: U = Object.create(null)): Promise<U> {
   return prompt(questions, initials).then(answers => {

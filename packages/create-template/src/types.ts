@@ -24,6 +24,7 @@ export interface CreateTemplateOpts {
   /**
    * 命令行参数
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   args?: Record<string, any>
 }
 

@@ -1,4 +1,7 @@
+/* eslint-disable no-undef */
+/* eslint-disable @typescript-eslint/naming-convention */
 module.exports = {
+  root: true,
   parser: '@typescript-eslint/parser',
   extends: [
     'eslint:recommended',
@@ -35,4 +38,5 @@ module.exports = {
     ],
     'import/order': 'off',
   },
+  ignorePatterns: ['**/lib', '**/esm', '**/dist', '**/*.d.ts'],
 }

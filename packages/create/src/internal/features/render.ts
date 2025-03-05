@@ -12,6 +12,7 @@ export default (api: Api) => {
     name: 'render',
     fn(
       path: string,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data: Record<string, any> = {},
       opts?: RenderTemplateOpts,
     ) {

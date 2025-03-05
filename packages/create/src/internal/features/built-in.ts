@@ -38,6 +38,7 @@ export default (api: Api) => {
 
       // esm 语法需要使用动态 import 引入
       const { default: sortPackageJson } = await import('sort-package-json')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await writeJSON(pkgJSONPath, sortPackageJson(pkgJSON as Record<any, any>))
     },
   })

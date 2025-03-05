@@ -40,10 +40,15 @@ export async function generateChangelog(opts: {
       {
         // https://github.com/conventional-changelog/conventional-changelog/blob/master/packages/conventional-changelog-core/lib/merge-config.js#L305
         finalizeContext: function (
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           context: any,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           writerOpts: any,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           filteredCommits: any,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           keyCommit: any,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           originalCommits: any,
         ) {
           const semverTags = context.gitSemverTags
@@ -143,6 +148,7 @@ export async function generateChangelog(opts: {
           fs.writeFileSync(LATESTLOG, latestLog)
           logger.done(`Generated LATESTLOG successfully.`)
         }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         hasError = true
         reject(err.stack)

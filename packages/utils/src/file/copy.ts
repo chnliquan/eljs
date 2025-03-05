@@ -26,6 +26,7 @@ export interface CopyFileOpts {
   /**
    * 模板渲染需要的参数
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: Record<string, any>
   /**
    * 渲染引擎的参数
@@ -62,6 +63,7 @@ export interface CopyTplOpts extends CopyFileOpts {
   /**
    * 模板渲染需要的参数
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: Record<string, any>
 }
 
@@ -97,6 +99,7 @@ export interface CopyDirectoryOpts extends CopyFileOpts {
   /**
    * 模板渲染需要的参数
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: Record<string, any>
 }
 

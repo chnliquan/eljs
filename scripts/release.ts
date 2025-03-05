@@ -1,13 +1,13 @@
 import { release, resolveBin, step } from '@eljs/release'
-import { isGitBehindRemote, isGitClean } from '@eljs/utils'
+import { isGitBehindRemote, isGitClean, logger } from '@eljs/utils'
 import { $, argv } from 'zx'
 
-import { assert } from './utils'
-
 const dry = argv.dry
-const skipGit = argv.skipGit
+const skipGitCheck = argv.skipGitCheck
 const skipTests = argv.skipTests
 const skipBuild = argv.skipBuild
+
+$.verbose = true
 
 main().catch((err: Error) => {
   console.error(`release error: ${err.message}.`)
@@ -15,9 +15,14 @@ main().catch((err: Error) => {
 })
 
 async function main(): Promise<void> {
-  if (!skipGit && !dry) {
-    assert(await isGitClean(), 'git is not clean.')
-    assert(!(await isGitBehindRemote()), 'git is behind remote.')
+  if (!dry && !skipGitCheck) {
+    if (!(await isGitClean())) {
+      logger.printErrorAndExit('git is not clean.')
+    }
+
+    if (await isGitBehindRemote()) {
+      logger.printErrorAndExit('git is behind remote.')
+    }
   }
 
   // run tests before release

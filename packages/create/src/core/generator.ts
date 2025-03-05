@@ -7,6 +7,7 @@ import { GenerateService } from './service'
 export interface GeneratorOpts {
   targetDir: string
   projectName: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   args?: Record<string, any>
   isLocalTemplate?: boolean
   isGenSchema?: boolean

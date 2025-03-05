@@ -1,24 +1,37 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
-import { logger } from '@eljs/utils'
+import { getPkgPaths, logger, readJSON, sleep } from '@eljs/utils'
 import path from 'path'
 import { $, argv } from 'zx'
 
-import { targets } from './utils'
+$.verbose = true
 
-const owners = argv._
+main().catch((err: Error) => {
+  console.error(`add owner error: ${err.message}.`)
+  process.exit(1)
+})
 
-if (!owners.length) {
-  logger.printErrorAndExit('please entry owner name.')
-}
+async function main(): Promise<void> {
+  const owners = argv._
 
-;(async (): Promise<void> => {
+  if (!owners.length) {
+    logger.printErrorAndExit('please entry owner name.')
+  }
+
+  const rootPath = path.resolve(__dirname, '../')
+  const pkgPaths = await getPkgPaths(rootPath)
+
   for (const owner of owners) {
-    for (const target of targets) {
-      const pkgDir = path.resolve(`packages/${target}`)
-      const pkg = require(`${pkgDir}/package.json`)
+    for (const pkgPath of pkgPaths) {
+      const { name: pkgName } = await readJSON(
+        path.resolve(pkgPath, 'package.json'),
+      )
 
-      await $`pnpm owner add owner ${pkg.name}`
-      logger.done(`${owner} now has the owner permission of ${pkg.name}.`)
+      try {
+        await $`pnpm owner add ${owner} ${pkgName}`
+        logger.done(`${owner} now has the owner permission of ${pkgName}.`)
+      } catch (err) {
+        await sleep(100)
+        await $`npm cache clean --force`
+      }
     }
   }
-})()
+}

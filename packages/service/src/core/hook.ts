@@ -44,6 +44,7 @@ export class Hook {
   /**
    * Hook 执行函数
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public fn: (...args: any[]) => any
 
   public constructor(opts: HookOpts) {

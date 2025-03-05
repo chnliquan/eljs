@@ -48,7 +48,7 @@ export class ConfigManager {
       }),
     })
   }
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public getConfig(opts: { schemas: Record<string, any> }) {
     const { config, files } = this.getUserConfig()
 
@@ -144,7 +144,9 @@ export class ConfigManager {
   }
 
   public static validateConfig(opts: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     config: Record<string, any>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     schemas: Record<string, any>
   }) {
     const errors = new Map<string, Error>()

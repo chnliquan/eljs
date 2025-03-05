@@ -66,6 +66,7 @@ export async function getRemoteDistTag(
               beta: distTag['beta'],
               rc: distTag['rc'],
             }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } catch (err: any) {
             if (err.message.includes('command not found')) {
               logger.error(
@@ -116,6 +117,7 @@ export async function isVersionExist(pkgName: string, version: string) {
     if (remoteInfo.trim() === '') {
       return false
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     if (err.message.includes('command not found')) {
       logger.error(

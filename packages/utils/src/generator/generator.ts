@@ -46,6 +46,7 @@ interface GeneratorDoneCtx {
   /**
    * 模版渲染数据
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: Record<string, any>
 }
 
@@ -53,10 +54,12 @@ export class Generator extends BaseGenerator {
   /**
    * 模版文件夹路径
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public src: string | ((prompts: Record<string, any>) => string)
   /**
    * 目标文件夹路径
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public dest: string | ((prompts: Record<string, any>) => string)
   /**
    * 问询列表
@@ -65,9 +68,8 @@ export class Generator extends BaseGenerator {
   /**
    * 模版渲染数据
    */
-  public data:
-    | Record<string, any>
-    | ((prompts: Record<string, any>) => Record<string, any>)
+  public data: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Record<string, any> | ((prompts: Record<string, any>) => Record<string, any>)
   /**
    * 模版写入完成回调函数
    */

@@ -34,7 +34,7 @@
   "dependencies": {
     "@eljs/conventional-changelog-preset": "workspace:*",
     "@eljs/utils": "workspace:*",
-    "@types/conventional-changelog": "^3.1.5",
+    "@types/conventional-changelog": "^6.0.0",
     "@types/glob": "^7.2.0",
     "@types/js-yaml": "^4.0.5",
     "@types/resolve-bin": "^0.4.1",

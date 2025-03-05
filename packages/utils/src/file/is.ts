@@ -11,8 +11,6 @@ export function isFileSync(file: string): boolean {
   return stat ? stat.isFile() : false
 }
 
-// console.log(isFileSync('/Users/ender/learning/github/eljs/.npmrc'))
-
 /**
  * 是否是文件
  * @param file 文件路径

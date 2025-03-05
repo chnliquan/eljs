@@ -32,7 +32,8 @@ async function cli() {
 
   enhanceErrorMessages('optionMissingArgument', (option, flag) => {
     return (
-      `Missing required argument for option ${chalk.yellow(option.flags)}` +
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      `Missing required argument for option ${chalk.yellow((option as any).flags)}` +
       (flag ? `, got ${chalk.yellow(flag)}` : ``)
     )
   })
@@ -63,8 +64,9 @@ async function cli() {
 
 function enhanceErrorMessages(
   methodName: string,
-  log: (...args: any[]) => void,
+  log: (...args: unknown[]) => void,
 ) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(program as any).Command.prototype[methodName] = function (...args: any[]) {
     if (methodName === 'unknownOption' && this._allowUnknownOption) {
       return

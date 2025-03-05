@@ -1,7 +1,7 @@
 import {
   PluginAPI,
-  type AppData as ServiceAppData,
   type PluginConfig,
+  type AppData as ServiceAppData,
 } from '@eljs/service'
 import type { PackageManager, PkgJSON, RenderTemplateOpts } from '@eljs/utils'
 import { GenerateService, type GenerateServicePluginAPI } from './core/service'
@@ -47,6 +47,7 @@ export interface CreateOpts {
   /**
    * 命令行参数
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   args?: Record<string, any>
 }
 
@@ -105,6 +106,7 @@ export interface Prompts {
   /**
    * 扩展字段
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [property: string]: any
 }
 
@@ -147,6 +149,7 @@ export interface CopyFileOpts {
   /**
    * 模板渲染需要的参数
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: Record<string, any>
   /**
    * 渲染引擎的参数
@@ -161,6 +164,7 @@ export interface CopyTplOpts extends CopyFileOpts {
   /**
    * 模板渲染需要的参数
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: Record<string, any>
 }
 
@@ -171,6 +175,7 @@ export interface CopyDirectoryOpts extends CopyFileOpts {
   /**
    * 模板渲染需要的参数
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: Record<string, any>
 }
 

@@ -88,8 +88,10 @@ function cli() {
 
 function enhanceErrorMessages(
   methodName: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   log: (...args: any[]) => void,
 ) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(program as any).Command.prototype[methodName] = function (...args: any[]) {
     if (methodName === 'unknownOption' && this._allowUnknownOption) {
       return

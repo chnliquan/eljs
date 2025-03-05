@@ -32,7 +32,7 @@ ${api.binName} help generate
       } else {
         showHelps(api.service.commands)
       }
-
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       function showHelp(command: any) {
         console.log(`
     Usage: ${api.binName} ${command.name} [options]
@@ -57,7 +57,7 @@ ${api.binName} help generate
         )
         console.log()
       }
-
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       function getDeps(commands: any) {
         return Object.keys(commands)
           .map(key => {

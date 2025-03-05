@@ -20,6 +20,7 @@ export class BaseGenerator {
   /**
    * 目标文件基准路径
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public basedir: string | ((prompts: Record<string, any>) => string)
   /**
    * 问询结果

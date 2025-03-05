@@ -12,15 +12,18 @@ export enum ServiceStage {
 export interface UserConfig {
   presets: string[]
   plugins: string[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [property: string]: any
 }
 
 export interface PluginConfig {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [property: string]: any
 }
 
 export interface Args {
   _: string[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [property: string]: any
 }
 
@@ -53,8 +56,9 @@ export interface AppData {
   /**
    * 命令执行参数
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   args: any
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [property: string]: any
 }
 
@@ -62,11 +66,13 @@ export interface AppData {
  * 预设插件提取器
  */
 export interface PresetsOrPluginsExtractor {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (presetsOrPlugins: string[], cwd: string, opts: Record<string, any>): string[]
 }
 
 export interface ProxyPluginAPIPropsExtractorReturnType {
   serviceProps: string[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   staticProps: Record<string, any>
 }
 

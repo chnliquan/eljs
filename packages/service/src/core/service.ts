@@ -68,6 +68,7 @@ export interface ServiceRunOpts {
   /**
    * 命令执行参数
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   args?: any
 }
 
@@ -157,6 +158,7 @@ export class Service {
    */
   public pluginMethods: Record<
     string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     { plugin: Plugin; fn: (...args: any[]) => void }
   > = {}
   /**
@@ -331,7 +333,9 @@ export class Service {
   public async applyPlugins<T>(opts: {
     key: string
     type?: ApplyPluginsType
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     initialValue?: any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     args?: any
   }): Promise<typeof opts.initialValue | T> {
     let { type } = opts
@@ -705,7 +709,7 @@ export class Service {
     presets: string[],
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     cwd: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
     opts: Record<string, any>,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ): string[] {
@@ -720,7 +724,7 @@ export class Service {
     plugins: string[],
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     cwd: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
     opts: Record<string, any>,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ): string[] {

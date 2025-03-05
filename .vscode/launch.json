@@ -5,29 +5,21 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Active Js File",
-      "runtimeExecutable": "node",
-      "args": ["${file}"],
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen"
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "Active Ts File",
-      "runtimeExecutable": "node",
-      "program": "${workspaceFolder}/node_modules/ts-node/dist/bin.js",
+      "name": "Debug Ts File",
+      "runtimeExecutable": "tsx",
+      "program": "${file}",
       "windows": {
-        "program": "${workspaceFolder}/node_modules/ts-node/bin/ts-node"
+        "program": "${file}"
       },
-      "args": ["-O", "{\"module\": \"commonjs\"}", "-T", "--files", "${file}"],
       "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal"
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
     },
     {
       "type": "node",
       "request": "launch",
-      "name": "Jest Active File",
+      "name": "Debug Jest File",
       "runtimeExecutable": "node",
       "program": "${workspaceFolder}/node_modules/.bin/jest",
       "windows": {
@@ -35,22 +27,29 @@
       },
       "args": ["${fileBasenameNoExtension}", "--config", "jest.config.js"],
       "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen"
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
     },
     {
       "type": "node",
       "request": "launch",
-      "name": "Release",
+      "name": "Debug Js File",
       "runtimeExecutable": "node",
-      "program": "${workspaceFolder}/node_modules/ts-node/dist/bin.js",
+      "args": ["${file}"],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Release",
+      "runtimeExecutable": "node",
+      "program": "${workspaceFolder}/packages/release/bin/release.js",
       "windows": {
-        "program": "${workspaceFolder}/node_modules/ts-node/bin/ts-node"
+        "program": "${workspaceFolder}/packages/release/bin/release.js"
       },
       "args": [
-        "-O",
-        "{\"module\": \"commonjs\"}",
-        "--files",
-        "${workspaceFolder}/packages/release/bin/release.js",
         "--registry",
         "https://npm.corp.kuaishou.com/",
         "--no-git-check",
@@ -61,15 +60,16 @@
         // "patch"
       ],
       // "cwd": "${workspaceFolder}",
-      "cwd": "/Users/ender/kwai/technology/drow/ad-create-comps/pc-components/create",
-      // "cwd": "/Users/ender/kwai/technology/polyrepo-release",
+      // "cwd": "/Users/ender/kwai/technology/drow/ad-create-comps/pc-components/create",
+      "cwd": "/Users/ender/kwai/technology/polyrepo-release",
       // "cwd": "/Users/ender/kwai/technology/monorepo-release",
-      "console": "integratedTerminal"
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
     },
     {
       "type": "node",
       "request": "launch",
-      "name": "Gen",
+      "name": "debug Gen",
       "runtimeExecutable": "node",
       "program": "${workspaceFolder}/node_modules/ts-node/dist/bin.js",
       "windows": {
@@ -87,7 +87,7 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Create Template",
+      "name": "Debug Create Template",
       "runtimeExecutable": "node",
       // "program": "${workspaceFolder}/node_modules/ts-node/dist/bin.js",
       "args": [

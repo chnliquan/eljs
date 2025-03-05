@@ -234,12 +234,14 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
    * 生成文件之前事件
    */
   onBeforeGenerateFiles: ApplyEvent<{
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     prompts: Record<string, any>
     paths: Paths
   }>
   /**
    * 生成文件事件
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onGenerateFiles: ApplyEvent<{ prompts: Record<string, any>; paths: Paths }>
   /**
    * 生成文件完成事件
@@ -265,6 +267,7 @@ export interface GenerateServicePluginAPI extends ServicePluginAPI {
    */
   render: (
     path: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data: Record<string, any>,
     opts?: RenderTemplateOpts,
   ) => Promise<void>

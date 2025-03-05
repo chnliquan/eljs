@@ -9,7 +9,7 @@ import { Service } from './service'
 
 const resolveConfigModes = ['strict', 'loose'] as const
 
-export type ResolveConfigMode = typeof resolveConfigModes[number]
+export type ResolveConfigMode = (typeof resolveConfigModes)[number]
 
 export interface ProxyPluginAPIOpts<T = Service> {
   pluginAPI: PluginAPI
@@ -97,6 +97,7 @@ export class PluginAPI<T extends Service = Service> {
     )
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public registerMethod(opts: { name: string; fn?: (...args: any[]) => void }) {
     assert(
       !this.service.pluginMethods[opts.name],
@@ -109,6 +110,7 @@ export class PluginAPI<T extends Service = Service> {
         opts.fn ||
         // 这里不能用 arrow function，this 需指向执行此方法的 PluginAPI
         // 否则 pluginId 会不对，导致不能正确 skip plugin
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         function fn(fn: (...args: any[]) => void | Record<string, unknown>) {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
