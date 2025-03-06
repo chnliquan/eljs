@@ -1,13 +1,12 @@
 import {
   camelCase,
   isPathExistsSync,
-  register,
+  loadTsSync,
   resolve,
   winPath,
   type PkgJSON,
 } from '@eljs/utils'
 import assert from 'assert'
-import esbuild from 'esbuild'
 import sum from 'hash-sum'
 import { basename, dirname, extname, join, relative } from 'path'
 import pkgUp from 'pkg-up'
@@ -106,28 +105,8 @@ export class Plugin {
     this.id = this.getId({ pkgJSON, isPkgEntry, pkgJSONPath })
     this.key = this.getKey({ pkgJSON, isPkgEntry })
     this.apply = () => {
-      register.register({
-        implementor: esbuild,
-        ignoreNodeModules: false,
-        exts: ['.ts'],
-      })
-      register.clearFiles()
-
-      let ret
-      try {
-        ret = require(this.path)
-      } catch (err) {
-        throw new Error(
-          `Register ${this.type} ${this.path} failed, since ${
-            (err as Error).message
-          }`,
-        )
-      } finally {
-        register.restore()
-      }
-
+      const ret = loadTsSync(this.path)
       this.config = ret.config ?? Object.create(null)
-
       // use the default member for es modules
       return ret.__esModule ? ret.default : ret
     }

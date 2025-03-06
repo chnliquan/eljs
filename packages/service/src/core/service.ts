@@ -72,11 +72,11 @@ export interface ServiceRunOpts {
   args?: any
 }
 
-export class Service {
+export class Service<T extends ServiceOpts> {
   /**
    * 构造函数配置项
    */
-  public opts: ServiceOpts
+  public opts: T
   /**
    * 当前执行路径
    */
@@ -170,7 +170,7 @@ export class Service {
    */
   private _prefix: string
 
-  public constructor(opts: ServiceOpts) {
+  public constructor(opts: T) {
     assert(
       utils.isPathExistsSync(opts.cwd),
       `Invalid cwd ${opts.cwd}, it's not found.`,
@@ -636,50 +636,50 @@ export class Service {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     opts: ServiceRunOpts,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    service: Service,
+    service: Service<T>,
     // eslint-disable-next-line @typescript-eslint/no-empty-function
   ): Promise<void> {}
 
   /**
    * 执行 `applyPlugin('modifyConfig')` 之前调用的钩子
    */
-  protected async beforeModifyPluginConfig<T extends PluginConfig>(
+  protected async beforeModifyPluginConfig<P extends PluginConfig>(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     opts: ServiceRunOpts,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    config: T,
+    config: P,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    service: Service,
+    service: Service<T>,
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-  ): Promise<T | void> {}
+  ): Promise<P | void> {}
 
   /**
    * 执行 `applyPlugin('modifyPaths')` 之前调用的钩子
    */
   // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-  protected async beforeModifyPaths<T extends Paths>(
+  protected async beforeModifyPaths<P extends Paths>(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     opts: ServiceRunOpts,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    paths: T,
+    paths: P,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    service: Service,
+    service: Service<T>,
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-  ): Promise<T | void> {}
+  ): Promise<P | void> {}
 
   /**
    * 执行 `applyPlugin('modifyAppData')' 之前调用的钩子
    */
   // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-  protected async beforeModifyAppData<T extends AppData>(
+  protected async beforeModifyAppData<P extends AppData>(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     opts: ServiceRunOpts,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    appData: T,
+    appData: P,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    service: Service,
+    service: Service<T>,
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-  ): Promise<T | void> {}
+  ): Promise<P | void> {}
   /**
    * 执行命令之前的钩子
    */
@@ -688,7 +688,7 @@ export class Service {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     opts: ServiceRunOpts,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    service: Service,
+    service: Service<T>,
     // eslint-disable-next-line @typescript-eslint/no-empty-function
   ): Promise<void> {}
   /**
@@ -698,7 +698,7 @@ export class Service {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     opts: ServiceRunOpts,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    service: Service,
+    service: Service<T>,
     // eslint-disable-next-line @typescript-eslint/no-empty-function
   ): Promise<void> {}
   /**

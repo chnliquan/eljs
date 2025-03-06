@@ -1,7 +1,6 @@
-import { isPathExistsSync, register } from '@eljs/utils'
+import { isPathExistsSync, loadTsSync } from '@eljs/utils'
 import assert from 'assert'
 import deepMerge from 'deepmerge'
-import esbuild from 'esbuild'
 import joi from 'joi'
 import { join } from 'path'
 import { DEFAULT_CONFIG_FILES, LOCAL_EXT, SHORT_ENV } from '../const'
@@ -111,30 +110,17 @@ export class ConfigManager {
 
     for (const configFile of opts.configFiles) {
       if (isPathExistsSync(configFile)) {
-        register.register({
-          implementor: esbuild,
-        })
-        register.clearFiles()
-
         try {
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          config = deepMerge(config, require(configFile).default)
+          const ret = loadTsSync(configFile)
+          config = deepMerge(config, ret.default)
         } catch (e) {
           throw new Error(`Parse config file failed: [${configFile}]`, {
             cause: e,
           })
         }
-
-        for (const file of register.getFiles()) {
-          delete require.cache[file]
-        }
-
-        // includes the config File
-        files.push(...register.getFiles())
-        register.restore()
-      } else {
-        files.push(configFile)
       }
+
+      files.push(configFile)
     }
 
     return {

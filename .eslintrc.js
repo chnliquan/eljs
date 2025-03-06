@@ -38,5 +38,5 @@ module.exports = {
     ],
     'import/order': 'off',
   },
-  ignorePatterns: ['**/lib', '**/esm', '**/dist', '**/*.d.ts'],
+  ignorePatterns: ['**/bin', '**/lib', '**/esm', '**/dist', '**/*.d.ts'],
 }

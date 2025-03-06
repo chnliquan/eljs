@@ -27,11 +27,7 @@ export interface GenerateServiceOpts extends ServiceOpts {
   isGenSchema?: boolean
 }
 
-export class GenerateService extends Service {
-  /**
-   * 构造函数配置项
-   */
-  public opts!: GenerateServiceOpts
+export class GenerateService extends Service<GenerateServiceOpts> {
   /**
    * 执行阶段
    */
