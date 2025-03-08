@@ -6,7 +6,7 @@ import { getPackageManager } from './package-manager'
 /**
  * 安装依赖选项
  */
-export interface InstallDepsOpts {
+export interface InstallDepsOptions {
   /**
    * 运行时依赖
    */
@@ -23,10 +23,10 @@ export interface InstallDepsOpts {
 
 /**
  * 安装指定依赖
- * @param opts 安装依赖选项
+ * @param options 安装依赖选项
  */
-export async function installDeps(opts: InstallDepsOpts): Promise<void> {
-  const { dependencies, devDependencies, cwd = process.cwd() } = opts
+export async function installDeps(options: InstallDepsOptions): Promise<void> {
+  const { dependencies, devDependencies, cwd = process.cwd() } = options
   const packageManager = await getPackageManager(cwd)
 
   if (dependencies) {

@@ -1,6 +1,6 @@
-import { Generator, type GeneratorOpts } from './generator'
+import { Generator, type GeneratorOptions } from './generator'
 
-export async function generateFile(opts: GeneratorOpts) {
-  const generator = new Generator(opts)
+export async function generateFile(options: GeneratorOptions) {
+  const generator = new Generator(options)
   await generator.run()
 }

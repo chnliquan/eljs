@@ -1,12 +1,9 @@
-import type { Api } from '@/types'
+import type { Api, AppData } from '@/types'
 
 export default (api: Api) => {
   api.modifyAppData(async memo => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const version = require('../../../package.json').version
-    memo.version = version
-    memo.projectName = api.args.projectName || ''
-    memo.packageManager = api.prompts.packageManager || 'pnpm'
+    memo.packageManager = api.prompts
+      .packageManager as AppData['packageManager']
     return memo
   })
 }

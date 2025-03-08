@@ -29,35 +29,35 @@ export function parseCommand(command: string) {
  * 执行命令
  * @param cmd 可执行命令
  * @param args 命令可传入的参数
- * @param opts 选项
+ * @param options 选项
  */
 export function run(
   cmd: string,
   args: readonly string[],
-  opts?: execa.Options & {
+  options?: execa.Options & {
     verbose?: boolean
   },
 ): execa.ExecaChildProcess {
-  if (opts?.verbose !== false) {
+  if (options?.verbose !== false) {
     console.log('$', chalk.greenBright(cmd), ...args)
   }
 
-  return execa(cmd, args, opts)
+  return execa(cmd, args, options)
 }
 
 /**
  * 执行命令
  * @param command 命令字符串
- * @param opts 选项
+ * @param options 选项
  */
 export function runCommand(
   command: string,
-  opts?: execa.Options & {
+  options?: execa.Options & {
     verbose?: boolean
   },
 ): execa.ExecaChildProcess {
   const [cmd, ...args] = parseCommand(command)
-  return run(cmd, args, opts)
+  return run(cmd, args, options)
 }
 
 export function getPid(cmd: string): Promise<number | null> {
@@ -93,7 +93,7 @@ export function getPid(cmd: string): Promise<number | null> {
 }
 
 export interface SudoOptions {
-  spawnOpts?: cp.SpawnOptions
+  spawnOptions?: cp.SpawnOptions
   password?: string
   cachePassword?: boolean
   prompt?: string
@@ -101,20 +101,20 @@ export interface SudoOptions {
 
 let cachedPassword: string
 
-export function sudo(args: string[], opts?: SudoOptions): void {
+export function sudo(args: string[], options?: SudoOptions): void {
   const NEED_PASSWORD = '#node-sudo-passwd#'
   const {
-    spawnOpts = {},
+    spawnOptions = {},
     password,
     cachePassword,
     prompt = 'sudo requires your password',
-  } = opts || {}
+  } = options || {}
   const bin = getExecutableCmd('sudo') as string
 
   args = ['-S', '-p', NEED_PASSWORD].concat(args)
-  spawnOpts.stdio = 'pipe'
+  spawnOptions.stdio = 'pipe'
 
-  const child = cp.spawn(bin, args, spawnOpts)
+  const child = cp.spawn(bin, args, spawnOptions)
 
   if (child.stdout) {
     child.stdout.on('data', chunk => {

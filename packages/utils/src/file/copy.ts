@@ -5,12 +5,12 @@ import path from 'path'
 
 import { mkdirSync } from './dir'
 import { isDirectorySync } from './is'
-import { renderTemplate, type RenderTemplateOpts } from './render'
+import { renderTemplate, type RenderTemplateOptions } from './render'
 
 /**
  * 文件拷贝选项
  */
-export interface CopyFileOpts {
+export interface CopyFileOptions {
   /**
    * 模板文件路径
    */
@@ -31,35 +31,35 @@ export interface CopyFileOpts {
   /**
    * 渲染引擎的参数
    */
-  opts?: RenderTemplateOpts
+  options?: RenderTemplateOptions
 }
 
 /**
  * 拷贝文件
- * @param opts 文件拷贝选项
+ * @param options 文件拷贝选项
  */
-export function copyFile(opts: CopyFileOpts) {
-  let destFile = convertFilePrefix(opts.to)
+export function copyFile(options: CopyFileOptions) {
+  let destFile = convertFilePrefix(options.to)
 
   if (destFile.indexOf('{{') > -1 || destFile.indexOf('<%') > -1) {
-    destFile = renderTemplate(destFile, opts.data || {}, opts.opts)
+    destFile = renderTemplate(destFile, options.data || {}, options.options)
   }
 
   mkdirSync(path.dirname(destFile))
 
-  if (opts.basedir) {
+  if (options.basedir) {
     console.log(
-      `${chalk.green('Copy: ')} ${path.relative(opts.basedir, destFile)}`,
+      `${chalk.green('Copy: ')} ${path.relative(options.basedir, destFile)}`,
     )
   }
 
-  fs.copyFileSync(opts.from, destFile)
+  fs.copyFileSync(options.from, destFile)
 }
 
 /**
  * 模版拷贝选项
  */
-export interface CopyTplOpts extends CopyFileOpts {
+export interface CopyTplOptions extends CopyFileOptions {
   /**
    * 模板渲染需要的参数
    */
@@ -69,23 +69,23 @@ export interface CopyTplOpts extends CopyFileOpts {
 
 /**
  * 拷贝模版
- * @param opts 模版拷贝选项
+ * @param options 模版拷贝选项
  */
-export function copyTpl(opts: CopyTplOpts) {
-  const tpl = fs.readFileSync(opts.from, 'utf-8')
-  const content = renderTemplate(tpl, opts.data, opts.opts)
+export function copyTpl(options: CopyTplOptions) {
+  const tpl = fs.readFileSync(options.from, 'utf-8')
+  const content = renderTemplate(tpl, options.data, options.options)
 
-  let destFile = convertFilePrefix(opts.to.replace(/\.tpl$/, ''))
+  let destFile = convertFilePrefix(options.to.replace(/\.tpl$/, ''))
 
   if (destFile.indexOf('{{') > -1 || destFile.indexOf('<%') > -1) {
-    destFile = renderTemplate(destFile, opts.data, opts.opts)
+    destFile = renderTemplate(destFile, options.data, options.options)
   }
 
   mkdirSync(path.dirname(destFile))
 
-  if (opts.basedir) {
+  if (options.basedir) {
     console.log(
-      `${chalk.green('Write:')} ${path.relative(opts.basedir, destFile)}`,
+      `${chalk.green('Write:')} ${path.relative(options.basedir, destFile)}`,
     )
   }
 
@@ -95,7 +95,7 @@ export function copyTpl(opts: CopyTplOpts) {
 /**
  * 文件夹拷贝选项
  */
-export interface CopyDirectoryOpts extends CopyFileOpts {
+export interface CopyDirectoryOptions extends CopyFileOptions {
   /**
    * 模板渲染需要的参数
    */
@@ -105,33 +105,33 @@ export interface CopyDirectoryOpts extends CopyFileOpts {
 
 /**
  * 拷贝文件夹
- * @param opts 文件夹拷贝选项
+ * @param options 文件夹拷贝选项
  */
-export function copyDirectory(opts: CopyDirectoryOpts) {
+export function copyDirectory(options: CopyDirectoryOptions) {
   const files = glob.sync('**/*', {
-    cwd: opts.from,
+    cwd: options.from,
     dot: true,
     ignore: ['**/node_modules/**'],
   })
 
   files.forEach(file => {
-    const srcFile = path.join(opts.from, file)
+    const srcFile = path.join(options.from, file)
 
     if (isDirectorySync(srcFile)) {
       return
     }
 
-    const destFile = path.join(opts.to, file)
+    const destFile = path.join(options.to, file)
 
     if (file.endsWith('.tpl')) {
       copyTpl({
-        ...opts,
+        ...options,
         from: srcFile,
         to: destFile,
       })
     } else {
       copyFile({
-        ...opts,
+        ...options,
         from: srcFile,
         to: destFile,
       })

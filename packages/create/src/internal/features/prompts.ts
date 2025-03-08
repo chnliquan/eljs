@@ -7,7 +7,7 @@ import { author, email, getGitHref, getGitUrl } from '../const'
 export default (api: Api) => {
   api.modifyPrompts(async (memo, { questions }) => {
     // 仅第一次执行，并且如果当前执行生成 schema 不执行终端输入逻辑
-    if (!memo.$$isFirstTime && !api.service.opts.isGenSchema) {
+    if (!memo.$$isFirstTime) {
       const res = await prompts(questions, {
         onCancel() {
           console.log(`${chalk.magenta('event')} - 取消模板创建`)
@@ -26,8 +26,8 @@ export default (api: Api) => {
   })
 
   api.modifyPrompts(memo => {
-    const gitUrl = getGitUrl(api.target)
-    const gitHref = getGitHref(api.target, memo.gitUrl)
+    const gitUrl = getGitUrl(api.paths.target)
+    const gitHref = getGitHref(api.paths.target, memo.gitUrl)
     const year = dayjs().format('YYYY')
     const date = dayjs().format('YYYY-MM-DD')
     const dateTime = dayjs().format('YYYY-MM-DD hh:mm:ss')

@@ -61,12 +61,12 @@ export interface NpmInfo extends OmitIndexSignature<PkgJSON> {
 /**
  * 获取 NPM 包信息
  * @param name NPM 包名
- * @param opts.registry 仓库地址
- * @param opts.cwd 工作目录
+ * @param options.registry 仓库地址
+ * @param options.cwd 工作目录
  */
 export async function getNpmInfo(
   name: string,
-  opts?: {
+  options?: {
     registry?: string
     cwd?: string
   },
@@ -74,13 +74,13 @@ export async function getNpmInfo(
 /**
  * 获取指定版本的 NPM 包信息
  * @param name NPM 包名
- * @param opts.version 版本
- * @param opts.registry 仓库地址
- * @param opts.cwd 工作目录
+ * @param options.version 版本
+ * @param options.registry 仓库地址
+ * @param options.cwd 工作目录
  */
 export async function getNpmInfo(
   name: string,
-  opts: {
+  options: {
     version: string
     registry?: string
     cwd?: string
@@ -88,20 +88,20 @@ export async function getNpmInfo(
 ): Promise<Omit<NpmInfo, 'versions' | 'dist-tags'> | null>
 export async function getNpmInfo(
   name: string,
-  opts?: {
+  options?: {
     version?: string
     registry?: string
     cwd?: string
   },
 ): Promise<NpmInfo | null> {
-  const registry = opts?.registry || (await getNpmRegistry(opts?.cwd))
+  const registry = options?.registry || (await getNpmRegistry(options?.cwd))
   let url = `${registry.replace(/\/+$/, '')}/${encodeURIComponent(name).replace(
     /^%40/,
     '@',
   )}`
 
-  if (opts?.version) {
-    url += `/${opts.version}`
+  if (options?.version) {
+    url += `/${options.version}`
   }
 
   return urllib
@@ -120,24 +120,24 @@ export async function getNpmInfo(
 /**
  * 获取 NPM 包标签
  * @param name NPM 包名
- * @param opts.cwd 工作目录
- * @param opts.registry 仓库地址
+ * @param options.cwd 工作目录
+ * @param options.registry 仓库地址
  */
 export async function getNpmDistTag(
   name: string,
-  opts?: {
+  options?: {
     cwd?: string
     registry?: string
   },
 ): Promise<NpmInfo['dist-tags']> {
   const args = ['dist-tag', 'ls', name]
 
-  if (opts?.registry) {
-    args.push('--registry', opts.registry)
+  if (options?.registry) {
+    args.push('--registry', options.registry)
   }
 
   return execa('npm', args, {
-    cwd: opts?.cwd,
+    cwd: options?.cwd,
   }).then(data => {
     const distTag = {
       latest: '',

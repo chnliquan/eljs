@@ -1,4 +1,4 @@
-import type { Api, ExtendPackageOpts } from '@/types'
+import type { Api } from '@/types'
 import {
   chalk,
   install,
@@ -7,29 +7,30 @@ import {
   logger,
   readJSON,
   writeJSON,
+  type PkgJSON,
 } from '@eljs/utils'
 import { join } from 'path'
 
 export default (api: Api) => {
-  api.registerMethod({
-    name: 'extendPackage',
-    async fn(opts: ExtendPackageOpts) {
-      const pkgJSON = api.service.pkgJSON
+  api.registerMethod(
+    'extendPackage',
+    async (opts: (pkg: PkgJSON) => PkgJSON | PkgJSON) => {
+      const pkgJSON = api.pkgJSON
       const toMerge = (isFunction(opts) ? await opts(pkgJSON) : opts) ?? {}
-      api.service.pkgJSON = api.lodash.merge(api.service.pkgJSON, toMerge)
+      api.pkgJSON = api.utils.deepMerge(api.pkgJSON, toMerge)
     },
-  })
+  )
 
   api.register({
     key: 'onGenerateDone',
     stage: Number.NEGATIVE_INFINITY,
     async fn() {
       const pkgJSONPath = join(api.paths.target, 'package.json')
-      let pkgJSON = api.service.pkgJSON
+      let pkgJSON = api.pkgJSON
 
       if (await isPathExists(pkgJSONPath)) {
         const originPkgJSON = await readJSON(pkgJSONPath)
-        pkgJSON = api.lodash.merge(originPkgJSON, pkgJSON)
+        pkgJSON = api.utils.deepMerge(originPkgJSON, pkgJSON)
       }
 
       if (Object.keys(pkgJSON).length === 0) {
@@ -55,16 +56,12 @@ export default (api: Api) => {
     },
   })
 
-  api.registerMethod({
-    name: 'installDeps',
-    fn() {
-      const { packageManager = 'pnpm' } = api.appData
+  api.registerMethod('installDeps', async () => {
+    const { packageManager = 'pnpm' } = api.appData
 
-      logger.info('📦 Installing additional dependencies...')
-      console.log()
+    logger.info('📦 Installing additional dependencies...')
+    console.log()
 
-      api.appData.installDeps = true
-      install(api.paths.target, packageManager)
-    },
+    await install(api.paths.target, packageManager)
   })
 }

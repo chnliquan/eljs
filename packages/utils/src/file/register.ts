@@ -15,12 +15,12 @@ export interface Implementor {
   /**
    * 文件转换函数
    * @param input 源代码
-   * @param opts 转换选项
+   * @param options 转换选项
    */
   transformSync: (
     input: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    opts: any,
+    options: any,
   ) => {
     code: string
   }
@@ -29,7 +29,7 @@ export interface Implementor {
 /**
  * 文件加载器选项
  */
-export interface RegisterOpts {
+export interface RegisterOptions {
   /**
    * 文件转换实现器
    */
@@ -46,10 +46,10 @@ export interface RegisterOpts {
 
 /**
  * 注册文件加载器
- * @param opts 注册选项
+ * @param options 注册选项
  */
-export function register(opts: RegisterOpts) {
-  const { implementor, ignoreNodeModules = true, exts = HOOK_EXTS } = opts
+export function register(options: RegisterOptions) {
+  const { implementor, ignoreNodeModules = true, exts = HOOK_EXTS } = options
   files = []
 
   if (!registered) {

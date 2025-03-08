@@ -1,5 +1,5 @@
+import { Create } from '@/core'
 import { minimist } from '@eljs/utils'
-import { Create } from './core/create'
 
 cli().catch((err: Error) => {
   console.error(`Create failed, ${err.message}`)

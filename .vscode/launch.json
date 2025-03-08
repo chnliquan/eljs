@@ -69,30 +69,28 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug Gen",
-      "runtimeExecutable": "node",
-      "program": "${workspaceFolder}/node_modules/ts-node/dist/bin.js",
+      "name": "Debug Create Template",
+      "runtimeExecutable": "tsx",
+      "program": "${workspaceFolder}/packages/create-template/src/cli.ts",
       "windows": {
-        "program": "${workspaceFolder}/node_modules/ts-node/bin/ts-node"
+        "program": "${workspaceFolder}/packages/create-template/src/cli.ts"
       },
-      "args": [
-        "-O",
-        "{\"module\": \"commonjs\"}",
-        "--files",
-        "${workspaceFolder}/packages/create/bin/gen.js"
-      ],
-      "cwd": "/Users/ender/learning/github/templates/packages/npm-node",
+      "args": ["temp", "-f"],
+      "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
     },
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug Create Template",
+      "name": "Debug Create Gen",
       "runtimeExecutable": "tsx",
-      "program": "${workspaceFolder}/packages/create-template/src/cli.ts",
-      "args": ["temp", "-f"],
-      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/packages/create/src/cli.ts",
+      "windows": {
+        "program": "${workspaceFolder}/packages/create/src/cli.ts"
+      },
+      "args": ["${workspaceFolder}/packages/create/bin/gen.js"],
+      "cwd": "/Users/ender/learning/github/templates/packages/npm-node",
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
     }

@@ -1,0 +1,72 @@
+import assert from 'assert'
+import type { Plugin } from './plugin'
+
+/**
+ * 钩子类参数
+ */
+export interface HookOptions {
+  /**
+   * Hook 对应的插件实例
+   */
+  plugin: Plugin
+  /**
+   * Hook 的唯一标识
+   */
+  key: string
+  /**
+   * 指定在某个 Hook 之前执行
+   */
+  before?: string
+  /**
+   * Hook 执行阶段，值越小执行越早
+   */
+  stage?: number
+  /**
+   * Hook 执行函数
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fn: (...args: any[]) => any
+}
+
+/**
+ * 钩子类
+ */
+export class Hook {
+  /**
+   * 钩子类参数
+   */
+  public options: HookOptions
+  /**
+   * Hook 对应的插件实例
+   */
+  public plugin: Plugin
+  /**
+   * Hook 的唯一标识
+   */
+  public key: string
+  /**
+   * 指定在某个 Hook 之前执行
+   */
+  public before: string
+  /**
+   * Hook 执行阶段，值越小执行越早
+   */
+  public stage: number
+  /**
+   * Hook 执行函数
+   */
+  public fn: HookOptions['fn']
+
+  public constructor(options: HookOptions) {
+    this.options = options
+    const { key, fn, plugin, before, stage } = options
+
+    assert(key && fn, `Invalid hook ${options}, key and fn must supplied.`)
+
+    this.plugin = plugin
+    this.key = key
+    this.before = before || ''
+    this.stage = stage || 0
+    this.fn = fn
+  }
+}

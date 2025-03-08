@@ -2,20 +2,20 @@ import type { Api } from '@/types'
 import {
   extractCallDir,
   isDirectorySync,
-  type RenderTemplateOpts,
+  type RenderTemplateOptions,
 } from '@eljs/utils'
 import { join, resolve } from 'path'
 
 export default (api: Api) => {
   // 复制文件夹
-  api.registerMethod({
-    name: 'render',
-    fn(
+  api.registerMethod(
+    'render',
+    (
       path: string,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data: Record<string, any> = {},
-      opts?: RenderTemplateOpts,
-    ) {
+      options?: RenderTemplateOptions,
+    ) => {
       const baseDir = extractCallDir(3)
       const srcFile = resolve(baseDir, path)
 
@@ -24,7 +24,7 @@ export default (api: Api) => {
           from: srcFile,
           to: api.paths.target,
           data,
-          opts,
+          options,
         })
       } else {
         const destFile = join(api.paths.target, srcFile.replace(/\.tpl$/, ''))
@@ -34,17 +34,17 @@ export default (api: Api) => {
             from: srcFile,
             to: destFile,
             data,
-            opts,
+            options,
           })
         } else {
           api.copyFile({
             from: srcFile,
             to: destFile,
             data,
-            opts,
+            options,
           })
         }
       }
     },
-  })
+  )
 }

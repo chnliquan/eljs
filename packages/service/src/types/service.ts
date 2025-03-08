@@ -36,7 +36,9 @@ export interface Paths {
    * 目标路径
    */
   target: string
-
+  /**
+   * 扩展字段
+   */
   [property: string]: string
 }
 

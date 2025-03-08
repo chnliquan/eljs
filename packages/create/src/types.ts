@@ -1,10 +1,10 @@
-import {
-  PluginAPI,
-  type PluginConfig,
-  type AppData as ServiceAppData,
-} from '@eljs/service'
-import type { PackageManager, PkgJSON, RenderTemplateOpts } from '@eljs/utils'
-import { GenerateService, type GenerateServicePluginAPI } from './core/service'
+import { Runner, type RunnerPluginAPI } from '@/core'
+import type { PluginAPI } from '@eljs/pluggable'
+import type {
+  PackageManager,
+  PkgJSON,
+  RenderTemplateOptions,
+} from '@eljs/utils'
 
 export type TemplateType = 'npm' | 'git' | 'local'
 
@@ -27,7 +27,10 @@ export interface TemplateInfo {
   registry?: string
 }
 
-export interface CreateOpts {
+/**
+ * 创建参数
+ */
+export interface CreateOptions {
   /**
    * 是否直接覆盖文件
    */
@@ -51,11 +54,40 @@ export interface CreateOpts {
   args?: Record<string, any>
 }
 
-export interface AppData extends ServiceAppData {
+/**
+ * 项目路径
+ */
+export interface Paths {
+  /**
+   * 当前执行路径
+   */
+  cwd: string
+  /**
+   * 目标路径
+   */
+  target: string
+  /**
+   * 扩展字段
+   */
+  [property: string]: string
+}
+
+/**
+ * 应用数据
+ */
+export interface AppData {
+  /**
+   * 场景
+   */
+  scene: 'node' | 'web'
   /**
    * 当前 Cli 版本
    */
-  version: string
+  cliVersion: string
+  /**
+   * package json 对象
+   */
+  pkgJSON: PkgJSON
   /**
    * 项目名
    */
@@ -64,8 +96,15 @@ export interface AppData extends ServiceAppData {
    * 包管理器
    */
   packageManager: PackageManager
+  /**
+   * 扩展字段
+   */
+  [property: string]: unknown
 }
 
+/**
+ * 命令行输入
+ */
 export interface Prompts {
   /**
    * 项目作者
@@ -106,38 +145,22 @@ export interface Prompts {
   /**
    * 扩展字段
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [property: string]: any
+  [property: string]: unknown
 }
 
-export interface GeneratePluginConfig extends PluginConfig {
-  /**
-   *
-   * 是否启用默认问询
-   */
-  defaultQuestions?: boolean
-  /**
-   * 是否启用 git 初始化
-   */
-  gitInit?: boolean
-}
-
-export enum GenerateServiceStage {
-  // #region service stage
+/**
+ * 生成器阶段枚举
+ */
+export enum RunnerStageEnum {
   Uninitialized = 'uninitialized',
   Init = 'init',
-  InitPresets = 'initPresets',
-  InitPlugins = 'initPlugins',
   CollectAppData = 'collectAppData',
   OnCheck = 'onCheck',
   OnStart = 'onStart',
-  // #endregion service stage
   Prompting = 'prompting',
 }
 
-export type ExtendPackageOpts = (pkg: PkgJSON) => PkgJSON | PkgJSON
-
-export interface CopyFileOpts {
+export interface CopyFileOptions {
   /**
    * 模板文件路径
    */
@@ -154,13 +177,13 @@ export interface CopyFileOpts {
   /**
    * 渲染引擎的参数
    */
-  opts?: RenderTemplateOpts
+  options?: RenderTemplateOptions
 }
 
 /**
  * 拷贝文件选项
  */
-export interface CopyTplOpts extends CopyFileOpts {
+export interface CopyTplOptions extends CopyFileOptions {
   /**
    * 模板渲染需要的参数
    */
@@ -171,7 +194,7 @@ export interface CopyTplOpts extends CopyFileOpts {
 /**
  * 拷贝文件夹选项
  */
-export interface CopyDirectoryOpts extends CopyFileOpts {
+export interface CopyDirectoryOptions extends CopyFileOptions {
   /**
    * 模板渲染需要的参数
    */
@@ -179,4 +202,44 @@ export interface CopyDirectoryOpts extends CopyFileOpts {
   data: Record<string, any>
 }
 
-export type Api = GenerateServicePluginAPI & PluginAPI<GenerateService>
+/**
+ * 插件入参
+ */
+export type Api = PluginAPI<Runner> &
+  RunnerPluginAPI & {
+    // #region 插件工具方法
+    /**
+     * 拷贝文件
+     */
+    copyFile: (options: CopyFileOptions) => void
+    /**
+     * 拷贝模版
+     */
+    copyTpl: (options: CopyTplOptions) => void
+    /**
+     * 拷贝文件夹
+     */
+    copyDirectory: (options: CopyDirectoryOptions) => void
+    /**
+     * 将模板文件渲染到目标文件对象中
+     */
+    render: (
+      path: string,
+      data: Record<string, unknown>,
+      options?: RenderTemplateOptions,
+    ) => Promise<void>
+    /**
+     * 扩展 package.json
+     */
+    extendPackage(partialPkgJSON: PkgJSON): void
+    extendPackage(extend: (memo: PkgJSON) => PkgJSON): void
+    /**
+     * 在当前工程下解析一个路径
+     */
+    resolve: (...paths: string[]) => string
+    /**
+     * 安装依赖
+     */
+    installDeps(): Promise<void>
+    // #endregion
+  }

@@ -5,7 +5,7 @@ import { author, email, getGitUrl } from '../const'
 export default async (api: Api) => {
   api.describe({
     key: 'defaultQuestions',
-    enableBy() {
+    enable() {
       return api.pluginConfig.defaultQuestions === true
     },
   })
@@ -19,7 +19,7 @@ export default async (api: Api) => {
           name: 'name',
           type: 'text',
           message: `项目名称`,
-          initial: api.args.projectName || path.basename(api.target),
+          initial: api.appData.projectName || path.basename(api.paths.target),
         },
         {
           name: 'description',
@@ -42,7 +42,7 @@ export default async (api: Api) => {
           name: 'gitUrl',
           type: 'text',
           message: `Git 地址`,
-          initial: getGitUrl(api.target),
+          initial: getGitUrl(api.paths.target),
         },
       ]
     },

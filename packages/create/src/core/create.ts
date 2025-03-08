@@ -1,3 +1,4 @@
+import type { CreateOpts, TemplateInfo } from '@/types'
 import {
   chalk,
   confirm,
@@ -11,7 +12,6 @@ import assert from 'assert'
 import { readdirSync } from 'fs'
 import path from 'path'
 
-import type { CreateOpts, TemplateInfo } from '../types'
 import { Download } from './download'
 import { Generator } from './generator'
 
@@ -87,13 +87,12 @@ export class Create {
       templatePath = (await this._getTemplatePath()) as string
 
       const generator = new Generator({
-        isLocalTemplate: !!this._localTemplatePath,
+        isLocal: !!this._localTemplatePath,
         projectName: name,
         targetDir,
-        args: this._opts.args,
       })
 
-      await generator.create(templatePath)
+      await generator.generate(templatePath)
     } catch (err) {
       console.log()
       logger.error('创建模版失败，错误信息如下：')

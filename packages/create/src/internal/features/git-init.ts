@@ -2,7 +2,7 @@ import type { Api } from '@/types'
 
 export default async (api: Api) => {
   api.describe({
-    enableBy() {
+    enable() {
       return api.pluginConfig.gitInit === true
     },
   })

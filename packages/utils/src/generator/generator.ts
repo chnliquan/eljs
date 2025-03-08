@@ -3,7 +3,7 @@ import { isFunction } from '@/type'
 import type { PromptObject } from 'prompts'
 import { BaseGenerator } from './base-generator'
 
-export interface GeneratorOpts {
+export interface GeneratorOptions {
   /**
    * 模版文件夹路径
    */
@@ -87,7 +87,7 @@ export class Generator extends BaseGenerator {
     data,
     renderTemplateOptions,
     onGeneratorDone,
-  }: GeneratorOpts) {
+  }: GeneratorOptions) {
     super(basedir || dest, renderTemplateOptions)
     this.src = src
     this.dest = dest

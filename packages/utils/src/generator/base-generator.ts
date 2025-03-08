@@ -3,10 +3,10 @@ import {
   copyDirectory,
   copyFile,
   copyTpl,
-  type CopyDirectoryOpts,
-  type CopyFileOpts,
-  type CopyTplOpts,
-  type RenderTemplateOpts,
+  type CopyDirectoryOptions,
+  type CopyFileOptions,
+  type CopyTplOptions,
+  type RenderTemplateOptions,
 } from '@/file'
 import { logger } from '@/logger'
 import { isFunction } from '@/type'
@@ -29,7 +29,7 @@ export class BaseGenerator {
   /**
    * 模版渲染配置项
    */
-  public renderTemplateOptions: RenderTemplateOpts | undefined
+  public renderTemplateOptions: RenderTemplateOptions | undefined
 
   private _basedir = ''
 
@@ -63,26 +63,26 @@ export class BaseGenerator {
     // ...
   }
 
-  public copyFile(opts: CopyFileOpts) {
+  public copyFile(options: CopyFileOptions) {
     copyFile({
-      ...opts,
-      opts: this.renderTemplateOptions,
+      ...options,
+      options: this.renderTemplateOptions,
       basedir: this._basedir,
     })
   }
 
-  public copyTpl(opts: CopyTplOpts) {
+  public copyTpl(options: CopyTplOptions) {
     copyTpl({
-      ...opts,
-      opts: this.renderTemplateOptions,
+      ...options,
+      options: this.renderTemplateOptions,
       basedir: this._basedir,
     })
   }
 
-  public copyDirectory(opts: CopyDirectoryOpts) {
+  public copyDirectory(options: CopyDirectoryOptions) {
     copyDirectory({
-      ...opts,
-      opts: this.renderTemplateOptions,
+      ...options,
+      options: this.renderTemplateOptions,
       basedir: this._basedir,
     })
   }

@@ -7,31 +7,31 @@ import { getGitBranch } from './meta'
 /**
  * 提交 git 信息
  * @param msg 提交信息
- * @param opts 选项
+ * @param options 选项
  */
 export async function gitCommit(
   msg: string,
-  opts?: execa.Options & {
+  options?: execa.Options & {
     verbose?: boolean
   },
 ): Promise<void> {
-  if (await isGitClean(opts?.cwd)) {
+  if (await isGitClean(options?.cwd)) {
     return
   }
-  await run('git', ['add', '-A'], opts)
-  await run('git', ['commit', '-m', msg], opts)
+  await run('git', ['add', '-A'], options)
+  await run('git', ['commit', '-m', msg], options)
 }
 
 /**
  * 同步 git commit 到远端
- * @param opts 选项
+ * @param options 选项
  */
 export async function gitPushCommit(
-  opts?: execa.Options & {
+  options?: execa.Options & {
     verbose?: boolean
   },
 ): Promise<void> {
-  const isAheadRemote = await isGitAheadRemote(opts?.cwd)
+  const isAheadRemote = await isGitAheadRemote(options?.cwd)
 
   if (!isAheadRemote) {
     return
@@ -42,34 +42,34 @@ export async function gitPushCommit(
   await run(
     'git',
     ['push', '--follow-tags', '--set-upstream', 'origin', branch],
-    opts,
+    options,
   )
 }
 
 /**
  * git tag
  * @param tag 标签
- * @param opts 选项
+ * @param options 选项
  */
 export async function gitTag(
   tag: string,
-  opts?: execa.Options & {
+  options?: execa.Options & {
     verbose?: boolean
   },
 ): Promise<void> {
-  await run('git', ['tag', tag, '-m', tag], opts)
+  await run('git', ['tag', tag, '-m', tag], options)
 }
 
 /**
  * 同步 git tag 到远端
  * @param tag 标签
- * @param opts 选项
+ * @param options 选项
  */
 export async function gitPushTag(
   tag: string,
-  opts?: execa.Options & {
+  options?: execa.Options & {
     verbose?: boolean
   },
 ): Promise<void> {
-  await run('git', ['push', 'origin', `refs/tags/${tag}`], opts)
+  await run('git', ['push', 'origin', `refs/tags/${tag}`], options)
 }

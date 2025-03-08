@@ -1,31 +1,45 @@
-import { Env } from '@eljs/service'
 import { chalk, logger, tryPaths } from '@eljs/utils'
 import assert from 'assert'
 import { join } from 'path'
-import { GenerateService } from './service'
+import { Runner } from './runner'
 
-export interface GeneratorOpts {
+/**
+ * 生成器构造函数参数
+ */
+export interface GeneratorOptions {
+  /**
+   * 目标路径
+   */
   targetDir: string
+  /**
+   * 项目名称
+   */
   projectName: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  args?: Record<string, any>
-  isLocalTemplate?: boolean
-  isGenSchema?: boolean
+  /**
+   * 是否是本地
+   */
+  isLocal?: boolean
 }
 
+/**
+ * 生成器类
+ */
 export class Generator {
-  private _opts: GeneratorOpts
+  /**
+   * 构造函数参数
+   */
+  public options: GeneratorOptions
 
-  public constructor(opts: GeneratorOpts) {
-    this._opts = opts
+  public constructor(options: GeneratorOptions) {
+    this.options = options
   }
 
-  public async create(templatePath?: string) {
+  public async generate(templatePath?: string) {
     assert(templatePath, 'templatePath 不允许为空')
-    const { isLocalTemplate, targetDir, projectName } = this._opts
+    const { isLocal, targetDir, projectName } = this.options
 
     if (templatePath) {
-      if (isLocalTemplate) {
+      if (isLocal) {
         logger.info(`启用本地模板生成，模板路径：${chalk.yellow(templatePath)}`)
       }
 
@@ -35,28 +49,21 @@ export class Generator {
         join(templatePath, 'generators/index.js'),
       ])
 
-      const service = new GenerateService({
+      const runner = new Runner({
         cwd: templatePath,
         plugins: generatorFile ? [require.resolve(generatorFile)] : [],
-        env: process.env.NODE_ENV as Env,
       })
 
       assert(
-        service.userConfig?.presets.length ||
-          service.userConfig?.plugins.length ||
+        runner.userConfig?.presets?.length ||
+          runner.userConfig?.plugins?.length ||
           generatorFile,
         `创建项目失败，必须包含配置文件 ${chalk.red(
           '.create.ts/create.js',
         )} 或者 ${chalk.red('generators/index.ts')}`,
       )
 
-      await service.run({
-        target: targetDir,
-        args: {
-          ...(this._opts.args || {}),
-          projectName,
-        },
-      })
+      await runner.run(targetDir, projectName)
     }
   }
 }

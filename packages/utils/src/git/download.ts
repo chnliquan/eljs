@@ -5,7 +5,7 @@ import { tmpdir } from '../file'
 /**
  * 下载选项
  */
-export interface DownloadGitRepoOpts {
+export interface DownloadGitRepoOptions {
   /**
    * 分支
    */
@@ -19,13 +19,13 @@ export interface DownloadGitRepoOpts {
 /**
  * 下载 git 仓库
  * @param url git 地址
- * @param opts 下载选项
+ * @param options 下载选项
  */
 export async function downloadGitRepo(
   url: string,
-  opts?: DownloadGitRepoOpts,
+  options?: DownloadGitRepoOptions,
 ): Promise<string> {
-  const { branch = 'master', dest = tmpdir(true) } = opts || {}
+  const { branch = 'master', dest = tmpdir(true) } = options || {}
 
   const args = [
     'git',
