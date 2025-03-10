@@ -29,7 +29,7 @@ export async function writeJson<T extends object>(
   path: string,
   content: T,
 ): Promise<void> {
-  fsp.writeFile(path, JSON.stringify(content, null, 2) + '\n')
+  await fsp.writeFile(path, JSON.stringify(content, null, 2) + '\n')
 }
 
 /**
@@ -115,7 +115,7 @@ export function writeFileSync(
   content: string,
   encoding: BufferEncoding = 'utf8',
 ): void {
-  writeFileSync(path, content, encoding)
+  fs.writeFileSync(path, content, encoding)
 }
 
 /**
@@ -129,7 +129,7 @@ export async function writeFile(
   content: string,
   encoding: BufferEncoding = 'utf8',
 ): Promise<void> {
-  await writeFile(path, content, encoding)
+  await fsp.writeFile(path, content, encoding)
 }
 
 /**

@@ -1,6 +1,6 @@
 import { PluggableStateEnum, type Pluggable } from '@/pluggable'
 import { isPlainObject, isString, type MaybePromiseFunction } from '@eljs/utils'
-import assert from 'assert'
+import assert from 'node:assert'
 
 import { Hook, type HookOptions } from './hook'
 import { Plugin } from './plugin'
@@ -35,12 +35,18 @@ export class PluginApi<T extends Pluggable = Pluggable> {
 
   /**
    * 注册插件
-   * @param options 注册参数
+   * @param key 唯一标识
+   * @param fn 执行函数
+   * @param options 可选配置项
    */
-  public register(options: Omit<HookOptions, 'plugin'>) {
-    this.pluggable.hooks[options.key] ||= []
-    this.pluggable.hooks[options.key].push(
-      new Hook({ ...options, plugin: this.plugin }),
+  public register(
+    key: HookOptions['key'],
+    fn: HookOptions['fn'],
+    options: Omit<HookOptions, 'plugin' | 'key' | 'fn'> = {},
+  ) {
+    this.pluggable.hooks[key] ||= []
+    this.pluggable.hooks[key].push(
+      new Hook({ ...options, key, fn, plugin: this.plugin }),
     )
   }
 
@@ -66,10 +72,7 @@ export class PluginApi<T extends Pluggable = Pluggable> {
         function fn(fn: (...args: any[]) => void | Record<string, unknown>) {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
-          this.register({
-            key: name,
-            ...(isPlainObject(fn) ? fn : { fn }),
-          })
+          this.register(name, isPlainObject(fn) ? fn.fn : fn)
         },
     }
   }

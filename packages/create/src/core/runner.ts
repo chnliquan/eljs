@@ -13,7 +13,7 @@ import {
   type PluggablePluginApi,
   type UserConfig,
 } from '@eljs/pluggable'
-import utils, { prompts, type PackageJson } from '@eljs/utils'
+import { prompts } from '@eljs/utils'
 
 /**
  * 运行器插件自身配置项
@@ -68,10 +68,6 @@ export class Runner extends Pluggable<
    * prettierConfig 配置
    */
   public prettierConfig = Object.create(null)
-  /**
-   * 项目的 package.json 对象
-   */
-  public pkgJSON: PackageJson = Object.create(null)
 
   public constructor(options: PluggableOptions) {
     super({
@@ -83,7 +79,7 @@ export class Runner extends Pluggable<
   }
 
   public async run(target: string, projectName: string): Promise<void> {
-    this.load()
+    await this.load()
     this.stage = RunnerStageEnum.Init
 
     const questions = await this.applyPlugins('addQuestions', {
@@ -106,7 +102,7 @@ export class Runner extends Pluggable<
         scene: 'web',
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         cliVersion: require('../../package.json').version,
-        pkgJSON: {},
+        pkg: {},
         projectName,
         packageManager: 'pnpm',
       },
@@ -192,10 +188,6 @@ export interface RunnerPluginApi extends PluggablePluginApi {
    * 插件启用配置，可通过 `modifyPluginConfig` 方法修改
    */
   pluginConfig: typeof Runner.prototype.pluginConfig
-  /**
-   *
-   */
-  pkgJSON: typeof Runner.prototype.pkgJSON
   // #endregion
 
   // #region 插件钩子
@@ -254,12 +246,5 @@ export interface RunnerPluginApi extends PluggablePluginApi {
    * 生成文件完成事件
    */
   onGenerateDone: ApplyEvent<null>
-  // #endregion
-
-  // #region 静态属性
-  /**
-   * 工具函数
-   */
-  utils: typeof utils
   // #endregion
 }

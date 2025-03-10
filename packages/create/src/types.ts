@@ -86,9 +86,9 @@ export interface AppData {
    */
   cliVersion: string
   /**
-   * package json 对象
+   * package.json 对象
    */
-  pkgJSON: PackageJson
+  pkg: PackageJson
   /**
    * 项目名
    */
@@ -169,6 +169,9 @@ export type Api = PluginApi<Runner> &
     // #region 插件工具方法
     /**
      * 拷贝文件
+     * @param from 源文件路径
+     * @param to 目标文件路径
+     * @param options 可选配置项
      */
     copyFile: (
       from: string,
@@ -177,6 +180,10 @@ export type Api = PluginApi<Runner> &
     ) => Promise<void>
     /**
      * 拷贝模版
+     * @param from 源文件路径
+     * @param to 目标文件路径
+     * @param data 模版数据
+     * @param options 可选配置项
      */
     copyTpl: (
       from: string,
@@ -186,6 +193,10 @@ export type Api = PluginApi<Runner> &
     ) => Promise<void>
     /**
      * 拷贝文件夹
+     * @param from 源文件路径
+     * @param to 目标文件路径
+     * @param data 模版数据
+     * @param options 可选配置项
      */
     copyDirectory: (
       from: string,
@@ -194,20 +205,30 @@ export type Api = PluginApi<Runner> &
       options: CopyFileOptions,
     ) => Promise<void>
     /**
-     * 将模板文件渲染到目标文件对象中
+     * 渲染模版
+     * @param path 模版路径
+     * @param data 模版数据
+     * @param options 可选配置项
      */
     render: (
       path: string,
-      data: Record<string, unknown>,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: Record<string, any>,
       options?: RenderTemplateOptions,
     ) => Promise<void>
     /**
      * 扩展 package.json
+     * @param partialPkgJson 部分 packageJson 数据
      */
-    extendPackage(partialPackageJson: PackageJson): void
-    extendPackage(extend: (memo: PackageJson) => PackageJson): void
+    extendPackage(partialPkgJson: PackageJson): void
+    /**
+     * 扩展 package.json
+     * @param fn packageJson 获取函数
+     */
+    extendPackage(fn: (memo: PackageJson) => PackageJson): void
     /**
      * 在当前工程下解析一个路径
+     * @param paths 文件路径
      */
     resolve: (...paths: string[]) => string
     /**

@@ -1,3 +1,4 @@
+import type { MaybePromiseFunction } from '@/types'
 import { sleep } from './timer'
 
 /**
@@ -24,9 +25,6 @@ export async function retry<T>(
 
   throw lastError
 }
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type MaybePromiseFunction<T> = (...args: any[]) => T | Promise<T>
 
 /**
  * 重试直到函数返回非 undefined/null 值

@@ -1,5 +1,5 @@
 import type { Api } from '@/types'
-import path from 'path'
+import path from 'node:path'
 
 import { author, email, getGitUrl } from '../constants'
 
@@ -11,10 +11,9 @@ export default async (api: Api) => {
     },
   })
 
-  api.register({
-    key: 'addQuestions',
-    stage: Number.NEGATIVE_INFINITY,
-    async fn() {
+  api.register(
+    'addQuestions',
+    () => {
       return [
         {
           name: 'name',
@@ -47,12 +46,14 @@ export default async (api: Api) => {
         },
       ]
     },
-  })
+    {
+      stage: Number.NEGATIVE_INFINITY,
+    },
+  )
 
-  api.register({
-    key: 'addQuestions',
-    stage: Number.POSITIVE_INFINITY,
-    async fn() {
+  api.register(
+    'addQuestions',
+    () => {
       return [
         {
           type: 'select',
@@ -67,5 +68,8 @@ export default async (api: Api) => {
         },
       ]
     },
-  })
+    {
+      stage: Number.POSITIVE_INFINITY,
+    },
+  )
 }

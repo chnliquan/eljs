@@ -1,9 +1,9 @@
 import { Plugin, PluginApi, PluginTypeEnum, type Hook } from '@/plugin'
 import { ConfigManager } from '@eljs/config'
-import * as utils from '@eljs/utils'
-import assert from 'assert'
+import assert from 'node:assert'
 import { AsyncSeriesWaterfallHook } from 'tapable'
 
+import utils, { isFunction, isPathExistsSync } from '@eljs/utils'
 import {
   ApplyPluginTypeEnum,
   PluggableStateEnum,
@@ -121,7 +121,7 @@ export class Pluggable<
 
   public constructor(options: O) {
     assert(
-      utils.isPathExistsSync(options.cwd),
+      isPathExistsSync(options.cwd),
       `Invalid cwd ${options.cwd}, it's not found.`,
     )
 
@@ -174,8 +174,12 @@ export class Pluggable<
    * 获取插件 API
    * @param plugin 插件
    */
-  protected getPluginApi(plugin: Plugin) {
+  protected getPluginApi(plugin: Plugin): PluginApi {
     const pluginApi = new PluginApi(this, plugin)
+
+    const extraApi = {
+      utils,
+    }
 
     return new Proxy(pluginApi, {
       get: (target, prop: string) => {
@@ -185,7 +189,11 @@ export class Pluggable<
 
         if (prop in this) {
           const value = this[prop as keyof typeof this]
-          return utils.isFunction(value) ? value.bind(this) : value
+          return isFunction(value) ? value.bind(this) : value
+        }
+
+        if (prop in extraApi) {
+          return extraApi[prop as keyof typeof extraApi]
         }
 
         return target[prop as keyof typeof target]
@@ -251,7 +259,7 @@ export class Pluggable<
     } = Object.create(null)
 
     const startTime = new Date()
-    const pluginRet = await plugin.apply()(PluginApi)
+    const pluginRet = await plugin.apply()(pluginApi)
     plugin.time.register = new Date().getTime() - startTime.getTime()
 
     if (plugin.type === PluginTypeEnum.Plugin) {
@@ -303,9 +311,9 @@ export class Pluggable<
    * @param key 通过 register 方法注册的 key
    * @param options 配置项
    */
-  public async applyPlugins<T extends object>(
+  public async applyPlugins<T extends object, U extends object>(
     key: string,
-    options?: ApplyPluginsOptions<T>,
+    options?: ApplyPluginsOptions<T, U>,
   ): Promise<T> {
     let { type } = options || {}
 
@@ -446,7 +454,7 @@ export class Pluggable<
       return false
     }
 
-    if (utils.isFunction(enable)) {
+    if (isFunction(enable)) {
       return enable()
     }
 
@@ -484,5 +492,12 @@ export interface PluggablePluginApi {
    * @param plugins 插件/路径集合
    */
   registerPlugins: (plugins: (Plugin | string)[]) => void
+  // #endregion
+
+  // #region 静态属性
+  /**
+   * 工具函数
+   */
+  utils: typeof utils
   // #endregion
 }

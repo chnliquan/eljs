@@ -26,10 +26,9 @@ export default async (api: Api) => {
     return true
   }
 
-  api.register({
-    key: 'onGenerateDone',
-    stage: Number.NEGATIVE_INFINITY,
-    async fn() {
+  api.register(
+    'onGenerateDone',
+    async () => {
       const initGit = await shouldInitGit()
 
       if (initGit) {
@@ -41,5 +40,8 @@ export default async (api: Api) => {
         })
       }
     },
-  })
+    {
+      stage: Number.NEGATIVE_INFINITY,
+    },
+  )
 }

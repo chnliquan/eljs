@@ -1,4 +1,5 @@
 import type { Plugin } from '@/plugin'
+import type { MaybePromise } from '@eljs/utils'
 
 /**
  * 插件执行阶段枚举
@@ -64,7 +65,7 @@ export enum ApplyPluginTypeEnum {
 /**
  * 执行插件参数
  */
-export interface ApplyPluginsOptions<T> {
+export interface ApplyPluginsOptions<T, U> {
   /**
    * 执行插件类型
    */
@@ -77,52 +78,32 @@ export interface ApplyPluginsOptions<T> {
   /**
    * 函数参数
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  args?: any
+  args?: U
 }
 
+/**
+ * 注册增加类型的函数
+ */
 export interface ApplyAdd<T, U> {
-  (fn: { (args: T): U | U[] }): void
-  (fn: { (args: T): Promise<U | U[]> }): void
-  (args: {
-    fn: { (args: T): U | U[] }
-    name?: string
-    before?: string
-    stage?: number
-  }): void
-  (args: {
-    fn: {
-      (args: T): Promise<U | U[]>
-      name?: string
-      before?: string
-      stage?: number
-    }
-  }): void
+  (
+    fn: { (args: T): MaybePromise<U> },
+    options?: { before?: string; stage?: number },
+  ): void
 }
 
+/**
+ * 注册修改类型的函数
+ */
 export interface ApplyModify<T, U> {
-  (fn: { (initialValue: T, args: U): T }): void
-  (fn: { (initialValue: T, args: U): Promise<T> }): void
-  (args: {
-    fn: { (initialValue: T, args: U): T }
-    name?: string
-    before?: string
-    stage?: number
-  }): void
-  (args: {
-    fn: { (initialValue: T, args: U): Promise<T> }
-    name?: string
-    before?: string
-    stage?: number
-  }): void
+  (
+    fn: { (initialValue: T, args: U): MaybePromise<T> },
+    options?: { before?: string; stage?: number },
+  ): void
 }
 
+/**
+ * 注册事件类型的函数
+ */
 export interface ApplyEvent<T> {
-  (fn: { (args: T): void }): void
-  (args: {
-    fn: { (args: T): void }
-    name?: string
-    before?: string
-    stage?: number
-  }): void
+  (fn: { (args: T): void }, options?: { before?: string; stage?: number }): void
 }

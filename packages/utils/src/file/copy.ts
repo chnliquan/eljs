@@ -1,5 +1,5 @@
 import chalk from 'chalk'
-import glob from 'glob'
+import { glob, globSync } from 'glob'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
@@ -167,7 +167,7 @@ export function copyDirectorySync(
   data: Record<string, any>,
   options: CopyFileOptions = {},
 ) {
-  const files = glob.sync('**/*', {
+  const files = globSync('**/*', {
     cwd: from,
     dot: true,
     ignore: ['**/node_modules/**'],
@@ -206,7 +206,7 @@ export async function copyDirectory(
   data: Record<string, any>,
   options: CopyFileOptions = {},
 ): Promise<void> {
-  const files = glob.sync('**/*', {
+  const files = await glob('**/*', {
     cwd: from,
     dot: true,
     ignore: ['**/node_modules/**'],

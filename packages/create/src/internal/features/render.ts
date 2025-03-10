@@ -7,7 +7,6 @@ import {
 import { join, resolve } from 'node:path'
 
 export default (api: Api) => {
-  // 复制文件夹
   api.registerMethod(
     'render',
     async (

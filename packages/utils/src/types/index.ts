@@ -14,7 +14,7 @@ export enum PackageManagerEnum {
 export type PackageManager = `${PackageManagerEnum}`
 
 /**
- * PackageJson 数据
+ * PackageJson 类型
  */
 export interface PackageJson {
   name?: string
@@ -55,6 +55,17 @@ export interface PackageJson {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [propName: string]: any
 }
+
+/**
+ * 可能为 Promise
+ */
+export type MaybePromise<T> = Promise<T> | T
+
+/**
+ * 可能为 Promise 函数
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type MaybePromiseFunction<T> = (...args: any[]) => Promise<T> | T
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DistributiveOmit<T, K extends keyof any> = T extends any

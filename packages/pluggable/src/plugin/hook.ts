@@ -1,4 +1,6 @@
-import assert from 'assert'
+import type { MaybePromiseFunction } from '@eljs/utils'
+import assert from 'node:assert'
+
 import type { Plugin } from './plugin'
 
 /**
@@ -25,7 +27,7 @@ export interface HookOptions {
    * Hook 执行函数
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  fn: (...args: any[]) => any
+  fn: MaybePromiseFunction<any>
 }
 
 /**
@@ -58,11 +60,13 @@ export class Hook {
   public fn: HookOptions['fn']
 
   public constructor(options: HookOptions) {
-    this.options = options
+    assert(
+      options.key && options.fn,
+      `Invalid hook ${options}, key and fn must supplied.`,
+    )
+
     const { key, fn, plugin, before, stage } = options
-
-    assert(key && fn, `Invalid hook ${options}, key and fn must supplied.`)
-
+    this.options = options
     this.plugin = plugin
     this.key = key
     this.before = before || ''
