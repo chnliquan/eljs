@@ -1,4 +1,10 @@
-import { chalk, logger, minimist, readJSONSync } from '@eljs/utils'
+import {
+  chalk,
+  logger,
+  minimist,
+  readJson,
+  type PackageJson,
+} from '@eljs/utils'
 import { InvalidArgumentError, program } from 'commander'
 import path from 'path'
 import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
@@ -9,8 +15,10 @@ cli().catch((err: Error) => {
   console.error(err)
 })
 
-function cli() {
-  const pkgJSON = readJSONSync(path.join(__dirname, '../package.json'))
+async function cli() {
+  const pkgJSON = await readJson<PackageJson>(
+    path.join(__dirname, '../package.json'),
+  )
   program
     .version(
       pkgJSON.version as string,

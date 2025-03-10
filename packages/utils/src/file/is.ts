@@ -1,6 +1,5 @@
-import fs from 'fs'
-
-const fsp = fs.promises
+import fs from 'node:fs'
+import fsp from 'node:fs/promises'
 
 /**
  * 是否是文件

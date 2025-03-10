@@ -1,8 +1,9 @@
 import type { Api } from '@/types'
 import { chalk, prompts } from '@eljs/utils'
-import { execSync } from 'child_process'
 import dayjs from 'dayjs'
-import { author, email, getGitHref, getGitUrl } from '../const'
+import { execSync } from 'node:child_process'
+
+import { author, email, getGitHref, getGitUrl } from '../constants'
 
 export default (api: Api) => {
   api.modifyPrompts(async (memo, { questions }) => {

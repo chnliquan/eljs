@@ -5,16 +5,16 @@ import {
   isFunction,
   isPathExists,
   logger,
-  readJSON,
-  writeJSON,
-  type PkgJSON,
+  readJson,
+  writeJson,
+  type PackageJson,
 } from '@eljs/utils'
-import { join } from 'path'
+import { join } from 'node:path'
 
 export default (api: Api) => {
   api.registerMethod(
     'extendPackage',
-    async (opts: (pkg: PkgJSON) => PkgJSON | PkgJSON) => {
+    async (opts: (pkg: PackageJson) => PackageJson | PackageJson) => {
       const pkgJSON = api.pkgJSON
       const toMerge = (isFunction(opts) ? await opts(pkgJSON) : opts) ?? {}
       api.pkgJSON = api.utils.deepMerge(api.pkgJSON, toMerge)
@@ -29,8 +29,8 @@ export default (api: Api) => {
       let pkgJSON = api.pkgJSON
 
       if (await isPathExists(pkgJSONPath)) {
-        const originPkgJSON = await readJSON(pkgJSONPath)
-        pkgJSON = api.utils.deepMerge(originPkgJSON, pkgJSON)
+        const originPackageJson = await readJson(pkgJSONPath)
+        pkgJSON = api.utils.deepMerge(originPackageJson, pkgJSON)
       }
 
       if (Object.keys(pkgJSON).length === 0) {
@@ -40,7 +40,7 @@ export default (api: Api) => {
       // esm 语法需要使用动态 import 引入
       const { default: sortPackageJson } = await import('sort-package-json')
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await writeJSON(pkgJSONPath, sortPackageJson(pkgJSON as Record<any, any>))
+      await writeJson(pkgJSONPath, sortPackageJson(pkgJSON as Record<any, any>))
     },
   })
 

@@ -2,8 +2,8 @@ import {
   getPackageManager,
   logger,
   runCommand,
-  writeJSONSync,
-  type PkgJSON,
+  writeJsonSync,
+  type PackageJson,
 } from '@eljs/utils'
 
 export async function updateLock(cwd: string) {
@@ -24,16 +24,16 @@ export async function updateLock(cwd: string) {
 }
 
 export function updateVersions(opts: {
-  rootPkgJSONPath: string
-  rootPkgJSON: Required<PkgJSON>
+  rootPackageJsonPath: string
+  rootPackageJson: Required<PackageJson>
   pkgNames: string[]
   pkgJSONPaths: string[]
-  pkgJSONs: Required<PkgJSON>[]
+  pkgJSONs: Required<PackageJson>[]
   version: string
 }) {
   const {
-    rootPkgJSONPath,
-    rootPkgJSON,
+    rootPackageJsonPath,
+    rootPackageJson,
     pkgNames,
     pkgJSONPaths,
     pkgJSONs,
@@ -50,11 +50,11 @@ export function updateVersions(opts: {
     })
   })
 
-  if (pkgJSONPaths[0] !== rootPkgJSONPath) {
+  if (pkgJSONPaths[0] !== rootPackageJsonPath) {
     // update polyrepo root package.json
     updatePackage({
-      pkgJSONPath: rootPkgJSONPath,
-      pkgJSON: rootPkgJSON,
+      pkgJSONPath: rootPackageJsonPath,
+      pkgJSON: rootPackageJson,
       version,
     })
   }
@@ -62,7 +62,7 @@ export function updateVersions(opts: {
 
 export function updatePackage(opts: {
   pkgJSONPath: string
-  pkgJSON: PkgJSON
+  pkgJSON: PackageJson
   version: string
   pkgNames?: string[]
 }) {
@@ -85,11 +85,11 @@ export function updatePackage(opts: {
     })
   }
 
-  writeJSONSync(pkgJSONPath, pkgJSON)
+  writeJsonSync(pkgJSONPath, pkgJSON)
 }
 
 export function updateDeps(opts: {
-  pkgJSON: PkgJSON
+  pkgJSON: PackageJson
   version: string
   depType: 'dependencies' | 'peerDependencies'
   pkgNames: string[]

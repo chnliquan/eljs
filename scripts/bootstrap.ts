@@ -6,11 +6,11 @@ import {
   isPathExistsSync,
   logger,
   mkdirSync,
-  PkgJSON,
-  readJSON,
-  readJSONSync,
+  PackageJson,
+  readJson,
+  readJsonSync,
   safeWriteFileSync,
-  writeJSONSync,
+  writeJsonSync,
 } from '@eljs/utils'
 import path from 'path'
 import { argv, chalk } from 'zx'
@@ -25,7 +25,7 @@ main().catch((err: Error) => {
 async function main(): Promise<void> {
   const rootPath = path.resolve(__dirname, '../')
   const pkgPaths = await getPkgPaths(rootPath, true)
-  const { version } = await readJSON(path.resolve(rootPath, 'package.json'))
+  const { version } = await readJson(path.resolve(rootPath, 'package.json'))
 
   const dirs = argv._.length ? argv._ : pkgPaths
 
@@ -43,7 +43,7 @@ async function main(): Promise<void> {
       mkdirSync(pkgDir)
     }
 
-    ensurePkgJSON(name, version as string, dirname, shortName)
+    ensurePackageJson(name, version as string, dirname, shortName)
     ensureReadme(name, dirname, shortName)
     ensureSrcIndex(dirname)
     ensureFatherrc(dirname)
@@ -51,7 +51,7 @@ async function main(): Promise<void> {
   })
 }
 
-function ensurePkgJSON(
+function ensurePackageJson(
   name: string,
   version: string,
   dirname: string,
@@ -59,10 +59,10 @@ function ensurePkgJSON(
 ): void {
   const pkgJSONPath = path.resolve(dirname, `package.json`)
   const pkgJSONExists = isPathExistsSync(pkgJSONPath)
-  let pkgJSON: PkgJSON = Object.create(null)
+  let pkgJSON: PackageJson = Object.create(null)
 
   if (pkgJSONExists) {
-    pkgJSON = readJSONSync(pkgJSONPath)
+    pkgJSON = readJsonSync(pkgJSONPath)
 
     if (pkgJSON.private) {
       return
@@ -118,7 +118,7 @@ function ensurePkgJSON(
     }
 
     step('Generate package.json')
-    writeJSONSync(pkgJSONPath, json)
+    writeJsonSync(pkgJSONPath, json)
   }
 }
 

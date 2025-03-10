@@ -6,7 +6,13 @@ import {
   getRemoteDistTag,
   isVersionExist,
 } from '@/utils'
-import { chalk, logger, pascalCase, prompts, type PkgJSON } from '@eljs/utils'
+import {
+  chalk,
+  logger,
+  pascalCase,
+  prompts,
+  type PackageJson,
+} from '@eljs/utils'
 import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
 
 function getPreVersionPromptQuestions(
@@ -37,7 +43,7 @@ export async function getBumpVersion(opts: {
   cwd: string
   registry: string
   canary: boolean
-  pkgJSON: Required<PkgJSON>
+  pkgJSON: Required<PackageJson>
   publishPkgNames: string[]
   preid?: Preid
   releaseTypeOrVersion?: ReleaseType | string

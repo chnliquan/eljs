@@ -1,10 +1,9 @@
+import { isPathExists, isPathExistsSync, readFile, readJson } from '@/file'
+import { getPackageManager } from '@/npm'
+import type { PackageJson } from '@/types'
 import { glob } from 'glob'
 import yaml from 'js-yaml'
-import path from 'path'
-
-import { isPathExists, isPathExistsSync, readFile, readJSON } from '@/file'
-import { getPackageManager } from '@/npm'
-import type { PkgJSON } from '@/types'
+import path from 'node:path'
 
 const cache = new Map()
 
@@ -41,9 +40,9 @@ export async function getPkgPaths(
       }
     } else {
       // yarn | npm | bun
-      const pkgJSONPath = path.resolve(cwd, 'package.json')
-      const pkgJSON = await readJSON<PkgJSON>(pkgJSONPath)
-      workspaces = (pkgJSON?.workspaces as string[]) || []
+      const pkgJsonPath = path.resolve(cwd, 'package.json')
+      const pkgJson = await readJson<PackageJson>(pkgJsonPath)
+      workspaces = (pkgJson?.workspaces as string[]) || []
     }
 
     if (workspaces?.length > 0) {

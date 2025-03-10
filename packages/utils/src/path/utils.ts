@@ -1,14 +1,25 @@
-import path from 'path'
-
-import { isPathExistsSync } from '../file'
+import { isPathExists, isPathExistsSync } from '@/file'
+import path from 'node:path'
 
 /**
  * 获取存在的路径
  * @param paths 路径数组
  */
-export function tryPaths(paths: string[]) {
+export function tryPathsSync(paths: string[]): string | undefined {
   for (const path of paths) {
     if (isPathExistsSync(path)) {
+      return path
+    }
+  }
+}
+
+/**
+ * 获取存在的路径
+ * @param paths 路径数组
+ */
+export async function tryPaths(paths: string[]): Promise<string | undefined> {
+  for await (const path of paths) {
+    if (await isPathExists(path)) {
       return path
     }
   }

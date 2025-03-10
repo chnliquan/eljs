@@ -1,5 +1,5 @@
-import findUp from 'find-up'
-import path from 'path'
+import { findUp } from 'find-up'
+import path from 'node:path'
 
 /**
  * 获取 pnpm 工作目录根路径

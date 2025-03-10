@@ -1,6 +1,6 @@
-import { PluginAPI } from './plugin-api'
+import { PluginApi } from './plugin-api'
 
-export default (api: PluginAPI) => {
+export default (api: PluginApi) => {
   ;[
     'modifyPluginConfig',
     'modifyPaths',

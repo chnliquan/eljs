@@ -1,14 +1,21 @@
+import { isPathExistsSync } from '@/file'
 import chalk from 'chalk'
-import cp from 'child_process'
-import execa from 'execa'
-import path from 'path'
-import read from 'read'
-
-import { isPathExistsSync } from '../file'
+import {
+  execa,
+  type ExecaChildProcess,
+  type Options as ExecaOptions,
+} from 'execa'
+import cp from 'node:child_process'
+import path from 'node:path'
+import { read } from 'read'
 
 const SPACES_REGEXP = / +/g
 
-export function parseCommand(command: string) {
+/**
+ * 解析命令
+ * @param command 可执行的命令
+ */
+export function parseCommand(command: string): string[] {
   const tokens: string[] = []
 
   for (const token of command.trim().split(SPACES_REGEXP)) {
@@ -26,43 +33,47 @@ export function parseCommand(command: string) {
 }
 
 /**
- * 执行命令
- * @param cmd 可执行命令
- * @param args 命令可传入的参数
- * @param options 选项
+ * 运行命令
+ * @param command 可运行的命令
+ * @param args 命令接收的参数
+ * @param options 可选配置项
  */
 export function run(
-  cmd: string,
-  args: readonly string[],
-  options?: execa.Options & {
+  command: string,
+  args: string[],
+  options?: ExecaOptions & {
     verbose?: boolean
   },
-): execa.ExecaChildProcess {
+): ExecaChildProcess {
   if (options?.verbose !== false) {
-    console.log('$', chalk.greenBright(cmd), ...args)
+    console.log('$', chalk.greenBright(command), ...args)
   }
 
-  return execa(cmd, args, options)
+  return execa(command, args, options)
 }
 
 /**
- * 执行命令
- * @param command 命令字符串
- * @param options 选项
+ * 运行命令
+ * @param command 可运行的命令
+ * @param options 可选配置项
  */
 export function runCommand(
   command: string,
-  options?: execa.Options & {
+  options?: ExecaOptions & {
     verbose?: boolean
   },
-): execa.ExecaChildProcess {
+): ExecaChildProcess {
   const [cmd, ...args] = parseCommand(command)
   return run(cmd, args, options)
 }
 
-export function getPid(cmd: string): Promise<number | null> {
-  const parse = (data: string, cmd: string): number | null => {
-    const reg = new RegExp('/' + cmd + '$')
+/**
+ * 获取命令对应的进程 ID
+ * @param command 可运行的命令
+ */
+export function getPid(command: string): Promise<number | null> {
+  const parse = (data: string, command: string): number | null => {
+    const reg = new RegExp('/' + command + '$')
     const lines = data.trim().split('\n')
 
     for (const line of lines) {
@@ -72,9 +83,9 @@ export function getPid(cmd: string): Promise<number | null> {
         continue
       }
 
-      const [pid, cmdName] = fields
+      const [pid, commandName] = fields
 
-      if (cmdName === cmd || reg.test(cmdName)) {
+      if (commandName === command || reg.test(commandName)) {
         return parseInt(pid, 10)
       }
     }
@@ -85,7 +96,7 @@ export function getPid(cmd: string): Promise<number | null> {
   return new Promise((resolve, reject) => {
     runCommand('ps -eo pid,comm')
       .then(value => {
-        const pid = parse(value.stdout, cmd)
+        const pid = parse(value.stdout, command)
         resolve(pid)
       })
       .catch(reject)
@@ -101,15 +112,23 @@ export interface SudoOptions {
 
 let cachedPassword: string
 
-export function sudo(args: string[], options?: SudoOptions): void {
+/**
+ * 以 sudo 模式执行命令
+ * @param args 命令参数
+ * @param options 可选配置项
+ */
+export async function sudo(
+  args: string[],
+  options: SudoOptions = {},
+): Promise<void> {
   const NEED_PASSWORD = '#node-sudo-passwd#'
   const {
     spawnOptions = {},
     password,
     cachePassword,
     prompt = 'sudo requires your password',
-  } = options || {}
-  const bin = getExecutableCmd('sudo') as string
+  } = options
+  const bin = getExecutableCommand('sudo') as string
 
   args = ['-S', '-p', NEED_PASSWORD].concat(args)
   spawnOptions.stdio = 'pipe'
@@ -133,11 +152,11 @@ export function sudo(args: string[], options?: SudoOptions): void {
           } else if (cachePassword && cachedPassword) {
             child.stdin?.write(cachedPassword + '\n')
           } else {
-            read({ prompt, silent: true }, (err, answer) => {
-              child.stdin?.write(answer + '\n')
+            read({ prompt, silent: true }).then(value => {
+              child.stdin?.write(value + '\n')
 
               if (cachePassword) {
-                cachedPassword = answer
+                cachedPassword = value
               }
             })
           }
@@ -149,7 +168,12 @@ export function sudo(args: string[], options?: SudoOptions): void {
   }
 }
 
-export function getExecutableCmd(
+/**
+ * 获取可执行的命令
+ * @param target 命令
+ * @param dirs 文件夹
+ */
+export function getExecutableCommand(
   target: string,
   dirs?: string[],
 ): string | null {

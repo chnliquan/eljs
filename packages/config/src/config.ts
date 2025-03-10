@@ -1,7 +1,7 @@
-import { DEFAULT_CONFIG_FILES } from '@/constants'
-import { deepMerge, isPathExistsSync, loadTsSync } from '@eljs/utils'
-import { join } from 'path'
+import { deepMerge, isPathExists, isPathExistsSync } from '@eljs/utils'
+import { extname, join } from 'node:path'
 
+import { defaultLoaders, defaultLoadersSync } from './defaults'
 import { addFileExt, getAbsFiles } from './utils'
 
 /**
@@ -9,13 +9,13 @@ import { addFileExt, getAbsFiles } from './utils'
  */
 export interface ConfigManagerOptions {
   /**
+   * 默认配置文件列表（config.ts）
+   */
+  defaultConfigFiles: string[]
+  /**
    * 当前工作目录
    */
   cwd?: string
-  /**
-   * 默认配置文件列表（config.ts）
-   */
-  defaultConfigFiles?: string[]
 }
 
 /**
@@ -37,15 +37,16 @@ export class ConfigManager {
 
   /**
    * 获取配置项
+   * @param configExts 配置文件扩展名
    */
-  public getConfig<T extends object>(configExts?: string[]): T | undefined {
-    const mainConfigFile = ConfigManager.getMainConfigFile(
-      this.options.cwd,
+  public getConfigSync<T extends object>(configExts?: string[]): T | null {
+    const mainConfigFile = ConfigManager.getMainConfigFileSync(
       this.options.defaultConfigFiles,
+      this.options.cwd,
     )
 
     if (!mainConfigFile) {
-      return
+      return null
     }
 
     let configFiles = [mainConfigFile]
@@ -54,23 +55,75 @@ export class ConfigManager {
       configFiles = ConfigManager.getConfigFiles(mainConfigFile, configExts)
     }
 
+    return ConfigManager.getConfigSync(
+      getAbsFiles(configFiles, this.options.cwd),
+    )
+  }
+
+  /**
+   * 获取配置项
+   * @param configExts 配置文件扩展名
+   */
+  public async getConfig<T extends object>(
+    configExts?: string[],
+  ): Promise<T | null> {
+    const mainConfigFile = await ConfigManager.getMainConfigFile(
+      this.options.defaultConfigFiles,
+      this.options.cwd,
+    )
+
+    if (!mainConfigFile) {
+      return null
+    }
+
+    let configFiles = [mainConfigFile]
+
+    if (configExts) {
+      configFiles = await ConfigManager.getConfigFiles(
+        mainConfigFile,
+        configExts,
+      )
+    }
+
     return ConfigManager.getConfig(getAbsFiles(configFiles, this.options.cwd))
   }
 
   /**
    * 获取主配置文件
-   * @param cwd 当前工作目录
    * @param configFiles 默认配置文件列表
+   * @param cwd 当前工作目录
    */
-  public static getMainConfigFile(
+  public static getMainConfigFileSync(
+    configFiles: string[],
     cwd = process.cwd(),
-    configFiles = DEFAULT_CONFIG_FILES,
   ): string | undefined {
-    let mainConfigFile: string | undefined
+    let mainConfigFile
 
     for (const configFile of configFiles) {
       const absConfigFile = join(cwd, configFile)
       if (isPathExistsSync(absConfigFile)) {
+        mainConfigFile = absConfigFile
+        break
+      }
+    }
+
+    return mainConfigFile
+  }
+
+  /**
+   * 获取主配置文件
+   * @param configFiles 默认配置文件列表
+   * @param cwd 当前工作目录
+   */
+  public static async getMainConfigFile(
+    configFiles: string[],
+    cwd = process.cwd(),
+  ): Promise<string | undefined> {
+    let mainConfigFile: string | undefined
+
+    for (const configFile of configFiles) {
+      const absConfigFile = join(cwd, configFile)
+      if (await isPathExists(absConfigFile)) {
         mainConfigFile = absConfigFile
         break
       }
@@ -98,15 +151,46 @@ export class ConfigManager {
    * 获取配置文件
    * @param configFiles 配置文件列表
    */
-  public static getConfig<T extends object>(
+  public static getConfigSync<T extends object>(
     configFiles: string[],
-  ): T | undefined {
-    let config: T | undefined = undefined
+  ): T | null {
+    let config: T | null = null
 
     for (const configFile of configFiles) {
       if (isPathExistsSync(configFile)) {
+        const loader =
+          defaultLoadersSync[
+            extname(configFile) as keyof typeof defaultLoadersSync
+          ]
         try {
-          const content = loadTsSync(configFile)
+          const content = loader(configFile)
+          config = deepMerge(config, content.default)
+        } catch (err) {
+          throw new Error(`Parse config file failed: [${configFile}].`, {
+            cause: err,
+          })
+        }
+      }
+    }
+
+    return config
+  }
+
+  /**
+   * 获取配置文件
+   * @param configFiles 配置文件列表
+   */
+  public static async getConfig<T extends object>(
+    configFiles: string[],
+  ): Promise<T | null> {
+    let config: T | null = null
+
+    for (const configFile of configFiles) {
+      if (await isPathExists(configFile)) {
+        const loader =
+          defaultLoaders[extname(configFile) as keyof typeof defaultLoaders]
+        try {
+          const content = await loader(configFile)
           config = deepMerge(config, content.default)
         } catch (err) {
           throw new Error(`Parse config file failed: [${configFile}].`, {

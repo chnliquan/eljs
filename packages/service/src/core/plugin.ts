@@ -4,7 +4,7 @@ import {
   loadTsSync,
   resolve,
   winPath,
-  type PkgJSON,
+  type PackageJson,
 } from '@eljs/utils'
 import assert from 'assert'
 import sum from 'hash-sum'
@@ -91,7 +91,7 @@ export class Plugin {
       `Invalid ${this.type} ${this.path}, it's not exists.`,
     )
 
-    let pkgJSON = null as unknown as PkgJSON
+    let pkgJSON = null as unknown as PackageJson
     let isPkgEntry = false
     const pkgJSONPath = pkgUp.sync({ cwd: this.path }) as string
 
@@ -134,7 +134,7 @@ export class Plugin {
   }
 
   public getId(opts: {
-    pkgJSON: PkgJSON
+    pkgJSON: PackageJson
     isPkgEntry: boolean
     pkgJSONPath: string | null
   }) {
@@ -158,7 +158,7 @@ export class Plugin {
     return id
   }
 
-  public getKey(opts: { pkgJSON: PkgJSON; isPkgEntry: boolean }) {
+  public getKey(opts: { pkgJSON: PackageJson; isPkgEntry: boolean }) {
     const { pkgJSON, isPkgEntry } = opts
     // e.g.
     // initial-state -> initialState

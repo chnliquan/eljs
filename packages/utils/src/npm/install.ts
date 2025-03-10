@@ -1,6 +1,6 @@
-import execa from 'execa'
+import type { PackageManager } from '@/types'
+import { execa } from 'execa'
 
-import type { PackageManager } from '../types'
 import { getPackageManager } from './package-manager'
 
 /**
@@ -23,7 +23,7 @@ export interface InstallDepsOptions {
 
 /**
  * 安装指定依赖
- * @param options 安装依赖选项
+ * @param options 可选配置项
  */
 export async function installDeps(options: InstallDepsOptions): Promise<void> {
   const { dependencies, devDependencies, cwd = process.cwd() } = options

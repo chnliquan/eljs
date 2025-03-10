@@ -1,84 +1,79 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import type { PkgJSON } from '@/types'
+import type { PackageJson } from '@/types'
 import deepmerge from 'deepmerge'
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import fsp from 'node:fs/promises'
+import path from 'node:path'
 import { v4 } from 'uuid'
+
 import { isPathExists, isPathExistsSync } from './is'
-import { readJSON, readJSONSync } from './read'
-
-const fsp = fs.promises
+import { readJson, readJsonSync } from './read'
 
 /**
- * 写入 JSON 文件
- * @param file 文件路径
+ * 写入 Json 文件
+ * @param path 文件路径
  * @param content 文件内容
  */
-export function writeJSONSync<T extends Record<string, any>>(
-  file: string,
+export function writeJsonSync<T extends object>(
+  path: string,
   content: T,
 ): void {
-  fs.writeFileSync(file, JSON.stringify(content, null, 2) + '\n')
+  fs.writeFileSync(path, JSON.stringify(content, null, 2) + '\n')
 }
 
 /**
- * 写入 JSON 文件
- * @param file 文件路径
+ * 写入 Json 文件
+ * @param path 文件路径
  * @param content 文件内容
  */
-export function writeJSON<T extends Record<string, any>>(
-  file: string,
+export async function writeJson<T extends object>(
+  path: string,
   content: T,
 ): Promise<void> {
-  return fsp.writeFile(file, JSON.stringify(content, null, 2) + '\n')
+  fsp.writeFile(path, JSON.stringify(content, null, 2) + '\n')
 }
 
 /**
- * 更新指定文件夹下的 package.json 文件
- * @param json 文件内容
+ * 更新 package.json 文件
+ * @param data 文件数据
  * @param dir 文件夹路径
  */
-export function updatePkgJSONSync(
-  json: Partial<PkgJSON>,
+export function updatePackageJsonSync(
+  data: Partial<PackageJson>,
   dir = process.cwd(),
 ): void {
-  const pkgJSONPath = path.resolve(dir, 'package.json')
-  const pkgJSON = readJSONSync(pkgJSONPath)
-  const pkg = deepmerge(pkgJSON, json)
-
-  safeWriteJSONSync(pkgJSONPath, pkg)
+  const pkgJsonPath = path.resolve(dir, 'package.Json')
+  const pkg = deepmerge(readJsonSync(pkgJsonPath), data)
+  safeWriteJsonSync(pkgJsonPath, pkg)
 }
 
 /**
- * 更新指定文件夹下的 package.json 文件
- * @param json 文件内容
+ * 更新 package.json 文件
+ * @param data 文件数据
  * @param dir 文件夹路径
  */
-export async function updatePkgJSON(
-  json: Partial<PkgJSON>,
+export async function updatePackageJson(
+  data: Partial<PackageJson>,
   dir = process.cwd(),
 ): Promise<void> {
-  const pkgJSONPath = path.resolve(dir, 'package.json')
-  const pkgJSON = await readJSON(pkgJSONPath)
-  const pkg = deepmerge(pkgJSON, json)
-
-  await safeWriteJSON(pkgJSONPath, pkg)
+  const pkgJsonPath = path.resolve(dir, 'package.Json')
+  const pkg = deepmerge(await readJson(pkgJsonPath), data)
+  await safeWriteJson(pkgJsonPath, pkg)
 }
 
 /**
- * 安全写入 JSON 文件
+ * 安全写入 Json 文件
  * @param file 文件路径
- * @param json 文件内容
+ * @param data 文件内容
  */
-export function safeWriteJSONSync<T extends Record<string, any>>(
-  file: string,
-  json: T,
+export function safeWriteJsonSync<T extends object>(
+  path: string,
+  data: T,
 ): void {
-  const tmpFile = `${file}.${v4()}-tmp`
+  const tmpFile = `${path}.${v4()}-tmp`
 
   try {
-    writeJSONSync(tmpFile, json)
-    fs.renameSync(tmpFile, file)
+    writeJsonSync(tmpFile, data)
+    fs.renameSync(tmpFile, path)
   } catch (err) {
     // 如果发生异常, 就将 tmpFile 删除掉
     if (isPathExistsSync(tmpFile)) {
@@ -88,19 +83,19 @@ export function safeWriteJSONSync<T extends Record<string, any>>(
 }
 
 /**
- * 安全写入 JSON 文件
- * @param file 文件路径
- * @param json 文件内容
+ * 安全写入 Json 文件
+ * @param path 文件路径
+ * @param data 文件内容
  */
-export async function safeWriteJSON<T extends Record<string, any>>(
-  file: string,
-  json: T,
+export async function safeWriteJson<T extends object>(
+  path: string,
+  data: T,
 ): Promise<void> {
-  const tmpFile = `${file}.${v4()}-tmp`
+  const tmpFile = `${path}.${v4()}-tmp`
 
   try {
-    await writeJSON(tmpFile, json)
-    await fsp.rename(tmpFile, file)
+    await writeJson(tmpFile, data)
+    await fsp.rename(tmpFile, path)
   } catch (err) {
     // 如果发生异常, 就将 tmpFile 删除掉
     if (await isPathExists(tmpFile)) {
@@ -111,48 +106,48 @@ export async function safeWriteJSON<T extends Record<string, any>>(
 
 /**
  * 写入文件内容
- * @param file 文件路径
+ * @param path 文件路径
  * @param content 文件内容
  * @param encoding 文件编码
  */
 export function writeFileSync(
-  file: string,
+  path: string,
   content: string,
-  encoding: BufferEncoding = 'utf-8',
+  encoding: BufferEncoding = 'utf8',
 ): void {
-  fs.writeFileSync(file, content, encoding)
+  writeFileSync(path, content, encoding)
 }
 
 /**
  * 写入文件内容
- * @param file 文件路径
+ * @param path 文件路径
  * @param content 文件内容
  * @param encoding 文件编码
  */
 export async function writeFile(
-  file: string,
+  path: string,
   content: string,
-  encoding: BufferEncoding = 'utf-8',
+  encoding: BufferEncoding = 'utf8',
 ): Promise<void> {
-  await fsp.writeFile(file, content, encoding)
+  await writeFile(path, content, encoding)
 }
 
 /**
  * 安全写入文件
- * @param file 文件路径
+ * @param path 文件路径
  * @param content 文件内容
  * @param encoding 文件编码
  */
 export function safeWriteFileSync(
-  file: string,
+  path: string,
   content: string,
-  encoding: BufferEncoding = 'utf-8',
+  encoding: BufferEncoding = 'utf8',
 ): void {
-  const tmpFile = `${file}.${v4()}-tmp`
+  const tmpFile = `${path}.${v4()}-tmp`
 
   try {
     writeFileSync(tmpFile, content, encoding)
-    fs.renameSync(tmpFile, file)
+    fs.renameSync(tmpFile, path)
   } catch (err) {
     // 如果发生异常, 就将 tmpFile 删除掉
     if (isPathExistsSync(tmpFile)) {
@@ -163,20 +158,20 @@ export function safeWriteFileSync(
 
 /**
  * 安全写入文件
- * @param file 文件路径
+ * @param path 文件路径
  * @param content 文件内容
  * @param encoding 文件编码
  */
 export async function safeWriteFile(
-  file: string,
+  path: string,
   content: string,
-  encoding: BufferEncoding = 'utf-8',
+  encoding: BufferEncoding = 'utf8',
 ): Promise<void> {
-  const tmpFile = `${file}.${v4()}-tmp`
+  const tmpFile = `${path}.${v4()}-tmp`
 
   try {
     await writeFile(tmpFile, content, encoding)
-    await fsp.rename(tmpFile, file)
+    await fsp.rename(tmpFile, path)
   } catch (err) {
     // 如果发生异常, 就将 tmpFile 删除掉
     if (await isPathExists(tmpFile)) {

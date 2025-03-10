@@ -6,7 +6,7 @@ import {
   isPrerelease,
   isRcVersion,
 } from '@/utils'
-import { chalk, execa, logger } from '@eljs/utils'
+import { chalk, logger, run } from '@eljs/utils'
 import fs from 'fs'
 import githubReleaseUrl from 'new-github-release-url'
 import open from 'open'
@@ -132,7 +132,7 @@ export async function publish(opts: {
       isPnpm && !gitCheck ? '--no-git-checks' : '',
     ].filter(Boolean)
 
-    await execa(cmd, cliArgs, {
+    await run(cmd, cliArgs, {
       cwd: pkgDir,
     })
 

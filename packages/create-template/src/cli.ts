@@ -1,6 +1,13 @@
-import { chalk, isPathExistsSync, logger, readJSONSync } from '@eljs/utils'
+import {
+  chalk,
+  isPathExistsSync,
+  logger,
+  readJson,
+  type PackageJson,
+} from '@eljs/utils'
 import { program } from 'commander'
-import path from 'path'
+import path from 'node:path'
+
 import { defaultTemplateConfig } from './config'
 import { CreateTemplate } from './create'
 import type { TemplateConfig } from './types'
@@ -8,7 +15,9 @@ import type { TemplateConfig } from './types'
 cli()
 
 async function cli() {
-  const pkgJSON = readJSONSync(path.join(__dirname, '../package.json'))
+  const pkgJSON = await readJson<PackageJson>(
+    path.join(__dirname, '../package.json'),
+  )
   program
     .version(
       pkgJSON.version as string,

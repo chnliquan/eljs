@@ -76,8 +76,8 @@ export async function release(opts: Options): Promise<void> {
   }
 
   const {
-    rootPkgJSONPath,
-    rootPkgJSON,
+    rootPackageJsonPath,
+    rootPackageJson,
     pkgNames,
     pkgJSONPaths,
     pkgJSONs,
@@ -87,7 +87,7 @@ export async function release(opts: Options): Promise<void> {
 
   const registry =
     opts.registry ||
-    rootPkgJSON?.publishConfig?.registry ||
+    rootPackageJson?.publishConfig?.registry ||
     (await getNpmRegistry(cwd))
 
   // 3. check ownership
@@ -117,7 +117,7 @@ export async function release(opts: Options): Promise<void> {
     return
   }
 
-  let bumpVersion = rootPkgJSON.version
+  let bumpVersion = rootPackageJson.version
   let changelog = ''
 
   if (!publishOnly) {
@@ -127,7 +127,7 @@ export async function release(opts: Options): Promise<void> {
       cwd,
       registry,
       canary,
-      pkgJSON: rootPkgJSON,
+      pkgJSON: rootPackageJson,
       publishPkgNames,
       preid,
       releaseTypeOrVersion: version,
@@ -141,7 +141,7 @@ export async function release(opts: Options): Promise<void> {
         canary,
         bumpVersion,
         publishPkgNames,
-        pkgJSON: rootPkgJSON,
+        pkgJSON: rootPackageJson,
         verbose,
       })
     }
@@ -153,8 +153,8 @@ export async function release(opts: Options): Promise<void> {
     // 5. update all package versions and inter-dependencies
     step('Updating versions ...')
     await updateVersions({
-      rootPkgJSONPath,
-      rootPkgJSON,
+      rootPackageJsonPath,
+      rootPackageJson,
       pkgNames,
       pkgJSONPaths,
       pkgJSONs,
@@ -173,7 +173,7 @@ export async function release(opts: Options): Promise<void> {
     step(`Generating changelog ...`)
     changelog = await generateChangelog({
       cwd,
-      pkgName: rootPkgJSON.name as string,
+      pkgName: rootPackageJson.name as string,
       latest,
       independent,
     })
@@ -200,7 +200,7 @@ export async function release(opts: Options): Promise<void> {
     gitCheck,
     changelog,
     createRelease,
-    repositoryUrl: rootPkgJSON?.repository?.url,
+    repositoryUrl: rootPackageJson?.repository?.url,
   })
 
   // 10. sync cnpm

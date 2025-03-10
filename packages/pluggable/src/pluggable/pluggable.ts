@@ -1,9 +1,9 @@
-import { Plugin, PluginAPI, PluginTypeEnum, type Hook } from '@/plugin'
+import { Plugin, PluginApi, PluginTypeEnum, type Hook } from '@/plugin'
+import { ConfigManager } from '@eljs/config'
 import * as utils from '@eljs/utils'
 import assert from 'assert'
 import { AsyncSeriesWaterfallHook } from 'tapable'
 
-import { ConfigManager } from '@eljs/config'
 import {
   ApplyPluginTypeEnum,
   PluggableStateEnum,
@@ -127,10 +127,10 @@ export class Pluggable<
 
     this.options = options
     this.configManager = new ConfigManager({
+      defaultConfigFiles: options.defaultConfigFiles || [],
       cwd: options.cwd,
-      defaultConfigFiles: options.defaultConfigFiles,
     })
-    this.userConfig = this.configManager.getConfig()
+    this.userConfig = this.configManager.getConfigSync() as U
   }
 
   /**
@@ -174,9 +174,10 @@ export class Pluggable<
    * 获取插件 API
    * @param plugin 插件
    */
-  protected getPluginAPI(plugin: Plugin) {
-    const pluginAPI = new PluginAPI(this, plugin)
-    return new Proxy(pluginAPI, {
+  protected getPluginApi(plugin: Plugin) {
+    const pluginApi = new PluginApi(this, plugin)
+
+    return new Proxy(pluginApi, {
       get: (target, prop: string) => {
         if (this.pluginMethods[prop]) {
           return this.pluginMethods[prop].fn
@@ -232,15 +233,15 @@ export class Pluggable<
 
     this.plugins[plugin.id] = plugin
 
-    const pluginAPI = this.getPluginAPI(plugin)
+    const pluginApi = this.getPluginApi(plugin)
 
-    pluginAPI.registerPresets = pluginAPI.registerPresets.bind(
-      pluginAPI,
+    pluginApi.registerPresets = pluginApi.registerPresets.bind(
+      pluginApi,
       resolvedPresets,
     )
 
-    pluginAPI.registerPlugins = pluginAPI.registerPlugins.bind(
-      pluginAPI,
+    pluginApi.registerPlugins = pluginApi.registerPlugins.bind(
+      pluginApi,
       resolvedPlugins || [],
     )
 
@@ -250,7 +251,7 @@ export class Pluggable<
     } = Object.create(null)
 
     const startTime = new Date()
-    const pluginRet = await plugin.apply()(pluginAPI)
+    const pluginRet = await plugin.apply()(PluginApi)
     plugin.time.register = new Date().getTime() - startTime.getTime()
 
     if (plugin.type === PluginTypeEnum.Plugin) {
@@ -456,7 +457,7 @@ export class Pluggable<
 /**
  * 可插拔插件 API
  */
-export interface PluggablePluginAPI {
+export interface PluggablePluginApi {
   // #region 插件属性
   /**
    * 当前执行路径

@@ -1,5 +1,5 @@
 import type { Preid } from '@/types'
-import { chalk, confirm, type PkgJSON } from '@eljs/utils'
+import { chalk, confirm, type PackageJson } from '@eljs/utils'
 import { getBumpVersion } from './bump'
 
 export interface ReconfirmOpts {
@@ -8,7 +8,7 @@ export interface ReconfirmOpts {
   canary: boolean
   bumpVersion: string
   publishPkgNames: string[]
-  pkgJSON: Required<PkgJSON>
+  pkgJSON: Required<PackageJson>
   preid?: Preid
   verbose?: boolean
 }

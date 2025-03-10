@@ -10,7 +10,7 @@ import {
   type Generator,
   type Paths,
   type PluginConfig,
-  type ProxyPluginAPIPropsExtractorReturnType,
+  type ProxyPluginApiPropsExtractorReturnType,
   type UserConfig,
 } from '@/types'
 import * as utils from '@eljs/utils'
@@ -23,7 +23,7 @@ import { EnableBy } from '../enum'
 import { Command } from './command'
 import { Hook } from './hook'
 import { Plugin } from './plugin'
-import { PluginAPI } from './plugin-api'
+import { PluginApi } from './plugin-api'
 
 export interface ServiceOpts {
   /**
@@ -72,7 +72,7 @@ export interface ServiceRunOpts {
   args?: any
 }
 
-export class Service<T extends ServiceOpts> {
+export class Service<T extends ServiceOpts = ServiceOpts> {
   /**
    * 构造函数配置项
    */
@@ -209,8 +209,8 @@ export class Service<T extends ServiceOpts> {
 
     this.plugins[opts.plugin.id] = opts.plugin
 
-    // apply with PluginAPI
-    const pluginAPI = new PluginAPI({
+    // apply with PluginApi
+    const pluginAPI = new PluginApi({
       plugin: opts.plugin,
       service: this,
     })
@@ -226,8 +226,8 @@ export class Service<T extends ServiceOpts> {
       this._prefix,
     )
 
-    const { serviceProps, staticProps } = this.proxyPluginAPIPropsExtractor()
-    const proxyPluginAPI = PluginAPI.proxyPluginAPI({
+    const { serviceProps, staticProps } = this.proxyPluginApiPropsExtractor()
+    const proxyPluginApi = PluginApi.proxyPluginApi({
       service: this,
       pluginAPI,
       serviceProps: _.union(
@@ -266,7 +266,7 @@ export class Service<T extends ServiceOpts> {
     } = Object.create(null)
 
     const dateStart = new Date()
-    const pluginRet = await opts.plugin.apply()(proxyPluginAPI)
+    const pluginRet = await opts.plugin.apply()(proxyPluginApi)
     opts.plugin.time.register = new Date().getTime() - dateStart.getTime()
 
     if (opts.plugin.type === 'plugin') {
@@ -734,7 +734,7 @@ export class Service<T extends ServiceOpts> {
   /**
    * 自定义的代理插件API属性提取器
    */
-  protected proxyPluginAPIPropsExtractor(): ProxyPluginAPIPropsExtractorReturnType {
+  protected proxyPluginApiPropsExtractor(): ProxyPluginApiPropsExtractorReturnType {
     return Object.create(null)
   }
 
@@ -757,7 +757,7 @@ export class Service<T extends ServiceOpts> {
   }
 }
 
-export interface ServicePluginAPI {
+export interface ServicePluginApi {
   // #region 服务自身属性
   /**
    * 当前执行路径

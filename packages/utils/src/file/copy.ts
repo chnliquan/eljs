@@ -1,142 +1,235 @@
 import chalk from 'chalk'
-import fs from 'fs'
 import glob from 'glob'
-import path from 'path'
+import fs from 'node:fs'
+import fsp from 'node:fs/promises'
+import path from 'node:path'
 
-import { mkdirSync } from './dir'
+import { mkdir, mkdirSync } from './dir'
 import { isDirectorySync } from './is'
+import { readFile, readFileSync } from './read'
 import { renderTemplate, type RenderTemplateOptions } from './render'
+import { writeFile, writeFileSync } from './write'
 
 /**
- * 文件拷贝选项
+ * 拷贝文件配置项
  */
 export interface CopyFileOptions {
   /**
-   * 模板文件路径
+   * 复制模式
    */
-  from: string
-  /**
-   * 目标文件路径
-   */
-  to: string
+  mode?: number
   /**
    * 文件基础路径，如果传入会打印日志
    */
   basedir?: string
   /**
-   * 模板渲染需要的参数
+   * 模板渲染数据
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: Record<string, any>
   /**
-   * 渲染引擎的参数
+   * 渲染引擎的配置项
    */
-  options?: RenderTemplateOptions
+  renderOptions?: RenderTemplateOptions
 }
 
 /**
  * 拷贝文件
- * @param options 文件拷贝选项
+ * @param from 源文件路径
+ * @param to 目标文件路径
+ * @param options 可选配置项
  */
-export function copyFile(options: CopyFileOptions) {
-  let destFile = convertFilePrefix(options.to)
+export function copyFileSync(
+  from: string,
+  to: string,
+  options: CopyFileOptions = {},
+): void {
+  let destFile = convertFilePrefix(to)
+  const { mode, basedir, data, renderOptions } = options
 
   if (destFile.indexOf('{{') > -1 || destFile.indexOf('<%') > -1) {
-    destFile = renderTemplate(destFile, options.data || {}, options.options)
+    destFile = renderTemplate(destFile, data || {}, renderOptions)
   }
 
   mkdirSync(path.dirname(destFile))
 
-  if (options.basedir) {
-    console.log(
-      `${chalk.green('Copy: ')} ${path.relative(options.basedir, destFile)}`,
-    )
+  if (basedir) {
+    console.log(`${chalk.green('Copy: ')} ${path.relative(basedir, destFile)}`)
   }
 
-  fs.copyFileSync(options.from, destFile)
+  fs.copyFileSync(from, destFile, mode)
 }
 
 /**
- * 模版拷贝选项
+ * 拷贝文件
+ * @param from 源文件路径
+ * @param to 目标文件路径
+ * @param options 可选配置项
  */
-export interface CopyTplOptions extends CopyFileOptions {
-  /**
-   * 模板渲染需要的参数
-   */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: Record<string, any>
+export async function copyFile(
+  from: string,
+  to: string,
+  options: CopyFileOptions = {},
+): Promise<void> {
+  let destFile = convertFilePrefix(to)
+  const { mode, basedir, data, renderOptions } = options
+
+  if (destFile.indexOf('{{') > -1 || destFile.indexOf('<%') > -1) {
+    destFile = renderTemplate(destFile, data || {}, renderOptions)
+  }
+
+  await mkdir(path.dirname(destFile))
+
+  if (basedir) {
+    console.log(`${chalk.green('Copy: ')} ${path.relative(basedir, destFile)}`)
+  }
+
+  await fsp.copyFile(from, destFile, mode)
 }
 
 /**
  * 拷贝模版
- * @param options 模版拷贝选项
+ * @param from 源文件路径
+ * @param to 目标文件路径
+ * @param data 模版数据
+ * @param options 可选配置项
  */
-export function copyTpl(options: CopyTplOptions) {
-  const tpl = fs.readFileSync(options.from, 'utf-8')
-  const content = renderTemplate(tpl, options.data, options.options)
+export function copyTplSync(
+  from: string,
+  to: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: Record<string, any>,
+  options: CopyFileOptions = {},
+): void {
+  const { basedir, renderOptions } = options
+  const tpl = readFileSync(from)
+  const content = renderTemplate(tpl, data, renderOptions)
 
-  let destFile = convertFilePrefix(options.to.replace(/\.tpl$/, ''))
+  let destFile = convertFilePrefix(to.replace(/\.tpl$/, ''))
 
   if (destFile.indexOf('{{') > -1 || destFile.indexOf('<%') > -1) {
-    destFile = renderTemplate(destFile, options.data, options.options)
+    destFile = renderTemplate(destFile, data, renderOptions)
   }
 
   mkdirSync(path.dirname(destFile))
 
-  if (options.basedir) {
-    console.log(
-      `${chalk.green('Write:')} ${path.relative(options.basedir, destFile)}`,
-    )
+  if (basedir) {
+    console.log(`${chalk.green('Write:')} ${path.relative(basedir, destFile)}`)
   }
 
-  fs.writeFileSync(destFile, content, 'utf-8')
+  writeFileSync(destFile, content)
 }
 
 /**
- * 文件夹拷贝选项
+ * 拷贝模版
+ * @param from 源文件路径
+ * @param to 目标文件路径
+ * @param data 模版数据
+ * @param options 可选配置项
  */
-export interface CopyDirectoryOptions extends CopyFileOptions {
-  /**
-   * 模板渲染需要的参数
-   */
+export async function copyTpl(
+  from: string,
+  to: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: Record<string, any>
+  data: Record<string, any>,
+  options: CopyFileOptions = {},
+): Promise<void> {
+  const { basedir, renderOptions } = options
+  const tpl = await readFile(from)
+  const content = renderTemplate(tpl, data, renderOptions)
+
+  let destFile = convertFilePrefix(to.replace(/\.tpl$/, ''))
+
+  if (destFile.indexOf('{{') > -1 || destFile.indexOf('<%') > -1) {
+    destFile = renderTemplate(destFile, data, renderOptions)
+  }
+
+  await mkdir(path.dirname(destFile))
+
+  if (basedir) {
+    console.log(`${chalk.green('Write:')} ${path.relative(basedir, destFile)}`)
+  }
+
+  await writeFile(destFile, content)
 }
 
 /**
  * 拷贝文件夹
- * @param options 文件夹拷贝选项
+ * @param from 源文件路径
+ * @param to 目标文件路径
+ * @param data 模版数据
+ * @param options 可选配置项
  */
-export function copyDirectory(options: CopyDirectoryOptions) {
+export function copyDirectorySync(
+  from: string,
+  to: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: Record<string, any>,
+  options: CopyFileOptions = {},
+) {
   const files = glob.sync('**/*', {
-    cwd: options.from,
+    cwd: from,
     dot: true,
     ignore: ['**/node_modules/**'],
   })
 
-  files.forEach(file => {
-    const srcFile = path.join(options.from, file)
+  for (const file of files) {
+    const srcFile = path.join(from, file)
 
     if (isDirectorySync(srcFile)) {
       return
     }
 
-    const destFile = path.join(options.to, file)
+    const destFile = path.join(to, file)
 
     if (file.endsWith('.tpl')) {
-      copyTpl({
-        ...options,
-        from: srcFile,
-        to: destFile,
-      })
+      copyTplSync(srcFile, destFile, options)
     } else {
-      copyFile({
+      copyFileSync(srcFile, destFile, {
         ...options,
-        from: srcFile,
-        to: destFile,
+        data,
       })
     }
+  }
+}
+
+/**
+ * 拷贝文件夹
+ * @param from 源文件路径
+ * @param to 目标文件路径
+ * @param options 可选配置项
+ */
+export async function copyDirectory(
+  from: string,
+  to: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: Record<string, any>,
+  options: CopyFileOptions = {},
+): Promise<void> {
+  const files = glob.sync('**/*', {
+    cwd: from,
+    dot: true,
+    ignore: ['**/node_modules/**'],
   })
+
+  for await (const file of files) {
+    const srcFile = path.join(from, file)
+
+    if (isDirectorySync(srcFile)) {
+      return
+    }
+
+    const destFile = path.join(to, file)
+
+    if (file.endsWith('.tpl')) {
+      await copyTpl(srcFile, destFile, options)
+    } else {
+      await copyFile(srcFile, destFile, {
+        ...options,
+        data,
+      })
+    }
+  }
 }
 
 function convertFilePrefix(file: string, prefix = '-') {

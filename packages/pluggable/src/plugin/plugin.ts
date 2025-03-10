@@ -2,10 +2,10 @@ import {
   camelCase,
   isPathExistsSync,
   loadTsSync,
-  readJSONSync,
+  readJsonSync,
   resolve,
   winPath,
-  type PkgJSON,
+  type PackageJson,
 } from '@eljs/utils'
 import assert from 'assert'
 import hash from 'hash-sum'
@@ -95,12 +95,12 @@ export class Plugin<
       `Invalid ${this.type} ${this.path}, it's not exists.`,
     )
 
-    let pkgJSON = {} as PkgJSON
+    let pkgJSON = {} as PackageJson
     let isPkgEntry = false
     const pkgJSONPath = pkgUpSync({ cwd: this.path }) as string
 
     if (pkgJSONPath) {
-      pkgJSON = readJSONSync(pkgJSONPath)
+      pkgJSON = readJsonSync(pkgJSONPath)
       isPkgEntry =
         winPath(join(dirname(pkgJSONPath), pkgJSON.main || 'index.js')) ===
         winPath(this.path)

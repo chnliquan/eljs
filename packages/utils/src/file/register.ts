@@ -1,4 +1,4 @@
-import { extname } from 'path'
+import { extname } from 'node:path'
 import { addHook } from 'pirates'
 
 const HOOK_EXTS = ['.ts', '.tsx']

@@ -1,6 +1,6 @@
-import execa from 'execa'
+import { run } from '@/cp'
+import { type Options as ExecaOptions } from 'execa'
 
-import { run } from '../cp'
 import { isGitAheadRemote, isGitClean } from './is'
 import { getGitBranch } from './meta'
 
@@ -11,11 +11,11 @@ import { getGitBranch } from './meta'
  */
 export async function gitCommit(
   msg: string,
-  options?: execa.Options & {
+  options?: ExecaOptions & {
     verbose?: boolean
   },
 ): Promise<void> {
-  if (await isGitClean(options?.cwd)) {
+  if (await isGitClean(options?.cwd as string)) {
     return
   }
   await run('git', ['add', '-A'], options)
@@ -27,11 +27,11 @@ export async function gitCommit(
  * @param options 选项
  */
 export async function gitPushCommit(
-  options?: execa.Options & {
+  options?: ExecaOptions & {
     verbose?: boolean
   },
 ): Promise<void> {
-  const isAheadRemote = await isGitAheadRemote(options?.cwd)
+  const isAheadRemote = await isGitAheadRemote(options?.cwd as string)
 
   if (!isAheadRemote) {
     return
@@ -53,7 +53,7 @@ export async function gitPushCommit(
  */
 export async function gitTag(
   tag: string,
-  options?: execa.Options & {
+  options?: ExecaOptions & {
     verbose?: boolean
   },
 ): Promise<void> {
@@ -67,7 +67,7 @@ export async function gitTag(
  */
 export async function gitPushTag(
   tag: string,
-  options?: execa.Options & {
+  options?: ExecaOptions & {
     verbose?: boolean
   },
 ): Promise<void> {

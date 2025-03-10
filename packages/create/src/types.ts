@@ -1,8 +1,9 @@
-import { Runner, type RunnerPluginAPI } from '@/core'
-import type { PluginAPI } from '@eljs/pluggable'
+import { Runner, type RunnerPluginApi } from '@/core'
+import type { PluginApi } from '@eljs/pluggable'
 import type {
+  CopyFileOptions,
+  PackageJson,
   PackageManager,
-  PkgJSON,
   RenderTemplateOptions,
 } from '@eljs/utils'
 
@@ -87,7 +88,7 @@ export interface AppData {
   /**
    * package json 对象
    */
-  pkgJSON: PkgJSON
+  pkgJSON: PackageJson
   /**
    * 项目名
    */
@@ -160,66 +161,38 @@ export enum RunnerStageEnum {
   Prompting = 'prompting',
 }
 
-export interface CopyFileOptions {
-  /**
-   * 模板文件路径
-   */
-  from: string
-  /**
-   * 目标文件路径
-   */
-  to: string
-  /**
-   * 模板渲染需要的参数
-   */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data?: Record<string, any>
-  /**
-   * 渲染引擎的参数
-   */
-  options?: RenderTemplateOptions
-}
-
-/**
- * 拷贝文件选项
- */
-export interface CopyTplOptions extends CopyFileOptions {
-  /**
-   * 模板渲染需要的参数
-   */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: Record<string, any>
-}
-
-/**
- * 拷贝文件夹选项
- */
-export interface CopyDirectoryOptions extends CopyFileOptions {
-  /**
-   * 模板渲染需要的参数
-   */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: Record<string, any>
-}
-
 /**
  * 插件入参
  */
-export type Api = PluginAPI<Runner> &
-  RunnerPluginAPI & {
+export type Api = PluginApi<Runner> &
+  RunnerPluginApi & {
     // #region 插件工具方法
     /**
      * 拷贝文件
      */
-    copyFile: (options: CopyFileOptions) => void
+    copyFile: (
+      from: string,
+      to: string,
+      options: CopyFileOptions,
+    ) => Promise<void>
     /**
      * 拷贝模版
      */
-    copyTpl: (options: CopyTplOptions) => void
+    copyTpl: (
+      from: string,
+      to: string,
+      data: object,
+      options: CopyFileOptions,
+    ) => Promise<void>
     /**
      * 拷贝文件夹
      */
-    copyDirectory: (options: CopyDirectoryOptions) => void
+    copyDirectory: (
+      from: string,
+      to: string,
+      data: object,
+      options: CopyFileOptions,
+    ) => Promise<void>
     /**
      * 将模板文件渲染到目标文件对象中
      */
@@ -231,8 +204,8 @@ export type Api = PluginAPI<Runner> &
     /**
      * 扩展 package.json
      */
-    extendPackage(partialPkgJSON: PkgJSON): void
-    extendPackage(extend: (memo: PkgJSON) => PkgJSON): void
+    extendPackage(partialPackageJson: PackageJson): void
+    extendPackage(extend: (memo: PackageJson) => PackageJson): void
     /**
      * 在当前工程下解析一个路径
      */

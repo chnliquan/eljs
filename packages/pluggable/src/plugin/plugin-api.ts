@@ -1,5 +1,5 @@
 import { PluggableStateEnum, type Pluggable } from '@/pluggable'
-import { isPlainObject, isString } from '@eljs/utils'
+import { isPlainObject, isString, type MaybePromiseFunction } from '@eljs/utils'
 import assert from 'assert'
 
 import { Hook, type HookOptions } from './hook'
@@ -9,7 +9,7 @@ import { PluginTypeEnum, type Enable } from './types'
 /**
  * 插件 API 类
  */
-export class PluginAPI<T extends Pluggable = Pluggable> {
+export class PluginApi<T extends Pluggable = Pluggable> {
   /**
    * 可插拔类实例
    */
@@ -50,7 +50,7 @@ export class PluginAPI<T extends Pluggable = Pluggable> {
    * @param fn 执行函数
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public registerMethod(name: string, fn?: (...args: any[]) => void) {
+  public registerMethod(name: string, fn?: MaybePromiseFunction<any>) {
     assert(
       !this.pluggable.pluginMethods[name],
       `api.registerMethod() failed, method ${name} is already exist.`,
@@ -60,7 +60,7 @@ export class PluginAPI<T extends Pluggable = Pluggable> {
       plugin: this.plugin,
       fn:
         fn ||
-        // 这里不能用 arrow function，this 需指向执行此方法的 PluginAPI
+        // 这里不能用 arrow function，this 需指向执行此方法的 pluginApi
         // 否则 pluginId 会不对，导致不能正确 skip plugin
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         function fn(fn: (...args: any[]) => void | Record<string, unknown>) {

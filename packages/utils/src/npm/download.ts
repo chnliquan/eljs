@@ -1,18 +1,18 @@
+import { tmpdir } from '@/file'
 import download from 'download'
-
-import { tmpdir } from '../file'
 
 /**
  * 下载 NPM 压缩文件
  * @param url NPM 地址
  * @param dest 目标地址
- * @param options 下载选项
+ * @param options 可选配置项
  */
 export async function downloadNpmTarball(
   url: string,
-  dest = tmpdir(true),
+  dest?: string,
   options?: download.DownloadOptions,
 ): Promise<string> {
+  dest = dest || (await tmpdir(true))
   try {
     await download(url, dest, {
       extract: true,

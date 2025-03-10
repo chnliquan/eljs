@@ -3,31 +3,31 @@ import {
   getPkgPaths,
   isPathExists,
   logger,
-  readJSON,
-  readJSONSync,
-  type PkgJSON,
+  readJson,
+  readJsonSync,
+  type PackageJson,
 } from '@eljs/utils'
 import path from 'path'
 
 export async function init(cwd: string) {
-  const rootPkgJSONPath = path.join(cwd, 'package.json')
+  const rootPackageJsonPath = path.join(cwd, 'package.json')
 
-  if (!(await isPathExists(rootPkgJSONPath))) {
+  if (!(await isPathExists(rootPackageJsonPath))) {
     logger.printErrorAndExit(
       `Detect ${chalk.bold.cyanBright(cwd)} has no package.json.`,
     )
   }
 
-  const rootPkgJSON: PkgJSON = await readJSON(rootPkgJSONPath)
+  const rootPackageJson: PackageJson = await readJson(rootPackageJsonPath)
 
-  if (!rootPkgJSON.version) {
+  if (!rootPackageJson.version) {
     logger.printErrorAndExit(
-      `Detect ${chalk.bold.cyanBright(rootPkgJSONPath)} has no version field.`,
+      `Detect ${chalk.bold.cyanBright(rootPackageJsonPath)} has no version field.`,
     )
   }
 
   const pkgJSONPaths: string[] = []
-  const pkgJSONs: PkgJSON[] = []
+  const pkgJSONs: PackageJson[] = []
   const pkgNames: string[] = []
   const publishPkgDirs: string[] = []
   const publishPkgNames: string[] = []
@@ -36,7 +36,7 @@ export async function init(cwd: string) {
 
   pkgPaths.forEach(pkgPath => {
     const pkgJSONPath = path.join(pkgPath, 'package.json')
-    const pkgJSON: PkgJSON = readJSONSync(pkgJSONPath)
+    const pkgJSON: PackageJson = readJsonSync(pkgJSONPath)
 
     if (!pkgJSON.name) {
       logger.warn(
@@ -65,11 +65,11 @@ export async function init(cwd: string) {
   }
 
   return {
-    rootPkgJSONPath: rootPkgJSONPath,
-    rootPkgJSON: rootPkgJSON as Required<PkgJSON>,
+    rootPackageJsonPath: rootPackageJsonPath,
+    rootPackageJson: rootPackageJson as Required<PackageJson>,
     pkgNames,
     pkgJSONPaths,
-    pkgJSONs: pkgJSONs as Required<PkgJSON>[],
+    pkgJSONs: pkgJSONs as Required<PackageJson>[],
     publishPkgDirs,
     publishPkgNames,
   }

@@ -14,9 +14,9 @@ export enum PackageManagerEnum {
 export type PackageManager = `${PackageManagerEnum}`
 
 /**
- * PackageJSON 信息
+ * PackageJson 数据
  */
-export interface PkgJSON {
+export interface PackageJson {
   name?: string
   version?: string
   private?: boolean

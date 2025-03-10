@@ -10,10 +10,10 @@ import {
   type ApplyEvent,
   type ApplyModify,
   type PluggableOptions,
-  type PluggablePluginAPI,
+  type PluggablePluginApi,
   type UserConfig,
 } from '@eljs/pluggable'
-import utils, { prompts, type PkgJSON } from '@eljs/utils'
+import utils, { prompts, type PackageJson } from '@eljs/utils'
 
 /**
  * 运行器插件自身配置项
@@ -71,7 +71,7 @@ export class Runner extends Pluggable<
   /**
    * 项目的 package.json 对象
    */
-  public pkgJSON: PkgJSON = Object.create(null)
+  public pkgJSON: PackageJson = Object.create(null)
 
   public constructor(options: PluggableOptions) {
     super({
@@ -162,7 +162,7 @@ export class Runner extends Pluggable<
 /**
  * 运行器插件 API
  */
-export interface RunnerPluginAPI extends PluggablePluginAPI {
+export interface RunnerPluginApi extends PluggablePluginApi {
   // #region 插件 API 属性
   /**
    * 应用数据，可通过 `modifyAppData` 方法修改

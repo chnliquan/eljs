@@ -1,6 +1,6 @@
-import path from 'path'
-import { run } from '../cp'
-import { tmpdir } from '../file'
+import { run } from '@/cp'
+import { tmpdir } from '@/file'
+import path from 'node:path'
 
 /**
  * 下载选项
@@ -19,13 +19,13 @@ export interface DownloadGitRepoOptions {
 /**
  * 下载 git 仓库
  * @param url git 地址
- * @param options 下载选项
+ * @param options 可选配置项
  */
 export async function downloadGitRepo(
   url: string,
-  options?: DownloadGitRepoOptions,
+  options: DownloadGitRepoOptions = {},
 ): Promise<string> {
-  const { branch = 'master', dest = tmpdir(true) } = options || {}
+  const { branch = 'master', dest = await tmpdir(true) } = options
 
   const args = [
     'git',

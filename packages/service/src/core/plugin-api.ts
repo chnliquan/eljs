@@ -11,23 +11,23 @@ const resolveConfigModes = ['strict', 'loose'] as const
 
 export type ResolveConfigMode = (typeof resolveConfigModes)[number]
 
-export interface ProxyPluginAPIOpts<T = Service> {
-  pluginAPI: PluginAPI
+export interface ProxyPluginApiOpts<T = Service> {
+  pluginAPI: PluginApi
   service: T
   serviceProps: string[]
   staticProps: Record<string, unknown>
 }
 
-export interface PluginAPIOpts<T = Service> {
+export interface PluginApiOpts<T = Service> {
   service: T
   plugin: Plugin
 }
 
-export class PluginAPI<T extends Service = Service> {
+export class PluginApi<T extends Service = Service> {
   public service: T
   public plugin: Plugin
 
-  public constructor(opts: PluginAPIOpts) {
+  public constructor(opts: PluginApiOpts) {
     this.service = opts.service as T
     this.plugin = opts.plugin
   }
@@ -108,7 +108,7 @@ export class PluginAPI<T extends Service = Service> {
       plugin: this.plugin,
       fn:
         opts.fn ||
-        // 这里不能用 arrow function，this 需指向执行此方法的 PluginAPI
+        // 这里不能用 arrow function，this 需指向执行此方法的 PluginApi
         // 否则 pluginId 会不对，导致不能正确 skip plugin
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         function fn(fn: (...args: any[]) => void | Record<string, unknown>) {
@@ -193,7 +193,7 @@ export class PluginAPI<T extends Service = Service> {
     })
   }
 
-  public static proxyPluginAPI(opts: ProxyPluginAPIOpts) {
+  public static proxyPluginApi(opts: ProxyPluginApiOpts) {
     return new Proxy(opts.pluginAPI, {
       get: (target, prop: string) => {
         if (opts.service.pluginMethods[prop]) {

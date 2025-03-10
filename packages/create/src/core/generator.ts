@@ -1,6 +1,7 @@
 import { chalk, logger, tryPaths } from '@eljs/utils'
-import assert from 'assert'
-import { join } from 'path'
+import assert from 'node:assert'
+import { join } from 'node:path'
+
 import { Runner } from './runner'
 
 /**
@@ -44,7 +45,7 @@ export class Generator {
       }
 
       // 检查生成配置否存在
-      const generatorFile = tryPaths([
+      const generatorFile = await tryPaths([
         join(templatePath, 'generators/index.ts'),
         join(templatePath, 'generators/index.js'),
       ])

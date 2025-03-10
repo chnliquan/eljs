@@ -1,5 +1,6 @@
 import importFresh from 'import-fresh'
-import path from 'path'
+import { dirname } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import {
   type TranspileOptions,
   findConfigFile,
@@ -10,7 +11,6 @@ import {
   sys,
   transpileModule,
 } from 'typescript'
-import { pathToFileURL } from 'url'
 
 import { isPathExists, isPathExistsSync } from './is'
 import { readFile, readFileSync } from './read'
@@ -19,24 +19,25 @@ import { writeFile, writeFileSync } from './write'
 
 /**
  * 加载 js 文件
- * @param filepath 文件路径
+ * @param path 文件路径
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function loadJsSync(filepath: string): any {
-  return importFresh(filepath)
+export function loadJsSync<T = any>(path: string): T {
+  return importFresh(path)
 }
 
 /**
  * 加载 js 文件
- * @param filepath 文件路径
+ * @param path 文件路径
  */
-async function loadJs(filepath: string) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function loadJs<T = any>(path: string): Promise<T> {
   try {
-    const { href } = pathToFileURL(filepath)
+    const { href } = pathToFileURL(path)
     return (await import(href)).default
   } catch (error) {
     try {
-      return loadJsSync(filepath)
+      return loadJsSync(path)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       if (
@@ -56,12 +57,13 @@ async function loadJs(filepath: string) {
 
 /**
  * 加载 ts 文件
- * @param filepath 文件路径
+ * @param path 文件路径
  */
-export function loadTsSync(filepath: string) {
-  const compiledFilepath = `${filepath.slice(0, -2)}cjs`
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function loadTsSync<T = any>(path: string): T {
+  const compiledPath = `${path.slice(0, -2)}cjs`
   try {
-    const config = resolveTsConfig(path.dirname(filepath)) ?? {}
+    const config = resolveTsConfig(dirname(path)) ?? {}
     config.compilerOptions = {
       ...config.compilerOptions,
       module: ModuleKind.NodeNext,
@@ -70,33 +72,34 @@ export function loadTsSync(filepath: string) {
       noEmit: false,
     }
     const transpiledContent = transpileModule(
-      readFileSync(filepath),
+      readFileSync(path),
       config,
     ).outputText
-    writeFileSync(compiledFilepath, transpiledContent)
-    return loadJsSync(compiledFilepath)
+    writeFileSync(compiledPath, transpiledContent)
+    return loadJsSync(compiledPath)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
-    error.message = `TypeScript Error in ${filepath}:\n${error.message}`
+    error.message = `TypeScript Error in ${path}:\n${error.message}`
     throw error
   } finally {
-    if (isPathExistsSync(compiledFilepath)) {
-      removeSync(compiledFilepath)
+    if (isPathExistsSync(compiledPath)) {
+      removeSync(compiledPath)
     }
   }
 }
 
 /**
- * 异步加载 ts 文件
- * @param filepath 文件路径
+ * 加载 ts 文件
+ * @param path 文件路径
  */
-export async function loadTs(filepath: string) {
-  const compiledFilepath = `${filepath.slice(0, -2)}mjs`
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function loadTs<T = any>(path: string): Promise<T> {
+  const compiledPath = `${path.slice(0, -2)}mjs`
   let transpiledContent = ''
 
   try {
     try {
-      const config = resolveTsConfig(path.dirname(filepath)) ?? {}
+      const config = resolveTsConfig(dirname(path)) ?? {}
       config.compilerOptions = {
         ...config.compilerOptions,
         module: ModuleKind.ES2022,
@@ -104,19 +107,19 @@ export async function loadTs(filepath: string) {
         target: ScriptTarget.ES2022,
         noEmit: false,
       }
-      const content = await readFile(filepath)
+      const content = await readFile(path)
       transpiledContent = transpileModule(content, config).outputText
-      await writeFile(compiledFilepath, transpiledContent)
+      await writeFile(compiledPath, transpiledContent)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      err.message = `TypeScript Error in ${filepath}:\n${err.message}`
+      err.message = `TypeScript Error in ${path}:\n${err.message}`
       throw err
     }
 
-    return await loadJs(compiledFilepath)
+    return await loadJs(compiledPath)
   } finally {
-    if (await isPathExists(compiledFilepath)) {
-      await remove(compiledFilepath)
+    if (await isPathExists(compiledPath)) {
+      await remove(compiledPath)
     }
   }
 }
@@ -126,16 +129,14 @@ export async function loadTs(filepath: string) {
  * @param dir 文件夹
  */
 export function resolveTsConfig(dir: string): TranspileOptions {
-  const filePath = findConfigFile(dir, fileName => {
+  const path = findConfigFile(dir, fileName => {
     return sys.fileExists(fileName)
   })
 
-  if (filePath !== undefined) {
-    const { config, error } = readConfigFile(filePath, path =>
-      sys.readFile(path),
-    )
+  if (path !== undefined) {
+    const { config, error } = readConfigFile(path, path => sys.readFile(path))
     if (error) {
-      throw new Error(`Error in ${filePath}: ${error.messageText.toString()}`)
+      throw new Error(`Error in ${path}: ${error.messageText.toString()}`)
     }
 
     return config

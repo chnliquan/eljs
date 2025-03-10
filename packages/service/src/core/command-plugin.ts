@@ -4,15 +4,15 @@ import {
   installDeps,
   logger,
   prompts,
-  updatePkgJSON,
+  updatePackageJson,
 } from '@eljs/utils'
 import _ from 'lodash'
 import { GeneratorType } from '../enum'
 import type { Generator } from '../types'
-import { PluginAPI } from './plugin-api'
-import type { ServicePluginAPI } from './service'
+import { PluginApi } from './plugin-api'
+import type { ServicePluginApi } from './service'
 
-export default (api: PluginAPI & ServicePluginAPI) => {
+export default (api: PluginApi & ServicePluginApi) => {
   api.registerCommand({
     name: 'help',
     description: 'show commands help',
@@ -93,7 +93,7 @@ ${api.binName} generate
           args,
           generateFile,
           installDeps,
-          updatePkgJSON,
+          updatePackageJson,
         })
       }
 

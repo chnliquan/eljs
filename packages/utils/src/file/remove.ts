@@ -2,16 +2,16 @@ import { rimraf, rimrafSync } from 'rimraf'
 
 /**
  * 删除文件（夹）
- * @param filepath 文件路径
+ * @param path 文件路径
  */
-export function removeSync(filepath: string): boolean {
-  return rimrafSync(filepath)
+export function removeSync(path: string): boolean {
+  return rimrafSync(path)
 }
 
 /**
  * 删除文件（夹）
- * @param filepath 文件路径
+ * @param path 文件路径
  */
-export function remove(filepath: string): Promise<boolean> {
-  return rimraf(filepath)
+export function remove(path: string): Promise<boolean> {
+  return rimraf(path)
 }

@@ -5,17 +5,17 @@ import {
   downloadNpmTarball,
   getNpmInfo,
   logger,
-  ora,
   pkgNameAnalysis,
-  readJSONSync,
+  readJsonSync,
   runCommand,
-  type PkgJSON,
+  type PackageJson,
 } from '@eljs/utils'
-import path from 'path'
+import path from 'node:path'
+import ora, { type Ora } from 'ora'
 
 export class Download {
   private _opts: TemplateInfo
-  private _spinner: ora.Ora
+  private _spinner: Ora
 
   public constructor(opts: TemplateInfo) {
     this._opts = opts
@@ -81,7 +81,9 @@ export class Download {
 
   private async _installDependencies(dist: string, pkgSpec: string) {
     try {
-      const pkgJSON: PkgJSON = readJSONSync(path.join(dist, './package.json'))
+      const pkgJSON: PackageJson = readJsonSync(
+        path.join(dist, './package.json'),
+      )
 
       if (
         pkgJSON.dependencies &&

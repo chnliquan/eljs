@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import fs from 'fs'
-import parseJSON from 'parse-json'
+import fs from 'node:fs'
+import fsp from 'node:fs/promises'
+import parseJson from 'parse-json'
 
-const fsp = fs.promises
 /**
  * 读取文件内容
  * @param file 文件路径
@@ -10,7 +9,7 @@ const fsp = fs.promises
  */
 export function readFileSync(
   file: string,
-  encoding: BufferEncoding = 'utf-8',
+  encoding: BufferEncoding = 'utf8',
 ): string {
   return fs.readFileSync(file, encoding)
 }
@@ -22,33 +21,32 @@ export function readFileSync(
  */
 export function readFile(
   file: string,
-  encoding: BufferEncoding = 'utf-8',
+  encoding: BufferEncoding = 'utf8',
 ): Promise<string> {
   return fsp.readFile(file, encoding)
 }
 
 /**
- * 读取 JSON 文件
+ * 读取 Json 文件
  * @param file 文件路径
  */
-export function readJSONSync<T extends Record<string, any>>(file: string): T {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function readJsonSync<T extends object>(file: string): T {
   try {
-    return parseJSON(fs.readFileSync(file, 'utf-8'))
+    return parseJson(readFileSync(file)) as T
   } catch (err) {
     return Object.create(null)
   }
 }
 
 /**
- * 读取 JSON 文件
+ * 读取 Json 文件
  * @param file 文件路径
  */
-export async function readJSON<T extends Record<string, any>>(
-  file: string,
-): Promise<T> {
+export async function readJson<T extends object>(file: string): Promise<T> {
   try {
     const content = await readFile(file)
-    return parseJSON(content)
+    return parseJson(content) as T
   } catch (err) {
     return Object.create(null)
   }

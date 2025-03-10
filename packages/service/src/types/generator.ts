@@ -1,4 +1,4 @@
-import type { generateFile, installDeps, updatePkgJSON } from '@eljs/utils'
+import type { generateFile, installDeps, updatePackageJson } from '@eljs/utils'
 import type { Plugin } from '../core/plugin'
 import { GeneratorType } from '../enum'
 import type { Args } from './service'
@@ -14,7 +14,7 @@ type GeneratorOptsWithoutEnableCheck = {
     (opts: {
       args: Args
       generateFile: typeof generateFile
-      updatePkgJSON: typeof updatePkgJSON
+      updatePackageJson: typeof updatePackageJson
       installDeps: typeof installDeps
     }): void
   }
@@ -35,7 +35,7 @@ type GeneratorOptsWithEnableCheck = {
     (opts: {
       args: Args
       generateFile: typeof generateFile
-      updatePkgJSON: typeof updatePkgJSON
+      updatePackageJson: typeof updatePackageJson
       installDeps: typeof installDeps
     }): void
   }

@@ -72,7 +72,7 @@ export interface PresetsOrPluginsExtractor {
   (presetsOrPlugins: string[], cwd: string, opts: Record<string, any>): string[]
 }
 
-export interface ProxyPluginAPIPropsExtractorReturnType {
+export interface ProxyPluginApiPropsExtractorReturnType {
   serviceProps: string[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   staticProps: Record<string, any>

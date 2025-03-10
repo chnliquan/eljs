@@ -1,4 +1,4 @@
-import type { CreateOpts, TemplateInfo } from '@/types'
+import type { CreateOptions, TemplateInfo } from '@/types'
 import {
   chalk,
   confirm,
@@ -8,9 +8,9 @@ import {
   mkdirSync,
   removeSync,
 } from '@eljs/utils'
-import assert from 'assert'
-import { readdirSync } from 'fs'
-import path from 'path'
+import assert from 'node:assert'
+import { readdirSync } from 'node:fs'
+import path from 'node:path'
 
 import { Download } from './download'
 import { Generator } from './generator'
@@ -34,7 +34,7 @@ export class Create {
   /**
    * 构造函数配置项
    */
-  private _opts: CreateOpts
+  private _opts: CreateOptions
   /**
    * 当前路径
    */
@@ -44,7 +44,7 @@ export class Create {
    */
   private _localTemplatePath?: string
 
-  public constructor(opts: CreateOpts) {
+  public constructor(opts: CreateOptions) {
     assert(
       opts.template || opts.templateInfo,
       `请传入 \`templateInfo\` 或者 \`template\``,

@@ -1,5 +1,6 @@
-import execa from 'execa'
-import { hasGlobalInstallation } from '../env'
+import { execa } from 'execa'
+
+import { hasGlobalInstallation } from '@/env'
 
 /**
  * 是否存在 git

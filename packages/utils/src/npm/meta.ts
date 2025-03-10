@@ -1,19 +1,17 @@
-import { execSync } from 'child_process'
-import execa from 'execa'
-import os from 'os'
-import path from 'path'
+import { PLATFORM } from '@/constants'
+import { isString } from '@/type'
+import type { OmitIndexSignature, PackageJson } from '@/types'
+import { execa } from 'execa'
+import os from 'node:os'
+import path from 'node:path'
 import urllib from 'urllib'
 import which from 'which'
-
-import { PLATFORM } from '../constants'
-import { isString } from '../type'
-import type { OmitIndexSignature, PkgJSON } from '../types'
 
 /**
  * 获取 NPM 仓库
  * @param cwd 工作目录
  */
-export async function getNpmRegistry(cwd = process.cwd()): Promise<string> {
+export async function getNpmRegistry(cwd?: string): Promise<string> {
   return execa('npm', ['config', 'get', 'registry'], {
     cwd,
   }).then(data => {
@@ -25,7 +23,7 @@ export async function getNpmRegistry(cwd = process.cwd()): Promise<string> {
  * 获取 NPM 用户
  * @param cwd 工作目录
  */
-export async function getNpmUser(cwd = process.cwd()): Promise<string> {
+export async function getNpmUser(cwd?: string): Promise<string> {
   return execa('npm', ['whoami'], {
     cwd,
   }).then(data => {
@@ -37,7 +35,7 @@ export async function getNpmUser(cwd = process.cwd()): Promise<string> {
  * NPM 包信息
  * https://github.com/npm/registry/blob/master/docs/REGISTRY-API.md
  */
-export interface NpmInfo extends OmitIndexSignature<PkgJSON> {
+export interface NpmInfo extends OmitIndexSignature<PackageJson> {
   version: string
   name: string
   dist: {
@@ -157,7 +155,7 @@ export async function getNpmDistTag(
 /**
  * 获取 NPM 前缀
  */
-export function getNpmPrefix(): string {
+export async function getNpmPrefix(): Promise<string> {
   if (process.env.GLOBAL_PREFIX) {
     return process.env.GLOBAL_PREFIX
   } else {
@@ -165,13 +163,13 @@ export function getNpmPrefix(): string {
 
     if (process.platform === PLATFORM.WIN) {
       try {
-        prefix = execSync('npm prefix -g').toString().trim()
+        prefix = (await execa('npm prefix -g')).stdout.toString().trim()
       } catch (err) {
         // ignore
       }
     } else {
       try {
-        prefix = path.join(which.sync('node'), '../../')
+        prefix = path.join(await which('node'), '../../')
       } catch (err) {
         // ignore
       }

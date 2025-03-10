@@ -1,10 +1,9 @@
-import execa from 'execa'
-import fs from 'fs'
+import { isPathExists, isPathExistsSync, readFile, readFileSync } from '@/file'
+import { execa, execaSync } from 'execa'
 import ini from 'ini'
-import os from 'os'
-import path from 'path'
-import { URL } from 'url'
-import { isPathExistsSync } from '../file'
+import os from 'node:os'
+import path from 'node:path'
+import { URL } from 'node:url'
 
 /**
  * 基础 git 仓库信息
@@ -55,17 +54,44 @@ export interface GitRepoInfo extends BaseGitRepoInfo {
  * @param cwd 当前工作目录
  * @param exact 是否在当前目录下提取
  */
-export function getGitUrl(cwd: string, exact?: boolean): string {
-  const gitDir = exact ? path.join(cwd, '.git') : getProjectGitDir(cwd) || ''
+export function getGitUrlSync(cwd: string, exact?: boolean): string {
+  const gitDir = exact
+    ? path.join(cwd, '.git')
+    : getProjectGitDirSync(cwd) || ''
 
   if (!isPathExistsSync(gitDir)) {
     return ''
   }
 
   try {
-    const parsed = ini.parse(
-      fs.readFileSync(path.join(gitDir, 'config'), 'utf8'),
-    )
+    const parsed = ini.parse(readFileSync(path.join(gitDir, 'config')))
+
+    if (parsed['remote "origin"']) {
+      return parsed['remote "origin"'].url
+    }
+  } catch (err) {
+    // catch error
+  }
+
+  return ''
+}
+
+/**
+ * 获取指定目录的 git 地址
+ * @param cwd 当前工作目录
+ * @param exact 是否在当前目录下提取
+ */
+export async function getGitUrl(cwd: string, exact?: boolean): Promise<string> {
+  const gitDir = exact
+    ? path.join(cwd, '.git')
+    : (await getProjectGitDir(cwd)) || ''
+
+  if (!(await isPathExists(gitDir))) {
+    return ''
+  }
+
+  try {
+    const parsed = ini.parse(await readFile(path.join(gitDir, 'config')))
 
     if (parsed['remote "origin"']) {
       return parsed['remote "origin"'].url
@@ -80,7 +106,6 @@ export function getGitUrl(cwd: string, exact?: boolean): string {
 /**
  * 获取指定工作目录的 git 分支
  * @param cwd 当前工作目录
- * @returns 当前分支
  */
 export async function getGitBranch(cwd?: string): Promise<string> {
   return execa('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
@@ -95,7 +120,6 @@ export async function getGitBranch(cwd?: string): Promise<string> {
  * 获取指定工作目录的 git commit 哈希值
  * @param cwd 当前工作目录
  * @param short 是否截断
- * @returns sha
  */
 export async function getGitCommitSha(
   cwd?: string,
@@ -162,14 +186,16 @@ export function gitUrlAnalysis(url: string): BaseGitRepoInfo | null {
 
 /**
  * 获取指定目录的 git 仓库信息
- * @param dir 指定的目录
+ * @param dir 文件目录
  * @param exact 是否在当前目录下提取
  */
-export function getGitRepoInfo(
+export function getGitRepoInfoSync(
   dir: string,
   exact?: boolean,
 ): GitRepoInfo | null {
-  const gitDir = exact ? path.join(dir, '.git') : getProjectGitDir(dir) || ''
+  const gitDir = exact
+    ? path.join(dir, '.git')
+    : getProjectGitDirSync(dir) || ''
 
   if (!isPathExistsSync(gitDir)) {
     return null
@@ -187,9 +213,7 @@ export function getGitRepoInfo(
   }
 
   try {
-    const config = ini.parse(
-      fs.readFileSync(path.join(gitDir, 'config'), 'utf8'),
-    )
+    const config = ini.parse(readFileSync(path.join(gitDir, 'config')))
     // remote
     if (config['remote "origin"']) {
       gitRepoInfo.ssh = config['remote "origin"'].url
@@ -205,7 +229,63 @@ export function getGitRepoInfo(
     }
 
     // branch
-    const gitHead = fs.readFileSync(path.join(gitDir, 'HEAD'), 'utf8')
+    const gitHead = readFileSync(path.join(gitDir, 'HEAD'))
+    gitRepoInfo.branch = gitHead
+      .replace('ref: refs/heads/', '')
+      .replace('\n', '')
+  } catch (err) {
+    return null
+  }
+
+  return gitRepoInfo
+}
+
+/**
+ * 获取指定目录的 git 仓库信息
+ * @param dir 文件目录
+ * @param exact 是否在当前目录下提取
+ */
+export async function getGitRepoInfo(
+  dir: string,
+  exact?: boolean,
+): Promise<GitRepoInfo | null> {
+  const gitDir = exact
+    ? path.join(dir, '.git')
+    : (await getProjectGitDir(dir)) || ''
+
+  if (!(await isPathExists(gitDir))) {
+    return null
+  }
+
+  const gitRepoInfo: GitRepoInfo = {
+    name: '',
+    group: '',
+    href: '',
+    https: '',
+    ssh: '',
+    branch: '',
+    author: '',
+    email: '',
+  }
+
+  try {
+    const config = ini.parse(await readFile(path.join(gitDir, 'config')))
+    // remote
+    if (config['remote "origin"']) {
+      gitRepoInfo.ssh = config['remote "origin"'].url
+
+      if (gitRepoInfo.ssh) {
+        Object.assign(gitRepoInfo, gitUrlAnalysis(gitRepoInfo.ssh))
+      }
+    }
+
+    if (config['user']) {
+      gitRepoInfo.author = config['user'].name
+      gitRepoInfo.email = config['user'].email
+    }
+
+    // branch
+    const gitHead = await readFile(path.join(gitDir, 'HEAD'))
     gitRepoInfo.branch = gitHead
       .replace('ref: refs/heads/', '')
       .replace('\n', '')
@@ -233,7 +313,7 @@ export interface GitUser {
 /**
  * 获取 git 用户
  */
-export function getGitUser(): GitUser {
+export function getGitUserSync(): GitUser {
   let user: GitUser = {
     name: '',
     email: '',
@@ -241,7 +321,7 @@ export function getGitUser(): GitUser {
 
   // try to get config by git
   try {
-    const gitConfig = execa.sync('git', ['config', '--list']).stdout
+    const gitConfig = execaSync('git', ['config', '--list']).stdout
 
     if (gitConfig) {
       const config = Object.create(null)
@@ -274,7 +354,7 @@ export function getGitUser(): GitUser {
   // try to read .gitconfig
   try {
     const gitFile = path.join(os.homedir(), '.gitconfig')
-    const parsed = ini.parse(fs.readFileSync(gitFile, 'utf8'))
+    const parsed = ini.parse(readFileSync(gitFile))
     const { name, email } = parsed.user
 
     if (email) {
@@ -295,12 +375,106 @@ export function getGitUser(): GitUser {
   return user
 }
 
-function getProjectGitDir(dir: string): string | undefined {
+/**
+ * 获取 git 用户
+ */
+export async function getGitUser(): Promise<GitUser> {
+  let user: GitUser = {
+    name: '',
+    email: '',
+  }
+
+  // try to get config by git
+  try {
+    const gitConfig = (await execa('git', ['config', '--list'])).stdout
+
+    if (gitConfig) {
+      const config = Object.create(null)
+
+      gitConfig.split(os.EOL).forEach(line => {
+        const [key, value] = line.split('=')
+        config[key] = value
+      })
+
+      if (config['user.email']) {
+        user = {
+          name: config['user.email'].split('@')[0],
+          email: config['user.email'],
+        }
+      } else {
+        user = {
+          name: config['user.name'],
+          email: '',
+        }
+      }
+    }
+  } catch (err) {
+    // ignore
+  }
+
+  if (user.email.match(/\.com$/)) {
+    return user
+  }
+
+  // try to read .gitconfig
+  try {
+    const gitFile = path.join(os.homedir(), '.gitconfig')
+    const parsed = ini.parse(await readFile(gitFile))
+    const { name, email } = parsed.user
+
+    if (email) {
+      user = {
+        name: email.split('@')[0],
+        email,
+      }
+    } else {
+      user = {
+        name,
+        email: '',
+      }
+    }
+  } catch (err) {
+    // empty
+  }
+
+  return user
+}
+
+/**
+ * 获取工程 git 路径
+ * @param dir 文件目录
+ */
+export function getProjectGitDirSync(dir: string): string | undefined {
   let cur = dir
 
   while (cur) {
     // 如果配置存在，说明是 .git 目录
     if (isPathExistsSync(path.join(cur, '.git', 'config'))) {
+      return path.join(cur, '.git')
+    }
+
+    const parent = path.dirname(cur)
+
+    if (parent === cur) {
+      break
+    } else {
+      cur = parent
+    }
+  }
+}
+
+/**
+ * 获取工程 git 路径
+ * @param dir 文件目录
+ */
+export async function getProjectGitDir(
+  dir: string,
+): Promise<string | undefined> {
+  let cur = dir
+
+  while (cur) {
+    // 如果配置存在，说明是 .git 目录
+    if (await isPathExists(path.join(cur, '.git', 'config'))) {
       return path.join(cur, '.git')
     }
 

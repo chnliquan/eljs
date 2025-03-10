@@ -1,6 +1,10 @@
-import { getGitUser, getGitUrl as gitUrl, gitUrlAnalysis } from '@eljs/utils'
+import {
+  getGitUserSync,
+  gitUrlAnalysis,
+  getGitUrlSync as gitUrlSync,
+} from '@eljs/utils'
 
-const account = getGitUser()
+const account = getGitUserSync()
 
 export const author = account.name
 export const email = account.email
@@ -12,7 +16,7 @@ export function getGitUrl(targetDir: string) {
     return _gitUrl
   }
 
-  _gitUrl = gitUrl(targetDir)
+  _gitUrl = gitUrlSync(targetDir)
   return _gitUrl
 }
 

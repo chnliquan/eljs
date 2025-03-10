@@ -35,8 +35,8 @@ export interface EjsRenderTemplateOptions {
 /**
  * 渲染模版字符串
  * @param template 模版内容
- * @param data 模版填充数据
- * @param options 模版渲染选项
+ * @param data 模版数据
+ * @param options 可选配置项
  */
 export function renderTemplate(
   template: string,

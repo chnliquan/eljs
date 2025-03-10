@@ -147,24 +147,12 @@ export class Generator extends BaseGenerator {
     }
 
     if (isDirectorySync(this._src)) {
-      this.copyDirectory({
-        from: this._src,
-        to: this._dest,
-        data,
-      })
+      await this.copyDirectory(this._src, this._dest, data)
     } else {
       if (this._src.endsWith('.tpl')) {
-        this.copyTpl({
-          from: this._src,
-          to: this._dest,
-          data,
-        })
+        await this.copyTpl(this._src, this._dest, data)
       } else {
-        this.copyFile({
-          from: this._src,
-          to: this._dest,
-          data,
-        })
+        await this.copyFile(this._src, this._dest, data)
       }
     }
   }
