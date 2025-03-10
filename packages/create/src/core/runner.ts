@@ -72,7 +72,7 @@ export class Runner extends Pluggable<
   public constructor(options: PluggableOptions) {
     super({
       ...options,
-      defaultConfigFiles: ['.create.ts', '.create.js'],
+      defaultConfigFiles: ['create.config.ts', 'create.config.js'],
       presets: [require.resolve('../internal'), ...(options.presets || [])],
       plugins: options.plugins,
     })
@@ -123,7 +123,7 @@ export class Runner extends Pluggable<
     })
 
     // 修改 tsConfig
-    this.tsConfig = await this.applyPlugins('modifyTSConfig', {
+    this.tsConfig = await this.applyPlugins('modifyTsConfig', {
       initialValue: {},
     })
 
@@ -136,6 +136,8 @@ export class Runner extends Pluggable<
     this.prettierConfig = await this.applyPlugins('modifyPrettierConfig', {
       initialValue: {},
     })
+
+    await this.applyPlugins('onStart')
 
     await this.applyPlugins('onBeforeGenerateFiles', {
       args: {
@@ -173,7 +175,7 @@ export interface RunnerPluginApi extends PluggablePluginApi {
    */
   prompts: typeof Runner.prototype.prompts
   /**
-   * tsConfig 配置，可通过 `modifyTSConfig` 方法修改
+   * tsConfig 配置，可通过 `modifyTsConfig` 方法修改
    */
   tsConfig: typeof Runner.prototype.tsConfig
   /**
@@ -213,7 +215,7 @@ export interface RunnerPluginApi extends PluggablePluginApi {
   /**
    * 修改 tsConfig
    */
-  modifyTSConfig: ApplyModify<typeof Runner.prototype.tsConfig, null>
+  modifyTsConfig: ApplyModify<typeof Runner.prototype.tsConfig, null>
   /**
    * 修改 jestConfig
    */
@@ -229,6 +231,10 @@ export interface RunnerPluginApi extends PluggablePluginApi {
    * 修改插件启用配置
    */
   modifyPluginConfig: ApplyModify<RunnerPluginConfig, null>
+  /**
+   * 应用启动事件
+   */
+  onStart: ApplyEvent<null>
   /**
    * 生成文件之前事件
    */

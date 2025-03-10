@@ -9,7 +9,6 @@ export default (api: Api) => {
     'modifyJestConfig',
     'modifyPrettierConfig',
     'onBeforeGenerateFiles',
-    'onCheck',
     'onStart',
     'onGenerateFiles',
     'onGenerateDone',

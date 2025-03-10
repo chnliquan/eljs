@@ -146,7 +146,8 @@ export interface Prompts {
   /**
    * 扩展字段
    */
-  [property: string]: unknown
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [property: string]: any
 }
 
 /**
