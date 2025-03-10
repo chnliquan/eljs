@@ -1,5 +1,5 @@
 import { isPathExists, isPathExistsSync, readFile, readFileSync } from '@/file'
-import { execa, execaSync } from 'execa'
+import execa from 'execa'
 import ini from 'ini'
 import os from 'node:os'
 import path from 'node:path'
@@ -321,7 +321,7 @@ export function getGitUserSync(): GitUser {
 
   // try to get config by git
   try {
-    const gitConfig = execaSync('git', ['config', '--list']).stdout
+    const gitConfig = execa.sync('git', ['config', '--list']).stdout
 
     if (gitConfig) {
       const config = Object.create(null)

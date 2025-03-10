@@ -1,7 +1,7 @@
 import { PLATFORM } from '@/constants'
 import { isString } from '@/type'
 import type { OmitIndexSignature, PackageJson } from '@/types'
-import { execa } from 'execa'
+import execa from 'execa'
 import os from 'node:os'
 import path from 'node:path'
 import urllib from 'urllib'

@@ -1,7 +1,6 @@
 import { isPathExistsSync } from '@/file'
 import chalk from 'chalk'
-import {
-  execa,
+import execa, {
   type ExecaChildProcess,
   type Options as ExecaOptions,
 } from 'execa'

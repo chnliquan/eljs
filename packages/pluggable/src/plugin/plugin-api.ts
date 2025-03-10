@@ -1,5 +1,5 @@
 import { PluggableStateEnum, type Pluggable } from '@/pluggable'
-import { isPlainObject, isString, type MaybePromiseFunction } from '@eljs/utils'
+import { isString, type MaybePromiseFunction } from '@eljs/utils'
 import assert from 'node:assert'
 
 import { Hook, type HookOptions } from './hook'
@@ -68,11 +68,12 @@ export class PluginApi<T extends Pluggable = Pluggable> {
         fn ||
         // 这里不能用 arrow function，this 需指向执行此方法的 pluginApi
         // 否则 pluginId 会不对，导致不能正确 skip plugin
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        function fn(fn: (...args: any[]) => void | Record<string, unknown>) {
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          this.register(name, isPlainObject(fn) ? fn.fn : fn)
+        function fn(
+          this: PluginApi,
+          fn: HookOptions['fn'],
+          options: Omit<HookOptions, 'plugin' | 'key' | 'fn'> = {},
+        ) {
+          this.register(name, fn, options)
         },
     }
   }

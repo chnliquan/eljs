@@ -7,10 +7,10 @@ import {
   winPath,
   type PackageJson,
 } from '@eljs/utils'
-import assert from 'assert'
 import hash from 'hash-sum'
+import assert from 'node:assert'
 import { basename, dirname, extname, join, relative } from 'path'
-import { pkgUpSync } from 'pkg-up'
+import pkgUp from 'pkg-up'
 
 import type { Enable, PluginReturnType, PluginType } from './types'
 
@@ -95,19 +95,19 @@ export class Plugin<
       `Invalid ${this.type} ${this.path}, it's not exists.`,
     )
 
-    let pkgJSON = {} as PackageJson
+    let pkg = {} as PackageJson
     let isPkgEntry = false
-    const pkgJSONPath = pkgUpSync({ cwd: this.path }) as string
+    const pkgJsonPath = pkgUp.sync({ cwd: this.path }) as string
 
-    if (pkgJSONPath) {
-      pkgJSON = readJsonSync(pkgJSONPath)
+    if (pkgJsonPath) {
+      pkg = readJsonSync(pkgJsonPath)
       isPkgEntry =
-        winPath(join(dirname(pkgJSONPath), pkgJSON.main || 'index.js')) ===
+        winPath(join(dirname(pkgJsonPath), pkg.main || 'index.js')) ===
         winPath(this.path)
     }
 
-    this.id = this._getId(pkgJSON.name as string, pkgJSONPath, isPkgEntry)
-    this.key = this._getKey(pkgJSON.name as string, isPkgEntry)
+    this.id = this._getId(pkg.name as string, pkgJsonPath, isPkgEntry)
+    this.key = this._getKey(pkg.name as string, isPkgEntry)
     this.apply = () => {
       const ret = loadTsSync(this.path)
       this.config = ret.config ?? Object.create(null)
@@ -135,18 +135,18 @@ export class Plugin<
   /**
    * 获取插件 ID
    * @param pkgName NPM 包名
-   * @param pkgJSONPath package.json 路径
+   * @param pkgPath package.json 路径
    * @param isPkgEntry 是否是入口
    */
-  private _getId(pkgName: string, pkgJSONPath: string, isPkgEntry: boolean) {
+  private _getId(pkgName: string, pkgPath: string, isPkgEntry: boolean) {
     let id = ''
 
     if (isPkgEntry) {
       id = pkgName
     } else if (winPath(this.path).startsWith(winPath(this._cwd))) {
       id = `./${winPath(relative(this._cwd, this.path))}`
-    } else if (pkgJSONPath) {
-      id = winPath(join(pkgName, relative(dirname(pkgJSONPath), this.path)))
+    } else if (pkgPath) {
+      id = winPath(join(pkgName, relative(dirname(pkgPath), this.path)))
     } else {
       id = winPath(this.path)
     }

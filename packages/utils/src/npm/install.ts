@@ -1,5 +1,5 @@
 import type { PackageManager } from '@/types'
-import { execa } from 'execa'
+import execa from 'execa'
 
 import { getPackageManager } from './package-manager'
 
