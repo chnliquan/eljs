@@ -1,6 +1,6 @@
 {
   "name": "@eljs/conventional-changelog-preset",
-  "version": "0.32.0",
+  "version": "0.33.0",
   "description": "eljs conventional changelog preset",
   "keywords": [
     "eljs",
