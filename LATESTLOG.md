@@ -1,9 +1,9 @@
-## [Changes](https://github.com/chnliquan/eljs/compare/v0.33.1...v0.33.2) (2025-03-10)
+## [Changes](https://github.com/chnliquan/eljs/compare/v0.33.2...v0.33.3) (2025-03-11)
 
 
 ### 🐛 Bug Fixes
 
-* **utils:** module deps ([20ec92a](https://github.com/chnliquan/eljs/commit/20ec92a87a85377cf49384617f4e65092721fece))
+* **pluggable:** apply plugin stage ([681b7f4](https://github.com/chnliquan/eljs/commit/681b7f439335abf085bf67a2731b676dc596b96b))
 
 
 
