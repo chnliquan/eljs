@@ -5,7 +5,7 @@ export default (api: Api) => {
     'addQuestions',
     'modifyAppData',
     'modifyPrompts',
-    'modifyTSConfig',
+    'modifyTsConfig',
     'modifyJestConfig',
     'modifyPrettierConfig',
     'onBeforeGenerateFiles',

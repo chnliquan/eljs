@@ -3,7 +3,7 @@ import { ConfigManager } from '@eljs/config'
 import assert from 'node:assert'
 import { AsyncSeriesWaterfallHook } from 'tapable'
 
-import utils, { isFunction, isPathExistsSync } from '@eljs/utils'
+import * as utils from '@eljs/utils'
 import {
   ApplyPluginTypeEnum,
   PluggableStateEnum,
@@ -121,7 +121,7 @@ export class Pluggable<
 
   public constructor(options: O) {
     assert(
-      isPathExistsSync(options.cwd),
+      utils.isPathExistsSync(options.cwd),
       `Invalid cwd ${options.cwd}, it's not found.`,
     )
 
@@ -189,7 +189,7 @@ export class Pluggable<
 
         if (prop in this) {
           const value = this[prop as keyof typeof this]
-          return isFunction(value) ? value.bind(this) : value
+          return utils.isFunction(value) ? value.bind(this) : value
         }
 
         if (prop in extraApi) {
@@ -313,9 +313,9 @@ export class Pluggable<
    */
   public async applyPlugins<T extends object, U extends object>(
     key: string,
-    options?: ApplyPluginsOptions<T, U>,
+    options: ApplyPluginsOptions<T, U> = {},
   ): Promise<T> {
-    let { type } = options || {}
+    let { type } = options
 
     // guess type from key
     if (!type) {
@@ -333,13 +333,12 @@ export class Pluggable<
     }
 
     const hooks = this.hooks[key] || []
-    const { initialValue, args } = options || {}
+    const { initialValue, args } = options
 
     switch (type) {
       case ApplyPluginTypeEnum.Add: {
         assert(
-          !(options && 'initialValue' in options) ||
-            Array.isArray(initialValue),
+          !('initialValue' in options) || Array.isArray(initialValue),
           `applyPlugins failed, \`options.initialValue\` must be Array if \`options.type\` is add.`,
         )
 
@@ -411,7 +410,7 @@ export class Pluggable<
           tapableEvent.tapPromise(
             {
               name: hook.plugin.key,
-              stage: hook.stage || 0,
+              stage: hook.stage,
               before: hook.before,
             },
             async () => {
@@ -454,7 +453,7 @@ export class Pluggable<
       return false
     }
 
-    if (isFunction(enable)) {
+    if (utils.isFunction(enable)) {
       return enable()
     }
 

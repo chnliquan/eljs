@@ -5,7 +5,7 @@ import fsp from 'node:fs/promises'
 import path from 'node:path'
 
 import { mkdir, mkdirSync } from './dir'
-import { isDirectorySync } from './is'
+import { isDirectory, isDirectorySync } from './is'
 import { readFile, readFileSync } from './read'
 import { renderTemplate, type RenderTemplateOptions } from './render'
 import { writeFile, writeFileSync } from './write'
@@ -177,7 +177,7 @@ export function copyDirectorySync(
     const srcFile = path.join(from, file)
 
     if (isDirectorySync(srcFile)) {
-      return
+      continue
     }
 
     const destFile = path.join(to, file)
@@ -215,14 +215,14 @@ export async function copyDirectory(
   for await (const file of files) {
     const srcFile = path.join(from, file)
 
-    if (isDirectorySync(srcFile)) {
-      return
+    if (await isDirectory(srcFile)) {
+      continue
     }
 
     const destFile = path.join(to, file)
 
     if (file.endsWith('.tpl')) {
-      await copyTpl(srcFile, destFile, options)
+      await copyTpl(srcFile, destFile, data, options)
     } else {
       await copyFile(srcFile, destFile, {
         ...options,

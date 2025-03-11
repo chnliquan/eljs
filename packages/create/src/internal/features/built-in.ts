@@ -14,9 +14,9 @@ import { join } from 'node:path'
 export default (api: Api) => {
   api.registerMethod(
     'extendPackage',
-    async (fn: (pkg: PackageJson) => PackageJson | PackageJson) => {
+    (fn: (pkg: PackageJson) => PackageJson | PackageJson) => {
       const pkg = api.appData.pkg
-      const toMerge = (isFunction(fn) ? await fn(pkg) : fn) ?? {}
+      const toMerge = (isFunction(fn) ? fn(pkg) : fn) ?? {}
       api.appData.pkg = api.utils.deepMerge(api.appData.pkg, toMerge)
     },
   )
@@ -28,8 +28,8 @@ export default (api: Api) => {
       let pkg = api.appData.pkg
 
       if (await isPathExists(pkgJsonPath)) {
-        const originPackageJson = await readJson(pkgJsonPath)
-        pkg = api.utils.deepMerge(originPackageJson, pkg)
+        const origin = await readJson(pkgJsonPath)
+        pkg = api.utils.deepMerge(origin, pkg)
       }
 
       if (Object.keys(pkg).length === 0) {

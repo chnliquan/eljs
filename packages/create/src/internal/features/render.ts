@@ -1,7 +1,7 @@
 import type { Api } from '@/types'
 import {
   extractCallDir,
-  isDirectorySync,
+  isDirectory,
   type RenderTemplateOptions,
 } from '@eljs/utils'
 import { join, resolve } from 'node:path'
@@ -17,7 +17,7 @@ export default (api: Api) => {
       const baseDir = extractCallDir(3)
       const srcFile = resolve(baseDir, path)
 
-      if (isDirectorySync(srcFile)) {
+      if (await isDirectory(srcFile)) {
         await api.copyDirectory(srcFile, api.paths.target, data, {
           renderOptions: options,
         })

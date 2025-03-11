@@ -19,11 +19,17 @@ export function readFileSync(
  * @param file 文件路径
  * @param encoding 文件编码
  */
-export function readFile(
+export async function readFile(
   file: string,
   encoding: BufferEncoding = 'utf8',
 ): Promise<string> {
-  return fsp.readFile(file, encoding)
+  try {
+    return await fsp.readFile(file, encoding)
+  } catch (err) {
+    throw new Error(`Read file [${file}] error.`, {
+      cause: err,
+    })
+  }
 }
 
 /**
@@ -35,7 +41,9 @@ export function readJsonSync<T extends object>(file: string): T {
   try {
     return parseJson(readFileSync(file)) as T
   } catch (err) {
-    return Object.create(null)
+    throw new Error(`Read Json file [${file}] error.`, {
+      cause: err,
+    })
   }
 }
 
@@ -48,6 +56,8 @@ export async function readJson<T extends object>(file: string): Promise<T> {
     const content = await readFile(file)
     return parseJson(content) as T
   } catch (err) {
-    return Object.create(null)
+    throw new Error(`Read Json file [${file}] error.`, {
+      cause: err,
+    })
   }
 }

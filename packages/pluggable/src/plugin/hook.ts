@@ -49,11 +49,11 @@ export class Hook {
   /**
    * 指定在某个 Hook 之前执行
    */
-  public before: string
+  public before?: string
   /**
    * Hook 执行阶段，值越小执行越早
    */
-  public stage: number
+  public stage?: number
   /**
    * Hook 执行函数
    */
@@ -69,8 +69,8 @@ export class Hook {
     this.options = options
     this.plugin = plugin
     this.key = key
-    this.before = before || ''
-    this.stage = stage || 0
+    this.before = before
+    this.stage = stage
     this.fn = fn
   }
 }
