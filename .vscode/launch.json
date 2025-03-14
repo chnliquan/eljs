@@ -7,11 +7,14 @@
       "request": "launch",
       "name": "Debug Ts File",
       "runtimeExecutable": "tsx",
+      "runtimeArgs": [
+        "--tsconfig",
+        "${workspaceFolder}/packages/release/tsconfig.json"
+      ],
       "program": "${file}",
       "windows": {
         "program": "${file}"
       },
-      "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
@@ -44,25 +47,16 @@
       "type": "node",
       "request": "launch",
       "name": "Debug Release",
-      "runtimeExecutable": "node",
-      "program": "${workspaceFolder}/packages/release/bin/release.js",
-      "windows": {
-        "program": "${workspaceFolder}/packages/release/bin/release.js"
-      },
-      "args": [
-        "--registry",
-        "https://npm.corp.kuaishou.com/",
-        "--no-git-check",
-        "--no-ownership-check"
-        // "--independent"
-        // "--preid",
-        // "canary",
-        // "patch"
+      "runtimeExecutable": "tsx",
+      "runtimeArgs": [
+        "--tsconfig",
+        "${workspaceFolder}/packages/release/tsconfig.json"
       ],
-      // "cwd": "${workspaceFolder}",
-      // "cwd": "/Users/ender/kwai/technology/drow/ad-create-comps/pc-components/create",
-      "cwd": "/Users/ender/kwai/technology/polyrepo-release",
-      // "cwd": "/Users/ender/kwai/technology/monorepo-release",
+      "program": "${workspaceFolder}/packages/release/src/cli.ts",
+      "windows": {
+        "program": "${workspaceFolder}/packages/release/src/cli.ts"
+      },
+      "args": ["--no-git-check", "--no-ownership-check"],
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
     },

@@ -9,9 +9,13 @@ import { addFileExt, getAbsFiles } from './utils'
  */
 export interface ConfigManagerOptions {
   /**
-   * 默认配置文件列表（config.ts）
+   * 默认配置文件（config.ts）
    */
   defaultConfigFiles: string[]
+  /**
+   * 默认配置文件扩展（dev => config.dev.ts，prod => config.prod.ts）
+   */
+  defaultConfigExts?: string[]
   /**
    * 当前工作目录
    */
@@ -23,26 +27,29 @@ export interface ConfigManagerOptions {
  */
 export class ConfigManager {
   /**
-   * 配置管理器类参数
+   * 构造函数参数
    */
-  public options: ConfigManagerOptions
+  public constructorOptions: ConfigManagerOptions
   /**
    * 主配置文件
    */
   public mainConfigFile?: string
 
   public constructor(options: ConfigManagerOptions) {
-    this.options = options
+    this.constructorOptions = options
   }
 
   /**
    * 获取配置项
    * @param configExts 配置文件扩展名
    */
-  public getConfigSync<T extends object>(configExts?: string[]): T | null {
+  public getConfigSync<T extends object>(): T | null {
+    const { defaultConfigFiles, defaultConfigExts, cwd } =
+      this.constructorOptions
+
     const mainConfigFile = ConfigManager.getMainConfigFileSync(
-      this.options.defaultConfigFiles,
-      this.options.cwd,
+      defaultConfigFiles,
+      cwd,
     )
 
     if (!mainConfigFile) {
@@ -51,41 +58,43 @@ export class ConfigManager {
 
     let configFiles = [mainConfigFile]
 
-    if (configExts) {
-      configFiles = ConfigManager.getConfigFiles(mainConfigFile, configExts)
-    }
-
-    return ConfigManager.getConfigSync(
-      getAbsFiles(configFiles, this.options.cwd),
-    )
-  }
-
-  /**
-   * 获取配置项
-   * @param configExts 配置文件扩展名
-   */
-  public async getConfig<T extends object>(
-    configExts?: string[],
-  ): Promise<T | null> {
-    const mainConfigFile = await ConfigManager.getMainConfigFile(
-      this.options.defaultConfigFiles,
-      this.options.cwd,
-    )
-
-    if (!mainConfigFile) {
-      return null
-    }
-
-    let configFiles = [mainConfigFile]
-
-    if (configExts) {
-      configFiles = await ConfigManager.getConfigFiles(
+    if (defaultConfigExts?.length) {
+      configFiles = ConfigManager.getConfigFiles(
         mainConfigFile,
-        configExts,
+        defaultConfigExts,
       )
     }
 
-    return ConfigManager.getConfig(getAbsFiles(configFiles, this.options.cwd))
+    return ConfigManager.getConfigSync(getAbsFiles(configFiles, cwd))
+  }
+
+  /**
+   * 获取配置项
+   * @param configExts 配置文件扩展名
+   */
+  public async getConfig<T extends object>(): Promise<T | null> {
+    const { defaultConfigFiles, defaultConfigExts, cwd } =
+      this.constructorOptions
+
+    const mainConfigFile = await ConfigManager.getMainConfigFile(
+      defaultConfigFiles,
+      cwd,
+    )
+
+    if (!mainConfigFile) {
+      return null
+    }
+
+    let configFiles = [mainConfigFile]
+
+    if (defaultConfigExts?.length) {
+      configFiles = await ConfigManager.getConfigFiles(
+        mainConfigFile,
+        defaultConfigExts,
+      )
+    }
+
+    return ConfigManager.getConfig(getAbsFiles(configFiles, cwd))
   }
 
   /**

@@ -1,7 +1,7 @@
 {
   "name": "@eljs/utils",
   "version": "0.33.3",
-  "description": "Nodejs 工具库",
+  "description": "Collection of nodejs utility.",
   "keywords": [
     "eljs",
     "node",

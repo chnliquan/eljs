@@ -57,6 +57,10 @@ export enum ApplyPluginTypeEnum {
    */
   Modify = 'modify',
   /**
+   * 获取
+   */
+  Get = 'get',
+  /**
    * 事件
    */
   Event = 'event',
@@ -73,7 +77,6 @@ export interface ApplyPluginsOptions<T, U> {
   /**
    * 初始化值
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   initialValue?: T
   /**
    * 函数参数
@@ -102,8 +105,21 @@ export interface ApplyModify<T, U> {
 }
 
 /**
+ * 注册获取类型的函数
+ */
+export interface ApplyGet<T, U> {
+  (
+    fn: { (args: T): MaybePromise<U> },
+    options?: { before?: string; stage?: number },
+  ): void
+}
+
+/**
  * 注册事件类型的函数
  */
 export interface ApplyEvent<T> {
-  (fn: { (args: T): void }, options?: { before?: string; stage?: number }): void
+  (
+    fn: { (args: T): MaybePromise<void> },
+    options?: { before?: string; stage?: number },
+  ): void
 }

@@ -1,7 +1,7 @@
 {
   "name": "@eljs/create-template",
   "version": "0.33.3",
-  "description": "项目模版创建",
+  "description": "Create template.",
   "keywords": [
     "eljs",
     "create-template"

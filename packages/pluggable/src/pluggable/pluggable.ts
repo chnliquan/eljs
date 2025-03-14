@@ -1,9 +1,9 @@
 import { Plugin, PluginApi, PluginTypeEnum, type Hook } from '@/plugin'
 import { ConfigManager } from '@eljs/config'
-import assert from 'node:assert'
-import { AsyncSeriesWaterfallHook } from 'tapable'
-
 import * as utils from '@eljs/utils'
+import assert from 'node:assert'
+
+import { AsyncSeriesBailHook, AsyncSeriesWaterfallHook } from 'tapable'
 import {
   ApplyPluginTypeEnum,
   PluggableStateEnum,
@@ -28,9 +28,13 @@ export interface PluggableOptions {
    */
   plugins?: string[]
   /**
-   * 默认配置文件列表
+   * 默认配置文件（config.ts）
    */
-  defaultConfigFiles?: string[]
+  defaultConfigFiles: string[]
+  /**
+   * 默认配置文件扩展（dev => config.dev.ts，prod => config.prod.ts）
+   */
+  defaultConfigExts?: string[]
 }
 
 /**
@@ -48,26 +52,27 @@ export interface UserConfig {
   /**
    * 扩展字段
    */
-  [property: string]: unknown
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [property: string]: any
 }
 
 /**
  * 插件配置项
  */
-export type PluginConfig = object
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type PluginConfig = Record<string, any>
 
 /**
  * 可插拔类
  */
 export class Pluggable<
-  O extends PluggableOptions = PluggableOptions,
-  U extends UserConfig = UserConfig,
-  P extends PluginConfig = PluginConfig,
+  T extends UserConfig = UserConfig,
+  U extends PluginConfig = PluginConfig,
 > {
   /**
-   * 构造函数配置项
+   * 构造函数参数
    */
-  public options: O
+  public constructorOptions: PluggableOptions
   /**
    * 配置文件管理器
    */
@@ -75,11 +80,11 @@ export class Pluggable<
   /**
    * 用户配置项
    */
-  public userConfig?: U
+  public userConfig: T = Object.create(null)
   /**
    * 插件自身配置项
    */
-  public pluginConfig: P = Object.create(null)
+  public pluginConfig: U = Object.create(null)
   /**
    * 钩子映射表
    */
@@ -109,7 +114,7 @@ export class Pluggable<
    * 当前工作目录
    */
   public get cwd(): string {
-    return this.options.cwd
+    return this.constructorOptions.cwd
   }
 
   /**
@@ -119,18 +124,18 @@ export class Pluggable<
     return this._state
   }
 
-  public constructor(options: O) {
+  public constructor(options: PluggableOptions) {
     assert(
       utils.isPathExistsSync(options.cwd),
       `Invalid cwd ${options.cwd}, it's not found.`,
     )
 
-    this.options = options
+    this.constructorOptions = options
     this.configManager = new ConfigManager({
       defaultConfigFiles: options.defaultConfigFiles || [],
+      defaultConfigExts: options.defaultConfigExts,
       cwd: options.cwd,
     })
-    this.userConfig = this.configManager.getConfigSync() as U
   }
 
   /**
@@ -139,10 +144,16 @@ export class Pluggable<
   protected async load() {
     this._state = PluggableStateEnum.Init
 
+    this.userConfig = (await this.configManager.getConfig()) as T
+
     const { plugins = [], presets = [] } = Plugin.getPresetsAndPlugins(
-      this.cwd,
-      (this.options.presets || []).concat(this.userConfig?.presets || []),
-      (this.options.plugins || []).concat(this.userConfig?.plugins || []),
+      this.constructorOptions.cwd,
+      (this.constructorOptions.presets || []).concat(
+        this.userConfig?.presets || [],
+      ),
+      (this.constructorOptions.plugins || []).concat(
+        this.userConfig?.plugins || [],
+      ),
     )
 
     // #region register presets
@@ -177,10 +188,6 @@ export class Pluggable<
   protected getPluginApi(plugin: Plugin): PluginApi {
     const pluginApi = new PluginApi(this, plugin)
 
-    const extraApi = {
-      utils,
-    }
-
     return new Proxy(pluginApi, {
       get: (target, prop: string) => {
         if (this.pluginMethods[prop]) {
@@ -190,10 +197,6 @@ export class Pluggable<
         if (prop in this) {
           const value = this[prop as keyof typeof this]
           return utils.isFunction(value) ? value.bind(this) : value
-        }
-
-        if (prop in extraApi) {
-          return extraApi[prop as keyof typeof extraApi]
         }
 
         return target[prop as keyof typeof target]
@@ -297,10 +300,11 @@ export class Pluggable<
       )
     }
 
-    // merge plugin config
-    this.pluginConfig = {
-      ...this.pluginConfig,
-      ...plugin.config,
+    if (this.pluginConfig && plugin?.config) {
+      this.pluginConfig = {
+        ...this.pluginConfig,
+        ...plugin.config,
+      }
     }
 
     return ret
@@ -311,7 +315,7 @@ export class Pluggable<
    * @param key 通过 register 方法注册的 key
    * @param options 配置项
    */
-  public async applyPlugins<T extends object, U extends object>(
+  public async applyPlugins<T, U>(
     key: string,
     options: ApplyPluginsOptions<T, U> = {},
   ): Promise<T> {
@@ -321,6 +325,8 @@ export class Pluggable<
     if (!type) {
       if (key.startsWith('on')) {
         type = ApplyPluginTypeEnum.Event
+      } else if (key.startsWith('get')) {
+        type = ApplyPluginTypeEnum.Get
       } else if (key.startsWith('modify')) {
         type = ApplyPluginTypeEnum.Modify
       } else if (key.startsWith('add')) {
@@ -357,12 +363,12 @@ export class Pluggable<
             },
             async memo => {
               const startTime = new Date()
-              const items = await hook.fn(args)
+              const ret = await hook.fn(args)
               hook.plugin.time.hooks[key] ||= []
               hook.plugin.time.hooks[key].push(
                 new Date().getTime() - startTime.getTime(),
               )
-              return (memo as []).concat(items)
+              return (memo as []).concat(ret)
             },
           )
         }
@@ -386,17 +392,46 @@ export class Pluggable<
             },
             async memo => {
               const startTime = new Date()
-              const modified = await hook.fn(memo, args)
+              const ret = await hook.fn(memo, args)
               hook.plugin.time.hooks[key] ||= []
               hook.plugin.time.hooks[key].push(
                 new Date().getTime() - startTime.getTime(),
               )
-              return modified
+              return ret
             },
           )
         }
 
         return tapableModify.promise(initialValue) as T
+      }
+
+      case ApplyPluginTypeEnum.Get: {
+        const tapableGet = new AsyncSeriesBailHook(['_'])
+
+        for (const hook of hooks) {
+          if (!this.isPluginEnable(hook)) {
+            continue
+          }
+
+          tapableGet.tapPromise(
+            {
+              name: hook.plugin.key,
+              stage: hook.stage,
+              before: hook.before,
+            },
+            async () => {
+              const startTime = new Date()
+              const ret = await hook.fn(args)
+              hook.plugin.time.hooks[key] ||= []
+              hook.plugin.time.hooks[key].push(
+                new Date().getTime() - startTime.getTime(),
+              )
+              return ret
+            },
+          )
+        }
+
+        return tapableGet.promise(0) as T
       }
 
       case ApplyPluginTypeEnum.Event: {
@@ -424,7 +459,7 @@ export class Pluggable<
           )
         }
 
-        return tapableEvent.promise(1) as T
+        return tapableEvent.promise(0) as T
       }
 
       default:
@@ -470,10 +505,6 @@ export interface PluggablePluginApi {
    * 当前执行路径
    */
   cwd: typeof Pluggable.prototype.cwd
-  /**
-   * 插件自身配置项
-   */
-  pluginConfig: typeof Pluggable.prototype.pluginConfig
   // #endregion
 
   // #region 插件方法
@@ -491,12 +522,5 @@ export interface PluggablePluginApi {
    * @param plugins 插件/路径集合
    */
   registerPlugins: (plugins: (Plugin | string)[]) => void
-  // #endregion
-
-  // #region 静态属性
-  /**
-   * 工具函数
-   */
-  utils: typeof utils
   // #endregion
 }

@@ -1,6 +1,7 @@
 import type { Api } from '@/types'
 import {
   chalk,
+  deepMerge,
   install,
   isFunction,
   isPathExists,
@@ -17,7 +18,7 @@ export default (api: Api) => {
     (fn: (pkg: PackageJson) => PackageJson | PackageJson) => {
       const pkg = api.appData.pkg
       const toMerge = (isFunction(fn) ? fn(pkg) : fn) ?? {}
-      api.appData.pkg = api.utils.deepMerge(api.appData.pkg, toMerge)
+      api.appData.pkg = deepMerge(api.appData.pkg, toMerge)
     },
   )
 
@@ -29,7 +30,7 @@ export default (api: Api) => {
 
       if (await isPathExists(pkgJsonPath)) {
         const origin = await readJson(pkgJsonPath)
-        pkg = api.utils.deepMerge(origin, pkg)
+        pkg = deepMerge(origin, pkg)
       }
 
       if (Object.keys(pkg).length === 0) {
@@ -49,7 +50,7 @@ export default (api: Api) => {
   api.register(
     'onGenerateDone',
     () => {
-      api.utils.logger.done(
+      logger.done(
         `🎉  Created project ${chalk.cyanBright.bold(
           api.appData.projectName,
         )} successfully.`,

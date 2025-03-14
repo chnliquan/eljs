@@ -1,13 +1,6 @@
-import type { DistTag, Preid } from '@/types'
-import {
-  chalk,
-  getGitCommitSha,
-  getNpmDistTag,
-  logger,
-  run,
-  timeout,
-} from '@eljs/utils'
-import semver, { type ReleaseType } from 'semver'
+import type { DistTag, PrereleaseId } from '@/types'
+import { chalk, getGitCommitSha, logger, run } from '@eljs/utils'
+import semver, { RELEASE_TYPES, SemVer, type ReleaseType } from 'semver'
 
 export function isPrerelease(version: string): boolean {
   return (
@@ -33,79 +26,54 @@ export function isRcVersion(version: string): boolean {
 export function isCanaryVersion(version: string): boolean {
   return version.includes('-canary.')
 }
+
 /**
- * 远程 NPM dist tag
+ * 版本号是否合法
+ * @param version 版本
+ * @param releaseType 是否可以是 releaseType
  */
-export interface RemoteDistTag {
-  latest: string
-  alpha: string
-  beta: string
-  rc: string
+export function isVersionValid(
+  version: string,
+  releaseType: boolean = false,
+): boolean {
+  if (releaseType) {
+    if (RELEASE_TYPES.includes(version as ReleaseType)) {
+      return true
+    }
+  }
+
+  if (semver.valid(version)) {
+    return true
+  }
+
+  return false
 }
 
-export async function getRemoteDistTag(
-  pkgNames: string[],
-  cwd: string,
-  registry: string,
-): Promise<RemoteDistTag> {
-  try {
-    const distTag = await timeout(
-      (async () => {
-        for (let i = 0; i < pkgNames.length; i++) {
-          const pkgName = pkgNames[i]
+/**
+ * 解析版本
+ * @param version 版本
+ */
+export function parseVersion(version: string) {
+  const parsed = semver.parse(version) as SemVer
+  const isPrerelease = Boolean(parsed.prerelease?.length)
+  const prereleaseId = (
+    isPrerelease && isNaN(parsed.prerelease[0] as number)
+      ? parsed.prerelease[0]
+      : null
+  ) as PrereleaseId | null
 
-          try {
-            const distTag = await getNpmDistTag(pkgName, {
-              cwd,
-              registry,
-            })
-
-            return {
-              latest: distTag['latest'],
-              alpha: distTag['alpha'],
-              beta: distTag['beta'],
-              rc: distTag['rc'],
-            }
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } catch (err: any) {
-            if (err.message.includes('command not found')) {
-              logger.error(
-                `Please make sure the ${chalk.cyanBright.bold(
-                  'npm',
-                )} has been installed.`,
-              )
-              process.exit(1)
-            } else {
-              // logger.info(
-              //   `This package ${chalk.cyanBright.bold(
-              //     pkgName,
-              //   )} has never been released, this is the first release.`,
-              // )
-              console.log()
-            }
-          }
-        }
-
-        return {
-          latest: '',
-          alpha: '',
-          beta: '',
-          rc: '',
-        }
-      })(),
-      pkgNames.length * 2000,
-    )
-    return distTag
-  } catch (err) {
-    return {
-      latest: '',
-      alpha: '',
-      beta: '',
-      rc: '',
-    }
+  return {
+    version: version.toString(),
+    isPrerelease,
+    prereleaseId,
   }
 }
 
+/**
+ * 版本是否存在
+ * @param pkgName 包名
+ * @param version 版本
+ */
 export async function isVersionExist(pkgName: string, version: string) {
   try {
     const remoteInfo = (
@@ -140,6 +108,10 @@ export async function isVersionExist(pkgName: string, version: string) {
   return true
 }
 
+/**
+ * 获取稳定版本
+ * @param version 版本
+ */
 export function getStableVersion(version: string) {
   const prerelease = semver.prerelease(version)
 
@@ -180,6 +152,10 @@ export function getReferenceVersion(
   }
 }
 
+/**
+ * 获取最大的版本
+ * @param versions 版本
+ */
 export function getMaxVersion(...versions: string[]) {
   return versions.reduce((maxVersion: string, version: string) => {
     if (!version) {
@@ -190,15 +166,17 @@ export function getMaxVersion(...versions: string[]) {
   })
 }
 
-interface Options {
-  referenceVersion: string
-  releaseType?: ReleaseType
-  preid?: Preid
-}
-
-export function getReleaseVersion(opts: Options) {
-  const { referenceVersion, releaseType, preid = 'alpha' } = opts
-
+/**
+ * 获取发布版本
+ * @param referenceVersion 基准版本
+ * @param releaseType 发布版本
+ * @param prereleaseId 预发布 ID
+ */
+export function getReleaseVersion(
+  referenceVersion: string,
+  releaseType: ReleaseType,
+  prereleaseId?: PrereleaseId,
+) {
   switch (releaseType) {
     case 'major':
     case 'minor':
@@ -208,7 +186,11 @@ export function getReleaseVersion(opts: Options) {
     case 'preminor':
     case 'prepatch':
     case 'prerelease':
-      return semver.inc(referenceVersion, releaseType, preid) as string
+      return semver.inc(
+        referenceVersion,
+        releaseType,
+        prereleaseId || 'beta',
+      ) as string
     default:
       break
   }
@@ -216,13 +198,23 @@ export function getReleaseVersion(opts: Options) {
   return referenceVersion
 }
 
-export async function getCanaryVersion(referenceVersion: string, cwd: string) {
+/**
+ *
+ * @param referenceVersion 基准版本
+ * @param cwd 当前工作目录
+ */
+export async function getCanaryVersion(
+  referenceVersion: string,
+  cwd: string = process.cwd(),
+) {
   const date = new Date()
   const yyyy = date.getUTCFullYear()
   const MM = String(date.getUTCMonth() + 1).padStart(2, '0')
   const dd = String(date.getUTCDate()).padStart(2, '0')
   const dateStamp = `${yyyy}${MM}${dd}`
-  const sha = await getGitCommitSha(cwd, true)
+  const sha = await getGitCommitSha(true, {
+    cwd,
+  })
   const stableVersion = getStableVersion(referenceVersion)
   const nextVersion =
     isAlphaVersion(referenceVersion) ||

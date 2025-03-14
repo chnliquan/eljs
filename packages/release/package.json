@@ -1,7 +1,7 @@
 {
   "name": "@eljs/release",
   "version": "0.33.3",
-  "description": "NPM 包发布工具",
+  "description": "Release npm package easily.",
   "keywords": [
     "eljs",
     "release"
@@ -34,21 +34,18 @@
   },
   "dependencies": {
     "@eljs/conventional-changelog-preset": "workspace:*",
-    "@eljs/utils": "workspace:*",
+    "@eljs/pluggable": "workspace:*",
+    "@types/concat-stream": "^2.0.3",
     "@types/conventional-changelog": "^6.0.0",
-    "@types/glob": "^7.2.0",
-    "@types/js-yaml": "^4.0.5",
-    "@types/resolve-bin": "^0.4.1",
-    "@types/semver": "^7.3.12",
-    "cnpm": "^8.3.0",
-    "commander": "^9.4.0",
+    "@types/resolve-bin": "^0.4.3",
+    "@types/semver": "^7.5.8",
+    "cnpm": "^9.4.0",
+    "commander": "^13.1.0",
+    "concat-stream": "^2.0.0",
     "conventional-changelog": "^6.0.0",
-    "glob": "^8.0.3",
-    "js-yaml": "^4.1.0",
-    "junk": "^3.1.0",
     "new-github-release-url": "^1.0.0",
-    "open": "^7.3.0",
+    "open": "^8.4.2",
     "resolve-bin": "^1.0.1",
-    "semver": "^7.3.7"
+    "semver": "^7.7.1"
   }
 }

@@ -1,3 +1,4 @@
+import { run, type RunCommandOptions } from '@/cp'
 import { isPathExists, isPathExistsSync, readFile, readFileSync } from '@/file'
 import execa from 'execa'
 import ini from 'ini'
@@ -104,30 +105,34 @@ export async function getGitUrl(cwd: string, exact?: boolean): Promise<string> {
 }
 
 /**
- * 获取指定工作目录的 git 分支
- * @param cwd 当前工作目录
+ * 获取 git 分支
+ * @param options 可选项
  */
-export async function getGitBranch(cwd?: string): Promise<string> {
-  return execa('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
-    cwd,
-  }).then(data => {
-    // .replace(/\n|\r|\t/, '')
-    return data.stdout.trim()
-  })
+export async function getGitBranch(
+  options?: RunCommandOptions,
+): Promise<string> {
+  return run('git', ['rev-parse', '--abbrev-ref', 'HEAD'], options).then(
+    data => {
+      // .replace(/\n|\r|\t/, '')
+      return data.stdout.trim()
+    },
+  )
 }
 
 /**
- * 获取指定工作目录的 git commit 哈希值
- * @param cwd 当前工作目录
+ * 获取 git commit 哈希值
  * @param short 是否截断
+ * @param options 可选项
  */
 export async function getGitCommitSha(
-  cwd?: string,
-  short = false,
+  short?: boolean,
+  options?: RunCommandOptions,
 ): Promise<string> {
-  return execa('git', ['rev-parse', ...(short ? ['--short'] : []), 'HEAD'], {
-    cwd,
-  }).then(data => {
+  return run(
+    'git',
+    ['rev-parse', ...(short ? ['--short'] : []), 'HEAD'],
+    options,
+  ).then(data => {
     return data.stdout.trim()
   })
 }

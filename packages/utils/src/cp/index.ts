@@ -32,19 +32,27 @@ export function parseCommand(command: string): string[] {
 }
 
 /**
+ * 执行命令可选项
+ */
+export interface RunCommandOptions extends ExecaOptions {
+  /**
+   * 是否打印命令
+   */
+  verbose?: boolean
+}
+
+/**
  * 运行命令
  * @param command 可运行的命令
  * @param args 命令接收的参数
- * @param options 可选配置项
+ * @param options 可选项
  */
 export function run(
   command: string,
   args: string[],
-  options?: ExecaOptions & {
-    verbose?: boolean
-  },
+  options?: RunCommandOptions,
 ): ExecaChildProcess {
-  if (options?.verbose !== false) {
+  if (options?.verbose) {
     console.log('$', chalk.greenBright(command), ...args)
   }
 
@@ -58,9 +66,7 @@ export function run(
  */
 export function runCommand(
   command: string,
-  options?: ExecaOptions & {
-    verbose?: boolean
-  },
+  options?: RunCommandOptions,
 ): ExecaChildProcess {
   const [cmd, ...args] = parseCommand(command)
   return run(cmd, args, options)

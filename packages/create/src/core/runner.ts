@@ -32,11 +32,7 @@ export interface RunnerPluginConfig {
 /**
  * 运行器
  */
-export class Runner extends Pluggable<
-  PluggableOptions,
-  UserConfig,
-  RunnerPluginConfig
-> {
+export class Runner extends Pluggable<UserConfig, RunnerPluginConfig> {
   /**
    * 执行阶段
    */
@@ -97,6 +93,7 @@ export class Runner extends Pluggable<
       },
     })
 
+    this.stage = RunnerStageEnum.CollectAppData
     this.appData = await this.applyPlugins('modifyAppData', {
       initialValue: {
         scene: 'web',
@@ -116,27 +113,28 @@ export class Runner extends Pluggable<
       args: {},
     })
 
-    this.stage = RunnerStageEnum.Prompting
+    this.stage = RunnerStageEnum.CollectPrompts
     this.prompts = await this.applyPlugins('modifyPrompts', {
       initialValue: {} as Prompts,
       args: { questions },
     })
 
-    // 修改 tsConfig
+    this.stage = RunnerStageEnum.CollectTsConfig
     this.tsConfig = await this.applyPlugins('modifyTsConfig', {
       initialValue: {},
     })
 
-    // 修改 jestConfig
+    this.stage = RunnerStageEnum.CollectJestConfig
     this.jestConfig = await this.applyPlugins('modifyJestConfig', {
       initialValue: {},
     })
 
-    // 修改 prettierConfig
+    this.stage = RunnerStageEnum.CollectPrettierConfig
     this.prettierConfig = await this.applyPlugins('modifyPrettierConfig', {
       initialValue: {},
     })
 
+    this.stage = RunnerStageEnum.OnStart
     await this.applyPlugins('onStart')
 
     await this.applyPlugins('onBeforeGenerateFiles', {
@@ -246,8 +244,8 @@ export interface RunnerPluginApi extends PluggablePluginApi {
   /**
    * 生成文件事件
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onGenerateFiles: ApplyEvent<{ prompts: Record<string, any>; paths: Paths }>
+  onGenerateFiles: ApplyEvent<// eslint-disable-next-line @typescript-eslint/no-explicit-any
+  { prompts: Record<string, any>; paths: Paths }>
   /**
    * 生成文件完成事件
    */

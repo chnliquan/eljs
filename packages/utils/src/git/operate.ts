@@ -1,5 +1,4 @@
-import { run } from '@/cp'
-import { type Options as ExecaOptions } from 'execa'
+import { run, type RunCommandOptions } from '@/cp'
 
 import { isGitAheadRemote, isGitClean } from './is'
 import { getGitBranch } from './meta'
@@ -11,11 +10,9 @@ import { getGitBranch } from './meta'
  */
 export async function gitCommit(
   msg: string,
-  options?: ExecaOptions & {
-    verbose?: boolean
-  },
+  options?: RunCommandOptions,
 ): Promise<void> {
-  if (await isGitClean(options?.cwd as string)) {
+  if (await isGitClean(options)) {
     return
   }
   await run('git', ['add', '-A'], options)
@@ -27,11 +24,9 @@ export async function gitCommit(
  * @param options 选项
  */
 export async function gitPushCommit(
-  options?: ExecaOptions & {
-    verbose?: boolean
-  },
+  options?: RunCommandOptions,
 ): Promise<void> {
-  const isAheadRemote = await isGitAheadRemote(options?.cwd as string)
+  const isAheadRemote = await isGitAheadRemote(options)
 
   if (!isAheadRemote) {
     return
@@ -53,9 +48,7 @@ export async function gitPushCommit(
  */
 export async function gitTag(
   tag: string,
-  options?: ExecaOptions & {
-    verbose?: boolean
-  },
+  options?: RunCommandOptions,
 ): Promise<void> {
   await run('git', ['tag', tag, '-m', tag], options)
 }
@@ -67,9 +60,7 @@ export async function gitTag(
  */
 export async function gitPushTag(
   tag: string,
-  options?: ExecaOptions & {
-    verbose?: boolean
-  },
+  options?: RunCommandOptions,
 ): Promise<void> {
   await run('git', ['push', 'origin', `refs/tags/${tag}`], options)
 }

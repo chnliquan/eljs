@@ -1,23 +1,25 @@
-import { isPathExistsSync, logger } from '@eljs/utils'
-import fs from 'fs'
-import os from 'os'
-import path from 'path'
+import concat from 'concat-stream'
 
-export async function generateChangelog(opts: {
-  pkgName: string
-  latest?: boolean
+export interface GenerateChangelogOptions {
+  /**
+   * 当前工作目录
+   */
   cwd?: string
+  /**
+   * 是否生成独立 tag
+   */
   independent?: boolean
-}): Promise<string> {
-  const {
-    pkgName,
-    latest = true,
-    cwd = process.cwd(),
-    independent = false,
-  } = opts
-  const CHANGELOG = path.join(cwd, 'CHANGELOG.md')
-  const LATESTLOG = path.join(cwd, 'LATESTLOG.md')
-  let hasError = false
+}
+
+/**
+ * 生成更新日志
+ * @param options.independent 是否生成独立 tag
+ * @returns
+ */
+export async function generateChangelog(
+  options: GenerateChangelogOptions,
+): Promise<string> {
+  const { cwd = process.cwd(), independent = false } = options
 
   const conventionalChangelog = (await import('conventional-changelog')).default
   const config = (await import('@eljs/conventional-changelog-preset')).default
@@ -26,6 +28,7 @@ export async function generateChangelog(opts: {
     const stream = conventionalChangelog(
       // https://github.com/conventional-changelog/conventional-changelog/tree/master/packages/conventional-changelog-core#conventionalchangelogcoreoptions-context-gitrawcommitsopts-parseropts-writeropts
       {
+        cwd,
         config,
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
@@ -101,77 +104,8 @@ export async function generateChangelog(opts: {
       },
     )
 
-    let changelog = ''
-    let latestLog = ''
-
-    stream.on('data', chunk => {
-      try {
-        let data: string = chunk.toString()
-
-        if (data.indexOf('###') === -1) {
-          data = data.replace(
-            /\n+/g,
-            `\n\n**Note:** Version bump only for package ${pkgName}`,
-          )
-        }
-
-        if (isPathExistsSync(CHANGELOG)) {
-          const remain = fs.readFileSync(CHANGELOG, 'utf8').trim()
-          changelog = remain.length
-            ? remain.replace(/# Change\s?Log/, '# ChangeLog \n\n' + data)
-            : '# ChangeLog \n\n' + data
-        } else {
-          changelog = '# ChangeLog \n\n' + data
-        }
-
-        fs.writeFileSync(CHANGELOG, changelog)
-
-        if (!latest) {
-          return
-        }
-
-        const lines = data.split(os.EOL)
-        let firstIndex = -1
-
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i]
-
-          if (/^#{1,3}/.test(line)) {
-            firstIndex = i
-            break
-          }
-        }
-
-        if (firstIndex > -1) {
-          latestLog = data.replace(/##* \[([\d.]+)\]/, '## [Changes]')
-
-          fs.writeFileSync(LATESTLOG, latestLog)
-          logger.done(`Generated LATESTLOG successfully.`)
-        }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (err: any) {
-        hasError = true
-        reject(err.stack)
-      }
-    })
-
-    stream.on('error', err => {
-      if (hasError) {
-        return
-      }
-
-      hasError = true
-      reject(err.stack)
-    })
-
-    stream.on('end', () => {
-      if (hasError) {
-        return
-      }
-
-      logger.done(`Generated CHANGELOG successfully.`)
-      resolve(latestLog)
-    })
+    stream.pipe(concat(result => resolve(result.toString().trim())))
+    stream.on('error', reject)
   })
 }
 

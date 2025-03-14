@@ -1,7 +1,7 @@
 {
   "name": "@eljs/create",
   "version": "0.33.3",
-  "description": "@eljs/create",
+  "description": "Create template easily.",
   "keywords": [
     "eljs",
     "create"

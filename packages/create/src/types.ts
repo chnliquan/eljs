@@ -1,5 +1,5 @@
 import { Runner, type RunnerPluginApi } from '@/core'
-import type { PluginApi } from '@eljs/pluggable'
+import type { PluggablePluginApi, PluginApi } from '@eljs/pluggable'
 import type {
   CopyFileOptions,
   PackageJson,
@@ -60,7 +60,7 @@ export interface CreateOptions {
  */
 export interface Paths {
   /**
-   * 当前执行路径
+   * 当前工作目录
    */
   cwd: string
   /**
@@ -100,7 +100,8 @@ export interface AppData {
   /**
    * 扩展字段
    */
-  [property: string]: unknown
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [property: string]: any
 }
 
 /**
@@ -157,15 +158,19 @@ export enum RunnerStageEnum {
   Uninitialized = 'uninitialized',
   Init = 'init',
   CollectAppData = 'collectAppData',
-  OnCheck = 'onCheck',
+  CollectPluginConfig = 'collectPluginConfig',
+  CollectPrompts = 'collectPrompts',
+  CollectTsConfig = 'collectTsConfig',
+  CollectJestConfig = 'collectJestConfig',
+  CollectPrettierConfig = 'collectPrettierConfig',
   OnStart = 'onStart',
-  Prompting = 'prompting',
 }
 
 /**
  * 插件入参
  */
 export type Api = PluginApi<Runner> &
+  PluggablePluginApi &
   RunnerPluginApi & {
     // #region 插件工具方法
     /**

@@ -1,4 +1,4 @@
-import { getPkgPaths, logger, readJson, sleep } from '@eljs/utils'
+import { getPackageRootPaths, logger, readJson, sleep } from '@eljs/utils'
 import path from 'path'
 import { $, argv } from 'zx'
 
@@ -17,7 +17,7 @@ async function main(): Promise<void> {
   }
 
   const rootPath = path.resolve(__dirname, '../')
-  const pkgPaths = await getPkgPaths(rootPath)
+  const pkgPaths = await getPackageRootPaths(rootPath)
 
   for (const owner of owners) {
     for (const pkgPath of pkgPaths) {

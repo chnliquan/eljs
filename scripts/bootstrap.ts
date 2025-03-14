@@ -2,7 +2,7 @@
 // create package.json, README, etc. for packages that don't have them yet.
 import {
   camelCase,
-  getPkgPaths,
+  getPackageRootPaths,
   isPathExistsSync,
   logger,
   mkdirSync,
@@ -24,7 +24,7 @@ main().catch((err: Error) => {
 
 async function main(): Promise<void> {
   const rootPath = path.resolve(__dirname, '../')
-  const pkgPaths = await getPkgPaths(rootPath, true)
+  const pkgPaths = await getPackageRootPaths(rootPath, true)
   const { version } = await readJson(path.resolve(rootPath, 'package.json'))
 
   const dirs = argv._.length ? argv._ : pkgPaths

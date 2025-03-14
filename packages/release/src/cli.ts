@@ -5,10 +5,10 @@ import {
   readJson,
   type PackageJson,
 } from '@eljs/utils'
-import { InvalidArgumentError, program } from 'commander'
+import { Command, InvalidArgumentError, program } from 'commander'
 import path from 'path'
 import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
-import { release } from './core/release'
+import { Runner } from './runner'
 
 cli().catch((err: Error) => {
   console.error(`release failed, ${err.message}`)
@@ -16,41 +16,14 @@ cli().catch((err: Error) => {
 })
 
 async function cli() {
-  const pkgJSON = await readJson<PackageJson>(
+  const pkg = await readJson<PackageJson>(
     path.join(__dirname, '../package.json'),
   )
   program
     .version(
-      pkgJSON.version as string,
+      pkg.version as string,
       '-v, --version',
       'Output the current version.',
-    )
-    .option(
-      '--registry <registry>',
-      'Specify the npm registry when publishing.',
-    )
-    .option(
-      '--preid <preid>',
-      'Specify the prerelease identifier when publishing a prerelease.',
-    )
-    .option('--independent', 'Tag published package independent.')
-    .option(
-      '--dry',
-      'Instead of executing, display details about the affected packages that would be publish.',
-    )
-    .option('--verbose', 'Whether display verbose message.')
-    .option('--latest', 'Whether generate latest changelog.')
-    .option('--publish-only', 'Whether publish only.')
-    .option('--sync-cnpm', 'Whether sync to cnpm when publish done.')
-    .option('--no-confirm', 'No confirm the bump version.')
-    .option('--no-ownership-check', 'No check the npm ownership.')
-    .option('--no-git-check', 'No check the git status.')
-    .option('--no-git-push', 'No push commit to git remote.')
-    .option('--no-create-release', 'No release to git client.')
-    .option('--branch <branch>', 'Limit the branch allowed to publish.')
-    .option(
-      '--repo-type <repo-type>',
-      'Publish packages with the specified git type.',
     )
     .argument('[version]', 'Specify the bump version.', checkVersion)
 
@@ -79,19 +52,9 @@ async function cli() {
     )
   }
 
-  const opts = program.opts()
+  const options = program.opts()
   const version = program.args[0]
-
-  if (opts.preid && !['alpha', 'beta', 'rc', 'canary'].includes(opts.preid)) {
-    logger.printErrorAndExit(
-      `Expected the --preid as alpha beta rc or canary, but got ${opts.preid}.`,
-    )
-  }
-
-  return release({
-    ...opts,
-    version,
-  }).then(() => process.exit(0))
+  return new Runner(options).run(version).then(() => process.exit(0))
 }
 
 function enhanceErrorMessages(
@@ -100,7 +63,7 @@ function enhanceErrorMessages(
   log: (...args: any[]) => void,
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(program as any).Command.prototype[methodName] = function (...args: any[]) {
+  ;(Command['prototype'] as any)[methodName] = function (...args: any[]) {
     if (methodName === 'unknownOption' && this._allowUnknownOption) {
       return
     }
@@ -120,7 +83,7 @@ function checkVersion(value: ReleaseType) {
   }
 
   if (!semver.valid(value)) {
-    throw new InvalidArgumentError('should be a valid semantic version.')
+    throw new InvalidArgumentError('Should be a valid semantic version.')
   }
 
   // if startsWith 'v', need to remove it
