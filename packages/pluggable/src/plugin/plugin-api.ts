@@ -1,5 +1,10 @@
-import { PluggableStateEnum, type Pluggable } from '@/pluggable'
-import { isString, type MaybePromiseFunction } from '@eljs/utils'
+import {
+  PluggableStateEnum,
+  type Pluggable,
+  type PluginDefinition,
+  type ResolvedPluginDefinition,
+} from '@/pluggable'
+import { type MaybePromiseFunction } from '@eljs/utils'
 import assert from 'node:assert'
 
 import { Hook, type HookOptions } from './hook'
@@ -81,23 +86,22 @@ export class PluginApi<T extends Pluggable = Pluggable> {
   /**
    * 注册预设
    * @param resolvedPresets 解析后的预设集合
-   * @param prefix 插件包名前缀
-   * @param presets 预设
+   * @param presetDefinitions 预设定义
    */
-  public registerPresets(resolvedPresets: Plugin[], presets: unknown[]) {
+  public registerPresets(
+    resolvedPresets: ResolvedPluginDefinition[],
+    presetDefinitions: unknown[],
+  ) {
     assert(
       this.pluggable.state === PluggableStateEnum.InitPresets,
       `api.registerPresets() failed, it should only used in presets state.`,
     )
 
     resolvedPresets.unshift(
-      ...presets.map(
-        preset =>
-          new Plugin({
-            path: preset as string,
-            cwd: this.pluggable.cwd,
-            type: PluginTypeEnum.Preset,
-          }),
+      ...Plugin.resolvePluginDefinitions(
+        presetDefinitions as PluginDefinition[],
+        PluginTypeEnum.Preset,
+        this.pluggable.cwd,
       ),
     )
   }
@@ -105,12 +109,11 @@ export class PluginApi<T extends Pluggable = Pluggable> {
   /**
    * 注册插件
    * @param resolvedPlugins 解析后的插件集合
-   * @param prefix 插件包名前缀
-   * @param presets 预设
+   * @param pluginDefinitions 插件定义
    */
   public registerPlugins(
-    resolvedPlugins: Plugin[],
-    plugins: (string | Plugin)[],
+    resolvedPlugins: ResolvedPluginDefinition[],
+    pluginDefinitions: unknown[],
   ) {
     assert(
       this.pluggable.state === PluggableStateEnum.InitPresets ||
@@ -118,34 +121,13 @@ export class PluginApi<T extends Pluggable = Pluggable> {
       `api.registerPlugins() failed, it should only be used in registering stage.`,
     )
 
-    const mappedPlugins = plugins.map(plugin => {
-      if (isString(plugin)) {
-        return new Plugin({
-          path: plugin,
-          cwd: this.pluggable.cwd,
-          type: PluginTypeEnum.Plugin,
-        })
-      } else {
-        assert(
-          plugin.id && plugin.key,
-          `Invalid plugin object, id and key must supplied.`,
-        )
-
-        plugin.type = PluginTypeEnum.Plugin
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
-        plugin.apply = plugin.apply || (() => () => {})
-        plugin.config = plugin.config || {}
-        plugin.time = { hooks: {} }
-
-        return plugin
-      }
-    })
-
-    if (this.pluggable.state === PluggableStateEnum.InitPresets) {
-      resolvedPlugins.push(...mappedPlugins)
-    } else {
-      resolvedPlugins.unshift(...mappedPlugins)
-    }
+    resolvedPlugins.unshift(
+      ...Plugin.resolvePluginDefinitions(
+        pluginDefinitions as PluginDefinition[],
+        PluginTypeEnum.Plugin,
+        this.pluggable.cwd,
+      ),
+    )
   }
 
   /**

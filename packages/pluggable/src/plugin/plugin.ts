@@ -1,3 +1,4 @@
+import type { PluginDefinition, ResolvedPluginDefinition } from '@/pluggable'
 import {
   camelCase,
   isPathExistsSync,
@@ -9,7 +10,7 @@ import {
 } from '@eljs/utils'
 import hash from 'hash-sum'
 import assert from 'node:assert'
-import { basename, dirname, extname, join, relative } from 'path'
+import { basename, dirname, extname, join, relative } from 'node:path'
 import pkgUp from 'pkg-up'
 
 import type { Enable, PluginReturnType, PluginType } from './types'
@@ -35,9 +36,7 @@ export interface PluginOptions {
 /**
  * 插件类
  */
-export class Plugin<
-  C extends Record<string, unknown> = Record<string, unknown>,
-> {
+export class Plugin {
   /**
    * 插件参数
    */
@@ -59,10 +58,6 @@ export class Plugin<
    */
   public key: string
   /**
-   * 插件配置项
-   */
-  public config: C = Object.create(null)
-  /**
    * 插件执行时间
    */
   public time: {
@@ -73,7 +68,8 @@ export class Plugin<
    * 插件执行函数
    */
   public apply: () => (
-    ...args: unknown[]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...args: any[]
   ) => PluginReturnType | Promise<PluginReturnType>
   /**
    * 插件是否可以执行
@@ -110,7 +106,6 @@ export class Plugin<
     this.key = this._getKey(pkg.name as string, isPkgEntry)
     this.apply = () => {
       const ret = loadTsSync(this.path)
-      this.config = ret.config ?? Object.create(null)
       return ret.__esModule ? ret.default : ret
     }
   }
@@ -181,48 +176,65 @@ export class Plugin<
   /**
    * 获取预设和插件
    * @param cwd 当前工作目录
-   * @param presets 预设路径合集
-   * @param plugins 插件路径合集
+   * @param presets 预设定义集合
+   * @param plugins 插件定义集合
    */
   public static getPresetsAndPlugins(
     cwd: string,
-    presets?: string[],
-    plugins?: string[],
+    presets?: PluginDefinition[],
+    plugins?: PluginDefinition[],
   ) {
     return {
-      presets: get('preset'),
-      plugins: get('plugin'),
+      presets: get('preset') as ResolvedPluginDefinition[],
+      plugins: get('plugin') as ResolvedPluginDefinition[],
     }
 
     function get(type: PluginType) {
       const presetsOrPlugins = type === 'preset' ? presets : plugins
-
-      if (presetsOrPlugins?.length) {
-        return presetsOrPlugins.map(path => {
-          assert(
-            typeof path === 'string',
-            `Invalid plugin ${path}, it must be string.`,
-          )
-
-          let resolvedPath = ''
-
-          try {
-            resolvedPath = resolve.sync(path, {
-              basedir: cwd,
-              extensions: ['.tsx', '.ts', '.mjs', '.jsx', '.js'],
-            })
-          } catch (_) {
-            throw new Error(`Invalid plugin ${path}, can not be resolved.`)
-          }
-
-          return new Plugin({
-            path: resolvedPath,
-            type,
-            cwd,
-          })
-        })
+      if (!presetsOrPlugins) {
+        return
       }
+      return Plugin.resolvePluginDefinitions(presetsOrPlugins, type, cwd)
     }
+  }
+
+  /**
+   * 解析插件定义集合
+   * @param pluginDefinitions 插件定义集合
+   * @param type 插件类型
+   * @param cwd 当前工作目录
+   */
+  public static resolvePluginDefinitions(
+    pluginDefinitions: PluginDefinition[],
+    type: PluginType,
+    cwd: string,
+  ): ResolvedPluginDefinition[] {
+    return pluginDefinitions.map(pluginDefinition => {
+      const [pluginName, pluginConfig] =
+        typeof pluginDefinition === 'string'
+          ? [pluginDefinition, null]
+          : pluginDefinition
+
+      let resolvedPath = ''
+
+      try {
+        resolvedPath = resolve.sync(pluginName, {
+          basedir: cwd,
+          extensions: ['.tsx', '.ts', '.mjs', '.jsx', '.js'],
+        })
+      } catch (_) {
+        throw new Error(`Invalid plugin ${pluginName}, can not be resolved.`)
+      }
+
+      return [
+        new Plugin({
+          path: resolvedPath,
+          type,
+          cwd,
+        }),
+        pluginConfig,
+      ] as ResolvedPluginDefinition
+    })
   }
 
   /**

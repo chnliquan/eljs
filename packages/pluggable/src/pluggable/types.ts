@@ -2,6 +2,41 @@ import type { Plugin } from '@/plugin'
 import type { MaybePromise } from '@eljs/utils'
 
 /**
+ * 插件定义
+ */
+export type PluginDefinition<T extends object = object> =
+  | string
+  | string[]
+  | [string, T]
+
+/**
+ * 解析后的插件定义
+ */
+export type ResolvedPluginDefinition<T extends object = object> = [
+  Plugin,
+  T | null,
+]
+
+/**
+ * 用户配置项
+ */
+export interface UserConfig {
+  /**
+   * 预设定义集合
+   */
+  presets?: PluginDefinition[]
+  /**
+   * 插件定义集合
+   */
+  plugins?: PluginDefinition[]
+  /**
+   * 扩展字段
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [property: string]: any
+}
+
+/**
  * 插件执行阶段枚举
  */
 export enum PluggableStateEnum {
