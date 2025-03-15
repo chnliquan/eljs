@@ -24,7 +24,6 @@ export default (api: Api) => {
 
   api.getIncrementVersion(
     async ({ releaseTypeOrVersion }) => {
-      console.log('12312312312321312')
       const version = await getIncrementVersion(api, releaseTypeOrVersion)
 
       if (!api.config.npm.confirm) {
@@ -66,7 +65,7 @@ async function getIncrementVersion(
   api: Api,
   releaseTypeOrVersion?: string,
 ): Promise<string> {
-  const { prereleaseId, canary } = api.config.npm
+  const { prerelease, prereleaseId, canary } = api.config.npm
   const { registry, projectPkg, validPkgNames } = api.appData
 
   api.step('Incrementing version ...')
@@ -145,49 +144,6 @@ async function getIncrementVersion(
   const minorVersion = getReleaseVersion(referenceVersionMap.latest, 'minor')
   const majorVersion = getReleaseVersion(referenceVersionMap.latest, 'major')
 
-  const choices = [
-    {
-      title: `Patch (${patchVersion})`,
-      value: patchVersion,
-      description: chalk.grey(`Bug Fix`),
-    },
-    {
-      title: `Minor (${minorVersion})`,
-      value: minorVersion,
-      description: chalk.grey(`New Feature`),
-    },
-    {
-      title: `Major (${majorVersion})`,
-      value: majorVersion,
-      description: chalk.grey(`Breaking Change`),
-    },
-    {
-      title: `Alpha`,
-      value: 'alpha',
-      description: chalk.grey(`Internal Test Version`),
-    },
-    {
-      title: `Beta`,
-      value: 'beta',
-      description: chalk.grey(`External Test Version`),
-    },
-    {
-      title: `Rc`,
-      value: 'rc',
-      description: chalk.grey(`Release Candidate Version`),
-    },
-    {
-      title: `Canary`,
-      value: 'canary',
-      description: chalk.grey(`Canary Deployment Version`),
-    },
-    {
-      title: `Custom`,
-      value: 'custom',
-      description: chalk.grey(`Custom version`),
-    },
-  ]
-
   let answer: prompts.Answers<'value'> = {
     value: '',
   }
@@ -195,6 +151,24 @@ async function getIncrementVersion(
   const onCancel = () => {
     process.exit(1)
   }
+
+  if (prereleaseId) {
+    const referenceVersion = referenceVersionMap[prereleaseId]
+    answer = await prompts(
+      getPrereleaseChoices(referenceVersion, prereleaseId),
+      {
+        onCancel,
+      },
+    )
+    return answer.value
+  }
+
+  const choices = getReleaseChoices(
+    patchVersion,
+    minorVersion,
+    majorVersion,
+    prerelease,
+  )
 
   let releaseType = ''
 
@@ -236,14 +210,11 @@ async function getIncrementVersion(
     }
   }
 
-  // prereleaseId version
-  const referenceVersion = referenceVersionMap[answer.value as PrereleaseId]
-  answer = await prompts(
-    getPreVersionPromptQuestions(referenceVersion, releaseType as PrereleaseId),
-    {
-      onCancel,
-    },
-  )
+  const referenceVersion =
+    referenceVersionMap[answer.value as keyof typeof referenceVersionMap]
+  answer = await prompts(getPrereleaseChoices(referenceVersion, answer.value), {
+    onCancel,
+  })
 
   return answer.value
 
@@ -263,7 +234,7 @@ async function getIncrementVersion(
     }
   }
 
-  function getPreVersionPromptQuestions(
+  function getPrereleaseChoices(
     referenceVersion: string,
     prereleaseId: PrereleaseId,
   ): prompts.PromptObject {
@@ -288,6 +259,63 @@ async function getIncrementVersion(
       }),
     }
   }
+}
+
+function getReleaseChoices(
+  patchVersion: string,
+  minorVersion: string,
+  majorVersion: string,
+  prerelease?: boolean,
+) {
+  const choices = [
+    {
+      title: `Alpha`,
+      value: 'alpha',
+      description: chalk.grey(`Internal Test Version`),
+    },
+    {
+      title: `Beta`,
+      value: 'beta',
+      description: chalk.grey(`External Test Version`),
+    },
+    {
+      title: `Rc`,
+      value: 'rc',
+      description: chalk.grey(`Release Candidate Version`),
+    },
+    {
+      title: `Canary`,
+      value: 'canary',
+      description: chalk.grey(`Canary Deployment Version`),
+    },
+    {
+      title: `Custom`,
+      value: 'custom',
+      description: chalk.grey(`Custom version`),
+    },
+  ]
+
+  if (!prerelease) {
+    choices.unshift(
+      {
+        title: `Patch (${patchVersion})`,
+        value: patchVersion,
+        description: chalk.grey(`Bug Fix`),
+      },
+      {
+        title: `Minor (${minorVersion})`,
+        value: minorVersion,
+        description: chalk.grey(`New Feature`),
+      },
+      {
+        title: `Major (${majorVersion})`,
+        value: majorVersion,
+        description: chalk.grey(`Breaking Change`),
+      },
+    )
+  }
+
+  return choices
 }
 
 async function confirmVersion(api: Api, version: string): Promise<string> {

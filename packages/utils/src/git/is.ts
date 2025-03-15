@@ -9,11 +9,12 @@ import { getGitBranch } from './meta'
 export async function isGitClean(
   options?: RunCommandOptions,
 ): Promise<boolean> {
-  return run('git', ['status', '--porcelain'], options)
-    .then(data => {
-      return data.stdout.trim().length === 0
-    })
-    .catch(() => false)
+  try {
+    const rawStatus = await run('git', ['status', '--porcelain'], options)
+    return rawStatus.stdout.trim().length === 0
+  } catch (err) {
+    return false
+  }
 }
 
 /**
@@ -23,33 +24,39 @@ export async function isGitClean(
 export async function isGitBehindRemote(
   options?: RunCommandOptions,
 ): Promise<boolean> {
-  return run('git', ['fetch'], options).then(() => {
+  return run('git', ['fetch'], {
+    ...options,
+    verbose: false,
+  }).then(() => {
     return run(
       'git',
       ['status', '--porcelain', '-b', '-u', '--null'],
       options,
     ).then(data => {
-      const behindResult = /behind (\d+)/.exec(data.stdout)
-      return behindResult?.[1] ? Number(behindResult[1]) > 0 : false
+      const behindResult = /\[(behind|落后)\s+(\d+)\]/.exec(data.stdout)
+      return behindResult?.[2] ? Number(behindResult[2]) > 0 : false
     })
   })
 }
 
 /**
- * 指定工作目录的 git 是否超前远程
+ * git 是否超前远程
  * @param options 可选项
  */
 export async function isGitAheadRemote(
   options?: RunCommandOptions,
 ): Promise<boolean> {
-  return run('git', ['fetch'], options).then(() => {
+  return run('git', ['fetch'], {
+    ...options,
+    verbose: false,
+  }).then(() => {
     return run(
       'git',
       ['status', '--porcelain', '-b', '-u', '--null'],
       options,
     ).then(data => {
-      const aheadResult = /ahead (\d+)/.exec(data.stdout)
-      return aheadResult?.[1] ? Number(aheadResult[1]) > 0 : false
+      const aheadResult = /\[(ahead|超前)\s+(\d+)\]/.exec(data.stdout)
+      return aheadResult?.[2] ? Number(aheadResult[2]) > 0 : false
     })
   })
 }

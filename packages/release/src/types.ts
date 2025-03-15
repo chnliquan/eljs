@@ -62,6 +62,11 @@ export interface Config extends UserConfig {
      */
     skipCheck?: boolean
     /**
+     * 是否预发布
+     * @default false
+     */
+    prerelease?: boolean
+    /**
      * 预发布类型
      */
     prereleaseId?: PrereleaseId

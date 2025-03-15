@@ -1,6 +1,5 @@
 import { run, type RunCommandOptions } from '@/cp'
 
-import { isGitAheadRemote, isGitClean } from './is'
 import { getGitBranch } from './meta'
 
 /**
@@ -12,11 +11,22 @@ export async function gitCommit(
   msg: string,
   options?: RunCommandOptions,
 ): Promise<void> {
-  if (await isGitClean(options)) {
-    return
+  try {
+    await run('git', ['add', '-A'], options)
+    await run('git', ['commit', '-m', msg], options)
+  } catch (error) {
+    const err = error as Error
+
+    if (
+      err.message.includes('nothing to commit') ||
+      /working tree clean/.test(err.message) ||
+      /无文件要提交/.test(err.message)
+    ) {
+      return
+    }
+
+    throw new Error(`Git commit failed: ${err.message}.`)
   }
-  await run('git', ['add', '-A'], options)
-  await run('git', ['commit', '-m', msg], options)
 }
 
 /**
@@ -26,13 +36,10 @@ export async function gitCommit(
 export async function gitPushCommit(
   options?: RunCommandOptions,
 ): Promise<void> {
-  const isAheadRemote = await isGitAheadRemote(options)
-
-  if (!isAheadRemote) {
-    return
-  }
-
-  const branch = await getGitBranch()
+  const branch = await getGitBranch({
+    ...options,
+    verbose: false,
+  })
 
   await run(
     'git',

@@ -9,7 +9,7 @@
       "runtimeExecutable": "tsx",
       "runtimeArgs": [
         "--tsconfig",
-        "${workspaceFolder}/packages/release/tsconfig.json"
+        "${workspaceFolder}/packages/utils/tsconfig.json"
       ],
       "program": "${file}",
       "windows": {
@@ -56,7 +56,7 @@
       "windows": {
         "program": "${workspaceFolder}/packages/release/src/cli.ts"
       },
-      "args": [],
+      // "args": ["prerelease"],
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
     },

@@ -113,7 +113,20 @@ export async function getGitBranch(
 ): Promise<string> {
   return run('git', ['rev-parse', '--abbrev-ref', 'HEAD'], options).then(
     data => {
-      // .replace(/\n|\r|\t/, '')
+      return data.stdout.trim()
+    },
+  )
+}
+
+/**
+ * 获取 git 远程分支
+ * @param options 可选项
+ */
+export async function getGitUpstreamBranch(
+  options?: RunCommandOptions,
+): Promise<string> {
+  return run('git', ['rev-parse', '--abbrev-ref', '@{u}'], options).then(
+    data => {
       return data.stdout.trim()
     },
   )
