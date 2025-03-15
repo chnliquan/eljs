@@ -23,7 +23,13 @@ export default (api: Api) => {
   })
 
   api.getIncrementVersion(async ({ releaseTypeOrVersion }) => {
-    return getIncrementVersion(api, releaseTypeOrVersion)
+    const version = await getIncrementVersion(api, releaseTypeOrVersion)
+
+    if (!api.config.npm.confirm) {
+      return version
+    }
+
+    return confirmVersion(api, version)
   })
 
   api.onBeforeBumpVersion(async ({ version }) => {
@@ -57,7 +63,10 @@ export default (api: Api) => {
   })
 }
 
-async function getIncrementVersion(api: Api, releaseTypeOrVersion?: string) {
+async function getIncrementVersion(
+  api: Api,
+  releaseTypeOrVersion?: string,
+): Promise<string> {
   const { prereleaseId, canary } = api.config.npm
   const { registry, projectPkg, validPkgNames } = api.appData
 
@@ -282,7 +291,7 @@ async function getIncrementVersion(api: Api, releaseTypeOrVersion?: string) {
   }
 }
 
-async function confirmVersion(api: Api, version: string) {
+async function confirmVersion(api: Api, version: string): Promise<string> {
   const { validPkgNames } = api.appData
 
   let confirmMessage = ''
