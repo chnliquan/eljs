@@ -22,22 +22,21 @@ export default (api: Api) => {
     }
   })
 
-  api.getIncrementVersion(async ({ releaseTypeOrVersion }) => {
-    const version = await getIncrementVersion(api, releaseTypeOrVersion)
+  api.getIncrementVersion(
+    async ({ releaseTypeOrVersion }) => {
+      console.log('12312312312321312')
+      const version = await getIncrementVersion(api, releaseTypeOrVersion)
 
-    if (!api.config.npm.confirm) {
-      return version
-    }
+      if (!api.config.npm.confirm) {
+        return version
+      }
 
-    return confirmVersion(api, version)
-  })
-
-  api.onBeforeBumpVersion(async ({ version }) => {
-    if (!api.config.npm.confirm) {
-      return
-    }
-    await confirmVersion(api, version)
-  })
+      return confirmVersion(api, version)
+    },
+    {
+      stage: 10,
+    },
+  )
 
   api.onBumpVersion(({ version }) => {
     const { projectPkgJsonPath, projectPkg, pkgNames, pkgJsonPaths, pkgs } =

@@ -10,10 +10,7 @@ import path from 'path'
 import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
 import { Runner } from './runner'
 
-cli().catch((err: Error) => {
-  console.error(`release failed, ${err.message}`)
-  console.error(err)
-})
+cli()
 
 async function cli() {
   const pkg = await readJson<PackageJson>(

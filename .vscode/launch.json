@@ -56,7 +56,7 @@
       "windows": {
         "program": "${workspaceFolder}/packages/release/src/cli.ts"
       },
-      "args": ["--no-git-check", "--no-ownership-check"],
+      "args": [],
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
     },
