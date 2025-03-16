@@ -31,9 +31,8 @@
   "dependencies": {
     "@eljs/utils": "workspace:*",
     "@types/hash-sum": "^1.0.0",
-    "@types/lodash": "^4.14.186",
+    "@types/lodash": "^4.17.16",
     "deepmerge": "^4.2.2",
-    "esbuild": "^0.15.5",
     "fastest-levenshtein": "^1.0.16",
     "hash-sum": "^2.0.0",
     "joi": "^17.6.2",

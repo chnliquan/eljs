@@ -35,7 +35,6 @@
   "dependencies": {
     "@eljs/create": "workspace:*",
     "@eljs/utils": "workspace:*",
-    "@types/commander": "^2.12.5",
-    "commander": "^9.4.0"
+    "commander": "^13.1.0"
   }
 }

@@ -254,7 +254,6 @@ export class Service<T extends ServiceOpts = ServiceOpts> {
           PluginType,
           service: this,
           utils: utils,
-          lodash: _,
         },
         staticProps,
       ),
@@ -852,10 +851,6 @@ export interface ServicePluginApi {
    * 工具函数
    */
   utils: typeof utils
-  /**
-   * lodash
-   */
-  lodash: typeof _
   /**
    * 插件执行类型枚举
    */
