@@ -1,7 +1,12 @@
-import { deepMerge, isPathExists, isPathExistsSync } from '@eljs/utils'
+import {
+  deepMerge,
+  fileLoaders,
+  fileLoadersSync,
+  isPathExists,
+  isPathExistsSync,
+} from '@eljs/utils'
 import { extname, join } from 'node:path'
 
-import { defaultLoaders, defaultLoadersSync } from './defaults'
 import { addFileExt, getAbsFiles } from './utils'
 
 /**
@@ -168,16 +173,22 @@ export class ConfigManager {
     for (const configFile of configFiles) {
       if (isPathExistsSync(configFile)) {
         const loader =
-          defaultLoadersSync[
-            extname(configFile) as keyof typeof defaultLoadersSync
-          ]
+          fileLoadersSync[extname(configFile) as keyof typeof fileLoadersSync]
+
         try {
-          const content = loader(configFile)
-          config = deepMerge(config, content.default)
-        } catch (err) {
-          throw new Error(`Parse config file failed: [${configFile}].`, {
-            cause: err,
-          })
+          const content = loader(configFile) as {
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            __esModule: boolean
+            default: T
+          }
+          config = deepMerge(
+            config,
+            content.__esModule ? content.default : (content as T),
+          )
+        } catch (error) {
+          const err = error as Error
+          err.message = `Load config Error in ${configFile}:\n${err.message}`
+          throw err
         }
       }
     }
@@ -197,14 +208,22 @@ export class ConfigManager {
     for (const configFile of configFiles) {
       if (await isPathExists(configFile)) {
         const loader =
-          defaultLoaders[extname(configFile) as keyof typeof defaultLoaders]
+          fileLoaders[extname(configFile) as keyof typeof fileLoaders]
+
         try {
-          const content = await loader(configFile)
-          config = deepMerge(config, content.default)
-        } catch (err) {
-          throw new Error(`Parse config file failed: [${configFile}].`, {
-            cause: err,
-          })
+          const content = (await loader(configFile)) as {
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            __esModule: boolean
+            default: T
+          }
+          config = deepMerge(
+            config,
+            content.__esModule ? content.default : (content as T),
+          )
+        } catch (error) {
+          const err = error as Error
+          err.message = `Load config Error in ${configFile}:\n${err.message}`
+          throw err
         }
       }
     }

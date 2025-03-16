@@ -1,6 +1,6 @@
 import { Plugin, PluginApi, PluginTypeEnum, type Hook } from '@/plugin'
 import { ConfigManager } from '@eljs/config'
-import * as utils from '@eljs/utils'
+import { isFunction, isPathExistsSync } from '@eljs/utils'
 import assert from 'node:assert'
 import { AsyncSeriesBailHook, AsyncSeriesWaterfallHook } from 'tapable'
 
@@ -97,7 +97,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
 
   public constructor(options: PluggableOptions) {
     assert(
-      utils.isPathExistsSync(options.cwd),
+      isPathExistsSync(options.cwd),
       `Invalid cwd ${options.cwd}, it's not found.`,
     )
 
@@ -173,7 +173,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
 
         if (prop in this) {
           const value = this[prop as keyof typeof this]
-          return utils.isFunction(value) ? value.bind(this) : value
+          return isFunction(value) ? value.bind(this) : value
         }
 
         return target[prop as keyof typeof target]
@@ -436,7 +436,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
 
   /**
    * 插件是否可执行
-   * @param hook 钩子
+   * @param hook 钩子/插件名
    */
   protected isPluginEnable(hook: Hook | string) {
     let plugin: Plugin
@@ -453,7 +453,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
       return false
     }
 
-    if (utils.isFunction(enable)) {
+    if (isFunction(enable)) {
       return enable()
     }
 
@@ -462,7 +462,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
 }
 
 /**
- * 可插拔插件 API
+ * 可插拔类插件 Api
  */
 export interface PluggablePluginApi {
   // #region 插件属性

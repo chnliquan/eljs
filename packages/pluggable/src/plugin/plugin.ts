@@ -1,8 +1,8 @@
 import type { PluginDefinition, ResolvedPluginDefinition } from '@/pluggable'
 import {
   camelCase,
+  fileLoadersSync,
   isPathExistsSync,
-  loadTsSync,
   readJsonSync,
   resolve,
   winPath,
@@ -105,8 +105,22 @@ export class Plugin {
     this.id = this._getId(pkg.name as string, pkgJsonPath, isPkgEntry)
     this.key = this._getKey(pkg.name as string, isPkgEntry)
     this.apply = () => {
-      const ret = loadTsSync(this.path)
-      return ret.__esModule ? ret.default : ret
+      const loader =
+        fileLoadersSync[extname(this.path) as keyof typeof fileLoadersSync]
+
+      try {
+        const content = loader(this.path) as {
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          __esModule: boolean
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          default: any
+        }
+        return content.__esModule ? content.default : content
+      } catch (error) {
+        const err = error as Error
+        err.message = `Load ${this.type} Error in ${this.path}:\n${err.message}`
+        throw err
+      }
     }
   }
 

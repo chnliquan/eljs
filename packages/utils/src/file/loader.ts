@@ -23,7 +23,7 @@ import { writeFile, writeFileSync } from './write'
 /**
  * 默认异步加载器
  */
-export const defaultLoaders = Object.freeze({
+export const fileLoaders = Object.freeze({
   '.mjs': loadJs,
   '.cjs': loadJs,
   '.js': loadJs,
@@ -36,7 +36,7 @@ export const defaultLoaders = Object.freeze({
 /**
  * 默认同步加载器
  */
-export const defaultLoadersSync = Object.freeze({
+export const fileLoadersSync = Object.freeze({
   '.cjs': loadJsSync,
   '.js': loadJsSync,
   '.ts': loadTsSync,
@@ -124,6 +124,7 @@ export async function loadTs<T = any>(path: string): Promise<T> {
  */
 export function loadTsSync<T>(path: string): T {
   const compiledPath = `${path.slice(0, -2)}cjs`
+
   try {
     const config = resolveTsConfig(dirname(path)) ?? {}
     config.compilerOptions = {
