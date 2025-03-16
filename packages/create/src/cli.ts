@@ -1,10 +1,7 @@
 import { Create } from '@/core'
 import minimist from 'minimist'
 
-cli().catch((err: Error) => {
-  console.error(`Create failed, ${err.message}`)
-  console.error(err)
-})
+cli()
 
 async function cli() {
   const cwd = process.cwd()

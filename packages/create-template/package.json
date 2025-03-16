@@ -35,6 +35,10 @@
   "dependencies": {
     "@eljs/create": "workspace:*",
     "@eljs/utils": "workspace:*",
-    "commander": "^13.1.0"
+    "commander": "^13.1.0",
+     "update-notifier": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/update-notifier": "^6.0.8"
   }
 }

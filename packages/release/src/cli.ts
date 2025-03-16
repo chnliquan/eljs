@@ -3,21 +3,18 @@ import { Command, InvalidArgumentError, program } from 'commander'
 import minimist from 'minimist'
 import path from 'node:path'
 import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
+import updater from 'update-notifier'
 
 import { Runner } from './runner'
 
 cli()
 
 async function cli() {
-  const pkg = await readJson<PackageJson>(
+  const pkg = await readJson<Required<PackageJson>>(
     path.join(__dirname, '../package.json'),
   )
   program
-    .version(
-      pkg.version as string,
-      '-v, --version',
-      'Output the current version.',
-    )
+    .version(pkg.version, '-v, --version', 'Output the current version.')
     .argument('[version]', 'Specify the bump version.', checkVersion)
 
   program.commands.forEach(c => c.on('--help', () => console.log()))
@@ -45,6 +42,7 @@ async function cli() {
     )
   }
 
+  updater({ pkg }).notify()
   const options = program.opts()
   const version = program.args[0]
   return new Runner(options).run(version).then(() => process.exit(0))

@@ -5,8 +5,9 @@ import {
   readJson,
   type PackageJson,
 } from '@eljs/utils'
-import { program } from 'commander'
+import { Command, program } from 'commander'
 import path from 'node:path'
+import updater from 'update-notifier'
 
 import { defaultTemplateConfig } from './config'
 import { CreateTemplate } from './create'
@@ -15,15 +16,11 @@ import type { TemplateConfig } from './types'
 cli()
 
 async function cli() {
-  const pkgJSON = await readJson<PackageJson>(
+  const pkg = await readJson<Required<PackageJson>>(
     path.join(__dirname, '../package.json'),
   )
   program
-    .version(
-      pkgJSON.version as string,
-      '-v, --version',
-      'Output the current version.',
-    )
+    .version(pkg.version, '-v, --version', 'Output the current version.')
     .option('-c, --template-config <template-config>', 'Template config path.')
     .option('-t, --app-type <app-type>', 'Template app type.')
     .option('-n, --app-name <app-name>', 'Template app name.')
@@ -53,20 +50,22 @@ async function cli() {
     logger.printErrorAndExit('Missing project name.')
   }
 
-  const opts = program.opts()
+  const options = program.opts()
   let templateConfig: TemplateConfig = defaultTemplateConfig
 
-  if (opts.templateConfig) {
-    if (!isPathExistsSync(opts.templateConfig)) {
-      logger.printErrorAndExit(`${opts.templateConfig} is not exist.`)
+  if (options.templateConfig) {
+    if (!isPathExistsSync(options.templateConfig)) {
+      logger.printErrorAndExit(`${options.templateConfig} is not exist.`)
     }
 
-    templateConfig = require(opts.templateConfig)
+    templateConfig = require(options.templateConfig)
   }
 
+  updater({ pkg }).notify()
+
   return new CreateTemplate({
-    ...opts,
-    args: opts,
+    ...options,
+    args: options,
     templateConfig,
   }).run(program.args[0])
 }
@@ -76,7 +75,7 @@ function enhanceErrorMessages(
   log: (...args: unknown[]) => void,
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(program as any).Command.prototype[methodName] = function (...args: any[]) {
+  ;(Command['prototype'] as any)[methodName] = function (...args: any[]) {
     if (methodName === 'unknownOption' && this._allowUnknownOption) {
       return
     }

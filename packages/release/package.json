@@ -35,9 +35,7 @@
   "dependencies": {
     "@eljs/conventional-changelog-preset": "workspace:*",
     "@eljs/pluggable": "workspace:*",
-    "@types/concat-stream": "^2.0.3",
     "@types/conventional-changelog": "^6.0.0",
-    "@types/minimist": "^1.2.5",
     "@types/resolve-bin": "^0.4.3",
     "@types/semver": "^7.5.8",
     "cnpm": "^9.4.0",
@@ -48,6 +46,12 @@
     "new-github-release-url": "^1.0.0",
     "open": "^8.4.2",
     "resolve-bin": "^1.0.1",
-    "semver": "^7.7.1"
+    "semver": "^7.7.1",
+    "update-notifier": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/concat-stream": "^2.0.3",
+    "@types/minimist": "^1.2.5",
+    "@types/update-notifier": "^6.0.8"
   }
 }
