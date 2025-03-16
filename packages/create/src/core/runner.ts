@@ -16,23 +16,9 @@ import {
 import { prompts } from '@eljs/utils'
 
 /**
- * 运行器插件自身配置项
- */
-export interface RunnerPluginConfig {
-  /**
-   * 是否启用默认问询
-   */
-  defaultQuestions?: boolean
-  /**
-   * 是否启用 git 初始化
-   */
-  gitInit?: boolean
-}
-
-/**
  * 运行器
  */
-export class Runner extends Pluggable<UserConfig, RunnerPluginConfig> {
+export class Runner extends Pluggable<UserConfig> {
   /**
    * 执行阶段
    */
@@ -65,7 +51,7 @@ export class Runner extends Pluggable<UserConfig, RunnerPluginConfig> {
    */
   public prettierConfig = Object.create(null)
 
-  public constructor(options: PluggableOptions) {
+  public constructor(options: Omit<PluggableOptions, 'defaultConfigFiles'>) {
     super({
       ...options,
       defaultConfigFiles: ['create.config.ts', 'create.config.js'],
@@ -106,11 +92,6 @@ export class Runner extends Pluggable<UserConfig, RunnerPluginConfig> {
       args: {
         cwd: this.cwd,
       },
-    })
-
-    this.pluginConfig = await this.applyPlugins('modifyPluginConfig', {
-      initialValue: this.pluginConfig,
-      args: {},
     })
 
     this.stage = RunnerStageEnum.CollectPrompts
@@ -161,6 +142,10 @@ export class Runner extends Pluggable<UserConfig, RunnerPluginConfig> {
 export interface RunnerPluginApi extends PluggablePluginApi {
   // #region 插件 API 属性
   /**
+   * 用户配置
+   */
+  userConfig: UserConfig
+  /**
    * 应用数据，可通过 `modifyAppData` 方法修改
    */
   appData: typeof Runner.prototype.appData
@@ -184,10 +169,6 @@ export interface RunnerPluginApi extends PluggablePluginApi {
    * prettierConfig 配置，可通过 `modifyPrettierConfig` 方法修改
    */
   prettierConfig: typeof Runner.prototype.prettierConfig
-  /**
-   * 插件启用配置，可通过 `modifyPluginConfig` 方法修改
-   */
-  pluginConfig: typeof Runner.prototype.pluginConfig
   // #endregion
 
   // #region 插件钩子
@@ -225,10 +206,6 @@ export interface RunnerPluginApi extends PluggablePluginApi {
     typeof Runner.prototype.prettierConfig,
     null
   >
-  /**
-   * 修改插件启用配置
-   */
-  modifyPluginConfig: ApplyModify<RunnerPluginConfig, null>
   /**
    * 应用启动事件
    */

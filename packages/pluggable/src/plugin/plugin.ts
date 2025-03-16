@@ -1,4 +1,4 @@
-import type { PluginDefinition, ResolvedPluginDefinition } from '@/pluggable'
+import type { PluginDeclaration, ResolvedPlugin } from '@/pluggable'
 import {
   camelCase,
   fileLoadersSync,
@@ -195,12 +195,12 @@ export class Plugin {
    */
   public static getPresetsAndPlugins(
     cwd: string,
-    presets?: PluginDefinition[],
-    plugins?: PluginDefinition[],
+    presets?: PluginDeclaration[],
+    plugins?: PluginDeclaration[],
   ) {
     return {
-      presets: get('preset') as ResolvedPluginDefinition[],
-      plugins: get('plugin') as ResolvedPluginDefinition[],
+      presets: get('preset') as ResolvedPlugin[],
+      plugins: get('plugin') as ResolvedPlugin[],
     }
 
     function get(type: PluginType) {
@@ -208,26 +208,24 @@ export class Plugin {
       if (!presetsOrPlugins) {
         return
       }
-      return Plugin.resolvePluginDefinitions(presetsOrPlugins, type, cwd)
+      return Plugin.resolvePlugins(presetsOrPlugins, type, cwd)
     }
   }
 
   /**
-   * 解析插件定义集合
-   * @param pluginDefinitions 插件定义集合
+   * 解析插件
+   * @param plugins 待解析插件集合
    * @param type 插件类型
    * @param cwd 当前工作目录
    */
-  public static resolvePluginDefinitions(
-    pluginDefinitions: PluginDefinition[],
+  public static resolvePlugins(
+    plugins: PluginDeclaration[],
     type: PluginType,
     cwd: string,
-  ): ResolvedPluginDefinition[] {
-    return pluginDefinitions.map(pluginDefinition => {
-      const [pluginName, pluginConfig] =
-        typeof pluginDefinition === 'string'
-          ? [pluginDefinition, null]
-          : pluginDefinition
+  ): ResolvedPlugin[] {
+    return plugins.map(plugin => {
+      const [pluginName, pluginOptions] =
+        typeof plugin === 'string' ? [plugin, null] : plugin
 
       let resolvedPath = ''
 
@@ -246,8 +244,8 @@ export class Plugin {
           type,
           cwd,
         }),
-        pluginConfig,
-      ] as ResolvedPluginDefinition
+        pluginOptions,
+      ] as ResolvedPlugin
     })
   }
 

@@ -8,9 +8,9 @@ import {
   ApplyPluginTypeEnum,
   PluggableStateEnum,
   type ApplyPluginsOptions,
-  type PluginDefinition,
+  type PluginDeclaration,
   type PluginMethods,
-  type ResolvedPluginDefinition,
+  type ResolvedPlugin,
   type UserConfig,
 } from './types'
 
@@ -25,11 +25,11 @@ export interface PluggableOptions {
   /**
    * 预设定义集合
    */
-  presets?: PluginDefinition[]
+  presets?: PluginDeclaration[]
   /**
    * 插件定义集合
    */
-  plugins?: PluginDefinition[]
+  plugins?: PluginDeclaration[]
   /**
    * 默认配置文件（config.ts）
    */
@@ -117,41 +117,37 @@ export class Pluggable<T extends UserConfig = UserConfig> {
 
     this.userConfig = (await this.configManager.getConfig()) as T
 
-    const constructorOptionsPresets: PluginDefinition[] =
-      this.constructorOptions.presets || []
-    const userConfigPresets: PluginDefinition[] = this.userConfig?.presets || []
-    const constructorOptionsPlugins: PluginDefinition[] =
-      this.constructorOptions.plugins || []
-    const userConfigPlugins: PluginDefinition[] = this.userConfig?.plugins || []
+    const constructorPresets = this.constructorOptions.presets || []
+    const userPresets = this.userConfig?.presets || []
+    const constructorPlugins = this.constructorOptions.plugins || []
+    const userPlugins = this.userConfig?.plugins || []
 
     const { plugins = [], presets = [] } = Plugin.getPresetsAndPlugins(
       this.constructorOptions.cwd,
-      constructorOptionsPresets.concat(userConfigPresets),
-      constructorOptionsPlugins.concat(userConfigPlugins),
+      [...constructorPresets, ...userPresets],
+      [...constructorPlugins, ...userPlugins],
     )
 
     // #region register presets
     this._state = PluggableStateEnum.InitPresets
 
-    const resolvedPluginDefinitions: ResolvedPluginDefinition[] = []
+    // 预设返回的插件集合
+    const pluginsFromPresets: ResolvedPlugin[] = []
     while (presets.length) {
       await this._initPreset(
-        presets.shift() as ResolvedPluginDefinition,
+        presets.shift() as ResolvedPlugin,
         presets,
-        resolvedPluginDefinitions,
+        pluginsFromPresets,
       )
     }
     // #endregion
 
     // #region register plugins
-    plugins.unshift(...resolvedPluginDefinitions)
+    plugins.unshift(...pluginsFromPresets)
     this._state = PluggableStateEnum.InitPlugins
 
     while (plugins.length) {
-      await this._initPlugin(
-        plugins.shift() as ResolvedPluginDefinition,
-        plugins,
-      )
+      await this._initPlugin(plugins.shift() as ResolvedPlugin, plugins)
     }
     // #endregion
 
@@ -183,36 +179,38 @@ export class Pluggable<T extends UserConfig = UserConfig> {
 
   /**
    * 初始化预设
-   * @param resolvedPresetDefinition 解析后的预设定义
-   * @param resolvedPresetDefinitions 解析后的预设定义集合
-   * @param resolvedPluginDefinitions 解析后的插件定义集合
+   * @param currentPreset 当前预设
+   * @param remainingPresets 待处理预设集合
+   * @param pluginsFromPresets 预设返回的插件集合
    */
   private async _initPreset(
-    resolvedPresetDefinition: ResolvedPluginDefinition,
-    resolvedPresetDefinitions: ResolvedPluginDefinition[],
-    resolvedPluginDefinitions: ResolvedPluginDefinition[],
+    currentPreset: ResolvedPlugin,
+    remainingPresets: ResolvedPlugin[],
+    pluginsFromPresets: ResolvedPlugin[],
   ) {
-    const { presets = [], plugins = [] } = await this._initPlugin(
-      resolvedPresetDefinition,
-      resolvedPresetDefinitions,
-      resolvedPluginDefinitions,
-    )
-    resolvedPresetDefinitions.unshift(...presets)
-    resolvedPluginDefinitions.push(...plugins)
+    const { presets: nestedPresets = [], plugins: nestedPlugins = [] } =
+      await this._initPlugin(
+        currentPreset,
+        remainingPresets,
+        pluginsFromPresets,
+      )
+
+    remainingPresets.unshift(...nestedPresets)
+    pluginsFromPresets.push(...nestedPlugins)
   }
 
   /**
    * 初始化插件
-   * @param resolvedPluginDefinition 解析后的插件定义
-   * @param resolvedPresetDefinitions 解析后的预设定义集合
-   * @param resolvedPluginDefinition 解析后的插件定义集合
+   * @param currentPlugin 当前插件
+   * @param remainingPresets 待处理预设集合
+   * @param remainingPlugins 待处理插件集合
    */
   private async _initPlugin(
-    resolvedPluginDefinition: ResolvedPluginDefinition,
-    resolvedPresetDefinitions: ResolvedPluginDefinition[],
-    resolvedPluginDefinitions?: ResolvedPluginDefinition[],
+    currentPlugin: ResolvedPlugin,
+    remainingPresets: ResolvedPlugin[],
+    remainingPlugins?: ResolvedPlugin[],
   ) {
-    const [plugin, pluginConfig] = resolvedPluginDefinition
+    const [plugin, pluginOptions] = currentPlugin
     assert(
       !this.plugins[plugin.id],
       `${plugin.type} ${plugin.id} is already registered by ${
@@ -226,25 +224,25 @@ export class Pluggable<T extends UserConfig = UserConfig> {
 
     pluginApi.registerPresets = pluginApi.registerPresets.bind(
       pluginApi,
-      resolvedPresetDefinitions,
+      remainingPresets,
     )
 
     pluginApi.registerPlugins = pluginApi.registerPlugins.bind(
       pluginApi,
-      resolvedPluginDefinitions || [],
+      remainingPlugins || [],
     )
 
-    const ret: {
-      presets: ResolvedPluginDefinition[]
-      plugins: ResolvedPluginDefinition[]
+    const result: {
+      presets: ResolvedPlugin[]
+      plugins: ResolvedPlugin[]
     } = Object.create(null)
 
-    const startTime = new Date()
-    const pluginRet = await plugin.apply()(pluginApi, pluginConfig)
-    plugin.time.register = new Date().getTime() - startTime.getTime()
+    const registrationStart = new Date()
+    const pluginResult = await plugin.apply()(pluginApi, pluginOptions)
+    plugin.time.register = new Date().getTime() - registrationStart.getTime()
 
     if (plugin.type === PluginTypeEnum.Plugin) {
-      assert(!pluginRet, `plugin should return nothing.`)
+      assert(!pluginResult, `plugin should return nothing.`)
     }
 
     assert(
@@ -256,23 +254,23 @@ export class Pluggable<T extends UserConfig = UserConfig> {
 
     this.key2Plugin[plugin.key] = plugin
 
-    if (pluginRet?.presets) {
-      ret.presets = Plugin.resolvePluginDefinitions(
-        pluginRet.presets,
+    if (pluginResult?.presets) {
+      result.presets = Plugin.resolvePlugins(
+        pluginResult.presets,
         PluginTypeEnum.Preset,
         this.cwd,
       )
     }
 
-    if (pluginRet?.plugins) {
-      ret.plugins = Plugin.resolvePluginDefinitions(
-        pluginRet.plugins,
+    if (pluginResult?.plugins) {
+      result.plugins = Plugin.resolvePlugins(
+        pluginResult.plugins,
         PluginTypeEnum.Plugin,
         this.cwd,
       )
     }
 
-    return ret
+    return result
   }
 
   /**
@@ -481,11 +479,11 @@ export interface PluggablePluginApi {
    * 注册预设
    * @param presets 预设定义集合
    */
-  registerPresets: (presets: PluginDefinition[]) => void
+  registerPresets: (presets: PluginDeclaration[]) => void
   /**
    * 注册插件
    * @param plugins 插件定义集合
    */
-  registerPlugins: (plugins: PluginDefinition[]) => void
+  registerPlugins: (plugins: PluginDeclaration[]) => void
   // #endregion
 }

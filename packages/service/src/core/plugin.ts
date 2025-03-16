@@ -105,7 +105,14 @@ export class Plugin {
     this.id = this.getId({ pkgJSON, isPkgEntry, pkgJSONPath })
     this.key = this.getKey({ pkgJSON, isPkgEntry })
     this.apply = () => {
-      const ret = loadTsSync(this.path)
+      const ret = loadTsSync(this.path) as {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        config: any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        default: any
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        __esModule: boolean
+      }
       this.config = ret.config ?? Object.create(null)
       // use the default member for es modules
       return ret.__esModule ? ret.default : ret

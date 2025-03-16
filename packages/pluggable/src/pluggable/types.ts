@@ -2,20 +2,17 @@ import type { Plugin } from '@/plugin'
 import type { MaybePromise } from '@eljs/utils'
 
 /**
- * 插件定义
+ * 插件声明
  */
-export type PluginDefinition<T extends object = object> =
+export type PluginDeclaration<Options extends object = object> =
   | string
   | string[]
-  | [string, T]
+  | [string, Options]
 
 /**
- * 解析后的插件定义
+ * 解析后的插件
  */
-export type ResolvedPluginDefinition<T extends object = object> = [
-  Plugin,
-  T | null,
-]
+export type ResolvedPlugin<Options extends object = object> = [Plugin, Options]
 
 /**
  * 用户配置项
@@ -24,11 +21,11 @@ export interface UserConfig {
   /**
    * 预设定义集合
    */
-  presets?: PluginDefinition[]
+  presets?: PluginDeclaration[]
   /**
    * 插件定义集合
    */
-  plugins?: PluginDefinition[]
+  plugins?: PluginDeclaration[]
   /**
    * 扩展字段
    */
@@ -37,7 +34,7 @@ export interface UserConfig {
 }
 
 /**
- * 插件执行阶段枚举
+ * 插件状态枚举
  */
 export enum PluggableStateEnum {
   /**

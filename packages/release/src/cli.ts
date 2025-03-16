@@ -1,13 +1,9 @@
-import {
-  chalk,
-  logger,
-  minimist,
-  readJson,
-  type PackageJson,
-} from '@eljs/utils'
+import { chalk, logger, readJson, type PackageJson } from '@eljs/utils'
 import { Command, InvalidArgumentError, program } from 'commander'
-import path from 'path'
+import minimist from 'minimist'
+import path from 'node:path'
 import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
+
 import { Runner } from './runner'
 
 cli()

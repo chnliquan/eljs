@@ -7,7 +7,7 @@ export default async (api: Api) => {
   api.describe({
     key: 'defaultQuestions',
     enable() {
-      return api.pluginConfig.defaultQuestions === true
+      return api.userConfig.defaultQuestions === true
     },
   })
 

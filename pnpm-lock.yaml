@@ -128,9 +128,15 @@ importers:
       '@eljs/utils':
         specifier: workspace:*
         version: link:../utils
+      '@types/minimist':
+        specifier: ^1.2.5
+        version: 1.2.5
       dayjs:
         specifier: ^1.11.13
         version: 1.11.13
+      minimist:
+        specifier: ^1.2.8
+        version: 1.2.8
       ora:
         specifier: ^5.4.1
         version: 5.4.1
@@ -188,6 +194,9 @@ importers:
       '@types/conventional-changelog':
         specifier: ^6.0.0
         version: 6.0.0
+      '@types/minimist':
+        specifier: ^1.2.5
+        version: 1.2.5
       '@types/resolve-bin':
         specifier: ^0.4.3
         version: 0.4.3
@@ -206,6 +215,9 @@ importers:
       conventional-changelog:
         specifier: ^6.0.0
         version: 6.0.0
+      minimist:
+        specifier: ^1.2.8
+        version: 1.2.8
       new-github-release-url:
         specifier: ^1.0.0
         version: 1.0.0
@@ -2274,6 +2286,10 @@ packages:
 
   /@types/minimatch@5.1.2:
     resolution: {integrity: sha512-K0VQKziLUWkVKiRVrx4a40iPaxTUefQmjtkQofBkYRcoaaL/8rhwDWww9qWbrgicNOgnpIsMxyNIUM4+n6dUIA==}
+    dev: false
+
+  /@types/minimist@1.2.5:
+    resolution: {integrity: sha512-hov8bUuiLiyFPGyFPE1lwWhmzYbirOXQNNo40+y3zow8aFVTeyn3VWL0VFFfdNddA8S4Vf0Tc062rzyNr7Paag==}
     dev: false
 
   /@types/mkdirp@2.0.0:

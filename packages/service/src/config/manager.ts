@@ -111,7 +111,8 @@ export class ConfigManager {
     for (const configFile of opts.configFiles) {
       if (isPathExistsSync(configFile)) {
         try {
-          const ret = loadTsSync(configFile)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const ret = loadTsSync(configFile) as { default: any }
           config = deepMerge(config, ret.default)
         } catch (e) {
           throw new Error(`Parse config file failed: [${configFile}]`, {

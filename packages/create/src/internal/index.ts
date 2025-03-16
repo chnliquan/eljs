@@ -1,12 +1,14 @@
-export default () => ({
-  plugins: [
-    require.resolve('./register'),
-    require.resolve('./features/app-data'),
-    require.resolve('./features/built-in'),
-    require.resolve('./features/generator'),
-    require.resolve('./features/git-init'),
-    require.resolve('./features/prompts'),
-    require.resolve('./features/questions'),
-    require.resolve('./features/render'),
-  ],
-})
+export default () => {
+  return {
+    plugins: [
+      require.resolve('./register'),
+      require.resolve('./plugins/app-data'),
+      require.resolve('./plugins/built-in'),
+      require.resolve('./plugins/generator'),
+      require.resolve('./plugins/git-init'),
+      require.resolve('./plugins/prompts'),
+      require.resolve('./plugins/questions'),
+      require.resolve('./plugins/render'),
+    ],
+  }
+}

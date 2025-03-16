@@ -1,8 +1,8 @@
 import {
   PluggableStateEnum,
   type Pluggable,
-  type PluginDefinition,
-  type ResolvedPluginDefinition,
+  type PluginDeclaration,
+  type ResolvedPlugin,
 } from '@/pluggable'
 import { type MaybePromiseFunction } from '@eljs/utils'
 import assert from 'node:assert'
@@ -85,21 +85,21 @@ export class PluginApi<T extends Pluggable = Pluggable> {
 
   /**
    * 注册预设
-   * @param resolvedPresets 解析后的预设集合
-   * @param presetDefinitions 预设定义
+   * @param remainingPresets 待处理预设集合
+   * @param presets 待注册预设集合
    */
   public registerPresets(
-    resolvedPresets: ResolvedPluginDefinition[],
-    presetDefinitions: unknown[],
+    remainingPresets: ResolvedPlugin[],
+    presets: unknown[],
   ) {
     assert(
       this.pluggable.state === PluggableStateEnum.InitPresets,
       `api.registerPresets() failed, it should only used in presets state.`,
     )
 
-    resolvedPresets.unshift(
-      ...Plugin.resolvePluginDefinitions(
-        presetDefinitions as PluginDefinition[],
+    remainingPresets.unshift(
+      ...Plugin.resolvePlugins(
+        presets as PluginDeclaration[],
         PluginTypeEnum.Preset,
         this.pluggable.cwd,
       ),
@@ -108,12 +108,12 @@ export class PluginApi<T extends Pluggable = Pluggable> {
 
   /**
    * 注册插件
-   * @param resolvedPlugins 解析后的插件集合
-   * @param pluginDefinitions 插件定义
+   * @param remainingPlugins 待处理插件集合
+   * @param plugins 待注册插件集合
    */
   public registerPlugins(
-    resolvedPlugins: ResolvedPluginDefinition[],
-    pluginDefinitions: unknown[],
+    remainingPlugins: ResolvedPlugin[],
+    plugins: unknown[],
   ) {
     assert(
       this.pluggable.state === PluggableStateEnum.InitPresets ||
@@ -121,9 +121,9 @@ export class PluginApi<T extends Pluggable = Pluggable> {
       `api.registerPlugins() failed, it should only be used in registering stage.`,
     )
 
-    resolvedPlugins.unshift(
-      ...Plugin.resolvePluginDefinitions(
-        pluginDefinitions as PluginDefinition[],
+    remainingPlugins.unshift(
+      ...Plugin.resolvePlugins(
+        plugins as PluginDeclaration[],
         PluginTypeEnum.Plugin,
         this.pluggable.cwd,
       ),
