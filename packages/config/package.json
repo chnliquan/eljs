@@ -1,6 +1,6 @@
 {
   "name": "@eljs/config",
-  "version": "0.33.3",
+  "version": "1.0.0-beta.0",
   "description": "config loader",
   "keywords": [
     "eljs",

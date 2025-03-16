@@ -1,5 +1,29 @@
 # ChangeLog 
 
+# [1.0.0-beta.0](https://github.com/chnliquan/eljs/compare/v0.33.3...v1.0.0-beta.0) (2025-03-16)
+
+
+### ♻ Code Refactoring
+
+* **config:** return esmodule ([0b64d27](https://github.com/chnliquan/eljs/commit/0b64d2757a7e20e411cdf24ace1d03280f534652))
+* **release:** modify internal plugin stage ([2d487ad](https://github.com/chnliquan/eljs/commit/2d487ade84312eff69b222c3232f57fc4f1dfd1c))
+* **release:** support plugin ([85849b0](https://github.com/chnliquan/eljs/commit/85849b0d59d123bb6ddcf9245b953d5defe69bc9))
+
+
+### ✨ Features
+
+* add define config ([001b57f](https://github.com/chnliquan/eljs/commit/001b57f58debaae62bb25b7ac7c2f7b8360e4fd0))
+* add update notify ([de6f134](https://github.com/chnliquan/eljs/commit/de6f134e416acee3228627d15bfe3ad375c20e49))
+* **pluggable:** support plugin config ([5fbb219](https://github.com/chnliquan/eljs/commit/5fbb21906677584c66401d6ebb2a7aa592fde34e))
+* **release:** add cli options ([f40a0cd](https://github.com/chnliquan/eljs/commit/f40a0cd4fe1d09fef8fc14e6643c4e9f4ce91b53))
+* **release:** support prerelease ([67f842a](https://github.com/chnliquan/eljs/commit/67f842ab5108c08caee6716d717e930ec98e3304))
+* **utils:** add file loaders ([6233129](https://github.com/chnliquan/eljs/commit/62331298f321c23d8913088dacda5b04e161bcd6))
+
+
+### 🐛 Bug Fixes
+
+* **release:** increment version with confirm ([ed8b195](https://github.com/chnliquan/eljs/commit/ed8b195f54c5e9dbd39fba8f92e4d77c73b02dce)) 
+
 ## [0.33.3](https://github.com/chnliquan/eljs/compare/v0.33.2...v0.33.3) (2025-03-11)
 
 
