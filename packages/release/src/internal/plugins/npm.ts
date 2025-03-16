@@ -115,7 +115,7 @@ export default (api: Api) => {
   })
 
   api.onAfterRelease(async () => {
-    if (api.config.npm.syncCnpm) {
+    if (api.config.npm.cnpm) {
       api.step('Sync packages to cnpm ...')
       await syncCnpm(api.appData.validPkgNames)
     }

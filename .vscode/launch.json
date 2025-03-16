@@ -56,7 +56,12 @@
       "windows": {
         "program": "${workspaceFolder}/packages/release/src/cli.ts"
       },
-      // "args": ["prerelease"],
+      "args": [
+        "--prerelease",
+        "--prereleaseId=beta",
+        "--confirm",
+        "prerelease"
+      ],
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
     },

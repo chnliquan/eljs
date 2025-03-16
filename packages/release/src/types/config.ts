@@ -74,7 +74,7 @@ export interface Config extends UserConfig {
      * 是否同步到 Cnpm
      * @default false
      */
-    syncCnpm?: boolean
+    cnpm?: boolean
   }
   /**
    * github 相关配置项

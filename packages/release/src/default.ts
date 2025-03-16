@@ -54,7 +54,7 @@ export const defaultConfig: Config = {
     /**
      * 是否同步到 Cnpm
      */
-    syncCnpm: false,
+    cnpm: false,
   },
   /**
    * github 相关配置项

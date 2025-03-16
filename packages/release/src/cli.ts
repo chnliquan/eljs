@@ -15,6 +15,13 @@ async function cli() {
   )
   program
     .version(pkg.version, '-v, --version', 'Output the current version.')
+    // #region npm config
+    .option('--prerelease', 'Use prerelease type.')
+    .option('--prereleaseId <prereleaseId>', 'Specify the prereleaseId.')
+    .option('--canary', 'Use canary type.')
+    .option('--confirm', 'Confirm the bump version.')
+    .option('--cnpm', 'Sync to cnpm.')
+    // #endregion
     .argument('[version]', 'Specify the bump version.', checkVersion)
 
   program.commands.forEach(c => c.on('--help', () => console.log()))
@@ -45,7 +52,14 @@ async function cli() {
   updater({ pkg }).notify()
   const options = program.opts()
   const version = program.args[0]
-  return new Runner(options).run(version).then(() => process.exit(0))
+
+  return new Runner({
+    git: options,
+    npm: options,
+    github: options,
+  })
+    .run(version)
+    .then(() => process.exit(0))
 }
 
 function enhanceErrorMessages(

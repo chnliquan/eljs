@@ -1,21 +1,17 @@
-import { release, resolveBin, step } from '@eljs/release'
+import { Runner, resolveBin } from '@eljs/release'
 import { isGitBehindRemote, isGitClean, logger } from '@eljs/utils'
 import { $, argv } from 'zx'
 
-const dry = argv.dry
 const skipGitCheck = argv.skipGitCheck
 const skipTests = argv.skipTests
 const skipBuild = argv.skipBuild
 
 $.verbose = true
 
-main().catch((err: Error) => {
-  console.error(`release error: ${err.message}.`)
-  process.exit(1)
-})
+main()
 
 async function main(): Promise<void> {
-  if (!dry && !skipGitCheck) {
+  if (!skipGitCheck) {
     if (!(await isGitClean())) {
       logger.printErrorAndExit('git is not clean.')
     }
@@ -26,29 +22,32 @@ async function main(): Promise<void> {
   }
 
   // run tests before release
-  step('Release Running tests ...')
-  if (!dry && !skipTests) {
+  logger.step('Release', 'Running tests ...')
+  if (!skipTests) {
     await $`${resolveBin.sync('jest')} --clearCache`
-    await $`pnpm test:once --bail --passWithNoTests`
+    await $`pnpm run test --bail --passWithNoTests`
   } else {
     console.log(`(skipped)`)
   }
 
   // build all packages
-  step('Building all packages ...')
-  if (!dry && !skipBuild) {
-    await $`pnpm clean`
-    await $`pnpm build --force`
+  logger.step('Release', 'Building all packages ...')
+  if (!skipBuild) {
+    await $`pnpm run clean`
+    await $`pnpm run build --force`
   } else {
     console.log(`(skipped)`)
   }
 
-  release({
-    ...argv,
-    gitCheck: false,
-    registryCheck: false,
-    ownershipCheck: false,
-    syncCnpm: true,
-    version: argv._[0],
-  })
+  new Runner({
+    git: {
+      ...argv,
+      skipCheck: true,
+    },
+    npm: {
+      ...argv,
+      skipCheck: true,
+      cnpm: true,
+    },
+  }).run(argv._[0])
 }
