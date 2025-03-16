@@ -2,7 +2,7 @@ import { chalk, getNpmDistTag, logger, run, timeout } from '@eljs/utils'
 import resolveBin from 'resolve-bin'
 
 /**
- * 远程 NPM dist tag
+ * 远程 dist tag
  */
 export interface RemoteDistTag {
   latest: string
@@ -87,9 +87,7 @@ export async function syncCnpm(pkgNames: string[]) {
   }
 
   async function doSync(pkgName: string) {
-    await run(cnpm, ['sync', pkgName], {
-      verbose: true,
-    })
+    await run(cnpm, ['sync', pkgName])
     logger.done(`Sync ${chalk.cyanBright.bold(`${pkgName}`)} to cnpm.`)
   }
 

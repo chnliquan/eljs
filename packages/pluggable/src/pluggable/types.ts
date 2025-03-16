@@ -26,11 +26,6 @@ export interface UserConfig {
    * 插件定义集合
    */
   plugins?: PluginDeclaration[]
-  /**
-   * 扩展字段
-   */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [property: string]: any
 }
 
 /**

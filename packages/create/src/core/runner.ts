@@ -1,6 +1,7 @@
 import {
   RunnerStageEnum,
   type AppData,
+  type Config,
   type Paths,
   type Prompts,
 } from '@/types'
@@ -11,14 +12,13 @@ import {
   type ApplyModify,
   type PluggableOptions,
   type PluggablePluginApi,
-  type UserConfig,
 } from '@eljs/pluggable'
 import { prompts } from '@eljs/utils'
 
 /**
  * 运行器
  */
-export class Runner extends Pluggable<UserConfig> {
+export class Runner extends Pluggable<Config> {
   /**
    * 执行阶段
    */
@@ -26,10 +26,7 @@ export class Runner extends Pluggable<UserConfig> {
   /**
    * 项目路径
    */
-  public paths: Paths = {
-    cwd: '',
-    target: '',
-  }
+  public paths: Paths = Object.create(null)
   /**
    * 应用数据
    */
@@ -144,7 +141,7 @@ export interface RunnerPluginApi extends PluggablePluginApi {
   /**
    * 用户配置
    */
-  userConfig: UserConfig
+  userConfig: Config
   /**
    * 应用数据，可通过 `modifyAppData` 方法修改
    */

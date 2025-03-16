@@ -55,15 +55,6 @@ export class Generator {
         plugins: generatorFile ? [require.resolve(generatorFile)] : [],
       })
 
-      assert(
-        runner.userConfig?.presets?.length ||
-          runner.userConfig?.plugins?.length ||
-          generatorFile,
-        `创建项目失败，必须包含配置文件 ${chalk.red(
-          '.create.ts/create.js',
-        )} 或者 ${chalk.red('generators/index.ts')}`,
-      )
-
       await runner.run(targetDir, projectName)
     }
   }
