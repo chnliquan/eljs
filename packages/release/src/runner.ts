@@ -70,9 +70,10 @@ export class Runner extends Pluggable<Config> {
 
     this.config = await this.applyPlugins('modifyConfig', {
       initialValue: deepMerge(
-        defaultConfig as RequiredRecursive<Config>,
-        deepMerge(this.constructorOptions || {}, this.userConfig || {}),
-      ),
+        defaultConfig,
+        this.constructorOptions,
+        this.userConfig,
+      ) as RequiredRecursive<Config>,
     })
 
     /**

@@ -21,20 +21,10 @@ export function deepMerge<T1, T2, T3, T4, T5>(
 ): T1 & T2 & T3 & T4 & T5
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function deepMerge(...sources: any[]) {
-  return sources.reduce((acc, current) => deepmerge(acc, current), {})
+  return sources.reduce((acc, current) => {
+    if (!current) {
+      return acc
+    }
+    return deepmerge(acc, current)
+  }, {})
 }
-
-console.log(
-  deepMerge(
-    {
-      a: 1,
-    },
-    {
-      b: 2,
-    },
-    {
-      b: 10,
-      c: 3,
-    },
-  ),
-)
