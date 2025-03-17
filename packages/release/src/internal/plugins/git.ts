@@ -2,7 +2,7 @@ import type { Api } from '@/types'
 import { generateChangelog } from '@/utils'
 import {
   gitCommit,
-  gitPushCommit,
+  gitPush,
   gitTag,
   isGitBehindRemote,
   isGitClean,
@@ -104,8 +104,12 @@ export default (api: Api) => {
   })
 
   api.onRelease(async ({ version }) => {
-    const { independent, push } = api.config.git
+    const { independent, commit, push } = api.config.git
     const { pkgNames } = api.appData
+
+    if (!commit) {
+      return
+    }
 
     api.step('Committing changes ...')
 
@@ -125,11 +129,13 @@ export default (api: Api) => {
       })
     }
 
-    if (push) {
-      await gitPushCommit({
-        cwd: api.cwd,
-        verbose: true,
-      })
+    if (!push) {
+      return
     }
+
+    await gitPush({
+      cwd: api.cwd,
+      verbose: true,
+    })
   })
 }

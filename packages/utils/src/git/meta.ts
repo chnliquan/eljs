@@ -106,7 +106,7 @@ export async function getGitUrl(cwd: string, exact?: boolean): Promise<string> {
 
 /**
  * 获取 git 分支
- * @param options 可选项
+ * @param options 可选配置项
  */
 export async function getGitBranch(
   options?: RunCommandOptions,
@@ -120,7 +120,7 @@ export async function getGitBranch(
 
 /**
  * 获取 git 远程分支
- * @param options 可选项
+ * @param options 可选配置项
  */
 export async function getGitUpstreamBranch(
   options?: RunCommandOptions,
@@ -135,7 +135,7 @@ export async function getGitUpstreamBranch(
 /**
  * 获取 git commit 哈希值
  * @param short 是否截断
- * @param options 可选项
+ * @param options 可选配置项
  */
 export async function getGitCommitSha(
   short?: boolean,

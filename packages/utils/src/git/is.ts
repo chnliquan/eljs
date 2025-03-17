@@ -4,7 +4,7 @@ import { getGitBranch } from './meta'
 
 /**
  * git 是否干净
- * @param options 可选项
+ * @param options 可选配置项
  */
 export async function isGitClean(
   options?: RunCommandOptions,
@@ -19,7 +19,7 @@ export async function isGitClean(
 
 /**
  * git 是否落后远程
- * @param options 可选项
+ * @param options 可选配置项
  */
 export async function isGitBehindRemote(
   options?: RunCommandOptions,
@@ -41,7 +41,7 @@ export async function isGitBehindRemote(
 
 /**
  * git 是否超前远程
- * @param options 可选项
+ * @param options 可选配置项
  */
 export async function isGitAheadRemote(
   options?: RunCommandOptions,
@@ -64,7 +64,7 @@ export async function isGitAheadRemote(
 /**
  * 当前分支是否为传入的分支
  * @param branch 分支名
- * @param options 可选项
+ * @param options 可选配置项
  */
 export async function isGitBranch(
   branch: string,

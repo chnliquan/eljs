@@ -37,7 +37,12 @@ export interface Config extends UserConfig {
      */
     independent?: boolean
     /**
-     * 推送 commit 到远端
+     * 是否提交 commit
+     * @default true
+     */
+    commit?: boolean
+    /**
+     * 是否推送到远端
      * @default true
      */
     push?: boolean

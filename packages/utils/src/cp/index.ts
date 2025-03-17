@@ -32,7 +32,7 @@ export function parseCommand(command: string): string[] {
 }
 
 /**
- * 执行命令可选项
+ * 执行命令可选配置项
  */
 export interface RunCommandOptions extends ExecaOptions {
   /**
@@ -45,7 +45,7 @@ export interface RunCommandOptions extends ExecaOptions {
  * 运行命令
  * @param command 可运行的命令
  * @param args 命令接收的参数
- * @param options 可选项
+ * @param options 可选配置项
  */
 export function run(
   command: string,

@@ -5,7 +5,7 @@ import { getGitBranch } from './meta'
 /**
  * 提交 git 信息
  * @param msg 提交信息
- * @param options 选项
+ * @param options 可选配置项
  */
 export async function gitCommit(
   msg: string,
@@ -30,12 +30,10 @@ export async function gitCommit(
 }
 
 /**
- * 同步 git commit 到远端
- * @param options 选项
+ * 推送 git 到远端
+ * @param options 可选配置项
  */
-export async function gitPushCommit(
-  options?: RunCommandOptions,
-): Promise<void> {
+export async function gitPush(options?: RunCommandOptions): Promise<void> {
   const branch = await getGitBranch({
     ...options,
     verbose: false,

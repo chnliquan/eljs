@@ -27,7 +27,11 @@ export const defaultConfig: Config = {
      */
     independent: false,
     /**
-     * 推送 commit 到远端
+     * 是否提交 commit
+     */
+    commit: true,
+    /**
+     * 是否推送到远端
      */
     push: true,
   },
