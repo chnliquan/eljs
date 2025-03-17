@@ -66,24 +66,24 @@ export interface Config extends UserConfig {
      */
     canary?: boolean
     /**
-     * 是否确认版本
-     * @default true
-     */
-    confirm?: boolean
-    /**
      * 是否同步到 Cnpm
      * @default false
      */
     cnpm?: boolean
+    /**
+     * 是否确认版本
+     * @default true
+     */
+    confirm?: boolean
   }
   /**
    * github 相关配置项
    */
   github?: {
     /**
-     * 创建发布变更
+     * 是否发布变更
      * @default true
      */
-    createRelease?: boolean
+    release?: boolean
   }
 }

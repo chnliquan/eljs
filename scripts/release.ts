@@ -1,4 +1,4 @@
-import { Runner, resolveBin } from '@eljs/release'
+import { release, resolveBin } from '@eljs/release'
 import { isGitBehindRemote, isGitClean, logger } from '@eljs/utils'
 import { $, argv } from 'zx'
 
@@ -39,15 +39,14 @@ async function main(): Promise<void> {
     console.log(`(skipped)`)
   }
 
-  new Runner({
+  await release(argv._[0], {
+    ...argv,
     git: {
-      ...argv,
       skipCheck: true,
     },
     npm: {
-      ...argv,
       skipCheck: true,
       cnpm: true,
     },
-  }).run(argv._[0])
+  })
 }

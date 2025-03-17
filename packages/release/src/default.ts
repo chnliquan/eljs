@@ -48,21 +48,21 @@ export const defaultConfig: Config = {
      */
     canary: false,
     /**
-     * 是否确认版本
-     */
-    confirm: true,
-    /**
      * 是否同步到 Cnpm
      */
     cnpm: false,
+    /**
+     * 是否确认版本
+     */
+    confirm: true,
   },
   /**
    * github 相关配置项
    */
   github: {
     /**
-     * 创建发布变更
+     * 是否发布变更
      */
-    createRelease: true,
+    release: true,
   },
 }

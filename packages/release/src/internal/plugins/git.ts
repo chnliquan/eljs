@@ -42,6 +42,10 @@ export default (api: Api) => {
 
   api.getChangelog(
     async () => {
+      if (!api.config.git.changelog) {
+        return ''
+      }
+
       const changelog = await generateChangelog({
         cwd: api.cwd,
         independent: api.config.git.independent,

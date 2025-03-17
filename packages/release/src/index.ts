@@ -1,6 +1,6 @@
 export { default as resolveBin } from 'resolve-bin'
 export * from './default'
 export * from './define'
-export * from './runner'
+export * from './release'
 export * from './types'
 export * from './utils'

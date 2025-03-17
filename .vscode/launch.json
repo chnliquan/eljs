@@ -57,9 +57,11 @@
         "program": "${workspaceFolder}/packages/release/src/cli.ts"
       },
       "args": [
-        "--prerelease",
-        "--prereleaseId=beta",
-        "--confirm",
+        "--git.skipCheck",
+        "--no-git.changelog",
+        "--npm.prerelease",
+        "--npm.prereleaseId=beta",
+        "--no-npm.confirm",
         "prerelease"
       ],
       "console": "integratedTerminal",

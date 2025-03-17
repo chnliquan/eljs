@@ -99,7 +99,7 @@ async function getIncrementVersion(
   if (releaseTypeOrVersion) {
     return getReleaseVersion(
       prereleaseId
-        ? referenceVersionMap[prereleaseId]
+        ? referenceVersionMap[prereleaseId] || referenceVersionMap.latest
         : referenceVersionMap.latest,
       releaseTypeOrVersion as ReleaseType,
       prereleaseId,
