@@ -1,6 +1,6 @@
 {
   "name": "eljs",
-  "version": "1.0.0-beta.0",
+  "version": "1.0.0-beta.1",
   "private": true,
   "description": "node utility monorepo",
   "repository": {
@@ -20,9 +20,9 @@
     "preinstall": "npx only-allow pnpm",
     "lint": "eslint 'packages/**/*.{ts,tsx}'",
     "prepare": "husky",
-    "prerelease:alpha": "tsx scripts/release --prereleaseId=alpha",
-    "prerelease:beta": "tsx scripts/release --prereleaseId=beta",
-    "prerelease:next": "tsx scripts/release --prereleaseId=next",
+    "prerelease:alpha": "tsx scripts/release --npm.prereleaseId=alpha",
+    "prerelease:beta": "tsx scripts/release --npm.prereleaseId=beta",
+    "prerelease:next": "tsx scripts/release --npm.prereleaseId=next",
     "release": "tsx scripts/release",
     "release:major": "tsx scripts/release major",
     "release:minor": "tsx scripts/release minor",
