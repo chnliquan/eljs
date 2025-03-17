@@ -57,12 +57,18 @@
         "program": "${workspaceFolder}/packages/release/src/cli.ts"
       },
       "args": [
-        "--git.skipCheck",
+        // "--help",
+        // "--version",
+        // "--cwd=/Users/ender/kwai/technology/polyrepo-release",
+        "--cwd=/Users/ender/kwai/technology/monorepo-release",
+        "--no-git.requireClean",
         "--no-git.changelog",
-        "--npm.prerelease",
-        "--npm.prereleaseId=beta",
+        // "--git.requireBranch=master",
+        "--npm.skipChecks",
+        // "--npm.prerelease",
+        // "--npm.prereleaseId=beta",
         "--no-npm.confirm",
-        "prerelease"
+        // "prerelease"
       ],
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]

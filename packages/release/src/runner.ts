@@ -1,4 +1,4 @@
-import { type AppData, type Config } from '@/types'
+import { type AppData, type Config, type InternalConfig } from '@/types'
 import {
   Pluggable,
   type ApplyEvent,
@@ -34,7 +34,7 @@ export class Runner extends Pluggable<Config> {
    */
   public appData: AppData = Object.create(null)
 
-  public constructor(options: Config = {}) {
+  public constructor(options: InternalConfig = {}) {
     const { cwd = process.cwd(), presets = [], plugins = [] } = options
     const projectPkgJsonPath = path.join(cwd, 'package.json')
 

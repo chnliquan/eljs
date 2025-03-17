@@ -42,10 +42,10 @@ async function main(): Promise<void> {
   await release(argv._[0], {
     ...argv,
     git: {
-      skipCheck: true,
+      skipChecks: true,
     },
     npm: {
-      skipCheck: true,
+      skipChecks: true,
       cnpm: true,
     },
   })

@@ -3,34 +3,46 @@ import type { UserConfig } from '@eljs/pluggable'
 import type { PrereleaseId } from './npm'
 
 /**
- * 配置项
+ * 内部使用配置项
  */
-export interface Config extends UserConfig {
+export interface InternalConfig extends Config {
   /**
    * 当前工作目录
    * @default process.cwd()
    */
   cwd?: string
+}
+
+/**
+ * 配置项
+ */
+export interface Config extends UserConfig {
   /**
    * git 相关配置项
    */
   git?: {
     /**
-     * 跳过 git 检查
-     * @default false
+     * 是否检查工作区干净
+     * @default true
      */
-    skipCheck?: boolean
+    requireClean?: boolean
+    /**
+     * 指定发布分支
+     */
+    requireBranch?: string
     /**
      * 更新日志
      * @default true
      */
-    changelog?: {
-      /**
-       * 文件名
-       * @default CHANGELOG.md
-       */
-      filename?: string
-    }
+    changelog?:
+      | false
+      | {
+          /**
+           * 文件名
+           * @default CHANGELOG.md
+           */
+          filename?: string
+        }
     /**
      * 是否生成独立的 git tag
      * @default false
@@ -52,10 +64,10 @@ export interface Config extends UserConfig {
    */
   npm?: {
     /**
-     * 跳过 npm 检查
+     * 是否跳过检查
      * @default false
      */
-    skipCheck?: boolean
+    skipChecks?: boolean
     /**
      * 是否预发布
      * @default false
@@ -71,15 +83,15 @@ export interface Config extends UserConfig {
      */
     canary?: boolean
     /**
-     * 是否同步到 Cnpm
-     * @default false
-     */
-    cnpm?: boolean
-    /**
      * 是否确认版本
      * @default true
      */
     confirm?: boolean
+    /**
+     * 是否同步到 Cnpm
+     * @default false
+     */
+    cnpm?: boolean
   }
   /**
    * github 相关配置项

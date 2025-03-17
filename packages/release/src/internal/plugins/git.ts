@@ -5,6 +5,7 @@ import {
   gitPush,
   gitTag,
   isGitBehindRemote,
+  isGitBranch,
   isGitClean,
   isPathExists,
   logger,
@@ -15,28 +16,32 @@ import path from 'node:path'
 
 export default (api: Api) => {
   api.onCheck(async () => {
-    if (api.config.git.skipCheck) {
-      return
+    const { requireClean, requireBranch } = api.config.git
+
+    if (requireClean) {
+      api.step('Checking git ...')
+
+      if (
+        !(await isGitClean({
+          cwd: api.cwd,
+          verbose: true,
+        }))
+      ) {
+        logger.printErrorAndExit('Git working tree is not clean.')
+      }
+
+      if (
+        await isGitBehindRemote({
+          cwd: api.cwd,
+          verbose: true,
+        })
+      ) {
+        logger.printErrorAndExit('Git working tree is behind remote.')
+      }
     }
 
-    api.step('Checking git ...')
-
-    if (
-      !(await isGitClean({
-        cwd: api.cwd,
-        verbose: true,
-      }))
-    ) {
-      logger.printErrorAndExit('git is not clean.')
-    }
-
-    if (
-      await isGitBehindRemote({
-        cwd: api.cwd,
-        verbose: true,
-      })
-    ) {
-      logger.printErrorAndExit('git is behind remote.')
+    if (requireBranch && !(await isGitBranch(requireBranch))) {
+      logger.printErrorAndExit(`Must be on branch ${requireBranch}`)
     }
   })
 

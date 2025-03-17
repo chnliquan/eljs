@@ -2,17 +2,13 @@ import type { Config } from './types'
 
 export const defaultConfig: Config = {
   /**
-   * 当前工作目录
-   */
-  cwd: process.cwd(),
-  /**
    * git 相关配置项
    */
   git: {
     /**
-     * 跳过 git 检查
+     * 是否检查工作区干净
      */
-    skipCheck: false,
+    requireClean: true,
     /**
      * 更新日志
      */
@@ -42,7 +38,7 @@ export const defaultConfig: Config = {
     /**
      * 跳过 npm 检查
      */
-    skipCheck: false,
+    skipChecks: false,
     /**
      * 是否预发布
      */

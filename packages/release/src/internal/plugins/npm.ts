@@ -4,7 +4,7 @@ import { chalk, getNpmUser, logger, run } from '@eljs/utils'
 
 export default (api: Api) => {
   api.onCheck(async () => {
-    if (api.config.npm.skipCheck) {
+    if (api.config.npm.skipChecks) {
       return
     }
 

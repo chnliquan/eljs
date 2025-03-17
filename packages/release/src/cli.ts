@@ -19,18 +19,23 @@ async function cli() {
   )
   program
     .version(pkg.version, '-v, --version', 'Output the current version.')
-    .option('--git.skipCheck', 'Skip git npm.')
+    .option('--cwd <cwd>', 'Specify the current workspace directory.')
     .option('--git.independent', 'Generate git tag independent.')
+    .option('--no-git.requireClean', 'Skip check git working tree clean.')
     .option('--no-git.changelog', 'Skip generate changelog.')
-    .option('--no-git.commit', 'Skip git commit.')
-    .option('--no-git.push', 'Skip git push to remote.')
-    .option('--npm.skipCheck', 'Skip check npm.')
-    .option('--npm.prerelease', 'Use prerelease type.')
+    .option('--no-git.commit', 'Skip the commit release step.')
+    .option('--no-git.push', 'Skip the push release step.')
+    .option(
+      '--git.requireBranch <requireBranch>',
+      'Require that the release is on a particular branch.',
+    )
+    .option('--npm.skipChecks', 'Skip the npm check step.')
+    .option('--npm.prerelease', 'Specify the release type as prerelease.')
+    .option('--npm.canary', 'Specify the release type as canary canary.')
+    .option('--npm.cnpm', 'Sync to cnpm when release done.')
+    .option('--no-npm.confirm', 'Skip the confirm bump version release step.')
     .option('--npm.prereleaseId <prereleaseId>', 'Specify the prereleaseId.')
-    .option('--npm.canary', 'Use canary type.')
-    .option('--npm.cnpm', 'Sync to cnpm.')
-    .option('--no-npm.confirm', 'Skip confirm the bump version.')
-    .option('--no-github.release', 'Skip github release.')
+    .option('--no-github.release', 'Skip the github release step.')
     .argument('[version]', 'Specify the bump version.', checkVersion)
 
   program.commands.forEach(c => c.on('--help', () => console.log()))
@@ -61,6 +66,8 @@ async function cli() {
   updater({ pkg }).notify()
   const options = parseOptions(program.opts())
   const version = program.args[0]
+  console.log('options', options)
+  return
   await release(version, options)
 }
 
@@ -132,9 +139,6 @@ function parseOptions<T extends NestedObject = NestedObject>(
       }
     }
   }
-
-  console.log(options)
-  console.log(result)
 
   return result
 }
