@@ -30,6 +30,7 @@
     "dev": "father dev"
   },
   "dependencies": {
+    "@types/debug": "^4.1.12",
     "@types/download": "^8.0.5",
     "@types/ejs": "^3.1.5",
     "@types/glob": "^8.1.0",
@@ -44,6 +45,7 @@
     "@types/uuid": "^10.0.0",
     "@types/which": "^3.0.4",
     "chalk": "^4.1.2",
+    "debug": "^4.4.0",
     "deepmerge": "^4.3.1",
     "download": "^8.0.0",
     "ejs": "^3.1.10",

@@ -15,9 +15,12 @@
       "windows": {
         "program": "${file}"
       },
+      "env": {
+        "DEBUG": "release:*"
+      },
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
+      "skipFiles": ["<node_internals>/**"]
     },
     {
       "type": "node",
