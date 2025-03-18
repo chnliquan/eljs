@@ -31,18 +31,26 @@ export const defaultConfig: Config = {
      */
     commit: true,
     /**
+     * commit 信息
+     */
+    commitMessage: 'chore: bump version v${version}',
+    /**
      * 是否推送到远端
      */
     push: true,
+    /**
+     * git push 参数
+     */
+    pushArgs: ['--follow-tags'],
   },
   /**
    * npm 相关配置项
    */
   npm: {
     /**
-     * 跳过 npm 检查
+     * 是否检查用户
      */
-    skipChecks: false,
+    requireOwner: true,
     /**
      * 是否预发布
      */

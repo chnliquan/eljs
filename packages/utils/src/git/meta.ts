@@ -124,12 +124,19 @@ export async function getGitBranch(
  */
 export async function getGitUpstreamBranch(
   options?: RunCommandOptions,
-): Promise<string> {
-  return run('git', ['rev-parse', '--abbrev-ref', '@{u}'], options).then(
-    data => {
+): Promise<string | null> {
+  try {
+    const upstream = await run(
+      'git',
+      ['rev-parse', '--abbrev-ref', '@{u}'],
+      options,
+    ).then(data => {
       return data.stdout.trim()
-    },
-  )
+    })
+    return upstream
+  } catch (err) {
+    return null
+  }
 }
 
 /**

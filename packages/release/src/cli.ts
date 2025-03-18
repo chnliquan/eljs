@@ -20,7 +20,7 @@ async function cli() {
   )
   program
     .version(pkg.version, '-v, --version', 'Output the current version.')
-    .option('--cwd <cwd>', 'Specify the  working directory.')
+    .option('--cwd <cwd>', 'Specify the working directory.')
     .option('--git.independent', 'Generate git tag independent.')
     .option('--no-git.requireClean', 'Skip check git working tree clean.')
     .option('--no-git.changelog', 'Skip generate changelog.')
@@ -30,10 +30,10 @@ async function cli() {
       '--git.requireBranch <requireBranch>',
       'Require that the release is on a particular branch.',
     )
-    .option('--npm.skipChecks', 'Skip the npm check step.')
     .option('--npm.prerelease', 'Specify the release type as prerelease.')
-    .option('--npm.canary', 'Specify the release type as canary canary.')
+    .option('--npm.canary', 'Specify the release type as canary.')
     .option('--npm.cnpm', 'Sync to cnpm when release done.')
+    .option('--no-npm.requireOwner', 'Skip check npm owner step.')
     .option('--no-npm.confirm', 'Skip the confirm bump version release step.')
     .option('--npm.prereleaseId <prereleaseId>', 'Specify the prereleaseId.')
     .option('--no-github.release', 'Skip the github release step.')

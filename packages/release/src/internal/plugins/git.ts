@@ -1,6 +1,8 @@
 import type { Api } from '@/types'
 import { generateChangelog } from '@/utils'
 import {
+  getGitBranch,
+  getGitUpstreamBranch,
   gitCommit,
   gitPush,
   gitTag,
@@ -9,6 +11,7 @@ import {
   isGitClean,
   isPathExists,
   logger,
+  normalizeArgs,
   readFile,
   writeFile,
 } from '@eljs/utils'
@@ -111,7 +114,8 @@ export default (api: Api) => {
   })
 
   api.onRelease(async ({ version }) => {
-    const { independent, commit, push } = api.config.git
+    const { independent, commit, commitMessage, commitArgs, push, pushArgs } =
+      api.config.git
     const { pkgNames } = api.appData
 
     if (!commit) {
@@ -120,17 +124,20 @@ export default (api: Api) => {
 
     api.step('Committing changes ...')
 
-    const tags = independent
-      ? pkgNames.map(pkgName => `${pkgName}@${version}`)
-      : [`v${version}`]
+    const commitCliArgs = [...normalizeArgs(commitArgs)].filter(Boolean)
+    const commitMsg = commitMessage.replace('${version}', version)
 
-    await gitCommit(`chore: bump version v${version}`, {
+    await gitCommit(commitMsg, commitCliArgs, {
       cwd: api.cwd,
       verbose: true,
     })
 
+    const tags = independent
+      ? pkgNames.map(pkgName => `${pkgName}@${version}`)
+      : [`v${version}`]
+
     for await (const tag of tags) {
-      await gitTag(tag, {
+      await gitTag(tag, [], {
         cwd: api.cwd,
         verbose: true,
       })
@@ -140,9 +147,32 @@ export default (api: Api) => {
       return
     }
 
-    await gitPush({
+    const upstreamArgs = await getUpstreamArgs(api.cwd)
+    const pushCliArgs = [...normalizeArgs(pushArgs), ...upstreamArgs].filter(
+      Boolean,
+    )
+
+    await gitPush(pushCliArgs, {
       cwd: api.cwd,
       verbose: true,
     })
   })
+}
+
+async function getUpstreamArgs(cwd: string) {
+  if (
+    !(await getGitUpstreamBranch({
+      cwd,
+    }))
+  ) {
+    return [
+      '--set-upstream',
+      'origin',
+      await getGitBranch({
+        cwd,
+      }),
+    ]
+  }
+
+  return []
 }

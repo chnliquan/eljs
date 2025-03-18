@@ -16,7 +16,7 @@ export interface Config extends UserConfig {
    */
   git?: {
     /**
-     * 是否检查工作区干净
+     * 是否检查工作区
      * @default true
      */
     requireClean?: boolean
@@ -26,7 +26,7 @@ export interface Config extends UserConfig {
     requireBranch?: string
     /**
      * 更新日志
-     * @default true
+     * @default { filename: 'CHANGELOG.md', preset: '@eljs/conventional-changelog-preset' }
      */
     changelog?:
       | false
@@ -53,20 +53,34 @@ export interface Config extends UserConfig {
      */
     commit?: boolean
     /**
+     * commit 信息
+     * @default "chore: bump version v${version}"
+     */
+    commitMessage?: string
+    /**
+     * git commit 参数
+     */
+    commitArgs?: string[] | string
+    /**
      * 是否推送到远端
      * @default true
      */
     push?: boolean
+    /**
+     * git push 参数
+     * @default ['--follow-tags']
+     */
+    pushArgs?: string[] | string
   }
   /**
    * npm 相关配置项
    */
   npm?: {
     /**
-     * 是否跳过检查
-     * @default false
+     * 是否检查用户
+     * @default true
      */
-    skipChecks?: boolean
+    requireOwner?: boolean
     /**
      * 是否预发布
      * @default false

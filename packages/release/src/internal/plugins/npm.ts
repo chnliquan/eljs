@@ -1,38 +1,39 @@
 import type { Api } from '@/types'
-import { normalizeArgs, syncCnpm } from '@/utils'
-import { chalk, getNpmUser, logger, run } from '@eljs/utils'
+import { syncCnpm } from '@/utils'
+import { chalk, getNpmUser, logger, normalizeArgs, run } from '@eljs/utils'
 
 export default (api: Api) => {
   api.onCheck(async () => {
-    if (api.config.npm.skipChecks) {
-      return
-    }
+    const { requireOwner } = api.config.npm
 
-    api.step('Checking npm ...')
+    if (requireOwner) {
+      api.step('Checking npm owner ...')
 
-    const user = await getNpmUser(api.cwd)
+      const user = await getNpmUser(api.cwd)
 
-    for (const pkgName of api.appData.validPkgNames) {
-      try {
-        const owners = (
-          await run('npm', ['owner', 'ls', pkgName], {
-            cwd: api.cwd,
-          })
-        ).stdout
-          .trim()
-          .split('\n')
-          .map(line => line.split(' ')[0])
+      for (const pkgName of api.appData.validPkgNames) {
+        try {
+          const owners = (
+            await run('npm', ['owner', 'ls', pkgName], {
+              cwd: api.cwd,
+            })
+          ).stdout
+            .trim()
+            .split('\n')
+            .map(line => line.split(' ')[0])
 
-        if (!owners.includes(user)) {
-          logger.printErrorAndExit(`${pkgName} is not owned by ${user}.`)
+          if (!owners.includes(user)) {
+            logger.printErrorAndExit(`${pkgName} is not owned by ${user}.`)
+          }
+        } catch (error) {
+          const err = error as Error
+
+          if (err.message.indexOf('Not Found') > -1) {
+            continue
+          }
+
+          logger.printErrorAndExit(`${pkgName} ownership is invalid.`)
         }
-      } catch (err) {
-        if ((err as Error).message.indexOf('Not Found') > -1) {
-          continue
-        }
-
-        logger.error(`${pkgName} ownership is invalid.`)
-        throw new Error((err as Error).message)
       }
     }
   })
@@ -84,16 +85,24 @@ export default (api: Api) => {
     ) {
       const tagArg = prereleaseId ? ['--tag', prereleaseId] : ''
       const registryArg = registry ? ['--registry', registry] : ''
+      const { requireBranch } = api.config.git
+      const gitCheckArg = requireBranch
+        ? ['--publish-branch', requireBranch]
+        : ['--no-git-checks']
+
       const cliArgs = [
         'publish',
         ...tagArg,
         ...registryArg,
+        ...gitCheckArg,
         ...normalizeArgs(api.config.npm.publishArgs),
       ].filter(Boolean)
 
       await run(packageManager, cliArgs, {
         cwd: pkgRootPath,
         verbose: true,
+        stdout: 'inherit',
+        stdin: 'inherit',
       })
 
       logger.done(

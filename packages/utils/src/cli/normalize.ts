@@ -1,4 +1,4 @@
-import { isArray } from '@eljs/utils'
+import { isArray } from '@/type'
 
 /**
  * 格式化参数
