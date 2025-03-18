@@ -391,6 +391,10 @@ importers:
       which:
         specifier: ^5.0.0
         version: 5.0.0
+    devDependencies:
+      typescript:
+        specifier: 5.5.4
+        version: 5.5.4
 
 packages:
 

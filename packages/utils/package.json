@@ -68,6 +68,17 @@
     "uuid": "^11.1.0",
     "which": "^5.0.0"
   },
+  "devDependencies": {
+    "typescript": "5.5.4"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
+  },
   "engines": {
     "node": ">= 16.15.0"
   }

@@ -181,13 +181,18 @@ export class ConfigManager {
             __esModule: boolean
             default: T
           }
+
+          if (!content) {
+            return config
+          }
+
           config = deepMerge(
-            config,
-            content.__esModule ? content.default : (content as T),
-          )
+            config as T,
+            content.__esModule ? content.default : content,
+          ) as T
         } catch (error) {
           const err = error as Error
-          err.message = `Load config Error in ${configFile}:\n${err.message}`
+          err.message = `Load config file Error in ${configFile}:\n${err.message}`
           throw err
         }
       }
@@ -216,13 +221,18 @@ export class ConfigManager {
             __esModule: boolean
             default: T
           }
+
+          if (!content) {
+            return config
+          }
+
           config = deepMerge(
-            config,
-            content.__esModule ? content.default : (content as T),
-          )
+            config as T,
+            content.__esModule ? content.default : content,
+          ) as T
         } catch (error) {
           const err = error as Error
-          err.message = `Load config Error in ${configFile}:\n${err.message}`
+          err.message = `Load config file Error in ${configFile}:\n${err.message}`
           throw err
         }
       }

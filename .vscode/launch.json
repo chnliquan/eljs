@@ -59,11 +59,14 @@
       "windows": {
         "program": "${workspaceFolder}/packages/release/src/cli.ts"
       },
+      "env": {
+        "DEBUG": "release*"
+      },
       "args": [
         // "--help",
         // "--version",
-        // "--cwd=/Users/ender/kwai/technology/polyrepo-release",
-        "--cwd=/Users/ender/kwai/technology/monorepo-release",
+        "--cwd=/Users/ender/kwai/technology/polyrepo-release",
+        // "--cwd=/Users/ender/kwai/technology/monorepo-release",
         // "--git.independent",
         // "--no-git.requireClean",
         // "--no-git.changelog",

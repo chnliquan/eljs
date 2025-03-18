@@ -8,6 +8,7 @@ import {
 } from '@eljs/pluggable'
 import {
   chalk,
+  createDebugger,
   deepMerge,
   isPathExistsSync,
   logger,
@@ -20,6 +21,8 @@ import type { ReleaseType } from 'semver'
 
 import { defaultConfig } from './default'
 import { parseVersion } from './utils'
+
+const debug = createDebugger('release:config')
 
 /**
  * 运行器类
@@ -161,15 +164,16 @@ export class Runner extends Pluggable<Config> {
   }
 
   private async _resolveConfig() {
-    const mergeConfig = deepMerge(
+    const mergedConfig = deepMerge(
       {},
       defaultConfig,
       this.constructorOptions,
       this.userConfig,
     ) as RequiredRecursive<Config>
 
+    debug?.(mergedConfig)
     this.config = await this.applyPlugins('modifyConfig', {
-      initialValue: mergeConfig,
+      initialValue: mergedConfig,
     })
   }
 }
