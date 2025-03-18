@@ -1,6 +1,7 @@
 import type { Api } from '@/types'
 import {
   chalk,
+  getGitBranch,
   getPackageRootPaths,
   logger,
   readJson,
@@ -40,6 +41,9 @@ export default (api: Api) => {
     }
 
     const registry = memo.projectPkg?.publishConfig?.registry
+    const branch = await getGitBranch({
+      cwd,
+    })
 
     return {
       ...memo,
@@ -49,6 +53,7 @@ export default (api: Api) => {
       validPkgRootPaths,
       validPkgNames,
       registry,
+      branch,
     }
   })
 }

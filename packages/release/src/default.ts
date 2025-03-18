@@ -52,10 +52,6 @@ export const defaultConfig: Config = {
      */
     requireOwner: true,
     /**
-     * 是否预发布
-     */
-    prerelease: false,
-    /**
      * 是否发布金丝雀版本
      */
     canary: false,

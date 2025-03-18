@@ -1,13 +1,13 @@
 import type { Api } from '@/types'
 import { generateChangelog } from '@/utils'
 import {
+  chalk,
   getGitBranch,
   getGitUpstreamBranch,
   gitCommit,
   gitPush,
   gitTag,
   isGitBehindRemote,
-  isGitBranch,
   isGitClean,
   isPathExists,
   logger,
@@ -43,8 +43,10 @@ export default (api: Api) => {
       }
     }
 
-    if (requireBranch && !(await isGitBranch(requireBranch))) {
-      logger.printErrorAndExit(`Must be on branch ${requireBranch}`)
+    if (requireBranch && api.appData.branch !== requireBranch) {
+      logger.printErrorAndExit(
+        `Must be on branch ${chalk.bold(requireBranch)}, but got ${chalk.bold(api.appData.branch)}.`,
+      )
     }
   })
 

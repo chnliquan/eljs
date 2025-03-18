@@ -139,9 +139,21 @@ function parseOptions<T extends NestedObject = NestedObject>(
     }
   }
 
-  if (result.git.changelog === true) {
-    const git = result.git
-    Reflect.deleteProperty(git, 'changelog')
+  const { git, npm } = result
+
+  for (const key of Object.keys(git)) {
+    if (
+      ['requireClean', 'changelog', 'commit', 'push'].includes(key) &&
+      git[key] === true
+    ) {
+      Reflect.deleteProperty(git, key)
+    }
+  }
+
+  for (const key of Object.keys(npm)) {
+    if (['requireOwner', 'confirm'].includes(key) && npm[key] === true) {
+      Reflect.deleteProperty(npm, key)
+    }
   }
 
   return result

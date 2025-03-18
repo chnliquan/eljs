@@ -1,7 +1,5 @@
 import { run, type RunCommandOptions } from '@/cp'
 
-import { getGitBranch } from './meta'
-
 /**
  * git 是否干净
  * @param options 可选配置项
@@ -59,17 +57,4 @@ export async function isGitAheadRemote(
       return aheadResult?.[2] ? Number(aheadResult[2]) > 0 : false
     })
   })
-}
-
-/**
- * 当前分支是否为传入的分支
- * @param branch 分支名
- * @param options 可选配置项
- */
-export async function isGitBranch(
-  branch: string,
-  options?: RunCommandOptions,
-): Promise<boolean> {
-  const currentBranch = await getGitBranch(options)
-  return branch === currentBranch
 }

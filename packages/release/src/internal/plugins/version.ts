@@ -10,8 +10,17 @@ import {
   updatePackageLock,
   updatePackageVersion,
 } from '@/utils'
-import { chalk, confirm, logger, pascalCase, prompts } from '@eljs/utils'
+import {
+  chalk,
+  confirm,
+  createDebugger,
+  logger,
+  pascalCase,
+  prompts,
+} from '@eljs/utils'
 import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
+
+const debug = createDebugger('release:version')
 
 export default (api: Api) => {
   api.onCheck(async ({ releaseTypeOrVersion }) => {
@@ -37,18 +46,43 @@ export default (api: Api) => {
     },
   )
 
-  api.onBumpVersion(({ version }) => {
+  api.onBeforeBumpVersion(async ({ version, isPrerelease, prereleaseId }) => {
+    const { prerelease, prereleaseId: preid } = api.config.npm
+
+    if (prerelease === true && !isPrerelease) {
+      logger.printErrorAndExit(
+        `Should input prerelease type, but got ${chalk.bold(version)}.`,
+      )
+    }
+
+    if (!preid && prerelease === false && isPrerelease) {
+      logger.printErrorAndExit(
+        `Should input release type, but got ${chalk.bold(version)}.`,
+      )
+    }
+
+    if (preid && preid !== prereleaseId) {
+      logger.printErrorAndExit(
+        `Should input ${preid} tag, but got ${chalk.bold(version)}.`,
+      )
+    }
+
+    await checkVersion(api.appData.validPkgNames[0], version)
+  })
+
+  api.onBumpVersion(async ({ version }) => {
     const { projectPkgJsonPath, projectPkg, pkgNames, pkgJsonPaths, pkgs } =
       api.appData
 
+    debug?.(pkgNames)
     // update all packages
-    pkgNames.forEach((_, index) => {
-      updatePackageVersion(pkgJsonPaths[index], pkgs[index], version, pkgNames)
-    })
+    for (let i = 0; i < pkgNames.length; i++) {
+      await updatePackageVersion(pkgJsonPaths[i], pkgs[i], version, pkgNames)
+    }
 
     // update polyrepo project root package.json
     if (pkgJsonPaths[0] !== projectPkgJsonPath) {
-      updatePackageVersion(projectPkgJsonPath, projectPkg, version)
+      await updatePackageVersion(projectPkgJsonPath, projectPkg, version)
     }
   })
 
@@ -74,7 +108,6 @@ async function getIncrementVersion(
     releaseTypeOrVersion &&
     !RELEASE_TYPES.includes(releaseTypeOrVersion as ReleaseType)
   ) {
-    await checkVersion(releaseTypeOrVersion)
     return releaseTypeOrVersion
   }
 
@@ -198,10 +231,7 @@ async function getIncrementVersion(
         name: 'value',
         type: 'text',
         message: 'Input custom version:',
-        initial: projectPkg.version,
       })
-
-      await checkVersion(answer.value)
       return answer.value
     }
 
@@ -217,47 +247,31 @@ async function getIncrementVersion(
   })
 
   return answer.value
+}
 
-  async function checkVersion(version: string) {
-    if (!semver.valid(version)) {
-      logger.printErrorAndExit(
-        `Invalid semantic version ${chalk.bold(version)}.`,
+function getPrereleaseChoices(
+  referenceVersion: string,
+  prereleaseId: PrereleaseId,
+): prompts.PromptObject {
+  return {
+    name: 'value',
+    type: 'select',
+    message: `Please select the ${prereleaseId} version to bump:`,
+    choices: prereleaseTypes.map(releaseType => {
+      const version = getReleaseVersion(
+        referenceVersion,
+        releaseType,
+        prereleaseId,
       )
-    }
-
-    const pkgName = validPkgNames[0]
-
-    if (await isVersionExist(pkgName, version)) {
-      logger.printErrorAndExit(
-        `${pkgName} has published v${chalk.bold(version)} already.`,
-      )
-    }
-  }
-
-  function getPrereleaseChoices(
-    referenceVersion: string,
-    prereleaseId: PrereleaseId,
-  ): prompts.PromptObject {
-    return {
-      name: 'value',
-      type: 'select',
-      message: `Please select the ${prereleaseId} version to bump:`,
-      choices: prereleaseTypes.map(releaseType => {
-        const version = getReleaseVersion(
-          referenceVersion,
-          releaseType,
-          prereleaseId,
-        )
-        return {
-          title: `${
-            releaseType === 'prerelease'
-              ? pascalCase(releaseType)
-              : pascalCase(releaseType) + '  '
-          } (${version})`,
-          value: version,
-        }
-      }),
-    }
+      return {
+        title: `${
+          releaseType === 'prerelease'
+            ? pascalCase(releaseType)
+            : pascalCase(releaseType) + '  '
+        } (${version})`,
+        value: version,
+      }
+    }),
   }
 }
 
@@ -267,7 +281,22 @@ function getReleaseChoices(
   majorVersion: string,
   prerelease?: boolean,
 ) {
-  const choices = [
+  let choices = [
+    {
+      title: `Patch (${patchVersion})`,
+      value: patchVersion,
+      description: chalk.grey(`Bug Fix`),
+    },
+    {
+      title: `Minor (${minorVersion})`,
+      value: minorVersion,
+      description: chalk.grey(`New Feature`),
+    },
+    {
+      title: `Major (${majorVersion})`,
+      value: majorVersion,
+      description: chalk.grey(`Breaking Change`),
+    },
     {
       title: `Alpha`,
       value: 'alpha',
@@ -288,34 +317,33 @@ function getReleaseChoices(
       value: 'canary',
       description: chalk.grey(`Canary Deployment Version`),
     },
-    {
-      title: `Custom`,
-      value: 'custom',
-      description: chalk.grey(`Custom version`),
-    },
   ]
 
-  if (!prerelease) {
-    choices.unshift(
-      {
-        title: `Patch (${patchVersion})`,
-        value: patchVersion,
-        description: chalk.grey(`Bug Fix`),
-      },
-      {
-        title: `Minor (${minorVersion})`,
-        value: minorVersion,
-        description: chalk.grey(`New Feature`),
-      },
-      {
-        title: `Major (${majorVersion})`,
-        value: majorVersion,
-        description: chalk.grey(`Breaking Change`),
-      },
-    )
+  if (prerelease === true) {
+    choices = choices.slice(3)
   }
 
-  return choices
+  if (prerelease === false) {
+    choices = choices.slice(0, 3)
+  }
+
+  return choices.concat({
+    title: `Custom`,
+    value: 'custom',
+    description: chalk.grey(`Custom version`),
+  })
+}
+
+async function checkVersion(pkgName: string, version: string) {
+  if (!semver.valid(version)) {
+    logger.printErrorAndExit(`Invalid semantic version ${chalk.bold(version)}.`)
+  }
+
+  if (await isVersionExist(pkgName, version)) {
+    logger.printErrorAndExit(
+      `${pkgName} has published v${chalk.bold(version)} already.`,
+    )
+  }
 }
 
 async function confirmVersion(api: Api, version: string): Promise<string> {

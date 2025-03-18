@@ -39,8 +39,13 @@ export default (api: Api) => {
   })
 
   api.onRelease(async ({ version, prereleaseId }) => {
-    const { registry, validPkgNames, validPkgRootPaths, packageManager } =
-      api.appData
+    const {
+      registry,
+      branch,
+      validPkgNames,
+      validPkgRootPaths,
+      packageManager,
+    } = api.appData
 
     api.step('Publishing package ...')
 
@@ -88,7 +93,9 @@ export default (api: Api) => {
       const { requireBranch } = api.config.git
       const gitCheckArg = requireBranch
         ? ['--publish-branch', requireBranch]
-        : ['--no-git-checks']
+        : ['master', 'main'].includes(branch)
+          ? []
+          : ['--no-git-checks']
 
       const cliArgs = [
         'publish',

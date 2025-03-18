@@ -13,6 +13,10 @@ export interface AppData {
    */
   registry: string
   /**
+   * 当前分支
+   */
+  branch: string
+  /**
    * 项目 package.json 路径
    */
   projectPkgJsonPath: string

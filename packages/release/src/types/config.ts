@@ -83,7 +83,6 @@ export interface Config extends UserConfig {
     requireOwner?: boolean
     /**
      * 是否预发布
-     * @default false
      */
     prerelease?: boolean
     /**
@@ -91,7 +90,7 @@ export interface Config extends UserConfig {
      */
     prereleaseId?: PrereleaseId
     /**
-     *
+     * 是否发布金丝雀版本
      * @default false
      */
     canary?: boolean
