@@ -2,6 +2,10 @@ import type { Config } from './types'
 
 export const defaultConfig: Config = {
   /**
+   * 项目工作目录
+   */
+  cwd: process.cwd(),
+  /**
    * git 相关配置项
    */
   git: {

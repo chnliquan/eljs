@@ -4,6 +4,7 @@ import minimist from 'minimist'
 import path from 'node:path'
 import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
 import updater from 'update-notifier'
+
 import { release } from './release'
 
 cli()
@@ -19,7 +20,7 @@ async function cli() {
   )
   program
     .version(pkg.version, '-v, --version', 'Output the current version.')
-    .option('--cwd <cwd>', 'Specify the current workspace directory.')
+    .option('--cwd <cwd>', 'Specify the  working directory.')
     .option('--git.independent', 'Generate git tag independent.')
     .option('--no-git.requireClean', 'Skip check git working tree clean.')
     .option('--no-git.changelog', 'Skip generate changelog.')
@@ -66,8 +67,6 @@ async function cli() {
   updater({ pkg }).notify()
   const options = parseOptions(program.opts())
   const version = program.args[0]
-  console.log('options', options)
-  return
   await release(version, options)
 }
 
@@ -138,6 +137,11 @@ function parseOptions<T extends NestedObject = NestedObject>(
         current = current[key]
       }
     }
+  }
+
+  if (result.git.changelog === true) {
+    const git = result.git
+    Reflect.deleteProperty(git, 'changelog')
   }
 
   return result

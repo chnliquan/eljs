@@ -1,4 +1,4 @@
-import { type AppData, type Config, type InternalConfig } from '@/types'
+import { type AppData, type Config } from '@/types'
 import {
   Pluggable,
   type ApplyEvent,
@@ -34,7 +34,7 @@ export class Runner extends Pluggable<Config> {
    */
   public appData: AppData = Object.create(null)
 
-  public constructor(options: InternalConfig = {}) {
+  public constructor(options: Config = {}) {
     const { cwd = process.cwd(), presets = [], plugins = [] } = options
     const projectPkgJsonPath = path.join(cwd, 'package.json')
 
@@ -68,13 +68,7 @@ export class Runner extends Pluggable<Config> {
   public async run(releaseTypeOrVersion?: ReleaseType | string): Promise<void> {
     await this.load()
 
-    this.config = await this.applyPlugins('modifyConfig', {
-      initialValue: deepMerge(
-        defaultConfig,
-        this.constructorOptions,
-        this.userConfig,
-      ) as RequiredRecursive<Config>,
-    })
+    await this._resolveConfig()
 
     /**
      * 修改应用数据
@@ -164,6 +158,19 @@ export class Runner extends Pluggable<Config> {
 
   public step(msg: string): void {
     return logger.step('Release', `${msg}\n`)
+  }
+
+  private async _resolveConfig() {
+    const mergeConfig = deepMerge(
+      {},
+      defaultConfig,
+      this.constructorOptions,
+      this.userConfig,
+    ) as RequiredRecursive<Config>
+
+    this.config = await this.applyPlugins('modifyConfig', {
+      initialValue: mergeConfig,
+    })
   }
 }
 

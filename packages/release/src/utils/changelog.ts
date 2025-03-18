@@ -9,6 +9,11 @@ export interface GenerateChangelogOptions {
    * 是否生成独立 tag
    */
   independent?: boolean
+  /**
+   * conventional-changelog 预设
+   * @link https://github.com/conventional-changelog/conventional-changelog/blob/master/packages/conventional-changelog/README.md#presets
+   */
+  preset?: string
 }
 
 /**
@@ -19,19 +24,38 @@ export interface GenerateChangelogOptions {
 export async function generateChangelog(
   options: GenerateChangelogOptions,
 ): Promise<string> {
-  const { cwd = process.cwd(), independent = false } = options
-
   const conventionalChangelog = (await import('conventional-changelog')).default
-  const config = (await import('@eljs/conventional-changelog-preset')).default
+  const conventionalChangelogOptions =
+    await getConventionalChangelogOptions(options)
 
   return new Promise((resolve, reject) => {
-    const stream = conventionalChangelog(
-      // https://github.com/conventional-changelog/conventional-changelog/tree/master/packages/conventional-changelog-core#conventionalchangelogcoreoptions-context-gitrawcommitsopts-parseropts-writeropts
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    const stream = conventionalChangelog(...conventionalChangelogOptions)
+    stream.pipe(concat(result => resolve(result.toString().trim())))
+    stream.on('error', reject)
+  })
+}
+
+async function getConventionalChangelogOptions(
+  options: GenerateChangelogOptions,
+) {
+  const { cwd = process.cwd(), independent = false, preset } = options
+
+  if (preset) {
+    return [
+      {
+        cwd,
+        preset,
+      },
+    ]
+  } else {
+    const config = (await import('@eljs/conventional-changelog-preset')).default
+    return [
+      // https://github.com/conventional-changelog/conventional-changelog/blob/standard-changelog-v6.0.0/packages/conventional-changelog/index.js#L21
       {
         cwd,
         config,
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
         tagPrefix: independent ? /^.+@/ : '',
         // tagPrefix: independent ? `${pkgName}@` : '',
       },
@@ -41,7 +65,7 @@ export async function generateChangelog(
       undefined,
       undefined,
       {
-        // https://github.com/conventional-changelog/conventional-changelog/blob/master/packages/conventional-changelog-core/lib/merge-config.js#L305
+        // https://github.com/conventional-changelog/conventional-changelog/blob/standard-changelog-v6.0.0/packages/conventional-changelog-core/lib/merge-config.js#L305
         finalizeContext: function (
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           context: any,
@@ -102,11 +126,8 @@ export async function generateChangelog(
           return context
         },
       },
-    )
-
-    stream.pipe(concat(result => resolve(result.toString().trim())))
-    stream.on('error', reject)
-  })
+    ]
+  }
 }
 
 function guessNextTag(previousTag: string, version: string) {

@@ -47,15 +47,17 @@ export default (api: Api) => {
 
   api.getChangelog(
     async () => {
-      if (!api.config.git.changelog) {
+      const { changelog, independent } = api.config.git
+
+      if (!changelog) {
         return ''
       }
 
-      const changelog = await generateChangelog({
+      return generateChangelog({
         cwd: api.cwd,
-        independent: api.config.git.independent,
+        independent,
+        preset: changelog.preset,
       })
-      return changelog
     },
     {
       stage: 10,
@@ -63,7 +65,7 @@ export default (api: Api) => {
   )
 
   api.onBeforeRelease(async ({ changelog }) => {
-    if (!changelog) {
+    if (!changelog || !api.config.git.changelog) {
       return
     }
 

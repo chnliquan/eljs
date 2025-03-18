@@ -3,20 +3,14 @@ import type { UserConfig } from '@eljs/pluggable'
 import type { PrereleaseId } from './npm'
 
 /**
- * 内部使用配置项
- */
-export interface InternalConfig extends Config {
-  /**
-   * 当前工作目录
-   * @default process.cwd()
-   */
-  cwd?: string
-}
-
-/**
  * 配置项
  */
 export interface Config extends UserConfig {
+  /**
+   * 项目工作目录
+   * @default process.cwd()
+   */
+  cwd?: string
   /**
    * git 相关配置项
    */
@@ -42,6 +36,11 @@ export interface Config extends UserConfig {
            * @default CHANGELOG.md
            */
           filename?: string
+          /**
+           * conventional-changelog 预设
+           * @link https://github.com/conventional-changelog/conventional-changelog/blob/master/packages/conventional-changelog/README.md#presets
+           */
+          preset?: string
         }
     /**
      * 是否生成独立的 git tag

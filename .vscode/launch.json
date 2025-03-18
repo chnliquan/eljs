@@ -61,13 +61,14 @@
         // "--version",
         // "--cwd=/Users/ender/kwai/technology/polyrepo-release",
         "--cwd=/Users/ender/kwai/technology/monorepo-release",
-        "--no-git.requireClean",
-        "--no-git.changelog",
+        // "--git.independent",
+        // "--no-git.requireClean",
+        // "--no-git.changelog",
         // "--git.requireBranch=master",
         "--npm.skipChecks",
         // "--npm.prerelease",
         // "--npm.prereleaseId=beta",
-        "--no-npm.confirm",
+        "--no-npm.confirm"
         // "prerelease"
       ],
       "console": "integratedTerminal",
