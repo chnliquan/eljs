@@ -1,5 +1,27 @@
 # ChangeLog 
 
+# [1.0.0-beta.2](https://github.com/chnliquan/eljs/compare/v1.0.0-beta.1...v1.0.0-beta.2) (2025-03-18)
+
+
+### ♻ Code Refactoring
+
+* **release:** optimize the configuration ([c78cc7e](https://github.com/chnliquan/eljs/commit/c78cc7e7e1206334b56c76c6ce6c862ba0a31115))
+
+
+### ✨ Features
+
+* **release:** add more config ([3f85f8b](https://github.com/chnliquan/eljs/commit/3f85f8b3cc689d5aeab3bffa32e044b2f2db41c7))
+* **release:** support changelog preset ([5065d38](https://github.com/chnliquan/eljs/commit/5065d3837dc4e8e54e42088c7d34aeb10f0d2137))
+* **release:** support npm publish args ([e9f231d](https://github.com/chnliquan/eljs/commit/e9f231dafe88899bca5a79d3f1a51d6c921531cd))
+* **release:** support skip git commit ([543c087](https://github.com/chnliquan/eljs/commit/543c08743cf115eea54bae12a8554e29302707d7))
+* **utils:** add debug ([088abba](https://github.com/chnliquan/eljs/commit/088abba1da3bc03d3e904c673fff368912b67f3f))
+* **utils:** deepmerge support more than two object ([7081221](https://github.com/chnliquan/eljs/commit/7081221ff0773248d85baf5c7d44722c8e675213))
+
+
+### 🐛 Bug Fixes
+
+* **utils:** typescript peerdeps ([0de36db](https://github.com/chnliquan/eljs/commit/0de36dbd2e8f4634ac69b73a57bc19e7824f62eb)) 
+
 # [1.0.0-beta.0](https://github.com/chnliquan/eljs/compare/v0.33.3...v1.0.0-beta.0) (2025-03-16)
 
 
