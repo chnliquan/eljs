@@ -1,7 +1,6 @@
 import type { Api } from '@/types'
 import {
   chalk,
-  getNpmRegistry,
   getPackageRootPaths,
   logger,
   readJson,
@@ -40,9 +39,7 @@ export default (api: Api) => {
       pkgNames.push(pkg.name)
     }
 
-    const registry =
-      memo.projectPkg?.publishConfig?.registry ||
-      (await getNpmRegistry(api.cwd))
+    const registry = memo.projectPkg?.publishConfig?.registry
 
     return {
       ...memo,

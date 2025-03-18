@@ -87,6 +87,10 @@ export interface Config extends UserConfig {
      */
     confirm?: boolean
     /**
+     * npm publish 参数
+     */
+    publishArgs?: string | string[]
+    /**
      * 是否同步到 Cnpm
      * @default false
      */

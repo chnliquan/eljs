@@ -1,5 +1,5 @@
 import type { Api } from '@/types'
-import { syncCnpm } from '@/utils'
+import { normalizeArgs, syncCnpm } from '@/utils'
 import { chalk, getNpmUser, logger, run } from '@eljs/utils'
 
 export default (api: Api) => {
@@ -51,15 +51,7 @@ export default (api: Api) => {
       const pkgName = validPkgNames[i]
 
       try {
-        promiseArr.push(
-          publishPackage(
-            pkgRootPath,
-            pkgName,
-            version,
-            registry,
-            prereleaseId as string,
-          ),
-        )
+        promiseArr.push(publishPackage(pkgRootPath, pkgName, version))
       } catch (error) {
         errors.push(pkgName)
       }
@@ -89,18 +81,14 @@ export default (api: Api) => {
       pkgRootPath: string,
       pkgName: string,
       version: string,
-      registry: string,
-      distTag?: string,
     ) {
-      const tag = distTag ? ['--tag', distTag] : []
-
+      const tagArg = prereleaseId ? ['--tag', prereleaseId] : ''
+      const registryArg = registry ? ['--registry', registry] : ''
       const cliArgs = [
         'publish',
-        '--registry',
-        registry,
-        ...tag,
-        '--access',
-        'public',
+        ...tagArg,
+        ...registryArg,
+        ...normalizeArgs(api.config.npm.publishArgs),
       ].filter(Boolean)
 
       await run(packageManager, cliArgs, {
