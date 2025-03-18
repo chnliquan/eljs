@@ -71,7 +71,7 @@
         // "--no-git.requireClean",
         // "--no-git.changelog",
         // "--git.requireBranch=master",
-        "--npm.skipChecks",
+        "--no-npm.requireOwner",
         // "--npm.prerelease",
         // "--npm.prereleaseId=beta",
         "--no-npm.confirm"

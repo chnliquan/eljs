@@ -42,9 +42,11 @@ async function main(): Promise<void> {
   await release(argv._[0], {
     ...argv,
     git: {
+      ...argv.git,
       requireClean: false,
     },
     npm: {
+      ...argv.npm,
       requireOwner: false,
       cnpm: true,
     },
