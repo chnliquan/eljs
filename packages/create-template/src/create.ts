@@ -1,4 +1,4 @@
-import { Create, type TemplateInfo } from '@eljs/create'
+import { Create, type TemplateConfig } from '@eljs/create'
 import { prompts } from '@eljs/utils'
 import assert from 'node:assert'
 
@@ -44,17 +44,17 @@ export class CreateTemplate {
   }
 
   public async run(projectName: string) {
-    const templateInfo = await this._getTemplateInfo()
+    const template = (await this._getTemplateInfo()) as TemplateConfig
 
     const create = new Create({
       ...this._opts,
       cwd: this.cwd,
-      templateInfo,
+      template,
     })
     await create.run(projectName)
   }
 
-  private _formatTemplate(template: Record<string, TemplateInfo>) {
+  private _formatTemplate(template: Record<string, Required<TemplateConfig>>) {
     return Object.keys(template).map(key => {
       const title = template[key].description
       return {

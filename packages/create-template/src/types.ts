@@ -1,4 +1,4 @@
-import type { TemplateInfo } from '@eljs/create'
+import type { TemplateConfig as BaseTemplateConfig } from '@eljs/create'
 
 export interface CreateTemplateOpts {
   /**
@@ -21,11 +21,6 @@ export interface CreateTemplateOpts {
    * 当前路径
    */
   cwd?: string
-  /**
-   * 命令行参数
-   */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  args?: Record<string, any>
 }
 
 export interface TemplateConfig {
@@ -36,5 +31,5 @@ export interface TemplateConfig {
   /**
    * 模版集合
    */
-  templates: Record<string, Record<string, TemplateInfo>>
+  templates: Record<string, Record<string, Required<BaseTemplateConfig>>>
 }
