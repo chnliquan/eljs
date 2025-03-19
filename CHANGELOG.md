@@ -1,5 +1,23 @@
 # ChangeLog 
 
+# [1.0.0-beta.3](https://github.com/chnliquan/eljs/compare/v1.0.0-beta.2...v1.0.0-beta.3) (2025-03-19)
+
+
+### ♻ Code Refactoring
+
+* **create:** template access ([f38caff](https://github.com/chnliquan/eljs/commit/f38caff202cbf56724c73028e68c93a720e8582a))
+
+
+### ✨ Features
+
+* **release:** optimize bump version logic ([9273591](https://github.com/chnliquan/eljs/commit/92735917648d818854dce95a4f854fa371ce812e))
+
+
+### 🐛 Bug Fixes
+
+* **release:** bump version check ([9ca85d6](https://github.com/chnliquan/eljs/commit/9ca85d66595f3f4b72968e0ff65f1764810c9146))
+* **release:** no changelog handle ([9aed53a](https://github.com/chnliquan/eljs/commit/9aed53a4f81df72602e1565c5baabf5adb865b06)) 
+
 # [1.0.0-beta.2](https://github.com/chnliquan/eljs/compare/v1.0.0-beta.1...v1.0.0-beta.2) (2025-03-18)
 
 
