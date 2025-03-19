@@ -9,7 +9,9 @@ export default (api: Api) => {
     if (requireOwner) {
       api.step('Checking npm owner ...')
 
-      const user = await getNpmUser(api.cwd)
+      const user = await getNpmUser({
+        cwd: api.cwd,
+      })
 
       for (const pkgName of api.appData.validPkgNames) {
         try {

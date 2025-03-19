@@ -1,7 +1,7 @@
 import { PLATFORM } from '@/constants'
+import { run, type RunCommandOptions } from '@/cp'
 import { isString } from '@/type'
 import type { OmitIndexSignature, PackageJson } from '@/types'
-import execa from 'execa'
 import os from 'node:os'
 import path from 'node:path'
 import urllib from 'urllib'
@@ -9,24 +9,22 @@ import which from 'which'
 
 /**
  * 获取 NPM 仓库
- * @param cwd 工作目录
+ * @param options 可选配置项
  */
-export async function getNpmRegistry(cwd?: string): Promise<string> {
-  return execa('npm', ['config', 'get', 'registry'], {
-    cwd,
-  }).then(data => {
+export async function getNpmRegistry(
+  options?: RunCommandOptions,
+): Promise<string> {
+  return run('npm', ['config', 'get', 'registry'], options).then(data => {
     return data.stdout.trim()
   })
 }
 
 /**
  * 获取 NPM 用户
- * @param cwd 工作目录
+ * @param options 可选配置项
  */
-export async function getNpmUser(cwd?: string): Promise<string> {
-  return execa('npm', ['whoami'], {
-    cwd,
-  }).then(data => {
+export async function getNpmUser(options?: RunCommandOptions): Promise<string> {
+  return run('npm', ['whoami'], options).then(data => {
     return data.stdout.trim()
   })
 }
@@ -57,42 +55,49 @@ export interface NpmInfo extends OmitIndexSignature<PackageJson> {
 }
 
 /**
- * 获取 NPM 包信息
+ * 获取 NPM 包元信息
  * @param name NPM 包名
  * @param options.registry 仓库地址
  * @param options.cwd 工作目录
  */
-export async function getNpmInfo(
+export async function getNpmMeta(
   name: string,
   options?: {
-    registry?: string
     cwd?: string
+    registry?: string
   },
 ): Promise<Omit<NpmInfo, 'version'> | null>
 /**
- * 获取指定版本的 NPM 包信息
+ * 获取指定版本的 NPM 包元信息
  * @param name NPM 包名
  * @param options.version 版本
  * @param options.registry 仓库地址
  * @param options.cwd 工作目录
  */
-export async function getNpmInfo(
+export async function getNpmMeta(
   name: string,
   options: {
     version: string
-    registry?: string
     cwd?: string
+    registry?: string
   },
 ): Promise<Omit<NpmInfo, 'versions' | 'dist-tags'> | null>
-export async function getNpmInfo(
+export async function getNpmMeta(
   name: string,
   options?: {
+    cwd?: string
     version?: string
     registry?: string
-    cwd?: string
   },
 ): Promise<NpmInfo | null> {
-  const registry = options?.registry || (await getNpmRegistry(options?.cwd))
+  let registry = options?.registry
+
+  if (!registry) {
+    registry = await getNpmRegistry({
+      cwd: options?.cwd,
+    })
+  }
+
   let url = `${registry.replace(/\/+$/, '')}/${encodeURIComponent(name).replace(
     /^%40/,
     '@',
@@ -134,7 +139,7 @@ export async function getNpmDistTag(
     args.push('--registry', options.registry)
   }
 
-  return execa('npm', args, {
+  return run('npm', args, {
     cwd: options?.cwd,
   }).then(data => {
     const distTag = {
@@ -163,7 +168,7 @@ export async function getNpmPrefix(): Promise<string> {
 
     if (process.platform === PLATFORM.WIN) {
       try {
-        prefix = (await execa('npm prefix -g')).stdout.toString().trim()
+        prefix = (await run('npm', ['prefix', '-g'])).stdout.toString().trim()
       } catch (err) {
         // ignore
       }
@@ -181,9 +186,9 @@ export async function getNpmPrefix(): Promise<string> {
 }
 
 /**
- * NPM 包名信息
+ * 解析后的 NPM 包名
  */
-export interface PkgNameInfo {
+export interface ResolvedPkgName {
   /**
    * 包名
    */
@@ -212,7 +217,7 @@ export interface PkgNameInfo {
  * '@eljs/utils' => { name: '@eljs/utils', version: 'latest', scope: '@eljs', unscopedName: 'utils'  }
  * 'utils' => { name: 'utils', version: 'latest', scope: '', unscopedName: 'utils'  }
  */
-export function pkgNameAnalysis(name: string): PkgNameInfo {
+export function pkgNameAnalysis(name: string): ResolvedPkgName {
   try {
     const regex = /^(@?[^@]+)(?:@(.+))?$/
     const [, pkgName = name, pkgVersion = 'latest'] = name.match(regex) || []

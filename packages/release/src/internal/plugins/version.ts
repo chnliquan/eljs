@@ -46,29 +46,35 @@ export default (api: Api) => {
     },
   )
 
-  api.onBeforeBumpVersion(async ({ version, isPrerelease, prereleaseId }) => {
-    const { prerelease, prereleaseId: preid } = api.config.npm
+  api.onBeforeBumpVersion(
+    async ({ version, isPrerelease, prereleaseId: preid }) => {
+      const { prerelease, prereleaseId } = api.config.npm
 
-    if (prerelease === true && !isPrerelease) {
-      logger.printErrorAndExit(
-        `Should input prerelease type, but got ${chalk.bold(version)}.`,
+      if (prereleaseId && prereleaseId !== preid) {
+        logger.printErrorAndExit(
+          `Should input ${prereleaseId} tag, but got ${chalk.bold(version)}.`,
+        )
+      }
+
+      if ((prereleaseId || prerelease === true) && !isPrerelease) {
+        logger.printErrorAndExit(
+          `Should input prerelease type, but got ${chalk.bold(version)}.`,
+        )
+      }
+
+      if (!prereleaseId && prerelease === false && isPrerelease) {
+        logger.printErrorAndExit(
+          `Should input release type, but got ${chalk.bold(version)}.`,
+        )
+      }
+
+      await checkVersion(
+        api.appData.validPkgNames[0],
+        version,
+        api.appData.registry,
       )
-    }
-
-    if (!preid && prerelease === false && isPrerelease) {
-      logger.printErrorAndExit(
-        `Should input release type, but got ${chalk.bold(version)}.`,
-      )
-    }
-
-    if (preid && preid !== prereleaseId) {
-      logger.printErrorAndExit(
-        `Should input ${preid} tag, but got ${chalk.bold(version)}.`,
-      )
-    }
-
-    await checkVersion(api.appData.validPkgNames[0], version)
-  })
+    },
+  )
 
   api.onBumpVersion(async ({ version }) => {
     const { projectPkgJsonPath, projectPkg, pkgNames, pkgJsonPaths, pkgs } =
@@ -334,12 +340,16 @@ function getReleaseChoices(
   })
 }
 
-async function checkVersion(pkgName: string, version: string) {
+async function checkVersion(
+  pkgName: string,
+  version: string,
+  registry?: string,
+) {
   if (!semver.valid(version)) {
     logger.printErrorAndExit(`Invalid semantic version ${chalk.bold(version)}.`)
   }
 
-  if (await isVersionExist(pkgName, version)) {
+  if (await isVersionExist(pkgName, version, registry)) {
     logger.printErrorAndExit(
       `${pkgName} has published v${chalk.bold(version)} already.`,
     )

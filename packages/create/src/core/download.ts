@@ -3,7 +3,7 @@ import {
   chalk,
   downloadGitRepo,
   downloadNpmTarball,
-  getNpmInfo,
+  getNpmMeta,
   logger,
   pkgNameAnalysis,
   readJsonSync,
@@ -37,7 +37,7 @@ export class Download {
 
   private async _downloadNpmTarball(name: string, registry?: string) {
     const { name: pkgName, version } = pkgNameAnalysis(name)
-    const data = await getNpmInfo(pkgName, {
+    const data = await getNpmMeta(pkgName, {
       version,
       registry,
     })

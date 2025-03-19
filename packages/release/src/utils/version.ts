@@ -1,5 +1,5 @@
 import type { DistTag, PrereleaseId } from '@/types'
-import { chalk, getGitCommitSha, logger, run } from '@eljs/utils'
+import { chalk, getGitCommitSha, run } from '@eljs/utils'
 import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
 
 export function isPrerelease(version: string): boolean {
@@ -78,36 +78,24 @@ export function parseVersion(version: string) {
  * 版本是否存在
  * @param pkgName 包名
  * @param version 版本
+ * @param registry 源仓库
  */
-export async function isVersionExist(pkgName: string, version: string) {
+export async function isVersionExist(
+  pkgName: string,
+  version: string,
+  registry?: string,
+) {
   try {
-    const remoteInfo = (
-      await run('npm', ['view', `${pkgName}@${version}`, version], {
-        verbose: false,
-      })
-    ).stdout.replace(/\W*/, '')
-
-    if (remoteInfo.trim() === '') {
+    const registryArg = registry ? ['--registry', registry] : []
+    const cliArgs = ['view', `${pkgName}@${version}`, ...registryArg].filter(
+      Boolean,
+    )
+    const remote = (await run('npm', cliArgs)).stdout.replace(/\W*/, '').trim()
+    if (!remote) {
       return false
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (err: any) {
-    if (err.message.includes('command not found')) {
-      logger.error(
-        `Please make sure the ${chalk.cyanBright.bold(
-          'npm',
-        )} has been installed`,
-      )
-      process.exit(1)
-    } else {
-      logger.info(
-        `This package ${chalk.cyanBright.bold(
-          pkgName,
-        )} has never been released, this is the first release.`,
-      )
-      console.log()
-      return false
-    }
+  } catch (error) {
+    return false
   }
 
   return true
@@ -129,6 +117,12 @@ export function getStableVersion(version: string) {
   return version
 }
 
+/**
+ * 获取基准版本
+ * @param localVersion 本地版本
+ * @param remoteVersion 远程版本
+ * @param distTag npm tag
+ */
 export function getReferenceVersion(
   localVersion: string,
   remoteVersion: string,
@@ -175,7 +169,7 @@ export function getMaxVersion(...versions: string[]) {
  * 获取发布版本
  * @param referenceVersion 基准版本
  * @param releaseType 发布版本
- * @param prereleaseId 预发布 ID
+ * @param prereleaseId 预发布 id
  */
 export function getReleaseVersion(
   referenceVersion: string,

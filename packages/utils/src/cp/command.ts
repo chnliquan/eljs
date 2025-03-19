@@ -1,0 +1,96 @@
+import { isPathExists } from '@/file'
+import chalk from 'chalk'
+import execa, {
+  type ExecaChildProcess,
+  type Options as ExecaOptions,
+} from 'execa'
+import path from 'node:path'
+
+const SPACES_REGEXP = / +/g
+
+/**
+ * 解析命令
+ * @param command 可执行的命令
+ */
+export function parseCommand(command: string): string[] {
+  const tokens: string[] = []
+
+  for (const token of command.trim().split(SPACES_REGEXP)) {
+    // Allow spaces to be escaped by a backslash if not meant as a delimiter
+    const previousToken: string = tokens[tokens.length - 1]
+
+    if (previousToken && previousToken.endsWith('\\')) {
+      // Merge previous token with current one
+      tokens[tokens.length - 1] = `${previousToken.slice(0, -1)} ${token}`
+    } else {
+      tokens.push(token)
+    }
+  }
+
+  return tokens
+}
+
+/**
+ * 执行命令可选配置项
+ */
+export interface RunCommandOptions extends ExecaOptions {
+  /**
+   * 是否打印命令
+   */
+  verbose?: boolean
+}
+
+/**
+ * 运行命令
+ * @param command 可运行的命令
+ * @param args 命令接收的参数
+ * @param options 可选配置项
+ */
+export function run(
+  command: string,
+  args: string[],
+  options?: RunCommandOptions,
+): ExecaChildProcess {
+  if (options?.verbose) {
+    console.log('$', chalk.greenBright(command), ...args)
+  }
+
+  return execa(command, args, options)
+}
+
+/**
+ * 运行命令
+ * @param command 可运行的命令
+ * @param options 可选配置项
+ */
+export function runCommand(
+  command: string,
+  options?: RunCommandOptions,
+): ExecaChildProcess {
+  const [cmd, ...args] = parseCommand(command)
+  return run(cmd, args, options)
+}
+
+/**
+ * 获取可执行的命令
+ * @param target 命令
+ * @param dirs 文件夹
+ */
+export async function getExecutableCommand(
+  target: string,
+  dirs?: string[],
+): Promise<string | null> {
+  if (!dirs) {
+    dirs = (process.env.PATH || '').split(':')
+  }
+
+  for (const dir of dirs) {
+    const resolved = path.join(dir, target)
+
+    if (await isPathExists(resolved)) {
+      return resolved
+    }
+  }
+
+  return null
+}
