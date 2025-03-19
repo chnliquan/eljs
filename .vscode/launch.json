@@ -97,10 +97,10 @@
         "DEBUG": "create*"
       },
       "args": [
-        "init",
         // "@eljs/create-plugin-npm-web",
         // "@eljs/utils",
-        "./template",
+        // "./template",
+        "./generator",
         "create-app",
         "--cwd=/Users/ender/kwai/technology/polyrepo-release",
         "-r"

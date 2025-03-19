@@ -4,6 +4,7 @@ import {
   confirm,
   createDebugger,
   findUp,
+  isDirectory,
   isPathExists,
   isString,
   logger,
@@ -125,8 +126,20 @@ export class Create {
    */
   private async _resolveTemplate() {
     if (isString(this.template)) {
-      this._templateRootPath = this.template
+      // 处理本地模版
+      if (this.template.startsWith('.') || this.template.startsWith('/')) {
+        const path = join(this.cwd, this.template)
 
+        if (!(await isDirectory(path))) {
+          throw new Error(`Invalid template ${this.template}.`)
+        }
+
+        this._isLocal = true
+        this._templateRootPath = path
+        return
+      }
+
+      // 处理 node_modules
       try {
         const cwd = resolve.sync(this.template, {
           basedir: this.cwd,
@@ -147,13 +160,7 @@ export class Create {
         )) as string
         this._isLocal = true
         return
-      } catch (error) {
-        const err = error as Error
-
-        if (this.template.startsWith('.') || this.template.startsWith('/')) {
-          throw new Error(`Invalid template ${this.template}:\n${err.message}`)
-        }
-
+      } catch (_) {
         this.template = {
           type: 'npm',
           value: this.template,

@@ -23,7 +23,7 @@ async function cli() {
   program
     .version(pkg.version, '-v, --version', 'Output the current version.')
     .description('Create a project from a remote template.')
-    .command('init <template> <project-name>')
+    .arguments('<template> <project-name>')
     .option('--cwd <cwd>', 'Specify the working directory.')
     .option('-r, --override', 'Override directory when exists.')
     .action(async (template, projectName, options) => {

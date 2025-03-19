@@ -4,7 +4,7 @@ import {
   isDirectory,
   type RenderTemplateOptions,
 } from '@eljs/utils'
-import { join, resolve } from 'node:path'
+import { basename, join, resolve } from 'node:path'
 
 export default (api: Api) => {
   api.registerMethod(
@@ -22,7 +22,10 @@ export default (api: Api) => {
           renderOptions: options,
         })
       } else {
-        const destFile = join(api.paths.target, srcFile.replace(/\.tpl$/, ''))
+        const destFile = join(
+          api.paths.target,
+          basename(path).replace(/\.tpl$/, ''),
+        )
 
         if (srcFile.endsWith('.tpl')) {
           await api.copyTpl(srcFile, destFile, data, {
