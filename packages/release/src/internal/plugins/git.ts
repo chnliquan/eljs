@@ -80,10 +80,8 @@ export default (api: Api) => {
     api.step('Generating changelog ...')
 
     if (changelog.indexOf('###') === -1) {
-      changelog = changelog.replace(
-        /\n+/g,
-        `\n\n**Note:** Version bump only for package ${api.appData.projectPkg.name}`,
-      )
+      changelog = changelog.replace(/\n+/g, '')
+      changelog += `\n\n**Note:** No changes, only version bump.`
     }
 
     if (await isPathExists(CHANGELOG_FILE)) {
