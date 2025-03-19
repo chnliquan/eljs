@@ -1,12 +1,11 @@
-import type { TemplateInfo } from '@/types'
+import type { TemplateConfig } from '@/types'
 import {
   chalk,
   downloadGitRepo,
   downloadNpmTarball,
   getNpmMeta,
-  logger,
   pkgNameAnalysis,
-  readJsonSync,
+  readJson,
   runCommand,
   type PackageJson,
 } from '@eljs/utils'
@@ -14,16 +13,22 @@ import path from 'node:path'
 import ora, { type Ora } from 'ora'
 
 export class Download {
-  private _opts: TemplateInfo
+  /**
+   * 构造函数参数
+   */
+  public constructorOptions: TemplateConfig
+  /**
+   * spinner
+   */
   private _spinner: Ora
 
-  public constructor(opts: TemplateInfo) {
-    this._opts = opts
+  public constructor(options: TemplateConfig) {
+    this.constructorOptions = options
     this._spinner = ora()
   }
 
-  public async download() {
-    const { type, value, registry } = this._opts
+  public async download(): Promise<string> {
+    const { type, value, registry } = this.constructorOptions
 
     switch (type) {
       case 'npm':
@@ -31,10 +36,17 @@ export class Download {
       case 'git':
         return this._downloadGit(value)
       default:
-        logger.error('模板类型错误')
+        throw new Error(
+          `Download type must be npm or git, but got ${chalk.bold(type)}`,
+        )
     }
   }
 
+  /**
+   * 下载 npm 压缩包
+   * @param name 包名
+   * @param registry 源仓库
+   */
   private async _downloadNpmTarball(name: string, registry?: string) {
     const { name: pkgName, version } = pkgNameAnalysis(name)
     const data = await getNpmMeta(pkgName, {
@@ -44,27 +56,32 @@ export class Download {
 
     if (!data) {
       throw new Error(
-        `模板 ${chalk.cyanBright(
+        `Access ${chalk.cyanBright(
           `${pkgName}${version ? `@${version}` : ''}`,
-        )} 获取失败`,
+        )} failed.`,
       )
     }
 
-    const pkgSpec = chalk.cyanBright(`${pkgName}@${data.version}`)
-    this._spinner.start(`Downloading ${pkgSpec}`)
+    const projectName = chalk.cyanBright(`${pkgName}@${data.version}`)
+    this._spinner.start(`Downloading ${projectName}`)
 
     try {
       const { tarball } = data.dist
       const templateDir = await downloadNpmTarball(tarball)
       this._spinner.succeed()
-      await this._installDependencies(templateDir, pkgSpec)
+      await this._installDependencies(templateDir, projectName)
       return templateDir
-    } catch (err) {
+    } catch (error) {
       this._spinner.fail()
-      throw new Error((err as Error).message)
+      const err = error as Error
+      throw new Error(`Download ${projectName} failed:\n${err.message}`)
     }
   }
 
+  /**
+   * 下载 git
+   * @param url git url
+   */
   private async _downloadGit(url: string) {
     this._spinner.start(`Downloading ${url}`)
 
@@ -73,33 +90,35 @@ export class Download {
       this._spinner.succeed()
       await this._installDependencies(templateDir, url)
       return templateDir
-    } catch (err) {
+    } catch (error) {
       this._spinner.fail()
-      throw new Error((err as Error).message)
+      const err = error as Error
+      throw new Error(`Download ${url} failed:\n${err.message}`)
     }
   }
 
-  private async _installDependencies(dist: string, pkgSpec: string) {
+  /**
+   * 安装依赖
+   * @param root 项目根目录
+   * @param projectName 项目名称
+   */
+  private async _installDependencies(root: string, projectName: string) {
     try {
-      const pkgJSON: PackageJson = readJsonSync(
-        path.join(dist, './package.json'),
-      )
+      const pkg: PackageJson = await readJson(path.join(root, './package.json'))
 
-      if (
-        pkgJSON.dependencies &&
-        Object.keys(pkgJSON.dependencies).length > 0
-      ) {
-        this._spinner.start(`Installing ${pkgSpec}`)
+      if (pkg.dependencies && Object.keys(pkg.dependencies)?.length > 0) {
+        this._spinner.start(`Installing ${projectName}`)
         await runCommand('npm install --production', {
-          cwd: dist,
-          verbose: false,
+          cwd: root,
         })
         this._spinner.succeed()
       }
-    } catch (err) {
-      console.log()
+    } catch (error) {
       this._spinner.fail()
-      throw new Error((err as Error).message)
+      const err = error as Error
+      throw new Error(
+        `Install dependencies in ${projectName} failed:\n${err.message}`,
+      )
     }
   }
 }

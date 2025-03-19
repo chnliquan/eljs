@@ -1,81 +1,70 @@
-import type { CreateOptions, TemplateInfo } from '@/types'
+import type { CreateOptions } from '@/types'
 import {
   chalk,
   confirm,
-  isDirectory,
-  isPathExistsSync,
+  createDebugger,
+  findUp,
+  isPathExists,
+  isString,
   logger,
-  mkdirSync,
-  removeSync,
+  mkdir,
+  remove,
+  resolve,
+  tryPaths,
 } from '@eljs/utils'
-import assert from 'node:assert'
-import { readdirSync } from 'node:fs'
-import path from 'node:path'
+import { readdir } from 'node:fs/promises'
+import path, { join } from 'node:path'
 
 import { Download } from './download'
-import { Generator } from './generator'
-
-export function objectToArray(
-  obj: Record<string, unknown>,
-  valueIsNumber = false,
-) {
-  return Object.keys(obj).map(key => {
-    const title = obj[key] as string
-    return {
-      title,
-      value: valueIsNumber ? Number(key) : key,
-    }
-  })
-}
+import { Runner } from './runner'
 
 const TARGET_DIR_WHITE_LIST = ['.git', 'LICENSE']
 
+const debug = createDebugger('create:class')
+
 export class Create {
   /**
-   * 构造函数配置项
+   * 构造函数参数
    */
-  private _opts: CreateOptions
+  public constructorOptions: CreateOptions
   /**
    * 当前路径
    */
-  private _cwd: string = process.cwd()
+  public cwd: string
   /**
-   * 本地模板路径
+   * 模版
    */
-  private _localTemplatePath?: string
+  public template: CreateOptions['template']
+  /**
+   * 模版根路径
+   */
+  public _templateRootPath!: string
+  /**
+   * 是否为本地模版
+   */
+  private _isLocal = false
 
-  public constructor(opts: CreateOptions) {
-    assert(
-      opts.template || opts.templateInfo,
-      `请传入 \`templateInfo\` 或者 \`template\``,
-    )
-    this._opts = opts
+  public constructor(options: CreateOptions) {
+    const { cwd = process.cwd(), template } = options
 
-    if (opts.cwd) {
-      this._cwd = opts.cwd
-    }
-
-    this._ensureLocalTemplate(this._opts.template)
+    this.constructorOptions = options
+    this.cwd = cwd
+    this.template = template
   }
 
-  public get cwd() {
-    return this._cwd
-  }
-
-  public get templateInfo() {
-    return this._opts.templateInfo
-  }
-
+  /**
+   * 执行创建
+   * @param projectName 项目名
+   */
   public async run(projectName: string) {
-    let templatePath = ''
-
     try {
-      const name =
-        projectName === '.' ? path.relative('../', this.cwd) : projectName
       const targetDir = path.resolve(this.cwd, projectName)
 
-      if (!isPathExistsSync(targetDir)) {
-        mkdirSync(targetDir)
+      debug?.(`targetDir:`, targetDir)
+      debug?.(`projectName:`, projectName)
+
+      if (!(await isPathExists(targetDir))) {
+        await mkdir(targetDir)
       } else {
         const override = await this._checkTargetDir(targetDir)
 
@@ -84,77 +73,95 @@ export class Create {
         }
       }
 
-      templatePath = (await this._getTemplatePath()) as string
+      await this._resolveTemplate()
+      debug?.(`templateRootPath`, this._templateRootPath)
 
-      const generator = new Generator({
-        isLocal: !!this._localTemplatePath,
-        projectName: name,
-        targetDir,
+      // 检查生成配置否存在
+      const generatorFile = await tryPaths([
+        join(this._templateRootPath, 'generators/index.ts'),
+        join(this._templateRootPath, 'generators/index.js'),
+      ])
+
+      const runner = new Runner({
+        cwd: this._templateRootPath,
+        plugins: generatorFile ? [generatorFile] : [],
       })
 
-      await generator.generate(templatePath)
-    } catch (err) {
-      console.log()
-      logger.error('创建模版失败，错误信息如下：')
-      throw err
+      await runner.run(targetDir, projectName)
     } finally {
-      this._removeTemplate(templatePath)
+      if (!this._isLocal && (await isPathExists(this._templateRootPath))) {
+        await remove(this._templateRootPath)
+      }
     }
   }
 
-  private async _ensureLocalTemplate(localTemplatePath?: string) {
-    if (!localTemplatePath) {
-      return
-    }
-
-    this._localTemplatePath = path.join(this._cwd, localTemplatePath)
-
-    assert(
-      isPathExistsSync(this._localTemplatePath),
-      `传入的自定义模板 ${chalk.cyan(
-        this._localTemplatePath,
-      )} 不存在, 请检查输入`,
-    )
-
-    assert(
-      isDirectory(this._localTemplatePath),
-      `传入的自定义模板 ${chalk.cyan(
-        this._localTemplatePath,
-      )} 不是一个文件目录, 请检查输入`,
-    )
-  }
-
-  private _checkTargetDir(targetDir: string) {
-    if (this._opts.force) {
+  /**
+   * 检查目标文件夹
+   * @param targetDir 目标文件夹
+   */
+  private async _checkTargetDir(targetDir: string): Promise<boolean> {
+    if (this.constructorOptions.force) {
       return true
     }
 
-    const files = readdirSync(targetDir).filter(
+    const files = (await readdir(targetDir)).filter(
       file => !TARGET_DIR_WHITE_LIST.includes(file),
     )
 
     if (files.length) {
-      logger.warn(`当前文件夹 ${chalk.bold(targetDir)} 存在如下文件:\n`)
+      logger.warn(
+        `The current folder ${chalk.bold(targetDir)} contains the following files:\n`,
+      )
       files.forEach(file => console.log(' - ' + file))
       console.log()
-      return confirm(`确定要覆盖当前文件夹吗?`, true)
+      return confirm(`Are you sure to overwrite the current folder?`, true)
     }
 
     return true
   }
 
-  private async _getTemplatePath() {
-    if (this._localTemplatePath) {
-      return this._localTemplatePath
+  /**
+   * 解析模版
+   */
+  private async _resolveTemplate() {
+    if (isString(this.template)) {
+      this._templateRootPath = this.template
+
+      try {
+        const cwd = resolve.sync(this.template, {
+          basedir: this.cwd,
+        })
+
+        this._templateRootPath = (await findUp(
+          async directory => {
+            const exist = await isPathExists(
+              path.join(directory, 'package.json'),
+            )
+            if (exist) {
+              return directory
+            }
+
+            return
+          },
+          { cwd, type: 'directory' },
+        )) as string
+        this._isLocal = true
+        return
+      } catch (error) {
+        const err = error as Error
+
+        if (this.template.startsWith('.') || this.template.startsWith('/')) {
+          throw new Error(`Invalid template ${this.template}:\n${err.message}`)
+        }
+
+        this.template = {
+          type: 'npm',
+          value: this.template,
+        }
+      }
     }
 
-    const download = new Download(this.templateInfo as TemplateInfo)
-    return download.download()
-  }
-
-  private _removeTemplate(templatePath: string) {
-    if (!this._localTemplatePath && isPathExistsSync(templatePath)) {
-      removeSync(templatePath)
-    }
+    const download = new Download(this.template)
+    this._templateRootPath = await download.download()
   }
 }

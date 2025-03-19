@@ -1,18 +1,19 @@
-export type TemplateType = 'npm' | 'git' | 'local'
-
-export interface TemplateInfo {
+/**
+ * 模版配置
+ */
+export interface TemplateConfig {
   /**
-   * 模板类型
+   * 模版源类型
    */
   type: 'npm' | 'git'
   /**
-   * 模板描述
-   */
-  description: string
-  /**
-   * 模版类型对应值
+   * 模版值
    */
   value: string
+  /**
+   * 模板描述
+   */
+  description?: string
   /**
    * 仓库地址
    */
@@ -20,28 +21,21 @@ export interface TemplateInfo {
 }
 
 /**
- * 创建参数
+ * 构造函数参数
  */
 export interface CreateOptions {
   /**
-   * 是否直接覆盖文件
+   * 模板
    */
-  force?: boolean
+  template: string | TemplateConfig
   /**
-   * 模板路径
-   */
-  template?: string
-  /**
-   * 模版信息
-   */
-  templateInfo?: TemplateInfo
-  /**
-   * 当前路径
+   * 项目工作目录
+   * @default process.cwd()
    */
   cwd?: string
   /**
-   * 命令行参数
+   * 是否直接覆盖文件
+   * @default false
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  args?: Record<string, any>
+  force?: boolean
 }

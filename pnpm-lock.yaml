@@ -125,6 +125,9 @@ importers:
       '@eljs/utils':
         specifier: workspace:*
         version: link:../utils
+      commander:
+        specifier: ^13.1.0
+        version: 13.1.0
       dayjs:
         specifier: ^1.11.13
         version: 1.11.13
@@ -140,10 +143,16 @@ importers:
       sort-package-json:
         specifier: ^3.0.0
         version: 3.0.0
+      update-notifier:
+        specifier: ^5.1.0
+        version: 5.1.0
     devDependencies:
       '@types/minimist':
         specifier: ^1.2.5
         version: 1.2.5
+      '@types/update-notifier':
+        specifier: ^6.0.8
+        version: 6.0.8
 
   packages/create-template:
     dependencies:

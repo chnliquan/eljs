@@ -83,28 +83,48 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug Create Template",
+      "name": "Debug Create",
       "runtimeExecutable": "tsx",
-      "program": "${workspaceFolder}/packages/create-template/src/cli.ts",
+      "runtimeArgs": [
+        "--tsconfig",
+        "${workspaceFolder}/packages/create/tsconfig.json"
+      ],
+      "program": "${workspaceFolder}/packages/create/src/cli.ts",
       "windows": {
-        "program": "${workspaceFolder}/packages/create-template/src/cli.ts"
+        "program": "${workspaceFolder}/packages/create/src/cli.ts"
       },
-      "args": ["temp", "-f"],
-      "cwd": "${workspaceFolder}",
+      "env": {
+        "DEBUG": "create*"
+      },
+      "args": [
+        "init",
+        // "@eljs/create-plugin-npm-web",
+        // "@eljs/utils",
+        "./template",
+        "create-app",
+        "--cwd=/Users/ender/kwai/technology/polyrepo-release",
+        "-r"
+      ],
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
     },
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug Create Gen",
+      "name": "Debug Create Template",
       "runtimeExecutable": "tsx",
-      "program": "${workspaceFolder}/packages/create/src/cli.ts",
+      "runtimeArgs": [
+        "--tsconfig",
+        "${workspaceFolder}/packages/create-template/tsconfig.json"
+      ],
+      "program": "${workspaceFolder}/packages/create-template/src/cli.ts",
       "windows": {
-        "program": "${workspaceFolder}/packages/create/src/cli.ts"
+        "program": "${workspaceFolder}/packages/create-template/src/cli.ts"
       },
-      "args": ["${workspaceFolder}/packages/create/bin/gen.js"],
-      "cwd": "/Users/ender/learning/github/templates/packages/npm-node",
+      "env": {
+        "DEBUG": "create-template*"
+      },
+      "args": ["-f"],
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
     }

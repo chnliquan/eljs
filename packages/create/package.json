@@ -21,7 +21,7 @@
   "module": "esm/index.js",
   "types": "esm/index.d.ts",
   "bin": {
-    "gen": "bin/gen.js"
+    "create": "bin/create.js"
   },
   "files": [
     "esm/*",
@@ -36,13 +36,16 @@
   "dependencies": {
     "@eljs/pluggable": "workspace:*",
     "@eljs/utils": "workspace:*",
+    "commander": "^13.1.0",
     "dayjs": "^1.11.13",
-    "ora": "^5.4.1",
     "minimist": "^1.2.8",
+    "ora": "^5.4.1",
     "prettier": "^3.5.3",
-    "sort-package-json": "^3.0.0"
+    "sort-package-json": "^3.0.0",
+    "update-notifier": "^5.1.0"
   },
   "devDependencies": {
-    "@types/minimist": "^1.2.5"
+    "@types/minimist": "^1.2.5",
+    "@types/update-notifier": "^6.0.8"
   }
 }
