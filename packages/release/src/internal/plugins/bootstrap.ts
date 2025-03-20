@@ -3,6 +3,7 @@ import {
   chalk,
   getGitBranch,
   getPackageRootPaths,
+  isPathExists,
   logger,
   readJson,
   type PackageJson,
@@ -21,11 +22,16 @@ export default (api: Api) => {
 
     for (const packageRootPath of packageRootPaths) {
       const pkgJsonPath = path.join(packageRootPath, 'package.json')
+
+      if (!(await isPathExists(pkgJsonPath))) {
+        continue
+      }
+
       const pkg = await readJson<Required<PackageJson>>(pkgJsonPath)
 
       if (!pkg.name) {
         logger.warn(
-          `Detect ${chalk.cyanBright(pkgJsonPath)} has no name field, skipped.`,
+          `The package ${chalk.bold(pkgJsonPath)} has no ${chalk.cyanBright('name')} field, skipped.`,
         )
         continue
       }

@@ -2,8 +2,6 @@ import type { Api } from '@/types'
 import { generateChangelog } from '@/utils'
 import {
   chalk,
-  getGitBranch,
-  getGitUpstreamBranch,
   gitCommit,
   gitPush,
   gitTag,
@@ -124,10 +122,9 @@ export default (api: Api) => {
 
     api.step('Committing changes ...')
 
-    const commitCliArgs = [...normalizeArgs(commitArgs)].filter(Boolean)
     const commitMsg = commitMessage.replace('${version}', version)
 
-    await gitCommit(commitMsg, commitCliArgs, {
+    await gitCommit(commitMsg, [...normalizeArgs(commitArgs)].filter(Boolean), {
       cwd: api.cwd,
       verbose: true,
     })
@@ -147,32 +144,9 @@ export default (api: Api) => {
       return
     }
 
-    const upstreamArgs = await getUpstreamArgs(api.cwd)
-    const pushCliArgs = [...normalizeArgs(pushArgs), ...upstreamArgs].filter(
-      Boolean,
-    )
-
-    await gitPush(pushCliArgs, {
+    await gitPush([...normalizeArgs(pushArgs)].filter(Boolean), {
       cwd: api.cwd,
       verbose: true,
     })
   })
-}
-
-async function getUpstreamArgs(cwd: string) {
-  if (
-    !(await getGitUpstreamBranch({
-      cwd,
-    }))
-  ) {
-    return [
-      '--set-upstream',
-      'origin',
-      await getGitBranch({
-        cwd,
-      }),
-    ]
-  }
-
-  return []
 }
