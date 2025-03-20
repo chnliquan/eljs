@@ -1,6 +1,6 @@
 {
   "name": "@eljs/service",
-  "version": "1.0.0-beta.3",
+  "version": "1.0.0-beta.4",
   "description": "NodeJS 插件服务",
   "keywords": [
     "eljs",

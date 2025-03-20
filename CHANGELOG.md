@@ -1,5 +1,21 @@
 # ChangeLog 
 
+# [1.0.0-beta.4](https://github.com/chnliquan/eljs/compare/v1.0.0-beta.3...v1.0.0-beta.4) (2025-03-20)
+
+
+### ♻ Code Refactoring
+
+* **release:** optimize remote dist tag ([78c5c4c](https://github.com/chnliquan/eljs/commit/78c5c4c144bb871bfabe1090591b09fc509b28d6))
+* **utils:** error handler ([ee9932a](https://github.com/chnliquan/eljs/commit/ee9932adca0ce1ddd9afe6f219bb6164e432452b))
+
+
+### 🐛 Bug Fixes
+
+* **create:** render file ([9c566b0](https://github.com/chnliquan/eljs/commit/9c566b023937a9490b899e16e3e991cc78e1b2ac))
+* **release:** invalid package ([efd2268](https://github.com/chnliquan/eljs/commit/efd2268d3f9a2a14e9b22b77a4dc8425286eb281))
+* **release:** no valid package ([1ce8406](https://github.com/chnliquan/eljs/commit/1ce8406fd37d00e2ebea03e7c46993377be530fb))
+* **utils:** export package ([6c5f09b](https://github.com/chnliquan/eljs/commit/6c5f09b6c00e88af0574ec9bb8f7fa949c5a34fb)) 
+
 # [1.0.0-beta.3](https://github.com/chnliquan/eljs/compare/v1.0.0-beta.2...v1.0.0-beta.3) (2025-03-19)
 
 
