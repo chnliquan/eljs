@@ -100,27 +100,28 @@ export function loadJsSync<T>(path: string): T {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function loadTs<T = any>(path: string): Promise<T> {
   const compiledPath = `${path.slice(0, -2)}mjs`
-  let transpiledContent = ''
 
   try {
+    const config = resolveTsConfig(dirname(path)) ?? {}
+    config.compilerOptions = {
+      ...config.compilerOptions,
+      module: ModuleKind.ES2022,
+      moduleResolution: ModuleResolutionKind.Bundler,
+      target: ScriptTarget.ES2022,
+      noEmit: false,
+    }
+    const content = await readFile(path)
+    let transpiledContent = ''
+
     try {
-      const config = resolveTsConfig(dirname(path)) ?? {}
-      config.compilerOptions = {
-        ...config.compilerOptions,
-        module: ModuleKind.ES2022,
-        moduleResolution: ModuleResolutionKind.Bundler,
-        target: ScriptTarget.ES2022,
-        noEmit: false,
-      }
-      const content = await readFile(path)
       transpiledContent = transpileModule(content, config).outputText
-      await writeFile(compiledPath, transpiledContent)
     } catch (error) {
       const err = error as Error
       err.message = `TypeScript Error in ${path}:\n${err.message}`
       throw err
     }
 
+    await writeFile(compiledPath, transpiledContent)
     return loadJs(compiledPath)
   } finally {
     if (await isPathExists(compiledPath)) {
@@ -145,16 +146,19 @@ export function loadTsSync<T>(path: string): T {
       target: ScriptTarget.ES2022,
       noEmit: false,
     }
-    const transpiledContent = transpileModule(
-      readFileSync(path),
-      config,
-    ).outputText
+    const content = readFileSync(path)
+    let transpiledContent = ''
+
+    try {
+      transpiledContent = transpileModule(content, config).outputText
+    } catch (error) {
+      const err = error as Error
+      err.message = `TypeScript Error in ${path}:\n${err.message}`
+      throw err
+    }
+
     writeFileSync(compiledPath, transpiledContent)
     return loadJsSync(compiledPath)
-  } catch (error) {
-    const err = error as Error
-    err.message = `TypeScript Error in ${path}:\n${err.message}`
-    throw err
   } finally {
     if (isPathExistsSync(compiledPath)) {
       removeSync(compiledPath)
@@ -167,13 +171,14 @@ export function loadTsSync<T>(path: string): T {
  * @param path 文件路径
  */
 export async function loadJson<T>(path: string): Promise<T> {
+  const content = await readFile(path)
+
   try {
-    const content = await readFile(path)
     const json = parseJson(content)
     return json
   } catch (error) {
     const err = error as Error
-    err.message = `Load ${path} failed:\n${err.message}`
+    err.message = `Parse ${path} failed:\n${err.message}`
     throw err
   }
 }
@@ -183,13 +188,14 @@ export async function loadJson<T>(path: string): Promise<T> {
  * @param path 文件路径
  */
 export function loadJsonSync<T>(path: string): T {
+  const content = readFileSync(path)
+
   try {
-    const content = readFileSync(path)
     const json = parseJson(content)
     return json
   } catch (error) {
     const err = error as Error
-    err.message = `Load ${path} failed:\n${err.message}`
+    err.message = `Parse ${path} failed:\n${err.message}`
     throw err
   }
 }
@@ -199,8 +205,9 @@ export function loadJsonSync<T>(path: string): T {
  * @param path 文件路径
  */
 export async function loadYaml<T>(path: string): Promise<T> {
+  const content = await readFile(path)
+
   try {
-    const content = await readFile(path)
     const data = yaml.load(content)
     return data as T
   } catch (error) {
@@ -215,8 +222,9 @@ export async function loadYaml<T>(path: string): Promise<T> {
  * @param path 文件路径
  */
 export function loadYamlSync<T>(path: string): T {
+  const content = readFileSync(path)
+
   try {
-    const content = readFileSync(path)
     const data = yaml.load(content)
     return data as T
   } catch (error) {

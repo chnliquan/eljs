@@ -2,6 +2,7 @@ import {
   deepMerge,
   fileLoaders,
   fileLoadersSync,
+  isESModule,
   isPathExists,
   isPathExistsSync,
 } from '@eljs/utils'
@@ -176,11 +177,7 @@ export class ConfigManager {
           fileLoadersSync[extname(configFile) as keyof typeof fileLoadersSync]
 
         try {
-          const content = loader(configFile) as {
-            // eslint-disable-next-line @typescript-eslint/naming-convention
-            __esModule: boolean
-            default: T
-          }
+          const content = loader(configFile)
 
           if (!content) {
             return config
@@ -188,7 +185,7 @@ export class ConfigManager {
 
           config = deepMerge(
             config as T,
-            content.__esModule ? content.default : content,
+            isESModule<T>(content) ? content.default : content,
           ) as T
         } catch (error) {
           const err = error as Error
@@ -216,11 +213,7 @@ export class ConfigManager {
           fileLoaders[extname(configFile) as keyof typeof fileLoaders]
 
         try {
-          const content = (await loader(configFile)) as {
-            // eslint-disable-next-line @typescript-eslint/naming-convention
-            __esModule: boolean
-            default: T
-          }
+          const content = await loader(configFile)
 
           if (!content) {
             return config
@@ -228,7 +221,7 @@ export class ConfigManager {
 
           config = deepMerge(
             config as T,
-            content.__esModule ? content.default : content,
+            isESModule<T>(content) ? content.default : content,
           ) as T
         } catch (error) {
           const err = error as Error

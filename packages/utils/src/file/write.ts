@@ -92,9 +92,7 @@ export async function safeWriteJson<T extends object>(
       await fsp.unlink(tmpFile)
     }
 
-    const err = error as Error
-    err.message = `Safe Write ${path} failed:\n${err.message}`
-    throw err
+    throw error
   }
 }
 
@@ -118,9 +116,7 @@ export function safeWriteJsonSync<T extends object>(
       fs.unlinkSync(tmpFile)
     }
 
-    const err = error as Error
-    err.message = `Safe Write ${path} failed:\n${err.message}`
-    throw err
+    throw error
   }
 }
 
@@ -186,9 +182,7 @@ export async function safeWriteFile(
       await fsp.unlink(tmpFile)
     }
 
-    const err = error as Error
-    err.message = `Safe Write ${path} failed:\n${err.message}`
-    throw err
+    throw error
   }
 }
 
@@ -214,8 +208,6 @@ export function safeWriteFileSync(
       fs.unlinkSync(tmpFile)
     }
 
-    const err = error as Error
-    err.message = `Safe Write ${path} failed:\n${err.message}`
-    throw err
+    throw error
   }
 }

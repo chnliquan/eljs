@@ -45,13 +45,14 @@ export function readFileSync(
  * @param file 文件路径
  */
 export async function readJson<T extends object>(file: string): Promise<T> {
+  const content = await readFile(file)
+
   try {
-    const content = await readFile(file)
     const json = parseJson(content)
     return json as T
   } catch (error) {
     const err = error as Error
-    err.message = `Read ${file} failed:\n${err.message}`
+    err.message = `Parse ${file} failed:\n${err.message}`
     throw err
   }
 }
@@ -62,13 +63,14 @@ export async function readJson<T extends object>(file: string): Promise<T> {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function readJsonSync<T extends object>(file: string): T {
+  const content = readFileSync(file)
+
   try {
-    const content = readFileSync(file)
     const json = parseJson(content)
     return json as T
   } catch (error) {
     const err = error as Error
-    err.message = `Read ${file} failed:\n${err.message}`
+    err.message = `Parse ${file} failed:\n${err.message}`
     throw err
   }
 }

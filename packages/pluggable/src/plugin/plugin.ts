@@ -2,10 +2,12 @@ import type { PluginDeclaration, ResolvedPlugin } from '@/pluggable'
 import {
   camelCase,
   fileLoadersSync,
+  isESModule,
   isPathExistsSync,
   readJsonSync,
   resolve,
   winPath,
+  type MaybePromise,
   type PackageJson,
 } from '@eljs/utils'
 import hash from 'hash-sum'
@@ -70,7 +72,7 @@ export class Plugin {
   public apply: () => (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ...args: any[]
-  ) => PluginReturnType | Promise<PluginReturnType>
+  ) => MaybePromise<PluginReturnType>
   /**
    * 插件是否可以执行
    */
@@ -109,16 +111,15 @@ export class Plugin {
         fileLoadersSync[extname(this.path) as keyof typeof fileLoadersSync]
 
       try {
-        const content = loader(this.path) as {
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          __esModule: boolean
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          default: any
-        }
-        return content.__esModule ? content.default : content
+        const content = loader(this.path) as ReturnType<
+          typeof Plugin.prototype.apply
+        >
+        return isESModule<ReturnType<typeof Plugin.prototype.apply>>(content)
+          ? content.default
+          : content
       } catch (error) {
         const err = error as Error
-        err.message = `Load ${this.type} Error in ${this.path}:\n${err.message}`
+        err.message = `Load ${this.type} failed in ${this.path}:\n${err.message}`
         throw err
       }
     }
