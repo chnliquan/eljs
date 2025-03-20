@@ -57,7 +57,6 @@ export async function installDeps(options: InstallDepsOptions): Promise<void> {
         stdout: 'pipe',
       },
     )
-    console.log(`Install dependencies packages success.`)
   }
 }
 

@@ -15,6 +15,7 @@ import {
   transpileModule,
 } from 'typescript'
 
+import { isESModule } from '@/type'
 import { isPathExists, isPathExistsSync } from './is'
 import { readFile, readFileSync } from './read'
 import { remove, removeSync } from './remove'
@@ -52,24 +53,27 @@ export const fileLoadersSync = Object.freeze({
 export async function loadJs<T>(path: string): Promise<T> {
   try {
     const { href } = pathToFileURL(path)
-    const content = (await import(href)).default
-    return content
-  } catch (error) {
+    const content = await import(href)
+    return isESModule<T>(content) ? content.default : content
+  } catch (dynamicImportError) {
+    const dynamicImportErr = dynamicImportError as Error
     try {
       return loadJsSync(path)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
+    } catch (requireError) {
+      const requireErr = requireError as NodeJS.ErrnoException
       if (
-        err.code === 'ERR_REQUIRE_ESM' ||
-        (err instanceof SyntaxError &&
-          err
+        requireErr.code === 'ERR_REQUIRE_ESM' ||
+        (requireErr instanceof SyntaxError &&
+          requireErr
             .toString()
             .includes('Cannot use import statement outside a module'))
       ) {
-        throw error
+        dynamicImportErr.message = `Load ${path} failed:\n${dynamicImportErr.message}`
+        throw dynamicImportErr
       }
 
-      throw err
+      requireErr.message = `Load ${path} failed:\n${dynamicImportErr.message}`
+      throw requireError
     }
   }
 }
@@ -79,7 +83,14 @@ export async function loadJs<T>(path: string): Promise<T> {
  * @param path 文件路径
  */
 export function loadJsSync<T>(path: string): T {
-  return importFresh(path)
+  try {
+    const content = importFresh(path) as T
+    return isESModule<T>(content) ? content.default : content
+  } catch (error) {
+    const err = error as Error
+    err.message = `Load ${path} failed:\n${err.message}`
+    throw err
+  }
 }
 
 /**
@@ -156,13 +167,13 @@ export function loadTsSync<T>(path: string): T {
  * @param path 文件路径
  */
 export async function loadJson<T>(path: string): Promise<T> {
-  const content = await readFile(path)
-
   try {
-    return parseJson(content)
+    const content = await readFile(path)
+    const json = parseJson(content)
+    return json
   } catch (error) {
     const err = error as Error
-    err.message = `JSON Error in ${path}:\n${err.message}`
+    err.message = `Load ${path} failed:\n${err.message}`
     throw err
   }
 }
@@ -172,13 +183,13 @@ export async function loadJson<T>(path: string): Promise<T> {
  * @param path 文件路径
  */
 export function loadJsonSync<T>(path: string): T {
-  const content = readFileSync(path)
-
   try {
-    return parseJson(content)
+    const content = readFileSync(path)
+    const json = parseJson(content)
+    return json
   } catch (error) {
     const err = error as Error
-    err.message = `JSON Error in ${path}:\n${err.message}`
+    err.message = `Load ${path} failed:\n${err.message}`
     throw err
   }
 }
@@ -188,12 +199,13 @@ export function loadJsonSync<T>(path: string): T {
  * @param path 文件路径
  */
 export async function loadYaml<T>(path: string): Promise<T> {
-  const content = await readFile(path)
   try {
-    return yaml.load(content) as T
+    const content = await readFile(path)
+    const data = yaml.load(content)
+    return data as T
   } catch (error) {
     const err = error as Error
-    err.message = `YAML Error in ${path}:\n${err.message}`
+    err.message = `Load ${path} failed:\n${err.message}`
     throw err
   }
 }
@@ -203,12 +215,13 @@ export async function loadYaml<T>(path: string): Promise<T> {
  * @param path 文件路径
  */
 export function loadYamlSync<T>(path: string): T {
-  const content = readFileSync(path)
   try {
-    return yaml.load(content) as T
+    const content = readFileSync(path)
+    const data = yaml.load(content)
+    return data as T
   } catch (error) {
     const err = error as Error
-    err.message = `YAML Error in ${path}:\n${err.message}`
+    err.message = `Load ${path} failed:\n${err.message}`
     throw err
   }
 }

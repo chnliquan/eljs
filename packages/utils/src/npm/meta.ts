@@ -1,5 +1,6 @@
 import { PLATFORM } from '@/constants'
 import { run, type RunCommandOptions } from '@/cp'
+import { timeout as timeoutWrapper } from '@/promise'
 import { isString } from '@/type'
 import type { OmitIndexSignature, PackageJson } from '@/types'
 import os from 'node:os'
@@ -131,30 +132,40 @@ export async function getNpmDistTag(
   options?: {
     cwd?: string
     registry?: string
+    timeout?: number
   },
 ): Promise<NpmInfo['dist-tags']> {
+  const { cwd, registry, timeout } = options || {}
   const args = ['dist-tag', 'ls', name]
 
-  if (options?.registry) {
-    args.push('--registry', options.registry)
+  if (registry) {
+    args.push('--registry', registry)
   }
 
-  return run('npm', args, {
-    cwd: options?.cwd,
-  }).then(data => {
-    const distTag = {
-      latest: '',
-      beta: '',
-      alpha: '',
-      next: '',
-    }
-    data.stdout.split(os.EOL).forEach(item => {
-      const paris = item.split(': ')
-      distTag[paris[0] as keyof typeof distTag] = paris[1]
-    })
+  if (timeout) {
+    return timeoutWrapper(get(), timeout)
+  }
 
-    return distTag
-  })
+  return get()
+
+  async function get() {
+    return run('npm', args, {
+      cwd,
+    }).then(data => {
+      const distTag = {
+        latest: '',
+        beta: '',
+        alpha: '',
+        next: '',
+      }
+      data.stdout.split(os.EOL).forEach(item => {
+        const paris = item.split(': ')
+        distTag[paris[0] as keyof typeof distTag] = paris[1]
+      })
+
+      return distTag
+    })
+  }
 }
 
 /**

@@ -22,8 +22,10 @@ export async function downloadNpmTarball(
       },
       ...options,
     })
-  } catch (err) {
-    throw new Error(`Failed to download ${url}，\n ${err}.`)
+  } catch (error) {
+    const err = error as Error
+    err.message = `Download ${url} failed:\n${err.message}`
+    throw err
   }
 
   return dest

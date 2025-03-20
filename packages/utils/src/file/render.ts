@@ -47,12 +47,18 @@ export function renderTemplate(
     options as EjsRenderTemplateOptions
   const { partials, tagsOrOptions } = options as MustacheRenderTemplateOptions
 
-  if (type === 'ejs') {
-    return ejs.render(template, data, {
-      ...renderOptions,
-      async: false,
-    })
-  } else {
-    return Mustache.render(template, data, partials, tagsOrOptions)
+  try {
+    if (type === 'ejs') {
+      return ejs.render(template, data, {
+        ...renderOptions,
+        async: false,
+      })
+    } else {
+      return Mustache.render(template, data, partials, tagsOrOptions)
+    }
+  } catch (error) {
+    const err = error as Error
+    err.message = `Render ${template} failed:\n${err.message}`
+    throw err
   }
 }

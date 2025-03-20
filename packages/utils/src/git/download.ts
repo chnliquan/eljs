@@ -43,8 +43,10 @@ export async function downloadGitRepo(
     await run('git', args, {
       cwd: dest,
     })
-  } catch (err) {
-    throw new Error(`Failed to download ${url}，\n ${err}.`)
+  } catch (error) {
+    const err = error as Error
+    err.message = `Download ${url} failed:\n${err.message}.`
+    throw err
   }
 
   return path.join(dest, 'package')

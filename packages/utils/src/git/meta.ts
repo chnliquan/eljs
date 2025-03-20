@@ -51,34 +51,7 @@ export interface GitRepoInfo extends BaseGitRepoInfo {
 }
 
 /**
- * 获取指定目录的 git 地址
- * @param cwd 当前工作目录
- * @param exact 是否在当前目录下提取
- */
-export function getGitUrlSync(cwd: string, exact?: boolean): string {
-  const gitDir = exact
-    ? path.join(cwd, '.git')
-    : getProjectGitDirSync(cwd) || ''
-
-  if (!isPathExistsSync(gitDir)) {
-    return ''
-  }
-
-  try {
-    const parsed = ini.parse(readFileSync(path.join(gitDir, 'config')))
-
-    if (parsed['remote "origin"']) {
-      return parsed['remote "origin"'].url
-    }
-  } catch (err) {
-    // catch error
-  }
-
-  return ''
-}
-
-/**
- * 获取指定目录的 git 地址
+ * 获取 git 地址
  * @param cwd 当前工作目录
  * @param exact 是否在当前目录下提取
  */
@@ -93,7 +66,32 @@ export async function getGitUrl(cwd: string, exact?: boolean): Promise<string> {
 
   try {
     const parsed = ini.parse(await readFile(path.join(gitDir, 'config')))
+    if (parsed['remote "origin"']) {
+      return parsed['remote "origin"'].url
+    }
+  } catch (err) {
+    // ...
+  }
 
+  return ''
+}
+
+/**
+ * 获取 git 地址
+ * @param cwd 当前工作目录
+ * @param exact 是否在当前目录下提取
+ */
+export function getGitUrlSync(cwd: string, exact?: boolean): string {
+  const gitDir = exact
+    ? path.join(cwd, '.git')
+    : getProjectGitDirSync(cwd) || ''
+
+  if (!isPathExistsSync(gitDir)) {
+    return ''
+  }
+
+  try {
+    const parsed = ini.parse(readFileSync(path.join(gitDir, 'config')))
     if (parsed['remote "origin"']) {
       return parsed['remote "origin"'].url
     }
@@ -338,71 +336,6 @@ export interface GitUser {
 /**
  * 获取 git 用户
  */
-export function getGitUserSync(): GitUser {
-  let user: GitUser = {
-    name: '',
-    email: '',
-  }
-
-  // try to get config by git
-  try {
-    const gitConfig = execa.sync('git', ['config', '--list']).stdout
-
-    if (gitConfig) {
-      const config = Object.create(null)
-
-      gitConfig.split(os.EOL).forEach(line => {
-        const [key, value] = line.split('=')
-        config[key] = value
-      })
-
-      if (config['user.email']) {
-        user = {
-          name: config['user.email'].split('@')[0],
-          email: config['user.email'],
-        }
-      } else {
-        user = {
-          name: config['user.name'],
-          email: '',
-        }
-      }
-    }
-  } catch (err) {
-    // ignore
-  }
-
-  if (user.email.match(/\.com$/)) {
-    return user
-  }
-
-  // try to read .gitconfig
-  try {
-    const gitFile = path.join(os.homedir(), '.gitconfig')
-    const parsed = ini.parse(readFileSync(gitFile))
-    const { name, email } = parsed.user
-
-    if (email) {
-      user = {
-        name: email.split('@')[0],
-        email,
-      }
-    } else {
-      user = {
-        name,
-        email: '',
-      }
-    }
-  } catch (err) {
-    // empty
-  }
-
-  return user
-}
-
-/**
- * 获取 git 用户
- */
 export async function getGitUser(): Promise<GitUser> {
   let user: GitUser = {
     name: '',
@@ -466,15 +399,82 @@ export async function getGitUser(): Promise<GitUser> {
 }
 
 /**
+ * 获取 git 用户
+ */
+export function getGitUserSync(): GitUser {
+  let user: GitUser = {
+    name: '',
+    email: '',
+  }
+
+  // try to get config by git
+  try {
+    const gitConfig = execa.sync('git', ['config', '--list']).stdout
+
+    if (gitConfig) {
+      const config = Object.create(null)
+
+      gitConfig.split(os.EOL).forEach(line => {
+        const [key, value] = line.split('=')
+        config[key] = value
+      })
+
+      if (config['user.email']) {
+        user = {
+          name: config['user.email'].split('@')[0],
+          email: config['user.email'],
+        }
+      } else {
+        user = {
+          name: config['user.name'],
+          email: '',
+        }
+      }
+    }
+  } catch (err) {
+    // ignore
+  }
+
+  if (user.email.match(/\.com$/)) {
+    return user
+  }
+
+  // try to read .gitconfig
+  try {
+    const gitFile = path.join(os.homedir(), '.gitconfig')
+    const parsed = ini.parse(readFileSync(gitFile))
+    const { name, email } = parsed.user
+
+    if (email) {
+      user = {
+        name: email.split('@')[0],
+        email,
+      }
+    } else {
+      user = {
+        name,
+        email: '',
+      }
+    }
+  } catch (err) {
+    // empty
+  }
+
+  return user
+}
+
+/**
  * 获取工程 git 路径
  * @param dir 文件目录
  */
-export function getProjectGitDirSync(dir: string): string | undefined {
+export async function getProjectGitDir(
+  dir: string,
+): Promise<string | undefined> {
   let cur = dir
 
   while (cur) {
     // 如果配置存在，说明是 .git 目录
-    if (isPathExistsSync(path.join(cur, '.git', 'config'))) {
+    if (await isPathExists(path.join(cur, '.git', 'config'))) {
       return path.join(cur, '.git')
     }
 
@@ -492,14 +492,12 @@ export function getProjectGitDirSync(dir: string): string | undefined {
  * 获取工程 git 路径
  * @param dir 文件目录
  */
-export async function getProjectGitDir(
-  dir: string,
-): Promise<string | undefined> {
+export function getProjectGitDirSync(dir: string): string | undefined {
   let cur = dir
 
   while (cur) {
     // 如果配置存在，说明是 .git 目录
-    if (await isPathExists(path.join(cur, '.git', 'config'))) {
+    if (isPathExistsSync(path.join(cur, '.git', 'config'))) {
       return path.join(cur, '.git')
     }
 

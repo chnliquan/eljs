@@ -10,26 +10,6 @@ import { remove, removeSync } from './remove'
  * @param to 目标路径
  * @param overwrite 是否覆盖
  */
-export function moveSync(from: string, to: string, overwrite?: boolean): void {
-  if (overwrite) {
-    removeSync(to)
-    fs.renameSync(from, to)
-    return
-  }
-
-  if (isPathExistsSync(to)) {
-    throw Error(`The dest ${to} already exists.`)
-  } else {
-    fs.renameSync(from, to)
-  }
-}
-
-/**
- * 移动文件
- * @param from 源路径
- * @param to 目标路径
- * @param overwrite 是否覆盖
- */
 export async function move(
   from: string,
   to: string,
@@ -42,8 +22,28 @@ export async function move(
   }
 
   if (await isPathExists(to)) {
-    throw Error(`The dest ${to} already exists.`)
+    throw new Error(`The dest ${to} already exists.`)
   } else {
     await fsp.rename(from, to)
+  }
+}
+
+/**
+ * 移动文件
+ * @param from 源路径
+ * @param to 目标路径
+ * @param overwrite 是否覆盖
+ */
+export function moveSync(from: string, to: string, overwrite?: boolean): void {
+  if (overwrite) {
+    removeSync(to)
+    fs.renameSync(from, to)
+    return
+  }
+
+  if (isPathExistsSync(to)) {
+    throw new Error(`The dest ${to} already exists.`)
+  } else {
+    fs.renameSync(from, to)
   }
 }

@@ -39,25 +39,33 @@ export interface CopyFileOptions {
  * @param to 目标文件路径
  * @param options 可选配置项
  */
-export function copyFileSync(
+export async function copyFile(
   from: string,
   to: string,
   options: CopyFileOptions = {},
-): void {
-  let destFile = convertFilePrefix(to)
-  const { mode, basedir, data, renderOptions } = options
+): Promise<void> {
+  try {
+    let destFile = convertFilePrefix(to)
+    const { mode, basedir, data, renderOptions } = options
 
-  if (destFile.indexOf('{{') > -1 || destFile.indexOf('<%') > -1) {
-    destFile = renderTemplate(destFile, data || {}, renderOptions)
+    if (destFile.indexOf('{{') > -1 || destFile.indexOf('<%') > -1) {
+      destFile = renderTemplate(destFile, data || {}, renderOptions)
+    }
+
+    await mkdir(path.dirname(destFile))
+
+    if (basedir) {
+      console.log(
+        `${chalk.green('Copy: ')} ${path.relative(basedir, destFile)}`,
+      )
+    }
+
+    await fsp.copyFile(from, destFile, mode)
+  } catch (error) {
+    const err = error as Error
+    err.message = `Copy file from ${from} to ${to} failed:\n${err.message}`
+    throw err
   }
-
-  mkdirSync(path.dirname(destFile))
-
-  if (basedir) {
-    console.log(`${chalk.green('Copy: ')} ${path.relative(basedir, destFile)}`)
-  }
-
-  fs.copyFileSync(from, destFile, mode)
 }
 
 /**
@@ -66,58 +74,33 @@ export function copyFileSync(
  * @param to 目标文件路径
  * @param options 可选配置项
  */
-export async function copyFile(
+export function copyFileSync(
   from: string,
   to: string,
-  options: CopyFileOptions = {},
-): Promise<void> {
-  let destFile = convertFilePrefix(to)
-  const { mode, basedir, data, renderOptions } = options
-
-  if (destFile.indexOf('{{') > -1 || destFile.indexOf('<%') > -1) {
-    destFile = renderTemplate(destFile, data || {}, renderOptions)
-  }
-
-  await mkdir(path.dirname(destFile))
-
-  if (basedir) {
-    console.log(`${chalk.green('Copy: ')} ${path.relative(basedir, destFile)}`)
-  }
-
-  await fsp.copyFile(from, destFile, mode)
-}
-
-/**
- * 拷贝模版
- * @param from 源文件路径
- * @param to 目标文件路径
- * @param data 模版数据
- * @param options 可选配置项
- */
-export function copyTplSync(
-  from: string,
-  to: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: Record<string, any>,
   options: CopyFileOptions = {},
 ): void {
-  const { basedir, renderOptions } = options
-  const tpl = readFileSync(from)
-  const content = renderTemplate(tpl, data, renderOptions)
+  try {
+    let destFile = convertFilePrefix(to)
+    const { mode, basedir, data, renderOptions } = options
 
-  let destFile = convertFilePrefix(to.replace(/\.tpl$/, ''))
+    if (destFile.indexOf('{{') > -1 || destFile.indexOf('<%') > -1) {
+      destFile = renderTemplate(destFile, data || {}, renderOptions)
+    }
 
-  if (destFile.indexOf('{{') > -1 || destFile.indexOf('<%') > -1) {
-    destFile = renderTemplate(destFile, data, renderOptions)
+    mkdirSync(path.dirname(destFile))
+
+    if (basedir) {
+      console.log(
+        `${chalk.green('Copy: ')} ${path.relative(basedir, destFile)}`,
+      )
+    }
+
+    fs.copyFileSync(from, destFile, mode)
+  } catch (error) {
+    const err = error as Error
+    err.message = `Copy file from ${from} to ${to} failed:\n${err.message}`
+    throw err
   }
-
-  mkdirSync(path.dirname(destFile))
-
-  if (basedir) {
-    console.log(`${chalk.green('Write:')} ${path.relative(basedir, destFile)}`)
-  }
-
-  writeFileSync(destFile, content)
 }
 
 /**
@@ -134,62 +117,71 @@ export async function copyTpl(
   data: Record<string, any>,
   options: CopyFileOptions = {},
 ): Promise<void> {
-  const { basedir, renderOptions } = options
-  const tpl = await readFile(from)
-  const content = renderTemplate(tpl, data, renderOptions)
+  try {
+    const { basedir, renderOptions } = options
+    const tpl = await readFile(from)
+    const content = renderTemplate(tpl, data, renderOptions)
 
-  let destFile = convertFilePrefix(to.replace(/\.tpl$/, ''))
+    let destFile = convertFilePrefix(to.replace(/\.tpl$/, ''))
 
-  if (destFile.indexOf('{{') > -1 || destFile.indexOf('<%') > -1) {
-    destFile = renderTemplate(destFile, data, renderOptions)
+    if (destFile.indexOf('{{') > -1 || destFile.indexOf('<%') > -1) {
+      destFile = renderTemplate(destFile, data, renderOptions)
+    }
+
+    await mkdir(path.dirname(destFile))
+
+    if (basedir) {
+      console.log(
+        `${chalk.green('Write:')} ${path.relative(basedir, destFile)}`,
+      )
+    }
+
+    await writeFile(destFile, content)
+  } catch (error) {
+    const err = error as Error
+    err.message = `Copy template from ${from} to ${to} failed:\n${err.message}`
+    throw err
   }
-
-  await mkdir(path.dirname(destFile))
-
-  if (basedir) {
-    console.log(`${chalk.green('Write:')} ${path.relative(basedir, destFile)}`)
-  }
-
-  await writeFile(destFile, content)
 }
 
 /**
- * 拷贝文件夹
+ * 拷贝模版
  * @param from 源文件路径
  * @param to 目标文件路径
  * @param data 模版数据
  * @param options 可选配置项
  */
-export function copyDirectorySync(
+export function copyTplSync(
   from: string,
   to: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: Record<string, any>,
   options: CopyFileOptions = {},
-) {
-  const files = globSync('**/*', {
-    cwd: from,
-    dot: true,
-    ignore: ['**/node_modules/**'],
-  })
+): void {
+  try {
+    const { basedir, renderOptions } = options
+    const tpl = readFileSync(from)
+    const content = renderTemplate(tpl, data, renderOptions)
 
-  for (const file of files) {
-    const srcFile = path.join(from, file)
+    let destFile = convertFilePrefix(to.replace(/\.tpl$/, ''))
 
-    if (isDirectorySync(srcFile)) {
-      continue
+    if (destFile.indexOf('{{') > -1 || destFile.indexOf('<%') > -1) {
+      destFile = renderTemplate(destFile, data, renderOptions)
     }
 
-    const destFile = path.join(to, file)
+    mkdirSync(path.dirname(destFile))
 
-    if (file.endsWith('.tpl')) {
-      copyTplSync(srcFile, destFile, options)
-    } else {
-      copyFileSync(srcFile, destFile, {
-        ...options,
-        data,
-      })
+    if (basedir) {
+      console.log(
+        `${chalk.green('Write:')} ${path.relative(basedir, destFile)}`,
+      )
     }
+
+    writeFileSync(destFile, content)
+  } catch (error) {
+    const err = error as Error
+    err.message = `Copy template from ${from} to ${to} failed:\n${err.message}`
+    throw err
   }
 }
 
@@ -206,29 +198,81 @@ export async function copyDirectory(
   data: Record<string, any>,
   options: CopyFileOptions = {},
 ): Promise<void> {
-  const files = await glob('**/*', {
-    cwd: from,
-    dot: true,
-    ignore: ['**/node_modules/**'],
-  })
+  try {
+    const files = await glob('**/*', {
+      cwd: from,
+      dot: true,
+      ignore: ['**/node_modules/**'],
+    })
 
-  for await (const file of files) {
-    const srcFile = path.join(from, file)
+    for await (const file of files) {
+      const srcFile = path.join(from, file)
 
-    if (await isDirectory(srcFile)) {
-      continue
+      if (await isDirectory(srcFile)) {
+        continue
+      }
+
+      const destFile = path.join(to, file)
+
+      if (file.endsWith('.tpl')) {
+        await copyTpl(srcFile, destFile, data, options)
+      } else {
+        await copyFile(srcFile, destFile, {
+          ...options,
+          data,
+        })
+      }
     }
+  } catch (error) {
+    const err = error as Error
+    err.message = `Copy directory from ${from} to ${to} failed:\n${err.message}`
+    throw err
+  }
+}
 
-    const destFile = path.join(to, file)
+/**
+ * 拷贝文件夹
+ * @param from 源文件路径
+ * @param to 目标文件路径
+ * @param data 模版数据
+ * @param options 可选配置项
+ */
+export function copyDirectorySync(
+  from: string,
+  to: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: Record<string, any>,
+  options: CopyFileOptions = {},
+) {
+  try {
+    const files = globSync('**/*', {
+      cwd: from,
+      dot: true,
+      ignore: ['**/node_modules/**'],
+    })
 
-    if (file.endsWith('.tpl')) {
-      await copyTpl(srcFile, destFile, data, options)
-    } else {
-      await copyFile(srcFile, destFile, {
-        ...options,
-        data,
-      })
+    for (const file of files) {
+      const srcFile = path.join(from, file)
+
+      if (isDirectorySync(srcFile)) {
+        continue
+      }
+
+      const destFile = path.join(to, file)
+
+      if (file.endsWith('.tpl')) {
+        copyTplSync(srcFile, destFile, options)
+      } else {
+        copyFileSync(srcFile, destFile, {
+          ...options,
+          data,
+        })
+      }
     }
+  } catch (error) {
+    const err = error as Error
+    err.message = `Copy directory from ${from} to ${to} failed:\n${err.message}`
+    throw err
   }
 }
 

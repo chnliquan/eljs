@@ -1,4 +1,5 @@
 import { run, type RunCommandOptions } from '@/cp'
+import { getGitBranch, getGitUpstreamBranch } from './meta'
 
 /**
  * 提交 git 信息
@@ -16,6 +17,7 @@ export async function gitCommit(
     await run('git', ['commit', '-m', msg, ...args], options)
   } catch (error) {
     const err = error as Error
+
     if (
       err.message.includes('nothing to commit') ||
       /working tree clean/.test(err.message) ||
@@ -24,7 +26,8 @@ export async function gitCommit(
       return
     }
 
-    throw new Error(`Git commit failed:\n${err.message}.`)
+    err.message = `Git commit failed:\n${err.message}.`
+    throw err
   }
 }
 
@@ -34,10 +37,32 @@ export async function gitCommit(
  * @param options 可选配置项
  */
 export async function gitPush(
-  args: string[],
+  args: string[] = [],
   options?: RunCommandOptions,
 ): Promise<void> {
-  await run('git', ['push', ...args], options)
+  try {
+    const upstreamBranch = await getGitUpstreamBranch({
+      ...options,
+      verbose: false,
+    })
+
+    const upstreamArg = !upstreamBranch
+      ? [
+          '--set-upstream',
+          'origin',
+          await getGitBranch({
+            ...options,
+            verbose: false,
+          }),
+        ]
+      : []
+    const cliArgs = ['push', ...args, ...upstreamArg].filter(Boolean)
+    await run('git', cliArgs, options)
+  } catch (error) {
+    const err = error as Error
+    err.message = `Git push failed:\n${err.message}`
+    throw err
+  }
 }
 
 /**
@@ -51,19 +76,11 @@ export async function gitTag(
   args: string[] = [],
   options?: RunCommandOptions,
 ): Promise<void> {
-  await run('git', ['tag', tag, '-m', tag, ...args], options)
-}
-
-/**
- * 同步 git tag 到远端
- * @param tag 标签
- * @param args git push 参数
- * @param options 选项
- */
-export async function gitPushTag(
-  tag: string,
-  args: string[] = [],
-  options?: RunCommandOptions,
-): Promise<void> {
-  await run('git', ['push', 'origin', `refs/tags/${tag}`, ...args], options)
+  try {
+    await run('git', ['tag', tag, '-m', tag, ...args], options)
+  } catch (error) {
+    const err = error as Error
+    err.message = `Git Tag failed:\n${err.message}`
+    throw err
+  }
 }

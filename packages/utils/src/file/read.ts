@@ -7,11 +7,18 @@ import parseJson from 'parse-json'
  * @param file 文件路径
  * @param encoding 文件编码
  */
-export function readFileSync(
+export async function readFile(
   file: string,
   encoding: BufferEncoding = 'utf8',
-): string {
-  return fs.readFileSync(file, encoding)
+): Promise<string> {
+  try {
+    const content = await fsp.readFile(file, encoding)
+    return content
+  } catch (error) {
+    const err = error as Error
+    err.message = `Read ${file} failed:\n${err.message}`
+    throw err
+  }
 }
 
 /**
@@ -19,31 +26,17 @@ export function readFileSync(
  * @param file 文件路径
  * @param encoding 文件编码
  */
-export async function readFile(
+export function readFileSync(
   file: string,
   encoding: BufferEncoding = 'utf8',
-): Promise<string> {
+): string {
   try {
-    return await fsp.readFile(file, encoding)
-  } catch (err) {
-    throw new Error(`Read file [${file}] error.`, {
-      cause: err,
-    })
-  }
-}
-
-/**
- * 读取 Json 文件
- * @param file 文件路径
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function readJsonSync<T extends object>(file: string): T {
-  try {
-    return parseJson(readFileSync(file)) as T
-  } catch (err) {
-    throw new Error(`Read Json file [${file}] error.`, {
-      cause: err,
-    })
+    const content = fs.readFileSync(file, encoding)
+    return content
+  } catch (error) {
+    const err = error as Error
+    err.message = `Read ${file} failed:\n${err.message}`
+    throw err
   }
 }
 
@@ -54,10 +47,28 @@ export function readJsonSync<T extends object>(file: string): T {
 export async function readJson<T extends object>(file: string): Promise<T> {
   try {
     const content = await readFile(file)
-    return parseJson(content) as T
-  } catch (err) {
-    throw new Error(`Read Json file [${file}] error.`, {
-      cause: err,
-    })
+    const json = parseJson(content)
+    return json as T
+  } catch (error) {
+    const err = error as Error
+    err.message = `Read ${file} failed:\n${err.message}`
+    throw err
+  }
+}
+
+/**
+ * 读取 Json 文件
+ * @param file 文件路径
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function readJsonSync<T extends object>(file: string): T {
+  try {
+    const content = readFileSync(file)
+    const json = parseJson(content)
+    return json as T
+  } catch (error) {
+    const err = error as Error
+    err.message = `Read ${file} failed:\n${err.message}`
+    throw err
   }
 }
