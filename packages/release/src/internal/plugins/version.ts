@@ -359,6 +359,10 @@ async function checkVersion(
 async function confirmVersion(api: Api, version: string): Promise<string> {
   const { validPkgNames } = api.appData
 
+  if (!validPkgNames.length) {
+    return version
+  }
+
   let confirmMessage = ''
 
   if (validPkgNames.length === 1) {

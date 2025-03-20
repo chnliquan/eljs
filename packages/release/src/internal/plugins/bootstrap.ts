@@ -45,6 +45,11 @@ export default (api: Api) => {
       cwd,
     })
 
+    if (validPkgNames.length === 0) {
+      logger.warn(`No valid package to publish in ${chalk.bold(cwd)}.`)
+      process.exit(0)
+    }
+
     return {
       ...memo,
       pkgJsonPaths,
