@@ -1,4 +1,4 @@
-import { chalk, getNpmDistTag, logger, run, timeout } from '@eljs/utils'
+import { chalk, getNpmMeta, logger, run } from '@eljs/utils'
 import resolveBin from 'resolve-bin'
 
 /**
@@ -13,9 +13,9 @@ export interface RemoteDistTag {
 
 /**
  * 获取远程 dist tag
- * @param cwd 当前工作目录
  * @param pkgNames 包名
- * @param registry 仓库源
+ * @param options.cwd 当前工作目录
+ * @param options.registry 仓库源
  */
 export async function getRemoteDistTag(
   pkgNames: string[],
@@ -24,53 +24,28 @@ export async function getRemoteDistTag(
     registry?: string
   },
 ): Promise<RemoteDistTag> {
-  try {
-    const distTag = await timeout(
-      (async () => {
-        for (let i = 0; i < pkgNames.length; i++) {
-          const pkgName = pkgNames[i]
+  for (let i = 0; i < pkgNames.length; i++) {
+    const pkgName = pkgNames[i]
+    const npmMeta = await getNpmMeta(pkgName, options)
+    const distTags = npmMeta?.['dist-tags']
 
-          try {
-            const distTag = await getNpmDistTag(pkgName, options)
-
-            return {
-              latest: distTag['latest'],
-              alpha: distTag['alpha'],
-              beta: distTag['beta'],
-              rc: distTag['rc'],
-            }
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } catch (err: any) {
-            if (err.message.includes('command not found')) {
-              logger.error(
-                `Please make sure the ${chalk.cyanBright.bold(
-                  'npm',
-                )} has been installed.`,
-              )
-              process.exit(1)
-            } else {
-              console.log()
-            }
-          }
-        }
-
-        return {
-          latest: '',
-          alpha: '',
-          beta: '',
-          rc: '',
-        }
-      })(),
-      pkgNames.length * 2000,
-    )
-    return distTag
-  } catch (err) {
-    return {
-      latest: '',
-      alpha: '',
-      beta: '',
-      rc: '',
+    if (!distTags) {
+      continue
     }
+
+    return {
+      latest: distTags['latest'],
+      alpha: distTags['alpha'],
+      beta: distTags['beta'],
+      rc: distTags['rc'],
+    }
+  }
+
+  return {
+    latest: '',
+    alpha: '',
+    beta: '',
+    rc: '',
   }
 }
 

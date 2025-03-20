@@ -1,9 +1,7 @@
 import { PLATFORM } from '@/constants'
 import { run, type RunCommandOptions } from '@/cp'
-import { timeout as timeoutWrapper } from '@/promise'
 import { isString } from '@/type'
 import type { OmitIndexSignature, PackageJson } from '@/types'
-import os from 'node:os'
 import path from 'node:path'
 import urllib from 'urllib'
 import which from 'which'
@@ -119,53 +117,6 @@ export async function getNpmMeta(
     .catch(() => {
       return null
     })
-}
-
-/**
- * 获取 NPM 包标签
- * @param name NPM 包名
- * @param options.cwd 工作目录
- * @param options.registry 仓库地址
- */
-export async function getNpmDistTag(
-  name: string,
-  options?: {
-    cwd?: string
-    registry?: string
-    timeout?: number
-  },
-): Promise<NpmInfo['dist-tags']> {
-  const { cwd, registry, timeout } = options || {}
-  const args = ['dist-tag', 'ls', name]
-
-  if (registry) {
-    args.push('--registry', registry)
-  }
-
-  if (timeout) {
-    return timeoutWrapper(get(), timeout)
-  }
-
-  return get()
-
-  async function get() {
-    return run('npm', args, {
-      cwd,
-    }).then(data => {
-      const distTag = {
-        latest: '',
-        beta: '',
-        alpha: '',
-        next: '',
-      }
-      data.stdout.split(os.EOL).forEach(item => {
-        const paris = item.split(': ')
-        distTag[paris[0] as keyof typeof distTag] = paris[1]
-      })
-
-      return distTag
-    })
-  }
 }
 
 /**
