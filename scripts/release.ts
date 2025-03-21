@@ -50,5 +50,8 @@ async function main(): Promise<void> {
       requireOwner: false,
       cnpm: true,
     },
+    github: {
+      ...argv.github,
+    },
   })
 }

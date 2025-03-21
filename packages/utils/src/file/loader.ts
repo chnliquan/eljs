@@ -16,9 +16,9 @@ import {
   transpileModule,
 } from 'typescript'
 
-import { isPathExistsSync } from './is'
+import { isPathExists, isPathExistsSync } from './is'
 import { readFile, readFileSync } from './read'
-import { removeSync } from './remove'
+import { remove, removeSync } from './remove'
 import { writeFile, writeFileSync } from './write'
 
 /**
@@ -123,11 +123,12 @@ export async function loadTs<T = any>(path: string): Promise<T> {
     }
 
     await writeFile(compiledPath, transpiledContent)
-    return loadJs(compiledPath)
+    const js = await loadJs(compiledPath)
+    return js as T
   } finally {
-    // if (await isPathExists(compiledPath)) {
-    //   await remove(compiledPath)
-    // }
+    if (await isPathExists(compiledPath)) {
+      await remove(compiledPath)
+    }
   }
 }
 
@@ -159,7 +160,8 @@ export function loadTsSync<T>(path: string): T {
     }
 
     writeFileSync(compiledPath, transpiledContent)
-    return loadJsSync(compiledPath)
+    const js = loadJsSync(compiledPath)
+    return js as T
   } finally {
     if (isPathExistsSync(compiledPath)) {
       removeSync(compiledPath)
