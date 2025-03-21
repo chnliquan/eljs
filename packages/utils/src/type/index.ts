@@ -142,3 +142,19 @@ export function isAsyncFunction(
     typeof target === 'function' && target.constructor.name === 'AsyncFunction'
   )
 }
+
+/**
+ * 是否是 es module
+ * @param module 模块
+ */
+export function isESModule<T>(
+  module: unknown,
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+): module is { __esModule: true; default: T } {
+  return (
+    !!module &&
+    typeof module === 'object' &&
+    (module as Record<string, unknown>).__esModule === true &&
+    'default' in (module as Record<string, unknown>)
+  )
+}

@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
+import { isESModule } from '@/type'
 import importFresh from 'import-fresh'
 import yaml from 'js-yaml'
 import { dirname } from 'node:path'
@@ -53,7 +54,8 @@ export async function loadJs<T>(path: string): Promise<T> {
   try {
     const { href } = pathToFileURL(path)
     const content = await import(href)
-    return content
+    // import 会默认给模块包一层 default
+    return isESModule<T>(content) ? content.default : content
   } catch (dynamicImportError) {
     const dynamicImportErr = dynamicImportError as Error
     try {
@@ -98,14 +100,14 @@ export function loadJsSync<T>(path: string): T {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function loadTs<T = any>(path: string): Promise<T> {
-  const compiledPath = `${path.slice(0, -2)}mjs`
+  const compiledPath = `${path.slice(0, -2)}cjs`
 
   try {
     const config = resolveTsConfig(dirname(path)) ?? {}
     config.compilerOptions = {
       ...config.compilerOptions,
-      module: ModuleKind.ES2022,
-      moduleResolution: ModuleResolutionKind.Bundler,
+      module: ModuleKind.NodeNext,
+      moduleResolution: ModuleResolutionKind.NodeNext,
       target: ScriptTarget.ES2022,
       noEmit: false,
     }
