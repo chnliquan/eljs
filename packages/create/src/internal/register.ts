@@ -2,9 +2,9 @@ import type { Api } from '@/types'
 
 export default (api: Api) => {
   ;[
-    'addQuestions',
     'modifyPaths',
     'modifyAppData',
+    'addQuestions',
     'modifyPrompts',
     'modifyTsConfig',
     'modifyJestConfig',

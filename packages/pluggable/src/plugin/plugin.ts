@@ -2,7 +2,7 @@ import type { PluginDeclaration, ResolvedPlugin } from '@/pluggable'
 import {
   camelCase,
   fileLoadersSync,
-  isESModule,
+  isFunction,
   isPathExistsSync,
   readJsonSync,
   resolve,
@@ -111,15 +111,24 @@ export class Plugin {
         fileLoadersSync[extname(this.path) as keyof typeof fileLoadersSync]
 
       try {
-        const content = loader(this.path) as ReturnType<
-          typeof Plugin.prototype.apply
-        >
-        return isESModule<ReturnType<typeof Plugin.prototype.apply>>(content)
-          ? content.default
-          : content
+        const content = loader(this.path) as {
+          default: ReturnType<typeof Plugin.prototype.apply>
+        }
+        const apply = content?.default ?? content
+
+        if (!isFunction(apply)) {
+          throw new Error(
+            `Load ${this.type} failed in ${this.path}, expected function, but got ${apply}.`,
+          )
+        }
+
+        return apply
       } catch (error) {
         const err = error as Error
-        err.message = `Load ${this.type} failed in ${this.path}:\n${err.message}`
+        err.message = err.message.replace(
+          /Load (\/.*?) failed:/,
+          `Load ${this.type} failed in ${this.path}:`,
+        )
         throw err
       }
     }

@@ -37,5 +37,5 @@ export interface CreateOptions {
    * 是否直接覆盖文件
    * @default false
    */
-  force?: boolean
+  override?: boolean
 }

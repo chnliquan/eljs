@@ -61,11 +61,6 @@ export class Runner extends Pluggable<Config> {
     await this.load()
     this.stage = RunnerStageEnum.Init
 
-    const questions = await this.applyPlugins('addQuestions', {
-      initialValue: [],
-      args: { cwd: this.cwd },
-    })
-
     this.paths = await this.applyPlugins('modifyPaths', {
       initialValue: {
         cwd: this.cwd,
@@ -89,6 +84,11 @@ export class Runner extends Pluggable<Config> {
       args: {
         cwd: this.cwd,
       },
+    })
+
+    const questions = await this.applyPlugins('addQuestions', {
+      initialValue: [],
+      args: { cwd: this.cwd },
     })
 
     this.stage = RunnerStageEnum.CollectPrompts

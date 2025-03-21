@@ -101,7 +101,7 @@ export class Create {
    * @param targetDir 目标文件夹
    */
   private async _checkTargetDir(targetDir: string): Promise<boolean> {
-    if (this.constructorOptions.force) {
+    if (this.constructorOptions.override) {
       return true
     }
 

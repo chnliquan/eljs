@@ -15,7 +15,6 @@ import {
   transpileModule,
 } from 'typescript'
 
-import { isESModule } from '@/type'
 import { isPathExists, isPathExistsSync } from './is'
 import { readFile, readFileSync } from './read'
 import { remove, removeSync } from './remove'
@@ -54,7 +53,7 @@ export async function loadJs<T>(path: string): Promise<T> {
   try {
     const { href } = pathToFileURL(path)
     const content = await import(href)
-    return isESModule<T>(content) ? content.default : content
+    return content
   } catch (dynamicImportError) {
     const dynamicImportErr = dynamicImportError as Error
     try {
@@ -84,8 +83,8 @@ export async function loadJs<T>(path: string): Promise<T> {
  */
 export function loadJsSync<T>(path: string): T {
   try {
-    const content = importFresh(path) as T
-    return isESModule<T>(content) ? content.default : content
+    const content = importFresh(path)
+    return content as T
   } catch (error) {
     const err = error as Error
     err.message = `Load ${path} failed:\n${err.message}`

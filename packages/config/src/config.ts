@@ -2,7 +2,6 @@ import {
   deepMerge,
   fileLoaders,
   fileLoadersSync,
-  isESModule,
   isPathExists,
   isPathExistsSync,
 } from '@eljs/utils'
@@ -177,19 +176,19 @@ export class ConfigManager {
           fileLoadersSync[extname(configFile) as keyof typeof fileLoadersSync]
 
         try {
-          const content = loader(configFile)
+          const content = loader(configFile) as { default: T }
 
           if (!content) {
             return config
           }
 
-          config = deepMerge(
-            config as T,
-            isESModule<T>(content) ? content.default : content,
-          ) as T
+          config = deepMerge(config as T, content.default ?? content) as T
         } catch (error) {
           const err = error as Error
-          err.message = `Load config file Error in ${configFile}:\n${err.message}`
+          err.message = err.message.replace(
+            /Load (\/.*?) failed:/,
+            `Load config ${configFile} failed:`,
+          )
           throw err
         }
       }
@@ -213,19 +212,19 @@ export class ConfigManager {
           fileLoaders[extname(configFile) as keyof typeof fileLoaders]
 
         try {
-          const content = await loader(configFile)
+          const content = (await loader(configFile)) as { default: T }
 
           if (!content) {
             return config
           }
 
-          config = deepMerge(
-            config as T,
-            isESModule<T>(content) ? content.default : content,
-          ) as T
+          config = deepMerge(config as T, content.default ?? content) as T
         } catch (error) {
           const err = error as Error
-          err.message = `Load config file Error in ${configFile}:\n${err.message}`
+          err.message = err.message.replace(
+            /Load (\/.*?) failed:/,
+            `Load config ${configFile} failed:`,
+          )
           throw err
         }
       }

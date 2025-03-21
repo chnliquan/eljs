@@ -3,16 +3,16 @@ import path from 'path'
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const mod = require('module')
 
-console.log('require-hook')
 const resolveFilename = mod._resolveFilename
-const createPath = path.dirname(require.resolve('../package.json'))
-const utilsPath = path.dirname(require.resolve('@eljs/utils'))
+const createRootPath = path.dirname(require.resolve('../package.json'))
+const utilsRootPath = path.dirname(path.dirname(require.resolve('@eljs/utils')))
 
-console.log('require-hook:createPath', createPath)
-console.log('require-hook:utilsPath', utilsPath)
+console.log('require-hook:createRootPath', createRootPath)
+console.log('require-hook:utilsRootPath', utilsRootPath)
+
 const hookPropertyMap = new Map([
-  ['@eljs/create', path.dirname(require.resolve('../package.json'))],
-  // ['@eljs/utils', path.dirname(require.resolve('@eljs/utils'))],
+  ['@eljs/create', createRootPath],
+  ['@eljs/utils', utilsRootPath],
 ])
 
 mod._resolveFilename = function (
@@ -23,11 +23,11 @@ mod._resolveFilename = function (
   options: any,
 ) {
   const hookResolved = hookPropertyMap.get(request)
-  console.log('require-hook:request', request)
+
   if (hookResolved) {
     request = hookResolved
   }
-  console.log('require-hook:resolvedRequest', request)
+
   return resolveFilename.call(mod, request, parent, isMain, options)
 }
 
