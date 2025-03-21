@@ -4,7 +4,7 @@ import { hasGit, hasProjectGit, logger, run } from '@eljs/utils'
 export default async (api: Api) => {
   api.describe({
     enable() {
-      return api.userConfig.gitInit === true
+      return api.userConfig?.gitInit === true
     },
   })
 

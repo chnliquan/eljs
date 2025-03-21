@@ -1,4 +1,10 @@
-import { getPackageRootPaths, logger, readJson, sleep } from '@eljs/utils'
+import {
+  getWorkspaces,
+  logger,
+  PackageJson,
+  readJson,
+  sleep,
+} from '@eljs/utils'
 import path from 'path'
 import { $, argv } from 'zx'
 
@@ -17,11 +23,11 @@ async function main(): Promise<void> {
   }
 
   const rootPath = path.resolve(__dirname, '../')
-  const pkgPaths = await getPackageRootPaths(rootPath)
+  const pkgPaths = await getWorkspaces(rootPath)
 
   for (const owner of owners) {
     for (const pkgPath of pkgPaths) {
-      const { name: pkgName } = await readJson(
+      const { name: pkgName } = await readJson<PackageJson>(
         path.resolve(pkgPath, 'package.json'),
       )
 

@@ -24,6 +24,8 @@ mod._resolveFilename = function (
 ) {
   const hookResolved = hookPropertyMap.get(request)
 
+  console.log('request', request)
+  console.log('hookResolved', hookResolved)
   if (hookResolved) {
     request = hookResolved
   }

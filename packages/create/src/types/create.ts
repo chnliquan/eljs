@@ -1,7 +1,7 @@
 /**
  * 模版配置
  */
-export interface TemplateConfig {
+export interface Template {
   /**
    * 模版源类型
    */
@@ -10,10 +10,6 @@ export interface TemplateConfig {
    * 模版值
    */
   value: string
-  /**
-   * 模板描述
-   */
-  description?: string
   /**
    * 仓库地址
    */
@@ -27,7 +23,7 @@ export interface CreateOptions {
   /**
    * 模板
    */
-  template: string | TemplateConfig
+  template: string | Template
   /**
    * 项目工作目录
    * @default process.cwd()

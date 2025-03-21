@@ -1,60 +1,58 @@
-import { Create, type TemplateConfig } from '@eljs/create'
+import { Create } from '@eljs/create'
 import { prompts } from '@eljs/utils'
 import assert from 'node:assert'
 
-import type { CreateTemplateOpts } from './types'
+import { defaultConfig, type Template } from './config'
+import { objectToArray } from './utils'
 
-export function objectToArray(
-  obj: Record<string, unknown>,
-  valueIsNumber = false,
-) {
-  return Object.keys(obj).map(key => {
-    const title = obj[key] as string
-    return {
-      title,
-      value: valueIsNumber ? Number(key) : key,
-    }
-  })
+/**
+ * 构造函数参数
+ */
+export interface CreateTemplateOptions {
+  /**
+   * 当前工作目录
+   */
+  cwd?: string
+  /**
+   * 应用场景
+   */
+  scene?: string
+  /**
+   * 应用模版
+   */
+  template?: string
+  /**
+   * 是否覆盖文件
+   */
+  override?: boolean
 }
 
 export class CreateTemplate {
   /**
-   * 构造函数配置项
+   * 构造函数参数
    */
-  private _opts: CreateTemplateOpts
+  public constructorOptions: CreateTemplateOptions
   /**
-   * 当前路径
+   * 当前工作目录
    */
-  private _cwd: string = process.cwd()
+  public cwd: string
 
-  public constructor(opts: CreateTemplateOpts) {
-    this._opts = opts
-
-    if (opts.cwd) {
-      this._cwd = opts.cwd
-    }
-  }
-
-  public get cwd() {
-    return this._cwd
-  }
-
-  public get templateConfig() {
-    return this._opts.templateConfig
+  public constructor(options: CreateTemplateOptions) {
+    this.constructorOptions = options
+    this.cwd = options.cwd || process.cwd()
   }
 
   public async run(projectName: string) {
-    const template = (await this._getTemplateInfo()) as TemplateConfig
-
+    const template = await this._getTemplate()
     const create = new Create({
-      ...this._opts,
+      ...this.constructorOptions,
       cwd: this.cwd,
       template,
     })
     await create.run(projectName)
   }
 
-  private _formatTemplate(template: Record<string, Required<TemplateConfig>>) {
+  private _formatTemplate(template: Record<string, Template>) {
     return Object.keys(template).map(key => {
       const title = template[key].description
       return {
@@ -64,49 +62,47 @@ export class CreateTemplate {
     })
   }
 
-  private async _getTemplateInfo() {
-    if (!this.templateConfig) {
-      return
-    }
-
-    const { appType, templates } = this.templateConfig
-    let appTypeAnswer = this._opts.appType as string
-    let appNameAnswer = this._opts.appName as string
-
-    if (!this._opts.appType || !(this._opts.appType in appType)) {
-      const answer = await prompts({
-        type: 'select',
-        name: 'appType',
-        message: '请选择场景',
-        choices: objectToArray(appType),
-      })
-      appTypeAnswer = answer.appType
-    }
+  private async _getTemplate() {
+    const { scenes, templates } = defaultConfig
+    let sceneAnswer = this.constructorOptions.scene as string
+    let templateAnswer = this.constructorOptions.template as string
 
     if (
-      !this._opts.appName ||
-      !(this._opts.appName in templates[appTypeAnswer])
+      !this.constructorOptions.scene ||
+      !(this.constructorOptions.scene in scenes)
     ) {
       const answer = await prompts({
         type: 'select',
-        name: 'appName',
-        message: '请选择模板',
-        choices: this._formatTemplate(templates[appTypeAnswer]),
+        name: 'scene',
+        message: 'Select the application scene',
+        choices: objectToArray(scenes),
       })
-      appNameAnswer = answer.appName
+      sceneAnswer = answer.scene
     }
 
-    assert(appTypeAnswer, '请选择场景')
-    assert(appNameAnswer, '请选择模板')
+    if (
+      !this.constructorOptions.template ||
+      !(this.constructorOptions.template in templates[sceneAnswer])
+    ) {
+      const answer = await prompts({
+        type: 'select',
+        name: 'template',
+        message: 'Select the application template',
+        choices: this._formatTemplate(templates[sceneAnswer]),
+      })
+      templateAnswer = answer.template
+    }
 
-    const templateInfo =
-      this.templateConfig.templates[appTypeAnswer][appNameAnswer]
+    assert(sceneAnswer, 'Excepted the application scene.')
+    assert(templateAnswer, 'Excepted the application template.')
+
+    const template = defaultConfig.templates[sceneAnswer][templateAnswer]
 
     assert(
-      templateInfo,
-      `当前选择的场景：${appTypeAnswer}，模板Id：${appNameAnswer} 未找到对应的模板配置`,
+      template,
+      `Selected scene: ${sceneAnswer} and template name: ${templateAnswer} not corresponding any template configuration.`,
     )
 
-    return templateInfo
+    return template
   }
 }

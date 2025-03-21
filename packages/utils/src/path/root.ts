@@ -68,7 +68,7 @@ export async function getBunWorkspaceRoot(cwd: string): Promise<string> {
 }
 
 /**
- * 获取工作目录根路径
+ * 获取工作目录根目录
  * @param cwd 工作目录
  * @returns 工作目录根路径
  */
@@ -84,11 +84,11 @@ export async function getWorkspaceRoot(cwd: string): Promise<string> {
 const cache = new Map()
 
 /**
- * 获取项目中包含的包路径
+ * 获取工作区
  * @param cwd 当前工作目录
- * @param relative 展示相对路径
+ * @param relative 是否展示相对路径
  */
-export async function getPackageRootPaths(
+export async function getWorkspaces(
   cwd: string,
   relative = false,
 ): Promise<string[]> {

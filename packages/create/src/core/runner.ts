@@ -141,7 +141,7 @@ export interface RunnerPluginApi extends PluggablePluginApi {
   /**
    * 用户配置
    */
-  userConfig: Config
+  userConfig: Config | null
   /**
    * 应用数据，可通过 `modifyAppData` 方法修改
    */

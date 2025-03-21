@@ -122,9 +122,16 @@
         "program": "${workspaceFolder}/packages/create-template/src/cli.ts"
       },
       "env": {
-        "DEBUG": "create-template*"
+        "DEBUG": "create*"
       },
-      "args": ["-f"],
+      "args": [
+        // "--help",
+        "create-app",
+        "--cwd=/Users/ender/kwai/technology/polyrepo-release",
+        "--scene=npm",
+        // "--template=template-npm-web",
+        "-r"
+      ],
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
     }

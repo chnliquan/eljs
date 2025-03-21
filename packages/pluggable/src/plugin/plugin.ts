@@ -2,7 +2,6 @@ import type { PluginDeclaration, ResolvedPlugin } from '@/pluggable'
 import {
   camelCase,
   fileLoadersSync,
-  isFunction,
   isPathExistsSync,
   readJsonSync,
   resolve,
@@ -116,7 +115,7 @@ export class Plugin {
         }
         const apply = content?.default ?? content
 
-        if (!isFunction(apply)) {
+        if (!(typeof apply === 'function')) {
           throw new Error(
             `Load ${this.type} failed in ${this.path}, expected function, but got ${apply}.`,
           )

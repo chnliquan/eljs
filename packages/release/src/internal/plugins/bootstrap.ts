@@ -2,7 +2,7 @@ import type { Api } from '@/types'
 import {
   chalk,
   getGitBranch,
-  getPackageRootPaths,
+  getWorkspaces,
   isPathExists,
   logger,
   readJson,
@@ -12,7 +12,7 @@ import path from 'node:path'
 
 export default (api: Api) => {
   api.modifyAppData(async (memo, { cwd }) => {
-    const packageRootPaths = await getPackageRootPaths(cwd)
+    const packageRootPaths = await getWorkspaces(cwd)
 
     const pkgJsonPaths: string[] = []
     const pkgs: Required<PackageJson>[] = []
