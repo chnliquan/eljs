@@ -1,5 +1,12 @@
 # ChangeLog 
 
+# [1.0.0-beta.5](https://github.com/chnliquan/eljs/compare/v1.0.0-beta.4...v1.0.0-beta.5) (2025-03-21)
+
+
+### ♻ Code Refactoring
+
+* **pluggable:** catch load plugin error ([ffd5b94](https://github.com/chnliquan/eljs/commit/ffd5b942c723ed7ef8a4bb8dc1a846f97bd5ec27)) 
+
 # [1.0.0-beta.4](https://github.com/chnliquan/eljs/compare/v1.0.0-beta.3...v1.0.0-beta.4) (2025-03-20)
 
 
