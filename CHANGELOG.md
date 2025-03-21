@@ -1,5 +1,12 @@
 # ChangeLog 
 
+# [1.0.0-beta.7](https://github.com/chnliquan/eljs/compare/v1.0.0-beta.6...v1.0.0-beta.7) (2025-03-21)
+
+
+### ♻ Code Refactoring
+
+* **create-template:** optimize logic ([06f997d](https://github.com/chnliquan/eljs/commit/06f997df63e9ebfb84a4b48ba764a29d50a393d8)) 
+
 # [1.0.0-beta.6](https://github.com/chnliquan/eljs/compare/v1.0.0-beta.5...v1.0.0-beta.6) (2025-03-21)
 
 **Note:** No changes, only version bump. 
