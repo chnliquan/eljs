@@ -62,18 +62,26 @@ export async function installDeps(options: InstallDepsOptions): Promise<void> {
 
 /**
  * 安装项目依赖
- * @param cwd 当前工作目录
- * @param packageManager 包管理器
+ * @param options.cwd 当前工作目录
+ * @param options.args 命令行参数
+ * @param options.packageManager 包管理器
  */
-export async function install(
-  cwd = process.cwd(),
-  packageManager?: PackageManager,
-): Promise<void> {
-  if (!packageManager) {
-    packageManager = await getPackageManager(cwd)
-  }
+export async function install(options?: {
+  cwd: string
+  args?: string[]
+  packageManager?: PackageManager
+}): Promise<void> {
+  const {
+    cwd = process.cwd(),
+    args = [],
+    packageManager = await getPackageManager(cwd),
+  } = options || {}
 
-  await execa(packageManager, [packageManager === 'npm' ? 'install' : ''], {
+  const cliArgs = [packageManager === 'yarn' ? '' : 'install', ...args].filter(
+    Boolean,
+  )
+
+  await execa(packageManager, cliArgs, {
     stdio: 'inherit',
     cwd,
   })

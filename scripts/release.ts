@@ -2,22 +2,22 @@ import { release, resolveBin } from '@eljs/release'
 import { isGitBehindRemote, isGitClean, logger } from '@eljs/utils'
 import { $, argv } from 'zx'
 
-const skipGitCheck = argv.skipGitCheck
 const skipTests = argv.skipTests
 const skipBuild = argv.skipBuild
+const skipRequireClean = argv.skipRequireClean
 
 $.verbose = true
 
 main()
 
 async function main(): Promise<void> {
-  if (!skipGitCheck) {
+  if (!skipRequireClean) {
     if (!(await isGitClean())) {
-      logger.printErrorAndExit('git is not clean.')
+      logger.printErrorAndExit('Git working tree is not clean.')
     }
 
     if (await isGitBehindRemote()) {
-      logger.printErrorAndExit('git is behind remote.')
+      logger.printErrorAndExit('Git working tree is behind remote.')
     }
   }
 
@@ -47,11 +47,7 @@ async function main(): Promise<void> {
     },
     npm: {
       ...argv.npm,
-      requireOwner: false,
       cnpm: true,
-    },
-    github: {
-      ...argv.github,
     },
   })
 }

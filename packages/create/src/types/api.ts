@@ -79,7 +79,8 @@ export type Api = PluginApi<Runner> &
     resolve: (...paths: string[]) => string
     /**
      * 安装依赖
+     * @param args 命令行参数
      */
-    installDeps(): Promise<void>
+    install(args: string[]): Promise<void>
     // #endregion
   }

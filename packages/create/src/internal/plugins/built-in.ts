@@ -61,12 +61,16 @@ export default (api: Api) => {
     },
   )
 
-  api.registerMethod('installDeps', async () => {
+  api.registerMethod('install', async (args: string[]) => {
     const { packageManager = 'pnpm' } = api.appData
 
     logger.info('📦 Installing additional dependencies...')
     console.log()
 
-    await install(api.paths.target, packageManager)
+    await install({
+      cwd: api.paths.target,
+      args,
+      packageManager,
+    })
   })
 }

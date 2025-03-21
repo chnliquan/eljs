@@ -5,7 +5,7 @@ import { getGitBranch, getGitUpstreamBranch } from './meta'
 /**
  * 提交 git 信息
  * @param msg 提交信息
- * @param args git commit 参数
+ * @param args 命令行参数
  * @param options 可选配置项
  */
 export async function gitCommit(
@@ -34,7 +34,7 @@ export async function gitCommit(
 
 /**
  * 推送 git 到远端
- * @param args git push 参数
+ * @param args 命令行参数
  * @param options 可选配置项
  */
 export async function gitPush(
@@ -69,7 +69,7 @@ export async function gitPush(
 /**
  * git tag
  * @param tag 标签
- * @param args git tag 参数
+ * @param args 命令行参数
  * @param options 选项
  */
 export async function gitTag(
