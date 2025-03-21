@@ -1,5 +1,12 @@
 # ChangeLog 
 
+# [1.0.0-beta.8](https://github.com/chnliquan/eljs/compare/v1.0.0-beta.7...v1.0.0-beta.8) (2025-03-21)
+
+
+### 🐛 Bug Fixes
+
+* **utils:** import export default ([83ea95a](https://github.com/chnliquan/eljs/commit/83ea95a25474aaf09d70d7b7a44be3b5cb869d33)) 
+
 # [1.0.0-beta.7](https://github.com/chnliquan/eljs/compare/v1.0.0-beta.6...v1.0.0-beta.7) (2025-03-21)
 
 
