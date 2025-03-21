@@ -1,4 +1,4 @@
-import type { TemplateConfig } from '@/types'
+import type { Template } from '@/types'
 import {
   chalk,
   downloadGitRepo,
@@ -16,13 +16,13 @@ export class Download {
   /**
    * 构造函数参数
    */
-  public constructorOptions: TemplateConfig
+  public constructorOptions: Template
   /**
    * spinner
    */
   private _spinner: Ora
 
-  public constructor(options: TemplateConfig) {
+  public constructor(options: Template) {
     this.constructorOptions = options
     this._spinner = ora()
   }
