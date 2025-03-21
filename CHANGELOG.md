@@ -1,5 +1,9 @@
 # ChangeLog 
 
+# [1.0.0-beta.6](https://github.com/chnliquan/eljs/compare/v1.0.0-beta.5...v1.0.0-beta.6) (2025-03-21)
+
+**Note:** No changes, only version bump. 
+
 # [1.0.0-beta.5](https://github.com/chnliquan/eljs/compare/v1.0.0-beta.4...v1.0.0-beta.5) (2025-03-21)
 
 
