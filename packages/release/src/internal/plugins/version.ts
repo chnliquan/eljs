@@ -137,9 +137,7 @@ async function getIncrementVersion(
 
   if (releaseTypeOrVersion) {
     return getReleaseVersion(
-      prereleaseId
-        ? referenceVersionMap[prereleaseId] || referenceVersionMap.latest
-        : referenceVersionMap.latest,
+      getReferenceVersion(prereleaseId),
       releaseTypeOrVersion as ReleaseType,
       prereleaseId,
     )
@@ -192,9 +190,8 @@ async function getIncrementVersion(
   }
 
   if (prereleaseId) {
-    const referenceVersion = referenceVersionMap[prereleaseId]
     answer = await prompts(
-      getPrereleaseChoices(referenceVersion, prereleaseId),
+      getPrereleaseChoices(getReferenceVersion(prereleaseId), prereleaseId),
       {
         onCancel,
       },
@@ -246,13 +243,18 @@ async function getIncrementVersion(
     }
   }
 
-  const referenceVersion =
-    referenceVersionMap[answer.value as keyof typeof referenceVersionMap]
-  answer = await prompts(getPrereleaseChoices(referenceVersion, answer.value), {
-    onCancel,
-  })
+  answer = await prompts(
+    getPrereleaseChoices(getReferenceVersion(answer.value), answer.value),
+    {
+      onCancel,
+    },
+  )
 
   return answer.value
+
+  function getReferenceVersion(prereleaseId: PrereleaseId) {
+    return referenceVersionMap[prereleaseId] || referenceVersionMap.latest
+  }
 }
 
 function getPrereleaseChoices(
