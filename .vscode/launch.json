@@ -15,9 +15,6 @@
       "windows": {
         "program": "${file}"
       },
-      "env": {
-        "DEBUG": "release:*"
-      },
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "skipFiles": ["<node_internals>/**"]
@@ -32,16 +29,6 @@
         "program": "${workspaceFolder}/node_modules/jest/bin/jest"
       },
       "args": ["${fileBasenameNoExtension}", "--config", "jest.config.js"],
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "Debug Js File",
-      "runtimeExecutable": "node",
-      "args": ["${file}"],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
@@ -64,19 +51,18 @@
       },
       "args": [
         // "--help",
-        "1.0.0",
-        "1.0.0",
         "--cwd=/Users/ender/kwai/technology/polyrepo-release",
         // "--cwd=/Users/ender/kwai/technology/monorepo-release",
         // "--git.independent",
         // "--no-git.requireClean",
         // "--no-git.changelog",
         // "--git.requireBranch=master",
-        "--no-npm.requireOwner",
+        // "--no-npm.requireOwner",
         // "--npm.prerelease",
         // "--npm.prereleaseId=beta",
         "--no-npm.confirm"
         // "prerelease"
+        // "1.0.0",
       ],
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**"]
@@ -98,14 +84,14 @@
         "DEBUG": "create*"
       },
       "args": [
-        "--help",
+        // "--help",
+        "--cwd=/Users/ender/kwai/technology/polyrepo-release",
+        "-r",
         // "@eljs/create-plugin-npm-web",
         // "@eljs/utils",
-        // "./template",
-        "./generator",
-        "create-app",
-        "--cwd=/Users/ender/kwai/technology/polyrepo-release",
-        "-r"
+        "./template2",
+        // "./generator",
+        "create-app"
       ],
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]

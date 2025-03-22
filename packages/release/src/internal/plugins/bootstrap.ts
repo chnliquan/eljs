@@ -1,6 +1,6 @@
 import type { Api } from '@/types'
+import { AppError } from '@/utils'
 import {
-  chalk,
   getGitBranch,
   getGitLatestTag,
   getWorkspaces,
@@ -31,9 +31,7 @@ export default (api: Api) => {
       const pkg = await readJson<Required<PackageJson>>(pkgJsonPath)
 
       if (!pkg.name) {
-        logger.warn(
-          `The package ${chalk.bold(pkgJsonPath)} has no ${chalk.cyanBright('name')} field, skipped.`,
-        )
+        logger.warn(`No name field was found in ${pkgJsonPath}, skipped.`)
         continue
       }
 
@@ -56,8 +54,7 @@ export default (api: Api) => {
     })
 
     if (validPkgNames.length === 0) {
-      logger.warn(`No valid package to publish in ${chalk.bold(cwd)}.`)
-      process.exit(0)
+      throw new AppError(`No valid package to publish in ${cwd}.`)
     }
 
     return {

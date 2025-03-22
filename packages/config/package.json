@@ -1,7 +1,7 @@
 {
   "name": "@eljs/config",
   "version": "1.0.0-next.1",
-  "description": "config loader",
+  "description": "Load your config file.",
   "keywords": [
     "eljs",
     "config",

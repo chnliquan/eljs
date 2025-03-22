@@ -7,7 +7,6 @@ import {
   type PluggablePluginApi,
 } from '@eljs/pluggable'
 import {
-  chalk,
   createDebugger,
   deepMerge,
   isPathExistsSync,
@@ -21,7 +20,7 @@ import path from 'node:path'
 import type { ReleaseType } from 'semver'
 
 import { defaultConfig } from './default'
-import { parseVersion } from './utils'
+import { AppError, parseVersion } from './utils'
 
 const debug = createDebugger('release:config')
 
@@ -43,18 +42,15 @@ export class Runner extends Pluggable<Config> {
     const projectPkgJsonPath = path.join(cwd, 'package.json')
 
     if (!isPathExistsSync(projectPkgJsonPath)) {
-      logger.printErrorAndExit(
-        `Detect ${chalk.bold.cyanBright(cwd)} has no package.json.`,
-      )
+      throw new AppError(`No package.json was found in ${cwd}.`)
     }
 
     const projectPkg = readJsonSync<PackageJson>(projectPkgJsonPath)
 
     if (!projectPkg.version) {
-      logger.printErrorAndExit(
-        `Detect ${chalk.bold.cyanBright(projectPkgJsonPath)} has no version field.`,
-      )
+      throw new AppError(`No version field was found in ${projectPkgJsonPath}.`)
     }
+
     super({
       ...options,
       cwd,
@@ -70,93 +66,100 @@ export class Runner extends Pluggable<Config> {
   }
 
   public async run(releaseTypeOrVersion?: ReleaseType | string): Promise<void> {
-    await this.load()
-
-    await this._resolveConfig()
-
-    /**
-     * 修改应用数据
-     */
-    this.appData = await this.applyPlugins('modifyAppData', {
-      initialValue: {
-        ...this.appData,
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        cliVersion: require('../package.json').version,
-        packageManager: 'pnpm',
-      } as AppData,
-      args: {
-        cwd: this.cwd,
-      },
-    })
-
-    /**
-     * 应用检查
-     */
-    await this.applyPlugins('onCheck', {
-      args: {
-        releaseTypeOrVersion,
-      },
-    })
-    /**
-     * 应用启动
-     */
-    await this.applyPlugins('onStart')
-    /**
-     * 获取升级版本
-     */
-    const rawVersion = (await this.applyPlugins('getIncrementVersion', {
-      args: {
-        releaseTypeOrVersion,
-      },
-    })) as string
-
-    if (rawVersion) {
-      const version = parseVersion(rawVersion)
-
-      await this.applyPlugins('onBeforeBumpVersion', {
+    try {
+      await this.load()
+      await this._resolveConfig()
+      /**
+       * 修改应用数据
+       */
+      this.appData = await this.applyPlugins('modifyAppData', {
+        initialValue: {
+          ...this.appData,
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          cliVersion: require('../package.json').version,
+          packageManager: 'pnpm',
+        } as AppData,
         args: {
-          ...version,
+          cwd: this.cwd,
         },
       })
 
-      await this.applyPlugins('onBumpVersion', {
+      /**
+       * 应用检查
+       */
+      await this.applyPlugins('onCheck', {
         args: {
-          ...version,
+          releaseTypeOrVersion,
         },
       })
-
-      await this.applyPlugins('onAfterBumpVersion', {
+      /**
+       * 应用启动
+       */
+      await this.applyPlugins('onStart')
+      /**
+       * 获取升级版本
+       */
+      const rawVersion = (await this.applyPlugins('getIncrementVersion', {
         args: {
-          ...version,
-        },
-      })
-
-      const changelog = (await this.applyPlugins('getChangelog', {
-        args: {
-          ...version,
+          releaseTypeOrVersion,
         },
       })) as string
 
-      await this.applyPlugins('onBeforeRelease', {
-        args: {
-          ...version,
-          changelog,
-        },
-      })
+      if (rawVersion) {
+        const version = parseVersion(rawVersion)
 
-      await this.applyPlugins('onRelease', {
-        args: {
-          ...version,
-          changelog,
-        },
-      })
+        await this.applyPlugins('onBeforeBumpVersion', {
+          args: {
+            ...version,
+          },
+        })
 
-      await this.applyPlugins('onAfterRelease', {
-        args: {
-          ...version,
-          changelog,
-        },
-      })
+        await this.applyPlugins('onBumpVersion', {
+          args: {
+            ...version,
+          },
+        })
+
+        await this.applyPlugins('onAfterBumpVersion', {
+          args: {
+            ...version,
+          },
+        })
+
+        const changelog = (await this.applyPlugins('getChangelog', {
+          args: {
+            ...version,
+          },
+        })) as string
+
+        await this.applyPlugins('onBeforeRelease', {
+          args: {
+            ...version,
+            changelog,
+          },
+        })
+
+        await this.applyPlugins('onRelease', {
+          args: {
+            ...version,
+            changelog,
+          },
+        })
+
+        await this.applyPlugins('onAfterRelease', {
+          args: {
+            ...version,
+            changelog,
+          },
+        })
+      }
+    } catch (error) {
+      if (error instanceof AppError) {
+        logger.error(error.message)
+      } else {
+        console.log(error)
+      }
+      throw error
     }
   }
 

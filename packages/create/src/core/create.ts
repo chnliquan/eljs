@@ -1,6 +1,5 @@
 import type { CreateOptions } from '@/types'
 import {
-  chalk,
   confirm,
   createDebugger,
   findUp,
@@ -17,6 +16,7 @@ import { readdir } from 'node:fs/promises'
 import { EOL } from 'node:os'
 import path, { join } from 'node:path'
 
+import { AppError } from '@/utils'
 import { Download } from './download'
 import { Runner } from './runner'
 
@@ -73,16 +73,28 @@ export class Create {
         if (!override) {
           return
         }
+        await remove(targetDir)
+        await mkdir(targetDir)
       }
 
       await this._resolveTemplate()
       debug?.(`templateRootPath`, this._templateRootPath)
 
-      // 检查生成配置否存在
+      const configFile = await tryPaths([
+        join(this._templateRootPath, 'create.config.ts'),
+        join(this._templateRootPath, 'create.config.js'),
+      ])
+
       const generatorFile = await tryPaths([
         join(this._templateRootPath, 'generators/index.ts'),
         join(this._templateRootPath, 'generators/index.js'),
       ])
+
+      if (!generatorFile && !configFile) {
+        throw new AppError(
+          `Invalid template in ${this._templateRootPath}, missing \`create.config.ts\` or \`generators/index.ts\`.`,
+        )
+      }
 
       const runner = new Runner({
         cwd: this._templateRootPath,
@@ -90,6 +102,13 @@ export class Create {
       })
 
       await runner.run(targetDir, projectName)
+    } catch (error) {
+      if (error instanceof AppError) {
+        logger.error(error.message)
+      } else {
+        console.log(error)
+      }
+      throw error
     } finally {
       if (!this._isLocal && (await isPathExists(this._templateRootPath))) {
         await remove(this._templateRootPath)
@@ -112,7 +131,7 @@ export class Create {
 
     if (files.length) {
       logger.warn(
-        `The current folder ${chalk.bold(targetDir)} contains the following files:${EOL}`,
+        `The current folder ${targetDir} contains the following files:${EOL}`,
       )
       files.forEach(file => console.log(' - ' + file))
       console.log()
@@ -132,7 +151,7 @@ export class Create {
         const path = join(this.cwd, this.template)
 
         if (!(await isDirectory(path))) {
-          throw new Error(`Invalid template ${this.template}.`)
+          throw new AppError(`Invalid local template ${this.template}.`)
         }
 
         this._isLocal = true

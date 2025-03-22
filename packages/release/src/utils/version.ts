@@ -1,5 +1,5 @@
 import type { DistTag, PrereleaseId } from '@/types'
-import { chalk, getGitCommitSha, run } from '@eljs/utils'
+import { getGitCommitSha, run } from '@eljs/utils'
 import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
 
 export function isPrerelease(version: string): boolean {
@@ -57,7 +57,7 @@ export function parseVersion(version: string) {
   const parsed = semver.parse(version)
 
   if (!parsed) {
-    throw new Error(`Invalid semantic version ${chalk.red.bold(version)}.`)
+    throw new Error(`Invalid semantic version ${version}.`)
   }
 
   const isPrerelease = Boolean(parsed.prerelease.length)

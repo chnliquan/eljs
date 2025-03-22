@@ -46,8 +46,7 @@ $ pnpm boot
 | release:minor    | 发布所有子包到 `minor` 版本                                                              |
 | release:major    | 发布所有子包到 `major` 版本                                                              |
 | test             | 测试所有子包                                                                             |
-| test:once        | 以 `watch` 模式单测所有子包                                                              |
-
+| test:w           | 以 `watch` 模式单测所有子包                                                              |
 
 ## 分支管理
 

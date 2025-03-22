@@ -1,6 +1,7 @@
 import { prereleaseTypes } from '@/constants'
 import type { Api, PrereleaseId } from '@/types'
 import {
+  AppError,
   getCanaryVersion,
   getMaxVersion,
   getReleaseVersion,
@@ -27,9 +28,7 @@ const debug = createDebugger('release:version')
 export default (api: Api) => {
   api.onCheck(async ({ releaseTypeOrVersion }) => {
     if (releaseTypeOrVersion && !isVersionValid(releaseTypeOrVersion, true)) {
-      logger.printErrorAndExit(
-        `Invalid semantic version ${chalk.bold(releaseTypeOrVersion)}.`,
-      )
+      throw new AppError(`Invalid semantic version ${releaseTypeOrVersion}.`)
     }
   })
 
@@ -53,21 +52,19 @@ export default (api: Api) => {
       const { prerelease, prereleaseId } = api.config.npm
 
       if (prereleaseId && prereleaseId !== preid) {
-        logger.printErrorAndExit(
-          `Should input ${prereleaseId} tag, but got ${chalk.bold(version)}.`,
+        throw new AppError(
+          `Should input ${prereleaseId} tag, but got ${version}.`,
         )
       }
 
       if ((prereleaseId || prerelease === true) && !isPrerelease) {
-        logger.printErrorAndExit(
-          `Should input prerelease type, but got ${chalk.bold(version)}.`,
+        throw new AppError(
+          `Should input prerelease type tag, but got ${version}.`,
         )
       }
 
       if (!prereleaseId && prerelease === false && isPrerelease) {
-        logger.printErrorAndExit(
-          `Should input release type, but got ${chalk.bold(version)}.`,
-        )
+        throw new AppError(`Should input release type, but got ${version}.`)
       }
 
       await checkVersion(
@@ -148,11 +145,11 @@ async function getIncrementVersion(
   if (canary) {
     return getCanaryVersion(referenceVersionMap.latest, api.cwd)
   } else {
-    logger.info(`- Local version: ${chalk.cyanBright.bold(localVersion)}`)
+    logger.info(`- Local version: ${chalk.bold.cyanBright(localVersion)}`)
 
     if (remoteLatestVersion) {
       logger.info(
-        `- Remote latest version: ${chalk.cyanBright.bold(
+        `- Remote latest version: ${chalk.bold.cyanBright(
           remoteLatestVersion,
         )}`,
       )
@@ -160,19 +157,19 @@ async function getIncrementVersion(
 
     if (remoteAlphaVersion && (!prereleaseId || prereleaseId === 'alpha')) {
       logger.info(
-        `- Remote alpha version: ${chalk.cyanBright.bold(remoteAlphaVersion)}`,
+        `- Remote alpha version: ${chalk.bold.cyanBright(remoteAlphaVersion)}`,
       )
     }
 
     if (remoteBetaVersion && (!prereleaseId || prereleaseId === 'beta')) {
       logger.info(
-        `- Remote beta version: ${chalk.cyanBright.bold(remoteBetaVersion)}`,
+        `- Remote beta version: ${chalk.bold.cyanBright(remoteBetaVersion)}`,
       )
     }
 
     if (remoteRcVersion && (!prereleaseId || prereleaseId === 'rc')) {
       logger.info(
-        `- Remote rc version: ${chalk.cyanBright.bold(remoteRcVersion)}`,
+        `- Remote rc version: ${chalk.bold.cyanBright(remoteRcVersion)}`,
       )
     }
   }
@@ -346,13 +343,11 @@ async function checkVersion(
   registry?: string,
 ) {
   if (!semver.valid(version)) {
-    logger.printErrorAndExit(`Invalid semantic version ${chalk.bold(version)}.`)
+    throw new AppError(`Invalid semantic version ${version}.`)
   }
 
   if (await isVersionExist(pkgName, version, registry)) {
-    logger.printErrorAndExit(
-      `${pkgName} has published v${chalk.bold(version)} already.`,
-    )
+    throw new AppError(`${pkgName} has published ${version} already.`)
   }
 }
 
@@ -366,11 +361,11 @@ async function confirmVersion(api: Api, version: string): Promise<string> {
   let confirmMessage = ''
 
   if (validPkgNames.length === 1) {
-    confirmMessage = `Are you sure to bump the version to ${chalk.cyanBright(
+    confirmMessage = `Are you sure to bump the version to ${chalk.bold.cyanBright(
       version,
     )}`
   } else {
-    console.log(chalk.bold(`The packages to be bumped are as follows:${EOL}`))
+    console.log(`The packages to be bumped are as follows:${EOL}`)
 
     for (const pkgName of validPkgNames) {
       console.log(` - ${chalk.cyanBright(`${pkgName}@${version}`)}`)

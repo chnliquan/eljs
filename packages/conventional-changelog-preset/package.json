@@ -1,10 +1,11 @@
 {
   "name": "@eljs/conventional-changelog-preset",
   "version": "1.0.0-next.1",
-  "description": "eljs conventional changelog preset",
+  "description": "Conventional changelog preset for @eljs/release.",
   "keywords": [
     "eljs",
-    "conventional-changelog-preset"
+    "conventional-changelog",
+    "preset"
   ],
   "homepage": "https://github.com/chnliquan/eljs/tree/master/packages/conventional-changelog-preset#readme",
   "bugs": {

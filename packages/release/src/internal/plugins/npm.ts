@@ -1,5 +1,5 @@
 import type { Api } from '@/types'
-import { syncCnpm } from '@/utils'
+import { AppError, syncCnpm } from '@/utils'
 import { chalk, getNpmUser, logger, normalizeArgs, run } from '@eljs/utils'
 import { EOL } from 'node:os'
 
@@ -26,7 +26,7 @@ export default (api: Api) => {
             .map(line => line.split(' ')[0])
 
           if (!owners.includes(user)) {
-            logger.printErrorAndExit(`${pkgName} is not owned by ${user}.`)
+            throw new AppError(`The ${user} is not the owner of ${pkgName}.`)
           }
         } catch (error) {
           const err = error as Error
@@ -35,7 +35,7 @@ export default (api: Api) => {
             continue
           }
 
-          logger.printErrorAndExit(`${pkgName} ownership is invalid.`)
+          throw new AppError(`Invalid ownership of ${pkgName}`)
         }
       }
     }
@@ -73,7 +73,7 @@ export default (api: Api) => {
       if (settledResult.status === 'rejected') {
         console.log()
         logger.error(
-          `Published ${chalk.cyanBright.bold(
+          `Published ${chalk.bold.cyanBright(
             `${validPkgNames[i]}@${version}`,
           )} failed.`,
         )
@@ -116,7 +116,7 @@ export default (api: Api) => {
       })
 
       logger.ready(
-        `Published ${chalk.cyanBright.bold(`${pkgName}@${version}`)} successfully.`,
+        `Published ${chalk.bold.cyanBright(`${pkgName}@${version}`)} successfully.`,
       )
     }
   })

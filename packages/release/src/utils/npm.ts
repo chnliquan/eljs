@@ -63,7 +63,7 @@ export async function syncCnpm(pkgNames: string[]) {
 
   async function doSync(pkgName: string) {
     await run(cnpm, ['sync', pkgName])
-    logger.ready(`Sync ${chalk.cyanBright.bold(`${pkgName}`)} to cnpm.`)
+    logger.ready(`Sync ${chalk.bold.cyanBright(`${pkgName}`)} to cnpm.`)
   }
 
   return Promise.allSettled(promiseArr)

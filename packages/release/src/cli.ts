@@ -11,8 +11,7 @@ const debug = createDebugger('release:cli')
 
 cli()
   .then(() => process.exit(0))
-  .catch(err => {
-    console.error(err)
+  .catch(() => {
     process.exit(1)
   })
 

@@ -1,7 +1,6 @@
 import type { Api } from '@/types'
-import { generateChangelog } from '@/utils'
+import { AppError, generateChangelog } from '@/utils'
 import {
-  chalk,
   gitCommit,
   gitPush,
   gitTag,
@@ -29,7 +28,7 @@ export default (api: Api) => {
           verbose: true,
         }))
       ) {
-        logger.printErrorAndExit('Git working tree is not clean.')
+        throw new AppError('Git working tree is not clean.')
       }
 
       if (
@@ -38,13 +37,13 @@ export default (api: Api) => {
           verbose: true,
         })
       ) {
-        logger.printErrorAndExit('Git working tree is behind remote.')
+        throw new AppError('Git working tree is behind remote.')
       }
     }
 
     if (requireBranch && api.appData.branch !== requireBranch) {
-      logger.printErrorAndExit(
-        `Must be on branch ${chalk.bold(requireBranch)}, but got ${chalk.bold(api.appData.branch)}.`,
+      throw new AppError(
+        `Must be on branch ${requireBranch}, but got ${api.appData.branch}.`,
       )
     }
   })
@@ -92,7 +91,7 @@ export default (api: Api) => {
           )
         : `# ChangeLog ${EOL}${EOL}${changelog}`
     } else {
-      changelog = '# ChangeLog ${EOL}${EOL}' + changelog
+      changelog = `# ChangeLog ${EOL}${EOL}${changelog}`
     }
 
     await writeFile(CHANGELOG_FILE, changelog)
@@ -149,7 +148,7 @@ export default (api: Api) => {
             /标签 '.+' 已存在/.test(message)) &&
           latestTag === tagName
         ) {
-          logger.warn(`Tag ${chalk.bold(tagName)} already exists.`)
+          logger.warn(`Tag ${tagName} already exists.`)
         } else {
           throw error
         }
