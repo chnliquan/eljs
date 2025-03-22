@@ -17,6 +17,7 @@ import * as utils from '@eljs/utils'
 import assert from 'assert'
 import fastestLevenshtein from 'fastest-levenshtein'
 import _ from 'lodash'
+import { EOL } from 'os'
 import { AsyncSeriesWaterfallHook } from 'tapable'
 import { ConfigManager } from '../config/manager'
 import { EnableBy } from '../enum'
@@ -610,7 +611,7 @@ export class Service<T extends ServiceOpts = ServiceOpts> {
       .map(cmd => {
         return ` - ${utils.chalk.green(cmd)}`
       })
-      .join('${EOL}')
+      .join(EOL)
 
     if (altCommands.length) {
       console.log()
@@ -622,7 +623,7 @@ export class Service<T extends ServiceOpts = ServiceOpts> {
               : 'Did you mean one of these commands ?',
           ),
           printHelper,
-        ].join('${EOL}'),
+        ].join(EOL),
       )
       console.log()
     }

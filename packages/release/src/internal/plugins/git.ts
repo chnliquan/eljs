@@ -97,7 +97,7 @@ export default (api: Api) => {
     await writeFile(CHANGELOG_FILE, changelog)
     logger.ready(`Generated ${filename} successfully.`)
 
-    // const lines = changelog.split(os.EOL)
+    // const lines = changelog.split(EOL)
     // let firstIndex = -1
 
     // for (let i = 0; i < lines.length; i++) {

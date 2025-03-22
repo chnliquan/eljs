@@ -1,6 +1,5 @@
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
-import { EOL } from 'node:os'
 
 /**
  * 获取文件信息
@@ -16,7 +15,7 @@ export async function fstat(
     return stat
   } catch (error) {
     const err = error as Error
-    err.message = `Stat ${file} failed :${EOL}${err.message}`
+    err.message = `Stat ${file} faile: ${err.message}`
     throw err
   }
 }
@@ -31,7 +30,7 @@ export function fstatSync(file: string, symlink?: boolean): fs.Stats | boolean {
     return symlink ? fs.lstatSync(file) : fs.statSync(file)
   } catch (error) {
     const err = error as Error
-    err.message = `Stat ${file} failed :${EOL}${err.message}`
+    err.message = `Stat ${file} failed: ${err.message}`
     throw err
   }
 }

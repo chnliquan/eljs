@@ -1,6 +1,5 @@
 import { run, type RunCommandOptions } from '@/cp'
 import { isObject } from '@/type'
-import { EOL } from 'node:os'
 
 import { getGitBranch, getGitUpstreamBranch } from './meta'
 
@@ -52,7 +51,7 @@ export async function gitCommit(
       return
     }
 
-    err.message = `Git commit failed:${EOL}${err.message}.`
+    err.message = `Git commit failed: ${err.message}.`
     throw err
   }
 }
@@ -104,7 +103,7 @@ export async function gitPush(
     await run('git', cliArgs, options)
   } catch (error) {
     const err = error as Error
-    err.message = `Git push failed:${EOL}${err.message}`
+    err.message = `Git push failed: ${err.message}`
     throw err
   }
 }
@@ -151,7 +150,7 @@ export async function gitTag(
     await run('git', cliArgs, options)
   } catch (error) {
     const err = error as Error
-    err.message = `Git Tag failed:${EOL}${err.message}`
+    err.message = `Git Tag failed: ${err.message}`
     throw err
   }
 }

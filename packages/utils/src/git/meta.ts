@@ -420,7 +420,7 @@ export async function getGitUser(): Promise<GitUser> {
     if (gitConfig) {
       const config = Object.create(null)
 
-      gitConfig.split(os.EOL).forEach(line => {
+      gitConfig.split(EOL).forEach(line => {
         const [key, value] = line.split('=')
         config[key] = value
       })
@@ -485,7 +485,7 @@ export function getGitUserSync(): GitUser {
     if (gitConfig) {
       const config = Object.create(null)
 
-      gitConfig.split(os.EOL).forEach(line => {
+      gitConfig.split(EOL).forEach(line => {
         const [key, value] = line.split('=')
         config[key] = value
       })

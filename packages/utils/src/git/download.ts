@@ -1,6 +1,5 @@
 import { run } from '@/cp'
 import { tmpdir } from '@/file'
-import { EOL } from 'node:os'
 import path from 'node:path'
 
 /**
@@ -46,7 +45,7 @@ export async function downloadGitRepo(
     })
   } catch (error) {
     const err = error as Error
-    err.message = `Download ${url} failed:${EOL}${err.message}.`
+    err.message = `Download ${url} failed: ${err.message}.`
     throw err
   }
 

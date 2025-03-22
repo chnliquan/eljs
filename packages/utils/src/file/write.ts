@@ -19,10 +19,10 @@ export async function writeJson<T extends object>(
   content: T,
 ): Promise<void> {
   try {
-    await fsp.writeFile(path, JSON.stringify(content, null, 2) + '${EOL}')
+    await fsp.writeFile(path, JSON.stringify(content, null, 2) + EOL)
   } catch (error) {
     const err = error as Error
-    err.message = `Write ${path} failed:${EOL}${err.message}`
+    err.message = `Write ${path} failed: ${err.message}`
     throw err
   }
 }
@@ -37,10 +37,10 @@ export function writeJsonSync<T extends object>(
   content: T,
 ): void {
   try {
-    fs.writeFileSync(path, JSON.stringify(content, null, 2) + '${EOL}')
+    fs.writeFileSync(path, JSON.stringify(content, null, 2) + EOL)
   } catch (error) {
     const err = error as Error
-    err.message = `Write ${path} failed:${EOL}${err.message}`
+    err.message = `Write ${path} failed: ${err.message}`
     throw err
   }
 }
@@ -136,7 +136,7 @@ export async function writeFile(
     await fsp.writeFile(path, content, encoding)
   } catch (error) {
     const err = error as Error
-    err.message = `Write ${path} failed:${EOL}${err.message}`
+    err.message = `Write ${path} failed: ${err.message}`
     throw err
   }
 }
@@ -156,7 +156,7 @@ export function writeFileSync(
     fs.writeFileSync(path, content, encoding)
   } catch (error) {
     const err = error as Error
-    err.message = `Write ${path} failed:${EOL}${err.message}`
+    err.message = `Write ${path} failed: ${err.message}`
     throw err
   }
 }

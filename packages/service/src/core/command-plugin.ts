@@ -67,7 +67,7 @@ ${api.binName} help generate
               commands[key].description || ''
             }`
           })
-          .join('${EOL}')
+          .join(EOL)
       }
 
       function padLeft(str: string) {

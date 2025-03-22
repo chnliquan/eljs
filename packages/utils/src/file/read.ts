@@ -1,6 +1,5 @@
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
-import { EOL } from 'node:os'
 import parseJson from 'parse-json'
 
 /**
@@ -17,7 +16,7 @@ export async function readFile(
     return content
   } catch (error) {
     const err = error as Error
-    err.message = `Read ${file} failed:${EOL}${err.message}`
+    err.message = `Read ${file} failed: ${err.message}`
     throw err
   }
 }
@@ -36,7 +35,7 @@ export function readFileSync(
     return content
   } catch (error) {
     const err = error as Error
-    err.message = `Read ${file} failed:${EOL}${err.message}`
+    err.message = `Read ${file} failed: ${err.message}`
     throw err
   }
 }
@@ -53,7 +52,7 @@ export async function readJson<T extends object>(file: string): Promise<T> {
     return json as T
   } catch (error) {
     const err = error as Error
-    err.message = `Parse ${file} failed:${EOL}${err.message}`
+    err.message = `Parse ${file} failed: ${err.message}`
     throw err
   }
 }
@@ -71,7 +70,7 @@ export function readJsonSync<T extends object>(file: string): T {
     return json as T
   } catch (error) {
     const err = error as Error
-    err.message = `Parse ${file} failed:${EOL}${err.message}`
+    err.message = `Parse ${file} failed: ${err.message}`
     throw err
   }
 }
