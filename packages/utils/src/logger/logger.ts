@@ -1,17 +1,18 @@
 import chalk from 'chalk'
+import { EOL } from 'os'
 import readline from 'readline'
 import stripAnsi from 'strip-ansi'
 
 class Logger {
   public format(label: string, message: string) {
     return message
-      .split('\n')
+      .split(EOL)
       .map((line, i) => {
         return i === 0
           ? `${label} ${line}`
           : line.padStart(stripAnsi(label).length + line.length + 1)
       })
-      .join('\n')
+      .join('${EOL}')
   }
 
   public log(message: string, tag = '') {
@@ -45,7 +46,7 @@ class Logger {
 
   public clear(title: string) {
     if (process.stdout.isTTY) {
-      const blank = '\n'.repeat(process.stdout.rows)
+      const blank = '${EOL}'.repeat(process.stdout.rows)
       console.log(blank)
       readline.cursorTo(process.stdout, 0, 0)
       readline.clearScreenDown(process.stdout)
@@ -61,12 +62,12 @@ class Logger {
   public step(name: string, message?: string) {
     if (message) {
       console.log(
-        `\n${chalk.gray(`>>> ${name}:`)} ${chalk.magenta.bold(message)}`,
+        `${EOL}${chalk.gray(`>>> ${name}:`)} ${chalk.magenta.bold(message)}`,
       )
     } else {
       return (message: string) =>
         console.log(
-          `\n${chalk.gray(`>>> ${name}:`)} ${chalk.magenta.bold(message)}`,
+          `${EOL}${chalk.gray(`>>> ${name}:`)} ${chalk.magenta.bold(message)}`,
         )
     }
   }

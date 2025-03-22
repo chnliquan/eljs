@@ -1,6 +1,7 @@
 import type { Api } from '@/types'
 import { syncCnpm } from '@/utils'
 import { chalk, getNpmUser, logger, normalizeArgs, run } from '@eljs/utils'
+import { EOL } from 'node:os'
 
 export default (api: Api) => {
   api.onCheck(async () => {
@@ -21,7 +22,7 @@ export default (api: Api) => {
             })
           ).stdout
             .trim()
-            .split('\n')
+            .split(EOL)
             .map(line => line.split(' ')[0])
 
           if (!owners.includes(user)) {

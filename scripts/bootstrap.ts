@@ -12,7 +12,8 @@ import {
   safeWriteFileSync,
   writeJsonSync,
 } from '@eljs/utils'
-import path from 'path'
+import { EOL } from 'node:os'
+import path from 'node:path'
 import { argv, chalk } from 'zx'
 
 const step = logger.step('Bootstrap')
@@ -25,7 +26,9 @@ main().catch((err: Error) => {
 async function main(): Promise<void> {
   const rootPath = path.resolve(__dirname, '../')
   const pkgPaths = await getWorkspaces(rootPath, true)
-  const { version } = await readJson(path.resolve(rootPath, 'package.json'))
+  const { version } = await readJson<PackageJson>(
+    path.resolve(rootPath, 'package.json'),
+  )
 
   const dirs = argv._.length ? argv._ : pkgPaths
 
@@ -193,7 +196,7 @@ Options:
   --skipOwnershipCheck 跳过发布权限检查
   --skipSyncCnpm       跳过同步 cnpm
 \`\`\`
-  `.trim() + '\n',
+  `.trim() + EOL,
     )
   }
 }
@@ -211,7 +214,7 @@ function ensureSrcIndex(dirname: string): void {
       indexPath,
       `
 export {}
-  `.trim() + '\n',
+  `.trim() + EOL,
     )
   }
 }
@@ -229,7 +232,7 @@ import { defineConfig } from 'father'
 export default defineConfig({
   extends: '../../.fatherrc.base.ts',
 })      
-`.trim() + '\n',
+`.trim() + EOL,
     )
   }
 }
@@ -252,7 +255,7 @@ function ensureTsconfig(dirname: string): void {
   },
   "include": ["src", "../../global.d.ts"]
 }         
-`.trim() + '\n',
+`.trim() + EOL,
     )
   }
 }

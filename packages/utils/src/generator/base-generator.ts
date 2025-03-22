@@ -13,6 +13,7 @@ import { logger } from '@/logger'
 import { isFunction } from '@/type'
 import chalk from 'chalk'
 import { readdirSync } from 'node:fs'
+import { EOL } from 'node:os'
 import prompts, { type Answers, type PromptObject } from 'prompts'
 
 const TARGET_DIR_WHITE_LIST = ['.git', 'LICENSE']
@@ -191,7 +192,7 @@ export class BaseGenerator {
     )
 
     if (files.length) {
-      logger.warn(`当前文件夹 ${chalk.bold(targetDir)} 存在如下文件:\n`)
+      logger.warn(`当前文件夹 ${chalk.bold(targetDir)} 存在如下文件:${EOL}`)
       files.forEach(file => console.log(' - ' + file))
       console.log()
       return confirm(`确定要覆盖当前文件夹吗?`, true)

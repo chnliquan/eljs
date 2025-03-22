@@ -1,5 +1,7 @@
 import cp from 'node:child_process'
+import { EOL } from 'node:os'
 import { read } from 'read'
+
 import { getExecutableCommand, runCommand } from './command'
 
 /**
@@ -9,7 +11,7 @@ import { getExecutableCommand, runCommand } from './command'
 export function getPid(command: string): Promise<number | null> {
   const parse = (data: string, command: string): number | null => {
     const reg = new RegExp('/' + command + '$')
-    const lines = data.trim().split('\n')
+    const lines = data.trim().split(EOL)
 
     for (const line of lines) {
       const fields = line.trim().split(/\s+/, 2)
@@ -78,17 +80,17 @@ export async function sudo(
 
   if (child.stderr) {
     child.stderr.on('data', chunk => {
-      const lines = chunk.toString().trim().split('\n')
+      const lines = chunk.toString().trim().split(EOL)
 
       lines.forEach((line: string) => {
         if (line === NEED_PASSWORD) {
           if (password) {
-            child.stdin?.write(password + '\n')
+            child.stdin?.write(password + EOL)
           } else if (cachePassword && cachedPassword) {
-            child.stdin?.write(cachedPassword + '\n')
+            child.stdin?.write(cachedPassword + EOL)
           } else {
             read({ prompt, silent: true }).then(value => {
-              child.stdin?.write(value + '\n')
+              child.stdin?.write(value + EOL)
 
               if (cachePassword) {
                 cachedPassword = value

@@ -19,6 +19,7 @@ import {
   pascalCase,
   prompts,
 } from '@eljs/utils'
+import { EOL } from 'node:os'
 import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
 
 const debug = createDebugger('release:version')
@@ -369,7 +370,7 @@ async function confirmVersion(api: Api, version: string): Promise<string> {
       version,
     )}`
   } else {
-    console.log(chalk.bold('The packages to be bumped are as follows: \n'))
+    console.log(chalk.bold(`The packages to be bumped are as follows:${EOL}`))
 
     for (const pkgName of validPkgNames) {
       console.log(` - ${chalk.cyanBright(`${pkgName}@${version}`)}`)

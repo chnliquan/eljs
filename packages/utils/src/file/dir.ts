@@ -1,6 +1,6 @@
 import { PLATFORM } from '@/constants'
 import { mkdirp, mkdirpSync } from 'mkdirp'
-import os from 'node:os'
+import os, { EOL } from 'node:os'
 import path from 'node:path'
 import util from 'node:util'
 
@@ -20,7 +20,7 @@ export async function mkdir(
       return mkdirp(dir, mode)
     } catch (error) {
       const err = error as Error
-      err.message = `Make dir ${dir} failed:\n${err.message}`
+      err.message = `Make dir ${dir} failed:${EOL}${err.message}`
       throw err
     }
   }
@@ -37,7 +37,7 @@ export function mkdirSync(dir: string, mode?: number | string): string | void {
       return mkdirpSync(dir, mode)
     } catch (error) {
       const err = error as Error
-      err.message = `Make dir ${dir} failed:\n${err.message}`
+      err.message = `Make dir ${dir} failed:${EOL}${err.message}`
       throw err
     }
   }

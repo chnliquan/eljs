@@ -16,6 +16,7 @@ import {
   type PackageJson,
   type RequiredRecursive,
 } from '@eljs/utils'
+import { EOL } from 'node:os'
 import path from 'node:path'
 import type { ReleaseType } from 'semver'
 
@@ -160,7 +161,7 @@ export class Runner extends Pluggable<Config> {
   }
 
   public step(message: string): void {
-    return logger.step('Release', `${message}\n`)
+    return logger.step('Release', `${message}${EOL}`)
   }
 
   private async _resolveConfig() {

@@ -4,6 +4,7 @@ import Mustache, {
   type PartialsOrLookupFn,
   type RenderOptions,
 } from 'mustache'
+import { EOL } from 'node:os'
 
 /**
  * 模版渲染配置项
@@ -59,7 +60,7 @@ export function renderTemplate(
     }
   } catch (error) {
     const err = error as Error
-    err.message = `Render ${template} failed:\n${err.message}`
+    err.message = `Render ${template} failed:${EOL}${err.message}`
     throw err
   }
 }

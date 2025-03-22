@@ -2,6 +2,7 @@ import type { PackageJson } from '@/types'
 import deepmerge from 'deepmerge'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
+import { EOL } from 'node:os'
 import path from 'node:path'
 import { v4 } from 'uuid'
 
@@ -18,10 +19,10 @@ export async function writeJson<T extends object>(
   content: T,
 ): Promise<void> {
   try {
-    await fsp.writeFile(path, JSON.stringify(content, null, 2) + '\n')
+    await fsp.writeFile(path, JSON.stringify(content, null, 2) + '${EOL}')
   } catch (error) {
     const err = error as Error
-    err.message = `Write ${path} failed:\n${err.message}`
+    err.message = `Write ${path} failed:${EOL}${err.message}`
     throw err
   }
 }
@@ -36,10 +37,10 @@ export function writeJsonSync<T extends object>(
   content: T,
 ): void {
   try {
-    fs.writeFileSync(path, JSON.stringify(content, null, 2) + '\n')
+    fs.writeFileSync(path, JSON.stringify(content, null, 2) + '${EOL}')
   } catch (error) {
     const err = error as Error
-    err.message = `Write ${path} failed:\n${err.message}`
+    err.message = `Write ${path} failed:${EOL}${err.message}`
     throw err
   }
 }
@@ -135,7 +136,7 @@ export async function writeFile(
     await fsp.writeFile(path, content, encoding)
   } catch (error) {
     const err = error as Error
-    err.message = `Write ${path} failed:\n${err.message}`
+    err.message = `Write ${path} failed:${EOL}${err.message}`
     throw err
   }
 }
@@ -155,7 +156,7 @@ export function writeFileSync(
     fs.writeFileSync(path, content, encoding)
   } catch (error) {
     const err = error as Error
-    err.message = `Write ${path} failed:\n${err.message}`
+    err.message = `Write ${path} failed:${EOL}${err.message}`
     throw err
   }
 }

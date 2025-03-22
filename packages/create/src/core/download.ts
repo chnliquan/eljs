@@ -9,6 +9,7 @@ import {
   runCommand,
   type PackageJson,
 } from '@eljs/utils'
+import { EOL } from 'node:os'
 import path from 'node:path'
 import ora, { type Ora } from 'ora'
 
@@ -74,7 +75,8 @@ export class Download {
     } catch (error) {
       this._spinner.fail()
       const err = error as Error
-      throw new Error(`Download ${projectName} failed:\n${err.message}`)
+      err.message = `Download ${projectName} failed:${EOL}${err.message}`
+      throw err
     }
   }
 
@@ -93,7 +95,8 @@ export class Download {
     } catch (error) {
       this._spinner.fail()
       const err = error as Error
-      throw new Error(`Download ${url} failed:\n${err.message}`)
+      err.message = `Download ${url} failed:${EOL}${err.message}`
+      throw err
     }
   }
 
@@ -116,9 +119,8 @@ export class Download {
     } catch (error) {
       this._spinner.fail()
       const err = error as Error
-      throw new Error(
-        `Install dependencies in ${projectName} failed:\n${err.message}`,
-      )
+      err.message = `Install dependencies in ${projectName} failed:${EOL}${err.message}`
+      throw err
     }
   }
 }

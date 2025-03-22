@@ -1,5 +1,6 @@
 import { tmpdir } from '@/file'
 import download, { type DownloadOptions } from 'download'
+import { EOL } from 'os'
 
 /**
  * 下载 NPM 压缩文件
@@ -24,7 +25,7 @@ export async function downloadNpmTarball(
     })
   } catch (error) {
     const err = error as Error
-    err.message = `Download ${url} failed:\n${err.message}`
+    err.message = `Download ${url} failed:${EOL}${err.message}`
     throw err
   }
 

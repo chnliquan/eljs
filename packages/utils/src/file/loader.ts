@@ -2,6 +2,7 @@
 import { isESModule } from '@/type'
 import importFresh from 'import-fresh'
 import yaml from 'js-yaml'
+import { EOL } from 'node:os'
 import { dirname } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import parseJson from 'parse-json'
@@ -69,11 +70,11 @@ export async function loadJs<T>(path: string): Promise<T> {
             .toString()
             .includes('Cannot use import statement outside a module'))
       ) {
-        dynamicImportErr.message = `Load ${path} failed:\n${dynamicImportErr.message}`
+        dynamicImportErr.message = `Load ${path} failed:${EOL}${dynamicImportErr.message}`
         throw dynamicImportErr
       }
 
-      requireErr.message = `Load ${path} failed:\n${dynamicImportErr.message}`
+      requireErr.message = `Load ${path} failed:${EOL}${dynamicImportErr.message}`
       throw requireError
     }
   }
@@ -89,7 +90,7 @@ export function loadJsSync<T>(path: string): T {
     return content as T
   } catch (error) {
     const err = error as Error
-    err.message = `Load ${path} failed:\n${err.message}`
+    err.message = `Load ${path} failed:${EOL}${err.message}`
     throw err
   }
 }
@@ -118,7 +119,7 @@ export async function loadTs<T = any>(path: string): Promise<T> {
       transpiledContent = transpileModule(content, config).outputText
     } catch (error) {
       const err = error as Error
-      err.message = `TypeScript Error in ${path}:\n${err.message}`
+      err.message = `TypeScript Error in ${path}:${EOL}${err.message}`
       throw err
     }
 
@@ -155,7 +156,7 @@ export function loadTsSync<T>(path: string): T {
       transpiledContent = transpileModule(content, config).outputText
     } catch (error) {
       const err = error as Error
-      err.message = `TypeScript Error in ${path}:\n${err.message}`
+      err.message = `TypeScript Error in ${path}:${EOL}${err.message}`
       throw err
     }
 
@@ -181,7 +182,7 @@ export async function loadJson<T>(path: string): Promise<T> {
     return json
   } catch (error) {
     const err = error as Error
-    err.message = `Parse ${path} failed:\n${err.message}`
+    err.message = `Parse ${path} failed:${EOL}${err.message}`
     throw err
   }
 }
@@ -198,7 +199,7 @@ export function loadJsonSync<T>(path: string): T {
     return json
   } catch (error) {
     const err = error as Error
-    err.message = `Parse ${path} failed:\n${err.message}`
+    err.message = `Parse ${path} failed:${EOL}${err.message}`
     throw err
   }
 }
@@ -215,7 +216,7 @@ export async function loadYaml<T>(path: string): Promise<T> {
     return data as T
   } catch (error) {
     const err = error as Error
-    err.message = `Load ${path} failed:\n${err.message}`
+    err.message = `Load ${path} failed:${EOL}${err.message}`
     throw err
   }
 }
@@ -232,7 +233,7 @@ export function loadYamlSync<T>(path: string): T {
     return data as T
   } catch (error) {
     const err = error as Error
-    err.message = `Load ${path} failed:\n${err.message}`
+    err.message = `Load ${path} failed:${EOL}${err.message}`
     throw err
   }
 }

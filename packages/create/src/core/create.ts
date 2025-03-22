@@ -14,6 +14,7 @@ import {
   tryPaths,
 } from '@eljs/utils'
 import { readdir } from 'node:fs/promises'
+import { EOL } from 'node:os'
 import path, { join } from 'node:path'
 
 import { Download } from './download'
@@ -111,7 +112,7 @@ export class Create {
 
     if (files.length) {
       logger.warn(
-        `The current folder ${chalk.bold(targetDir)} contains the following files:\n`,
+        `The current folder ${chalk.bold(targetDir)} contains the following files:${EOL}`,
       )
       files.forEach(file => console.log(' - ' + file))
       console.log()

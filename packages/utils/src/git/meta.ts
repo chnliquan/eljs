@@ -3,7 +3,7 @@ import { isPathExists, isPathExistsSync, readFile, readFileSync } from '@/file'
 import { isObject } from '@/type'
 import execa from 'execa'
 import ini from 'ini'
-import os from 'node:os'
+import os, { EOL } from 'node:os'
 import path from 'node:path'
 import { URL } from 'node:url'
 
@@ -326,7 +326,7 @@ export function getGitRepoInfoSync(
     const gitHead = readFileSync(path.join(gitDir, 'HEAD'))
     gitRepoInfo.branch = gitHead
       .replace('ref: refs/heads/', '')
-      .replace('\n', '')
+      .replace(EOL, '')
   } catch (err) {
     return null
   }
@@ -382,7 +382,7 @@ export async function getGitRepoInfo(
     const gitHead = await readFile(path.join(gitDir, 'HEAD'))
     gitRepoInfo.branch = gitHead
       .replace('ref: refs/heads/', '')
-      .replace('\n', '')
+      .replace(EOL, '')
   } catch (err) {
     return null
   }

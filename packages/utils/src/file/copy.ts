@@ -2,6 +2,7 @@ import chalk from 'chalk'
 import { glob, globSync } from 'glob'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
+import { EOL } from 'node:os'
 import path from 'node:path'
 
 import { mkdir, mkdirSync } from './dir'
@@ -63,7 +64,7 @@ export async function copyFile(
     await fsp.copyFile(from, destFile, mode)
   } catch (error) {
     const err = error as Error
-    err.message = `Copy file from ${from} to ${to} failed:\n${err.message}`
+    err.message = `Copy file from ${from} to ${to} failed:${EOL}${err.message}`
     throw err
   }
 }
@@ -98,7 +99,7 @@ export function copyFileSync(
     fs.copyFileSync(from, destFile, mode)
   } catch (error) {
     const err = error as Error
-    err.message = `Copy file from ${from} to ${to} failed:\n${err.message}`
+    err.message = `Copy file from ${from} to ${to} failed:${EOL}${err.message}`
     throw err
   }
 }
@@ -139,7 +140,7 @@ export async function copyTpl(
     await writeFile(destFile, content)
   } catch (error) {
     const err = error as Error
-    err.message = `Copy template from ${from} to ${to} failed:\n${err.message}`
+    err.message = `Copy template from ${from} to ${to} failed:${EOL}${err.message}`
     throw err
   }
 }
@@ -180,7 +181,7 @@ export function copyTplSync(
     writeFileSync(destFile, content)
   } catch (error) {
     const err = error as Error
-    err.message = `Copy template from ${from} to ${to} failed:\n${err.message}`
+    err.message = `Copy template from ${from} to ${to} failed:${EOL}${err.message}`
     throw err
   }
 }
@@ -226,7 +227,7 @@ export async function copyDirectory(
     }
   } catch (error) {
     const err = error as Error
-    err.message = `Copy directory from ${from} to ${to} failed:\n${err.message}`
+    err.message = `Copy directory from ${from} to ${to} failed:${EOL}${err.message}`
     throw err
   }
 }
@@ -273,7 +274,7 @@ export function copyDirectorySync(
     }
   } catch (error) {
     const err = error as Error
-    err.message = `Copy directory from ${from} to ${to} failed:\n${err.message}`
+    err.message = `Copy directory from ${from} to ${to} failed:${EOL}${err.message}`
     throw err
   }
 }

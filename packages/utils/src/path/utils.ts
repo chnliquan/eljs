@@ -1,4 +1,5 @@
 import { isPathExists, isPathExistsSync } from '@/file'
+import { EOL } from 'node:os'
 import path from 'node:path'
 
 /**
@@ -32,7 +33,7 @@ export async function tryPaths(paths: string[]): Promise<string | undefined> {
 export function extractCallDir(stack = 2) {
   const obj = Object.create(null)
   Error.captureStackTrace(obj)
-  const callSite = obj.stack.split('\n')[stack]
+  const callSite = obj.stack.split(EOL)[stack]
 
   // the regexp for the stack when called inside a named function
   const namedStackRegExp = /\s\((.*):\d+:\d+\)$/

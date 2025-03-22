@@ -13,6 +13,7 @@ import {
   readFile,
   writeFile,
 } from '@eljs/utils'
+import { EOL } from 'node:os'
 import path from 'node:path'
 
 export default (api: Api) => {
@@ -78,17 +79,20 @@ export default (api: Api) => {
     api.step('Generating changelog ...')
 
     if (changelog.indexOf('###') === -1) {
-      changelog = changelog.replace(/\n+/g, '')
-      changelog += `\n\n**Note:** No changes, only version bump.`
+      changelog = changelog.replace(new RegExp(EOL, 'g'), '')
+      changelog += `${EOL}${EOL}**Note:** No changes, only version bump.`
     }
 
     if (await isPathExists(CHANGELOG_FILE)) {
       const remain = (await readFile(CHANGELOG_FILE)).trim()
       changelog = remain.length
-        ? remain.replace(/# Change\s?Log/, '# ChangeLog \n\n' + changelog)
-        : '# ChangeLog \n\n' + changelog
+        ? remain.replace(
+            /# Change\s?Log/,
+            `# ChangeLog ${EOL}${EOL}${changelog}`,
+          )
+        : `# ChangeLog ${EOL}${EOL}${changelog}`
     } else {
-      changelog = '# ChangeLog \n\n' + changelog
+      changelog = '# ChangeLog ${EOL}${EOL}' + changelog
     }
 
     await writeFile(CHANGELOG_FILE, changelog)

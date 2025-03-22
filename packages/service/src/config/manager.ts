@@ -1,10 +1,12 @@
+import { DEFAULT_CONFIG_FILES, LOCAL_EXT, SHORT_ENV } from '@/const'
+import { Env } from '@/types/env'
 import { isPathExistsSync, loadTsSync } from '@eljs/utils'
 import assert from 'assert'
 import deepMerge from 'deepmerge'
 import joi from 'joi'
+import { EOL } from 'os'
 import { join } from 'path'
-import { DEFAULT_CONFIG_FILES, LOCAL_EXT, SHORT_ENV } from '../const'
-import { Env } from '../types/env'
+
 import { addExt, getAbsFiles } from './utils'
 
 export interface ConfigManagerOpts {
@@ -161,7 +163,7 @@ export class ConfigManager {
       errors.size === 0,
       `Invalid config values: ${Array.from(errors.keys()).join(', ')}
 ${Array.from(errors.keys()).map(key => {
-  return `Invalid value for ${key}:\n${(errors.get(key) as Error).message}`
+  return `Invalid value for ${key}:${EOL}${(errors.get(key) as Error).message}`
 })}`,
     )
     // invalid config keys

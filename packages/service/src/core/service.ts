@@ -610,7 +610,7 @@ export class Service<T extends ServiceOpts = ServiceOpts> {
       .map(cmd => {
         return ` - ${utils.chalk.green(cmd)}`
       })
-      .join('\n')
+      .join('${EOL}')
 
     if (altCommands.length) {
       console.log()
@@ -622,7 +622,7 @@ export class Service<T extends ServiceOpts = ServiceOpts> {
               : 'Did you mean one of these commands ?',
           ),
           printHelper,
-        ].join('\n'),
+        ].join('${EOL}'),
       )
       console.log()
     }

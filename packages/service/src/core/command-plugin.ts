@@ -7,6 +7,8 @@ import {
   updatePackageJson,
 } from '@eljs/utils'
 import _ from 'lodash'
+import { EOL } from 'os'
+
 import { GeneratorType } from '../enum'
 import type { Generator } from '../types'
 import { PluginApi } from './plugin-api'
@@ -36,9 +38,9 @@ ${api.binName} help generate
       function showHelp(command: any) {
         console.log(`
     Usage: ${api.binName} ${command.name} [options]
-    ${command.description ? `${chalk.gray(command.description)}.\n` : ''}
-    ${command.options ? `Options:\n${padLeft(command.options)}\n` : ''}
-    ${command.details ? `Details:\n${padLeft(command.details)}` : ''}
+    ${command.description ? `${chalk.gray(command.description)}.${EOL}` : ''}
+    ${command.options ? `Options:${EOL}${padLeft(command.options)}${EOL}` : ''}
+    ${command.details ? `Details:${EOL}${padLeft(command.details)}` : ''}
     `)
       }
 
@@ -65,15 +67,15 @@ ${api.binName} help generate
               commands[key].description || ''
             }`
           })
-          .join('\n')
+          .join('${EOL}')
       }
 
       function padLeft(str: string) {
         return str
           .trim()
-          .split('\n')
+          .split(EOL)
           .map((line: string) => `    ${line}`)
-          .join('\n')
+          .join(EOL)
       }
     },
   })
