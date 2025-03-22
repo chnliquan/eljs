@@ -1,5 +1,12 @@
 # ChangeLog 
 
+# [1.0.0-next.1](https://github.com/chnliquan/eljs/compare/v1.0.0-next.0...v1.0.0-next.1) (2025-03-22)
+
+
+### 🐛 Bug Fixes
+
+* **utils:** load ts file ([68c048b](https://github.com/chnliquan/eljs/commit/68c048bfdd9e5caffa6934f23e9777a6a47c22f6)) 
+
 # [1.0.0-next.0](https://github.com/chnliquan/eljs/compare/v1.0.0-beta.10...v1.0.0-next.0) (2025-03-22)
 
 
