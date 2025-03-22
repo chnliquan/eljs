@@ -1,7 +1,17 @@
 import chalk from 'chalk'
-import { EOL } from 'os'
+import { EOL } from 'node:os'
 import readline from 'readline'
 import stripAnsi from 'strip-ansi'
+
+export const prefixes = {
+  event: chalk.magenta('event') + ' -',
+  info: chalk.cyan('info') + '  -',
+  warn: chalk.yellow('warn') + '  -',
+  error: chalk.red('error') + ' -',
+  fatal: chalk.red('fatal') + ' -',
+  wait: chalk.cyan('wait') + '  -',
+  ready: chalk.green('ready') + ' -',
+}
 
 class Logger {
   public format(label: string, message: string) {
@@ -12,7 +22,7 @@ class Logger {
           ? `${label} ${line}`
           : line.padStart(stripAnsi(label).length + line.length + 1)
       })
-      .join('${EOL}')
+      .join(EOL)
   }
 
   public log(message: string, tag = '') {
@@ -21,18 +31,32 @@ class Logger {
       : console.log(message)
   }
 
+  public event(message: string) {
+    console.log(this.format(prefixes.event, message))
+  }
+
   public info(message: string) {
-    console.log(this.format(chalk.bgBlue.black(' INFO '), message))
+    console.log(this.format(prefixes.info, message))
   }
 
   public warn(message: string) {
-    console.warn(
-      this.format(chalk.bgYellow.black(' WARN '), chalk.yellow(message)),
-    )
+    console.warn(this.format(prefixes.warn, message))
   }
 
   public error(message: string) {
-    console.error(this.format(chalk.bgRed(' ERROR '), chalk.red(message)))
+    console.error(this.format(prefixes.error, message))
+  }
+
+  public fatal(message: string) {
+    console.error(this.format(prefixes.fatal, message))
+  }
+
+  public wait(message: string) {
+    console.log(this.format(prefixes.wait, message))
+  }
+
+  public ready(message: string) {
+    console.log(this.format(prefixes.ready, message))
   }
 
   public printErrorAndExit(message: string) {
@@ -40,13 +64,9 @@ class Logger {
     process.exit(1)
   }
 
-  public done(message: string) {
-    console.log(this.format(chalk.bgGreen.black(' DONE '), message))
-  }
-
   public clear(title: string) {
     if (process.stdout.isTTY) {
-      const blank = '${EOL}'.repeat(process.stdout.rows)
+      const blank = EOL.repeat(process.stdout.rows)
       console.log(blank)
       readline.cursorTo(process.stdout, 0, 0)
       readline.clearScreenDown(process.stdout)

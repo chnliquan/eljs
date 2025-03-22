@@ -1,6 +1,6 @@
 import { tmpdir } from '@/file'
 import download, { type DownloadOptions } from 'download'
-import { EOL } from 'os'
+import { EOL } from 'node:os'
 
 /**
  * 下载 NPM 压缩文件
