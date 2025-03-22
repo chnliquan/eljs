@@ -1,4 +1,5 @@
 import { isPathExists } from '@/file'
+import { isObject } from '@/type'
 import chalk from 'chalk'
 import execa, {
   type ExecaChildProcess,
@@ -43,14 +44,35 @@ export interface RunCommandOptions extends ExecaOptions {
 /**
  * 运行命令
  * @param command 可运行的命令
- * @param args 命令接收的参数
+ * @param options 可选配置项
+ */
+export function run(
+  command: string,
+  options?: RunCommandOptions,
+): ExecaChildProcess
+/**
+ * 运行命令
+ * @param command 可运行的命令
+ * @param args 命令行参数
  * @param options 可选配置项
  */
 export function run(
   command: string,
   args: string[],
   options?: RunCommandOptions,
+): ExecaChildProcess
+export function run(
+  command: string,
+  args?: string[] | RunCommandOptions,
+  options?: RunCommandOptions,
 ): ExecaChildProcess {
+  if (isObject(args)) {
+    options = args
+    args = []
+  }
+
+  args = (args || []) as string[]
+
   if (options?.verbose) {
     console.log('$', chalk.greenBright(command), ...args)
   }

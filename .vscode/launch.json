@@ -9,7 +9,7 @@
       "runtimeExecutable": "tsx",
       "runtimeArgs": [
         "--tsconfig",
-        "${workspaceFolder}/packages/release/tsconfig.json"
+        "${workspaceFolder}/packages/utils/tsconfig.json"
       ],
       "program": "${file}",
       "windows": {

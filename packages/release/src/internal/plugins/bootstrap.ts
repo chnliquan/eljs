@@ -2,6 +2,7 @@ import type { Api } from '@/types'
 import {
   chalk,
   getGitBranch,
+  getGitLatestTag,
   getWorkspaces,
   isPathExists,
   logger,
@@ -50,6 +51,9 @@ export default (api: Api) => {
     const branch = await getGitBranch({
       cwd,
     })
+    const latestTag = await getGitLatestTag({
+      cwd,
+    })
 
     if (validPkgNames.length === 0) {
       logger.warn(`No valid package to publish in ${chalk.bold(cwd)}.`)
@@ -65,6 +69,7 @@ export default (api: Api) => {
       validPkgNames,
       registry,
       branch,
+      latestTag,
     }
   })
 }

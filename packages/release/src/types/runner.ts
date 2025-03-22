@@ -17,6 +17,10 @@ export interface AppData {
    */
   branch: string
   /**
+   * 最新 tag
+   */
+  latestTag: string
+  /**
    * 项目 package.json 路径
    */
   projectPkgJsonPath: string

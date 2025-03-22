@@ -1,5 +1,6 @@
 import { run, type RunCommandOptions } from '@/cp'
 import { isPathExists, isPathExistsSync, readFile, readFileSync } from '@/file'
+import { isObject } from '@/type'
 import execa from 'execa'
 import ini from 'ini'
 import os from 'node:os'
@@ -139,18 +140,88 @@ export async function getGitUpstreamBranch(
 
 /**
  * 获取 git commit 哈希值
+ * @param options 可选配置项
+ */
+export async function getGitCommitSha(
+  options?: RunCommandOptions,
+): Promise<string>
+/**
+ * 获取 git commit 哈希值
  * @param short 是否截断
  * @param options 可选配置项
  */
 export async function getGitCommitSha(
-  short?: boolean,
+  short: boolean,
+  options?: RunCommandOptions,
+): Promise<string>
+export async function getGitCommitSha(
+  short?: boolean | RunCommandOptions,
   options?: RunCommandOptions,
 ): Promise<string> {
-  return run(
-    'git',
-    ['rev-parse', ...(short ? ['--short'] : []), 'HEAD'],
-    options,
-  ).then(data => {
+  if (isObject(short)) {
+    options = short
+    short = false
+  }
+
+  const cliArgs = ['rev-parse', ...(short ? ['--short'] : []), 'HEAD'].filter(
+    Boolean,
+  )
+  return run('git', cliArgs, options).then(data => {
+    return data.stdout.trim()
+  })
+}
+
+/**
+ * 获取 git 最新 tag
+ * @param options 可选配置项
+ */
+export async function getGitLatestTag(
+  options?: RunCommandOptions,
+): Promise<string>
+/**
+ * 获取 git 最新 tag
+ * @param match 匹配模式
+ * @param options 可选配置项
+ */
+export async function getGitLatestTag(
+  match: string,
+  options?: RunCommandOptions,
+): Promise<string>
+/**
+ * 获取 git 最新 tag
+ * @param match 匹配模式
+ * @param args 命令行参数
+ * @param options 可选配置项
+ */
+export async function getGitLatestTag(
+  match: string,
+  args: string[],
+  options?: RunCommandOptions,
+): Promise<string>
+export async function getGitLatestTag(
+  match?: string | RunCommandOptions,
+  args?: string[] | RunCommandOptions,
+  options?: RunCommandOptions,
+): Promise<string> {
+  if (isObject(match)) {
+    options = match
+    match = undefined
+    args = []
+  }
+
+  if (isObject(args)) {
+    options = args
+    args = []
+  }
+
+  const cliArgs = [
+    'describe',
+    '--tags',
+    '--match',
+    (match || '*') as string,
+    ...(args ? (args as string[]) : []),
+  ].filter(Boolean)
+  return run('git', cliArgs, options).then(data => {
     return data.stdout.trim()
   })
 }

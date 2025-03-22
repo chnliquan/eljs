@@ -114,7 +114,7 @@ export default (api: Api) => {
   api.onRelease(async ({ version }) => {
     const { independent, commit, commitMessage, commitArgs, push, pushArgs } =
       api.config.git
-    const { pkgNames } = api.appData
+    const { pkgNames, latestTag } = api.appData
 
     if (!commit) {
       return
@@ -123,7 +123,6 @@ export default (api: Api) => {
     api.step('Committing changes ...')
 
     const commitMsg = commitMessage.replace('${version}', version)
-
     await gitCommit(commitMsg, [...normalizeArgs(commitArgs)].filter(Boolean), {
       cwd: api.cwd,
       verbose: true,
@@ -133,11 +132,24 @@ export default (api: Api) => {
       ? pkgNames.map(pkgName => `${pkgName}@${version}`)
       : [`v${version}`]
 
-    for await (const tag of tags) {
-      await gitTag(tag, [], {
-        cwd: api.cwd,
-        verbose: true,
-      })
+    for await (const tagName of tags) {
+      try {
+        await gitTag(tagName, {
+          cwd: api.cwd,
+          verbose: true,
+        })
+      } catch (error) {
+        const { message } = error as Error
+        if (
+          (/tag '.+' already exists/.test(message) ||
+            /标签 '.+' 已存在/.test(message)) &&
+          latestTag === tagName
+        ) {
+          logger.warn(`Tag ${chalk.bold(tagName)} already exists.`)
+        } else {
+          throw error
+        }
+      }
     }
 
     if (!push) {
