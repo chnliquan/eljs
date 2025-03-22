@@ -10,12 +10,12 @@ export function sleep(ms: number): Promise<void> {
  * 超时拒绝
  * @param promise promise
  * @param ms 超时时间
- * @param msg 超时信息
+ * @param message 超时信息
  */
 export function timeout<T>(
   promise: Promise<T>,
   ms: number,
-  msg?: string,
+  message?: string,
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     let finished = false
@@ -37,7 +37,7 @@ export function timeout<T>(
         return
       }
 
-      reject(new Error(msg || 'Timeout'))
+      reject(new Error(message || 'Timeout'))
     }
   })
 }

@@ -100,14 +100,14 @@ export function loadJsSync<T>(path: string): T {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function loadTs<T = any>(path: string): Promise<T> {
-  const compiledPath = `${path.slice(0, -2)}cjs`
+  const compiledPath = `${path.slice(0, -2)}mjs`
 
   try {
     const config = resolveTsConfig(dirname(path)) ?? {}
     config.compilerOptions = {
       ...config.compilerOptions,
-      module: ModuleKind.NodeNext,
-      moduleResolution: ModuleResolutionKind.NodeNext,
+      module: ModuleKind.ES2022,
+      moduleResolution: ModuleResolutionKind.Bundler,
       target: ScriptTarget.ES2022,
       noEmit: false,
     }

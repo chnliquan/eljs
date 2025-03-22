@@ -159,8 +159,8 @@ export class Runner extends Pluggable<Config> {
     }
   }
 
-  public step(msg: string): void {
-    return logger.step('Release', `${msg}\n`)
+  public step(message: string): void {
+    return logger.step('Release', `${message}\n`)
   }
 
   private async _resolveConfig() {
@@ -269,6 +269,6 @@ export interface RunnerPluginApi extends PluggablePluginApi {
   // #endregion
 
   // #region 插件方法
-  step: (msg: string) => void
+  step: (message: string) => void
   // #endregion
 }

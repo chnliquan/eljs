@@ -29,10 +29,10 @@ export async function getNpmUser(options?: RunCommandOptions): Promise<string> {
 }
 
 /**
- * NPM 包信息
- * https://github.com/npm/registry/blob/master/docs/REGISTRY-API.md
+ * NPM 包
+ * @link https://github.com/npm/registry/blob/main/docs/REGISTRY-API.md#package
  */
-export interface NpmInfo extends OmitIndexSignature<PackageJson> {
+export interface NpmPackage extends OmitIndexSignature<PackageJson> {
   version: string
   name: string
   dist: {
@@ -49,46 +49,51 @@ export interface NpmInfo extends OmitIndexSignature<PackageJson> {
     [key: string]: string
   }
   versions: {
-    [version: string]: Omit<NpmInfo, 'versions' | 'dist-tags'>
+    [version: string]: Omit<NpmPackage, 'versions' | 'dist-tags'>
   }
 }
 
 /**
- * 获取 NPM 包元信息
+ * 获取 NPM 包
  * @param name NPM 包名
+ * @param options.cwd 当前工作目录
  * @param options.registry 仓库地址
- * @param options.cwd 工作目录
+ * @param options.timeout 超时时间
  */
-export async function getNpmMeta(
+export async function getNpmPackage(
   name: string,
   options?: {
     cwd?: string
     registry?: string
+    timeout?: number
   },
-): Promise<Omit<NpmInfo, 'version'> | null>
+): Promise<Omit<NpmPackage, 'version'> | null>
 /**
  * 获取指定版本的 NPM 包元信息
  * @param name NPM 包名
  * @param options.version 版本
- * @param options.registry 仓库地址
  * @param options.cwd 工作目录
+ * @param options.registry 仓库地址
+ * @param options.timeout 超时时间
  */
-export async function getNpmMeta(
+export async function getNpmPackage(
   name: string,
   options: {
     version: string
     cwd?: string
     registry?: string
+    timeout?: number
   },
-): Promise<Omit<NpmInfo, 'versions' | 'dist-tags'> | null>
-export async function getNpmMeta(
+): Promise<Omit<NpmPackage, 'versions' | 'dist-tags'> | null>
+export async function getNpmPackage(
   name: string,
   options?: {
     cwd?: string
     version?: string
     registry?: string
+    timeout?: number
   },
-): Promise<NpmInfo | null> {
+): Promise<NpmPackage | null> {
   let registry = options?.registry
 
   if (!registry) {
@@ -107,7 +112,7 @@ export async function getNpmMeta(
   }
 
   return urllib
-    .request(url, { timeout: 30000, dataType: 'json' })
+    .request(url, { timeout: options?.timeout ?? 10000, dataType: 'json' })
     .then(({ data }) => {
       if (!data || isString(data) || data.error || data.code) {
         return null

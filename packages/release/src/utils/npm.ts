@@ -1,4 +1,4 @@
-import { chalk, getNpmMeta, logger, run } from '@eljs/utils'
+import { chalk, getNpmPackage, logger, run } from '@eljs/utils'
 import resolveBin from 'resolve-bin'
 
 /**
@@ -26,7 +26,7 @@ export async function getRemoteDistTag(
 ): Promise<RemoteDistTag> {
   for (let i = 0; i < pkgNames.length; i++) {
     const pkgName = pkgNames[i]
-    const npmMeta = await getNpmMeta(pkgName, options)
+    const npmMeta = await getNpmPackage(pkgName, options)
     const distTags = npmMeta?.['dist-tags']
 
     if (!distTags) {

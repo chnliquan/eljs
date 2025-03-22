@@ -4,18 +4,18 @@ import { getGitBranch, getGitUpstreamBranch } from './meta'
 
 /**
  * 提交 git 信息
- * @param msg 提交信息
+ * @param message 提交信息
  * @param args 命令行参数
  * @param options 可选配置项
  */
 export async function gitCommit(
-  msg: string,
+  message: string,
   args: string[] = [],
   options?: RunCommandOptions,
 ): Promise<void> {
   try {
     await run('git', ['add', '-A'], options)
-    await run('git', ['commit', '-m', msg, ...args], options)
+    await run('git', ['commit', '-m', message, ...args], options)
   } catch (error) {
     const err = error as Error
 
@@ -70,7 +70,7 @@ export async function gitPush(
  * git tag
  * @param tag 标签
  * @param args 命令行参数
- * @param options 选项
+ * @param options 可选配置项
  */
 export async function gitTag(
   tag: string,

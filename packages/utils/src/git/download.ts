@@ -3,7 +3,7 @@ import { tmpdir } from '@/file'
 import path from 'node:path'
 
 /**
- * 下载选项
+ * 下载配置项
  */
 export interface DownloadGitRepoOptions {
   /**

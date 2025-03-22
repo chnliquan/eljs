@@ -115,13 +115,13 @@ export async function copyTpl(
   to: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: Record<string, any>,
-  options: CopyFileOptions = {},
+  options?: CopyFileOptions,
 ): Promise<void> {
-  try {
-    const { basedir, renderOptions } = options
-    const tpl = await readFile(from)
-    const content = renderTemplate(tpl, data, renderOptions)
+  const { basedir, renderOptions } = options || {}
+  const tpl = await readFile(from)
 
+  try {
+    const content = renderTemplate(tpl, data, renderOptions)
     let destFile = convertFilePrefix(to.replace(/\.tpl$/, ''))
 
     if (destFile.indexOf('{{') > -1 || destFile.indexOf('<%') > -1) {
@@ -156,13 +156,13 @@ export function copyTplSync(
   to: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: Record<string, any>,
-  options: CopyFileOptions = {},
+  options?: CopyFileOptions,
 ): void {
-  try {
-    const { basedir, renderOptions } = options
-    const tpl = readFileSync(from)
-    const content = renderTemplate(tpl, data, renderOptions)
+  const { basedir, renderOptions } = options || {}
+  const tpl = readFileSync(from)
 
+  try {
+    const content = renderTemplate(tpl, data, renderOptions)
     let destFile = convertFilePrefix(to.replace(/\.tpl$/, ''))
 
     if (destFile.indexOf('{{') > -1 || destFile.indexOf('<%') > -1) {
@@ -196,8 +196,9 @@ export async function copyDirectory(
   to: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: Record<string, any>,
-  options: CopyFileOptions = {},
+  options?: CopyFileOptions,
 ): Promise<void> {
+  options = options || {}
   try {
     const files = await glob('**/*', {
       cwd: from,
@@ -205,7 +206,7 @@ export async function copyDirectory(
       ignore: ['**/node_modules/**'],
     })
 
-    for await (const file of files) {
+    for (const file of files) {
       const srcFile = path.join(from, file)
 
       if (await isDirectory(srcFile)) {
@@ -242,8 +243,9 @@ export function copyDirectorySync(
   to: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: Record<string, any>,
-  options: CopyFileOptions = {},
+  options?: CopyFileOptions,
 ) {
+  options = options || {}
   try {
     const files = globSync('**/*', {
       cwd: from,

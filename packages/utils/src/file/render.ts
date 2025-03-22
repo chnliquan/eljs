@@ -6,14 +6,14 @@ import Mustache, {
 } from 'mustache'
 
 /**
- * 模版渲染选项
+ * 模版渲染配置项
  */
 export type RenderTemplateOptions =
   | MustacheRenderTemplateOptions
   | EjsRenderTemplateOptions
 
 /**
- * mustache 模版渲染选项
+ * mustache 模版渲染配置项
  */
 export interface MustacheRenderTemplateOptions {
   /**
@@ -25,7 +25,7 @@ export interface MustacheRenderTemplateOptions {
 }
 
 /**
- * ejs 模版渲染选项
+ * ejs 模版渲染配置项
  */
 export interface EjsRenderTemplateOptions {
   type?: 'ejs'
@@ -41,11 +41,12 @@ export interface EjsRenderTemplateOptions {
 export function renderTemplate(
   template: string,
   data: Record<string, unknown>,
-  options: RenderTemplateOptions = {},
+  options?: RenderTemplateOptions,
 ): string {
-  const { type = 'mustache', options: renderOptions } =
-    options as EjsRenderTemplateOptions
-  const { partials, tagsOrOptions } = options as MustacheRenderTemplateOptions
+  const { type = 'mustache', options: renderOptions } = (options ||
+    {}) as EjsRenderTemplateOptions
+  const { partials, tagsOrOptions } = (options ||
+    {}) as MustacheRenderTemplateOptions
 
   try {
     if (type === 'ejs') {

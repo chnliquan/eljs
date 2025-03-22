@@ -1,5 +1,5 @@
 /**
- * 将传入的字符串转换成小驼峰
+ * 小驼峰格式
  * @param str 字符串
  */
 export function camelCase(str: string): string {
@@ -9,7 +9,7 @@ export function camelCase(str: string): string {
 }
 
 /**
- * 将传入的字符串转换成大驼峰
+ * 大驼峰格式
  * @param str 字符串
  */
 export function pascalCase(str: string): string {
@@ -21,7 +21,7 @@ export function pascalCase(str: string): string {
 }
 
 /**
- * 将传入的字符串转换成中划线
+ * 中划线格式
  * @param str 字符串
  */
 export function kebabCase(str: string): string {

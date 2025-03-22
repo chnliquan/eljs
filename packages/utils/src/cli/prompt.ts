@@ -1,5 +1,5 @@
 import { isNull } from '@/type'
-import prompts, { type Choice, type PromptObject } from 'prompts'
+import prompts, { type Answers, type PromptObject } from 'prompts'
 
 /**
  * 确认问询
@@ -33,14 +33,14 @@ export function confirm(
  * 选择问询
  * @param message 问询信息
  * @param choices 问询选项
- * @param initial 问询初始化数据
+ * @param initial 初始数据
  */
-export function select<T extends Choice>(
+export function select<T extends string = string>(
   message: string,
-  choices: T[],
-  initial?: PromptObject['initial'],
+  choices: PromptObject['choices'],
+  initial?: PromptObject<T>['initial'],
 ): Promise<string> {
-  const fields: Array<PromptObject> = [
+  const questions: PromptObject[] = [
     {
       name: 'name',
       message,
@@ -50,47 +50,45 @@ export function select<T extends Choice>(
     },
   ]
 
-  return prompts(fields).then(answers => {
+  return prompts(questions).then(answers => {
     return answers.name
   })
 }
 
 /**
  * 问询
- * @param questions 问询问题列表
- * @param initials 问询初始化数据
+ * @param questions 问题列表
+ * @param initials 初始数据
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function prompt<T extends PromptObject, U extends Record<string, any>>(
-  questions: T[],
-  initials: U = Object.create(null),
-): Promise<U> {
+export function prompt<T extends string = string>(
+  questions: PromptObject<T>[],
+  initials?: Record<string, PromptObject<T>['initial']>,
+): Promise<Answers<T>> {
   questions = questions.map(question => {
     const copied = Object.assign({}, question)
     const name = (copied.name || '') as string
 
     copied.type = copied.type || isNull(copied.type) ? copied.type : 'text'
 
-    if (initials[name]) {
+    if (initials?.[name]) {
       copied.initial = initials[name]
     }
 
     return copied
   })
 
-  return prompts(questions) as Promise<U>
+  return prompts(questions)
 }
 
 /**
  * 循环问询
- * @param questions 问询问题列表
- * @param initials 问询初始化数据
+ * @param questions 问题列表
+ * @param initials 初始数据
  */
-export function loopPrompt<
-  T extends PromptObject,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  U extends Record<string, any> = Record<string, any>,
->(questions: T[], initials: U = Object.create(null)): Promise<U> {
+export function loopPrompt<T extends string = string>(
+  questions: PromptObject<T>[],
+  initials?: Record<string, PromptObject<T>['initial']>,
+): Promise<Answers<T>> {
   return prompt(questions, initials).then(answers => {
     console.log()
     console.log('The information you entered is as follows:')

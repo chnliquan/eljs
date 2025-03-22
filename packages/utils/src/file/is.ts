@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+
 import { fstat, fstatSync } from './meta'
 
 /**

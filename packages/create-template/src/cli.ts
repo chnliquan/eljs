@@ -27,7 +27,7 @@ async function cli() {
     .option('--cwd <cwd>', 'Specify the working directory.')
     .option('-s, --scene <scene>', 'Specify the application scene.')
     .option('-t, --template <template>', 'Specify the application template.')
-    .option('-r, --override', 'Force overwrite existing directory.')
+    .option('-r, --override', 'Force override existing directory.')
     .action((projectName, options) => {
       debug?.(`projectName:`, projectName)
       debug?.(`options:%O`, options)

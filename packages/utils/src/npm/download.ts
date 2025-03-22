@@ -1,5 +1,5 @@
 import { tmpdir } from '@/file'
-import download from 'download'
+import download, { type DownloadOptions } from 'download'
 
 /**
  * 下载 NPM 压缩文件
@@ -10,7 +10,7 @@ import download from 'download'
 export async function downloadNpmTarball(
   url: string,
   dest?: string,
-  options?: download.DownloadOptions,
+  options?: DownloadOptions,
 ): Promise<string> {
   dest = dest || (await tmpdir(true))
   try {

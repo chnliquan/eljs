@@ -3,8 +3,8 @@ import readline from 'readline'
 import stripAnsi from 'strip-ansi'
 
 class Logger {
-  public format(label: string, msg: string) {
-    return msg
+  public format(label: string, message: string) {
+    return message
       .split('\n')
       .map((line, i) => {
         return i === 0
@@ -14,29 +14,33 @@ class Logger {
       .join('\n')
   }
 
-  public log(msg: string, tag = '') {
-    tag ? console.log(this.format(this._chalkTag(tag), msg)) : console.log(msg)
+  public log(message: string, tag = '') {
+    tag
+      ? console.log(this.format(this._chalkTag(tag), message))
+      : console.log(message)
   }
 
-  public info(msg: string) {
-    console.log(this.format(chalk.bgBlue.black(' INFO '), msg))
+  public info(message: string) {
+    console.log(this.format(chalk.bgBlue.black(' INFO '), message))
   }
 
-  public warn(msg: string) {
-    console.warn(this.format(chalk.bgYellow.black(' WARN '), chalk.yellow(msg)))
+  public warn(message: string) {
+    console.warn(
+      this.format(chalk.bgYellow.black(' WARN '), chalk.yellow(message)),
+    )
   }
 
-  public error(msg: string) {
-    console.error(this.format(chalk.bgRed(' ERROR '), chalk.red(msg)))
+  public error(message: string) {
+    console.error(this.format(chalk.bgRed(' ERROR '), chalk.red(message)))
   }
 
-  public printErrorAndExit(msg: string) {
-    this.error(msg)
+  public printErrorAndExit(message: string) {
+    this.error(message)
     process.exit(1)
   }
 
-  public done(msg: string) {
-    console.log(this.format(chalk.bgGreen.black(' DONE '), msg))
+  public done(message: string) {
+    console.log(this.format(chalk.bgGreen.black(' DONE '), message))
   }
 
   public clear(title: string) {
@@ -52,21 +56,23 @@ class Logger {
     }
   }
 
-  public step(name: string): (msg: string) => void
-  public step(name: string, msg: string): void
-  public step(name: string, msg?: string) {
-    if (msg) {
-      console.log(`\n${chalk.gray(`>>> ${name}:`)} ${chalk.magenta.bold(msg)}`)
+  public step(name: string): (message: string) => void
+  public step(name: string, message: string): void
+  public step(name: string, message?: string) {
+    if (message) {
+      console.log(
+        `\n${chalk.gray(`>>> ${name}:`)} ${chalk.magenta.bold(message)}`,
+      )
     } else {
-      return (msg: string) =>
+      return (message: string) =>
         console.log(
-          `\n${chalk.gray(`>>> ${name}:`)} ${chalk.magenta.bold(msg)}`,
+          `\n${chalk.gray(`>>> ${name}:`)} ${chalk.magenta.bold(message)}`,
         )
     }
   }
 
-  private _chalkTag(msg: string) {
-    return chalk.bgBlackBright.white.dim(` ${msg} `)
+  private _chalkTag(message: string) {
+    return chalk.bgBlackBright.white.dim(` ${message} `)
   }
 }
 

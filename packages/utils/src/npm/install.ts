@@ -4,9 +4,17 @@ import execa from 'execa'
 import { getPackageManager } from './package-manager'
 
 /**
- * 安装依赖选项
+ * 安装依赖配置项
  */
 export interface InstallDepsOptions {
+  /**
+   * 当前工作目录
+   */
+  cwd?: string
+  /**
+   * 包管理器
+   */
+  packageManager?: PackageManager
   /**
    * 运行时依赖
    */
@@ -15,19 +23,22 @@ export interface InstallDepsOptions {
    * 开发时依赖
    */
   devDependencies?: string[]
-  /**
-   * 当前工作目录
-   */
-  cwd?: string
 }
 
 /**
  * 安装指定依赖
- * @param options 可选配置项
+ * @param options.cwd 当前工作目录
+ * @param options.packageManager 包管理器
+ * @param options.dependencies 运行时依赖
+ * @param options.devDependencies 开发时依赖
  */
-export async function installDeps(options: InstallDepsOptions): Promise<void> {
-  const { dependencies, devDependencies, cwd = process.cwd() } = options
-  const packageManager = await getPackageManager(cwd)
+export async function installDeps(options?: InstallDepsOptions): Promise<void> {
+  const {
+    cwd = process.cwd(),
+    packageManager = await getPackageManager(cwd),
+    dependencies,
+    devDependencies,
+  } = options || {}
 
   if (dependencies) {
     await installDependencies(dependencies)
@@ -38,26 +49,37 @@ export async function installDeps(options: InstallDepsOptions): Promise<void> {
   }
 
   async function installDependencies(deps: string[], devStr?: string) {
-    console.log(
-      `${packageManager} install dependencies packages: ${deps.join(' ')}.`,
-    )
-
-    await execa(
-      packageManager,
-      [packageManager === 'npm' ? 'install' : 'add', devStr]
-        .concat(deps)
-        .filter(Boolean) as string[],
-      {
-        encoding: 'utf8',
-        cwd,
-        env: {
-          ...process.env,
-        },
-        stderr: 'pipe',
-        stdout: 'pipe',
-      },
-    )
+    const cliArgs = [
+      packageManager === 'npm' ? 'install' : 'add',
+      devStr,
+      ...deps,
+    ].filter(Boolean) as string[]
+    await execa(packageManager, cliArgs, {
+      encoding: 'utf8',
+      cwd,
+      env: process.env,
+      stderr: 'inherit',
+      stdout: 'inherit',
+    })
   }
+}
+
+/**
+ * 安装项目依赖配置项
+ */
+export interface InstallOptions {
+  /**
+   * 当前工作目录
+   */
+  cwd?: string
+  /**
+   * 命令行参数
+   */
+  args?: string[]
+  /**
+   * 包管理器
+   */
+  packageManager?: PackageManager
 }
 
 /**
@@ -66,11 +88,7 @@ export async function installDeps(options: InstallDepsOptions): Promise<void> {
  * @param options.args 命令行参数
  * @param options.packageManager 包管理器
  */
-export async function install(options?: {
-  cwd: string
-  args?: string[]
-  packageManager?: PackageManager
-}): Promise<void> {
+export async function install(options?: InstallOptions): Promise<void> {
   const {
     cwd = process.cwd(),
     args = [],

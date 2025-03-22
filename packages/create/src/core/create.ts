@@ -115,7 +115,7 @@ export class Create {
       )
       files.forEach(file => console.log(' - ' + file))
       console.log()
-      return confirm(`Are you sure to overwrite the current folder?`, true)
+      return confirm(`Are you sure to override the current folder?`, true)
     }
 
     return true

@@ -1,6 +1,7 @@
 import { isDirectorySync, isPathExistsSync, mkdirSync } from '@/file'
 import { isFunction } from '@/type'
 import type { PromptObject } from 'prompts'
+
 import { BaseGenerator } from './base-generator'
 
 export interface GeneratorOptions {
