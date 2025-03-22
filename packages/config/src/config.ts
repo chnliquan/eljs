@@ -48,35 +48,6 @@ export class ConfigManager {
    * 获取配置项
    * @param configExts 配置文件扩展名
    */
-  public getConfigSync<T extends object>(): T | null {
-    const { defaultConfigFiles, defaultConfigExts, cwd } =
-      this.constructorOptions
-
-    const mainConfigFile = ConfigManager.getMainConfigFileSync(
-      defaultConfigFiles,
-      cwd,
-    )
-
-    if (!mainConfigFile) {
-      return null
-    }
-
-    let configFiles = [mainConfigFile]
-
-    if (defaultConfigExts?.length) {
-      configFiles = ConfigManager.getConfigFiles(
-        mainConfigFile,
-        defaultConfigExts,
-      )
-    }
-
-    return ConfigManager.getConfigSync(getAbsFiles(configFiles, cwd))
-  }
-
-  /**
-   * 获取配置项
-   * @param configExts 配置文件扩展名
-   */
   public async getConfig<T extends object>(): Promise<T | null> {
     const { defaultConfigFiles, defaultConfigExts, cwd } =
       this.constructorOptions
@@ -103,25 +74,32 @@ export class ConfigManager {
   }
 
   /**
-   * 获取主配置文件
-   * @param configFiles 默认配置文件列表
-   * @param cwd 当前工作目录
+   * 获取配置项
+   * @param configExts 配置文件扩展名
    */
-  public static getMainConfigFileSync(
-    configFiles: string[],
-    cwd = process.cwd(),
-  ): string | undefined {
-    let mainConfigFile
+  public getConfigSync<T extends object>(): T | null {
+    const { defaultConfigFiles, defaultConfigExts, cwd } =
+      this.constructorOptions
 
-    for (const configFile of configFiles) {
-      const absConfigFile = join(cwd, configFile)
-      if (isPathExistsSync(absConfigFile)) {
-        mainConfigFile = absConfigFile
-        break
-      }
+    const mainConfigFile = ConfigManager.getMainConfigFileSync(
+      defaultConfigFiles,
+      cwd,
+    )
+
+    if (!mainConfigFile) {
+      return null
     }
 
-    return mainConfigFile
+    let configFiles = [mainConfigFile]
+
+    if (defaultConfigExts?.length) {
+      configFiles = ConfigManager.getConfigFiles(
+        mainConfigFile,
+        defaultConfigExts,
+      )
+    }
+
+    return ConfigManager.getConfigSync(getAbsFiles(configFiles, cwd))
   }
 
   /**
@@ -138,6 +116,28 @@ export class ConfigManager {
     for (const configFile of configFiles) {
       const absConfigFile = join(cwd, configFile)
       if (await isPathExists(absConfigFile)) {
+        mainConfigFile = absConfigFile
+        break
+      }
+    }
+
+    return mainConfigFile
+  }
+
+  /**
+   * 获取主配置文件
+   * @param configFiles 默认配置文件列表
+   * @param cwd 当前工作目录
+   */
+  public static getMainConfigFileSync(
+    configFiles: string[],
+    cwd = process.cwd(),
+  ): string | undefined {
+    let mainConfigFile
+
+    for (const configFile of configFiles) {
+      const absConfigFile = join(cwd, configFile)
+      if (isPathExistsSync(absConfigFile)) {
         mainConfigFile = absConfigFile
         break
       }
@@ -165,18 +165,18 @@ export class ConfigManager {
    * 获取配置文件
    * @param configFiles 配置文件列表
    */
-  public static getConfigSync<T extends object>(
+  public static async getConfig<T extends object>(
     configFiles: string[],
-  ): T | null {
+  ): Promise<T | null> {
     let config: T | null = null
 
     for (const configFile of configFiles) {
-      if (isPathExistsSync(configFile)) {
+      if (await isPathExists(configFile)) {
         const loader =
-          fileLoadersSync[extname(configFile) as keyof typeof fileLoadersSync]
+          fileLoaders[extname(configFile) as keyof typeof fileLoaders]
 
         try {
-          const content = loader(configFile) as { default: T }
+          const content = (await loader(configFile)) as { default: T }
 
           if (!content) {
             return config
@@ -201,18 +201,18 @@ export class ConfigManager {
    * 获取配置文件
    * @param configFiles 配置文件列表
    */
-  public static async getConfig<T extends object>(
+  public static getConfigSync<T extends object>(
     configFiles: string[],
-  ): Promise<T | null> {
+  ): T | null {
     let config: T | null = null
 
     for (const configFile of configFiles) {
-      if (await isPathExists(configFile)) {
+      if (isPathExistsSync(configFile)) {
         const loader =
-          fileLoaders[extname(configFile) as keyof typeof fileLoaders]
+          fileLoadersSync[extname(configFile) as keyof typeof fileLoadersSync]
 
         try {
-          const content = (await loader(configFile)) as { default: T }
+          const content = loader(configFile) as { default: T }
 
           if (!content) {
             return config

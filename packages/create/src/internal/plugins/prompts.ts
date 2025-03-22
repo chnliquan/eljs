@@ -1,5 +1,6 @@
 import type { Api } from '@/types'
-import { chalk, prompts } from '@eljs/utils'
+import { onCancel } from '@/utils'
+import { prompts } from '@eljs/utils'
 import dayjs from 'dayjs'
 import { execSync } from 'node:child_process'
 
@@ -9,17 +10,14 @@ export default (api: Api) => {
   api.modifyPrompts(async (memo, { questions }) => {
     // 仅第一次执行，并且如果当前执行生成 schema 不执行终端输入逻辑
     if (!memo.$$isFirstTime) {
-      const res = await prompts(questions, {
-        onCancel() {
-          console.log(`${chalk.magenta('event')} - 取消模板创建`)
-          process.exit()
-        },
+      const answers = await prompts(questions, {
+        onCancel,
       })
 
       return {
         $$isFirstTime: true,
         ...memo,
-        ...res,
+        ...answers,
       }
     }
 

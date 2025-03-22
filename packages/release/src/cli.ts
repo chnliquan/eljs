@@ -6,6 +6,7 @@ import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
 import updater from 'update-notifier'
 
 import { release } from './release'
+import { onCancel } from './utils'
 
 cli()
   .then(() => process.exit(0))
@@ -13,6 +14,10 @@ cli()
     console.error(err)
     process.exit(1)
   })
+
+process.on('SIGINT', () => {
+  onCancel()
+})
 
 async function cli() {
   const pkg = await readJson<Required<PackageJson>>(

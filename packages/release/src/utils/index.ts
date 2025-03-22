@@ -1,3 +1,4 @@
+export * from './cancel'
 export * from './changelog'
 export * from './npm'
 export * from './pkg'

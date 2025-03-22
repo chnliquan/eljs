@@ -2,7 +2,9 @@ import { chalk, createDebugger, readJson, type PackageJson } from '@eljs/utils'
 import { Command, program } from 'commander'
 import path from 'node:path'
 import updateNotifier from 'update-notifier'
+
 import { Create } from './core'
+import { onCancel } from './utils'
 
 const debug = createDebugger('create:cli')
 
@@ -12,6 +14,10 @@ cli()
     console.error(err)
     process.exit(1)
   })
+
+process.on('SIGINT', () => {
+  onCancel()
+})
 
 async function cli() {
   const pkg = await readJson<Required<PackageJson>>(

@@ -2,7 +2,9 @@ import { chalk, createDebugger, readJson, type PackageJson } from '@eljs/utils'
 import { Command, program } from 'commander'
 import path from 'node:path'
 import updateNotifier from 'update-notifier'
+
 import { CreateTemplate } from './create'
+import { onCancel } from './utils'
 
 const debug = createDebugger('create-template:cli')
 
@@ -12,6 +14,16 @@ cli()
     console.error(err)
     process.exit(1)
   })
+
+process.on('SIGINT', () => {
+  onCancel()
+})
+
+// process.on('exit', () => {
+//   console.log('exit')
+//   console.log(`${chalk.magenta('event')} - 取消模板创建`)
+//   process.exit(0)
+// })
 
 async function cli() {
   const pkg = await readJson<Required<PackageJson>>(

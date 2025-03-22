@@ -7,6 +7,7 @@ import {
   getRemoteDistTag,
   isVersionExist,
   isVersionValid,
+  onCancel,
   updatePackageLock,
   updatePackageVersion,
 } from '@/utils'
@@ -183,10 +184,6 @@ async function getIncrementVersion(
 
   let answer: prompts.Answers<'value'> = {
     value: '',
-  }
-
-  const onCancel = () => {
-    process.exit(1)
   }
 
   if (prereleaseId) {

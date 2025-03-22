@@ -3,7 +3,7 @@ import { prompts } from '@eljs/utils'
 import assert from 'node:assert'
 
 import { defaultConfig, type Template } from './config'
-import { objectToArray } from './utils'
+import { objectToArray, onCancel } from './utils'
 
 /**
  * 构造函数参数
@@ -71,12 +71,17 @@ export class CreateTemplate {
       !this.constructorOptions.scene ||
       !(this.constructorOptions.scene in scenes)
     ) {
-      const answer = await prompts({
-        type: 'select',
-        name: 'scene',
-        message: 'Select the application scene',
-        choices: objectToArray(scenes),
-      })
+      const answer = await prompts(
+        {
+          type: 'select',
+          name: 'scene',
+          message: 'Select the application scene',
+          choices: objectToArray(scenes),
+        },
+        {
+          onCancel,
+        },
+      )
       sceneAnswer = answer.scene
     }
 
@@ -84,12 +89,17 @@ export class CreateTemplate {
       !this.constructorOptions.template ||
       !(this.constructorOptions.template in templates[sceneAnswer])
     ) {
-      const answer = await prompts({
-        type: 'select',
-        name: 'template',
-        message: 'Select the application template',
-        choices: this._formatTemplate(templates[sceneAnswer]),
-      })
+      const answer = await prompts(
+        {
+          type: 'select',
+          name: 'template',
+          message: 'Select the application template',
+          choices: this._formatTemplate(templates[sceneAnswer]),
+        },
+        {
+          onCancel,
+        },
+      )
       templateAnswer = answer.template
     }
 
