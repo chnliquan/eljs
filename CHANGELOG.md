@@ -1,5 +1,17 @@
 # ChangeLog 
 
+# [1.0.0-next.0](https://github.com/chnliquan/eljs/compare/v1.0.0-beta.10...v1.0.0-next.0) (2025-03-22)
+
+
+### ♻ Code Refactoring
+
+* **utils:** loda ts file ([7992c3f](https://github.com/chnliquan/eljs/commit/7992c3f5fc436c90bc434cae998a88ba73651efa))
+
+
+### 🐛 Bug Fixes
+
+* **release:** reference version ([98d2547](https://github.com/chnliquan/eljs/commit/98d2547c0584d17d83ad30b5f7ebf44867ce2efd)) 
+
 # [1.0.0-beta.10](https://github.com/chnliquan/eljs/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2025-03-21)
 
 **Note:** No changes, only version bump. 
