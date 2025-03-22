@@ -50,7 +50,7 @@ export default (api: Api) => {
   api.register(
     'onGenerateDone',
     () => {
-      logger.done(
+      logger.ready(
         `🎉  Created project ${chalk.cyanBright.bold(
           api.appData.projectName,
         )} successfully.`,

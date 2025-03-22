@@ -115,7 +115,7 @@ export default (api: Api) => {
         stdin: 'inherit',
       })
 
-      logger.done(
+      logger.ready(
         `Published ${chalk.cyanBright.bold(`${pkgName}@${version}`)} successfully.`,
       )
     }

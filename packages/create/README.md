@@ -1,59 +1,27 @@
-# @eljs/generate
+# @eljs/create
 
-eljs generate
+Create a project from a remote template
 
-## 快速开始
-
-### 1. 安装
+## Installation
 
 ```bash
-$ npm i @eljs/generate -S
+$ npm i @eljs/create -g
+```
+
+## Usage
+
+```bash
+$ create <template> <project-name>
 // or
-$ yarn add @eljs/generate
-// or
-$ pnpm add @eljs/generate
+$ npx @eljs/create <template> <project-name>
 ```
-
-### 2. 使用
-
-```ts
-import generate from '@eljs/generate'
-```
-
-## API
-
-
-## 开发
 
 ```bash
-$ pnpm dev --filter @eljs/generate
-// or
-$ pnpm -F '@eljs/generate' dev
-```
-
-## 发布
-
-### 1. [语义化提交 Commit](https://www.conventionalcommits.org/en/v1.0.0/#summary) 
-
-```bash
-$ git commit -m 'feat(generate): add some feature'
-$ git commit -m 'fix(generate): fix some bug'
-```
-
-### 2. 编译（可选）
-
-```bash
-$ pnpm build --filter @eljs/generate
-// or
-$ pnpm -F '@eljs/generate' build
-```
-
-### 3. 执行发包命令
-
-```bash
-$ pnpm release
+Usage: create [options] <template> <project-name>
 
 Options:
-  --skipTests skip package test
-  --skipBuild skip package build
+  -v, --version   Output the current version.
+  --cwd <cwd>     Specify the working directory.
+  -r, --override  Force override existing directory.
+  -h, --help      display help for command
 ```

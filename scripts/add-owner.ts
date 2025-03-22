@@ -33,7 +33,7 @@ async function main(): Promise<void> {
 
       try {
         await $`pnpm owner add ${owner} ${pkgName}`
-        logger.done(`${owner} now has the owner permission of ${pkgName}.`)
+        logger.ready(`${owner} now has the owner permission of ${pkgName}.`)
       } catch (err) {
         await sleep(100)
         await $`npm cache clean --force`

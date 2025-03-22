@@ -3,118 +3,118 @@ import type { UserConfig } from '@eljs/pluggable'
 import type { PrereleaseId } from './npm'
 
 /**
- * 配置项
+ * Config
  */
 export interface Config extends UserConfig {
   /**
-   * 项目工作目录
+   * Working directory
    * @default process.cwd()
    */
   cwd?: string
   /**
-   * git 相关配置项
+   * Git config
    */
   git?: {
     /**
-     * 是否检查工作区
+     * Whether to require git working tree clean
      * @default true
      */
     requireClean?: boolean
     /**
-     * 指定发布分支
+     * Require that the release is on a particular branch
      */
     requireBranch?: string
     /**
-     * 更新日志
+     * Changelog config
      * @default { filename: 'CHANGELOG.md', preset: '@eljs/conventional-changelog-preset' }
      */
     changelog?:
       | false
       | {
           /**
-           * 文件名
+           * Changelog file name
            * @default CHANGELOG.md
            */
           filename?: string
           /**
-           * conventional-changelog 预设
+           * Preset of conventional-changelog
            * @link https://github.com/conventional-changelog/conventional-changelog/blob/master/packages/conventional-changelog/README.md#presets
            */
           preset?: string
         }
     /**
-     * 是否生成独立的 git tag
+     * Whether to generate independent git tags
      * @default false
      */
     independent?: boolean
     /**
-     * 是否提交 commit
+     * Whether commit changes
      * @default true
      */
     commit?: boolean
     /**
-     * commit 信息
+     * Commit message
      * @default "chore: bump version v${version}"
      */
     commitMessage?: string
     /**
-     * git commit 参数
+     * Git commit arguments
      */
     commitArgs?: string[] | string
     /**
-     * 是否推送到远端
+     * Whether push to remote
      * @default true
      */
     push?: boolean
     /**
-     * git push 参数
+     * Git push arguments
      * @default ['--follow-tags']
      */
     pushArgs?: string[] | string
   }
   /**
-   * npm 相关配置项
+   * Npm config
    */
   npm?: {
     /**
-     * 是否检查用户
+     * Whether to require npm owner
      * @default true
      */
     requireOwner?: boolean
     /**
-     * 是否预发布
+     * Whether to use prerelease type
      */
     prerelease?: boolean
     /**
-     * 预发布类型
+     * Prerelease id
      */
     prereleaseId?: PrereleaseId
     /**
-     * 是否发布金丝雀版本
+     * Whether to use canary version
      * @default false
      */
     canary?: boolean
     /**
-     * 是否确认版本
+     * Whether to confirm the increment version
      * @default true
      */
     confirm?: boolean
     /**
-     * npm publish 参数
+     * Npm publish arguments
      */
     publishArgs?: string | string[]
     /**
-     * 是否同步到 Cnpm
+     * Whether to sync cnpm
      * @default false
      */
     cnpm?: boolean
   }
   /**
-   * github 相关配置项
+   * Github config
    */
   github?: {
     /**
-     * 是否发布变更
+     * Whether to release github
      * @default true
      */
     release?: boolean

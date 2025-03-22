@@ -1,4 +1,4 @@
-import { chalk } from '@eljs/utils'
+import { logger } from '@eljs/utils'
 
 /**
  *  将对象转换成数组
@@ -19,6 +19,6 @@ export function objectToArray(obj: Record<string, unknown>, toNumber = false) {
  * 用户取消
  */
 export function onCancel() {
-  console.log(`${chalk.magenta('event')} - Cancel template creation`)
+  logger.event('Cancel create template')
   process.exit(0)
 }

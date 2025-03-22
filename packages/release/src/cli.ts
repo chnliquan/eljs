@@ -1,12 +1,13 @@
-import { chalk, logger, readJson, type PackageJson } from '@eljs/utils'
+import { chalk, createDebugger, readJson, type PackageJson } from '@eljs/utils'
 import { Command, InvalidArgumentError, program } from 'commander'
-import minimist from 'minimist'
 import path from 'node:path'
 import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
-import updater from 'update-notifier'
+import updateNotifier from 'update-notifier'
 
 import { release } from './release'
 import { onCancel } from './utils'
+
+const debug = createDebugger('release:cli')
 
 cli()
   .then(() => process.exit(0))
@@ -23,8 +24,14 @@ async function cli() {
   const pkg = await readJson<Required<PackageJson>>(
     path.join(__dirname, '../package.json'),
   )
+
+  updateNotifier({ pkg }).notify()
+
   program
+    .name('release')
+    .description('Release npm package easily.')
     .version(pkg.version, '-v, --version', 'Output the current version.')
+    .argument('[version]', 'Specify the bump version.', checkVersion)
     .option('--cwd <cwd>', 'Specify the working directory.')
     .option('--git.independent', 'Generate git tag independent.')
     .option('--no-git.requireClean', 'Skip check git working tree clean.')
@@ -42,18 +49,25 @@ async function cli() {
     .option('--no-npm.confirm', 'Skip the confirm bump version release step.')
     .option('--npm.prereleaseId <prereleaseId>', 'Specify the prereleaseId.')
     .option('--no-github.release', 'Skip the github release step.')
-    .argument('[version]', 'Specify the bump version.', checkVersion)
+    .action(async (version, opts) => {
+      debug?.(`version:`, version)
+      debug?.(`opts:%O`, opts)
+      const options = parseOptions(opts)
+      debug?.(`options:%O`, options)
+      await release(version, options)
+    })
 
-  program.commands.forEach(c => c.on('--help', () => console.log()))
-
+  // https://github.com/tj/commander.js/blob/master/lib/command.js#L1994
   enhanceErrorMessages('missingArgument', argName => {
     return `Missing required argument ${chalk.yellow(`<${argName}>`)}.`
   })
 
+  // https://github.com/tj/commander.js/blob/master/lib/command.js#L2074
   enhanceErrorMessages('unknownOption', optionName => {
     return `Unknown option ${chalk.yellow(optionName)}.`
   })
 
+  // https://github.com/tj/commander.js/blob/master/lib/command.js#L2006
   enhanceErrorMessages('optionMissingArgument', (option, flag) => {
     return (
       `Missing required argument for option ${chalk.yellow(option.flags)}` +
@@ -61,18 +75,9 @@ async function cli() {
     )
   })
 
-  program.parse(process.argv)
+  enhanceExcessArguments()
 
-  if (minimist(process.argv.slice(3))._.length > 1) {
-    logger.info(
-      'You provided more than one argument. The first one will be used as the bump version, the rest are ignored.',
-    )
-  }
-
-  updater({ pkg }).notify()
-  const options = parseOptions(program.opts())
-  const version = program.args[0]
-  await release(version, options)
+  await program.parseAsync(process.argv)
 }
 
 function enhanceErrorMessages(
@@ -90,6 +95,27 @@ function enhanceErrorMessages(
 
     console.log()
     console.log(`  ` + chalk.red(log(...args)))
+    console.log()
+    process.exit(1)
+  }
+}
+
+function enhanceExcessArguments() {
+  // https://github.com/tj/commander.js/blob/master/lib/command.js#L2106
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(Command['prototype'] as any)['_excessArguments'] = function (
+    receivedArgs: string[],
+  ) {
+    if (this._allowExcessArguments) return
+
+    const expected = this.registeredArguments.length
+    const s = expected === 1 ? '' : 's'
+    const message = `Expected ${expected} argument${s} but got ${chalk.yellow(receivedArgs.length)}.`
+
+    this.outputHelp()
+
+    console.log()
+    console.log(`  ` + chalk.red(message))
     console.log()
     process.exit(1)
   }

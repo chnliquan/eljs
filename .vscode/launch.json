@@ -64,7 +64,8 @@
       },
       "args": [
         // "--help",
-        // "--version",
+        "1.0.0",
+        "1.0.0",
         "--cwd=/Users/ender/kwai/technology/polyrepo-release",
         // "--cwd=/Users/ender/kwai/technology/monorepo-release",
         // "--git.independent",
@@ -78,7 +79,7 @@
         // "prerelease"
       ],
       "console": "integratedTerminal",
-      "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
+      "skipFiles": ["<node_internals>/**"]
     },
     {
       "type": "node",
@@ -97,6 +98,7 @@
         "DEBUG": "create*"
       },
       "args": [
+        "--help",
         // "@eljs/create-plugin-npm-web",
         // "@eljs/utils",
         // "./template",
@@ -125,7 +127,7 @@
         "DEBUG": "create*"
       },
       "args": [
-        // "--help",
+        "--help",
         "create-app",
         "--cwd=/Users/ender/kwai/technology/polyrepo-release",
         "--scene=npm",

@@ -27,16 +27,17 @@ async function cli() {
   updateNotifier({ pkg }).notify()
 
   program
-    .version(pkg.version, '-v, --version', 'Output the current version.')
+    .name('create')
     .description('Create a project from a remote template.')
+    .version(pkg.version, '-v, --version', 'Output the current version.')
     .arguments('<template> <project-name>')
     .option('--cwd <cwd>', 'Specify the working directory.')
-    .option('-r, --override', 'Override directory when exists.')
+    .option('-r, --override', 'Force override existing directory.')
     .action(async (template, projectName, options) => {
       debug?.(`template:`, template)
       debug?.(`projectName:`, projectName)
       debug?.(`options:%O`, options)
-      return new Create({
+      await new Create({
         ...options,
         template,
       }).run(projectName)

@@ -1,7 +1,7 @@
 {
   "name": "@eljs/create",
   "version": "1.0.0-next.1",
-  "description": "Create template easily.",
+  "description": "Create a project from a remote template.",
   "keywords": [
     "eljs",
     "create"

@@ -19,12 +19,6 @@ process.on('SIGINT', () => {
   onCancel()
 })
 
-// process.on('exit', () => {
-//   console.log('exit')
-//   console.log(`${chalk.magenta('event')} - 取消模板创建`)
-//   process.exit(0)
-// })
-
 async function cli() {
   const pkg = await readJson<Required<PackageJson>>(
     path.join(__dirname, '../package.json'),
@@ -33,17 +27,18 @@ async function cli() {
   updateNotifier({ pkg }).notify()
 
   program
-    .version(pkg.version, '-v, --version', 'Output the current version.')
+    .name('create-template')
     .description('Create a new project powered by @eljs/create.')
+    .version(pkg.version, '-v, --version', 'Output the current version.')
     .argument('<project-name>', 'Project name.')
     .option('--cwd <cwd>', 'Specify the working directory.')
     .option('-s, --scene <scene>', 'Specify the application scene.')
     .option('-t, --template <template>', 'Specify the application template.')
     .option('-r, --override', 'Force override existing directory.')
-    .action((projectName, options) => {
+    .action(async (projectName, options) => {
       debug?.(`projectName:`, projectName)
       debug?.(`options:%O`, options)
-      return new CreateTemplate(options).run(projectName)
+      await new CreateTemplate(options).run(projectName)
     })
 
   // https://github.com/tj/commander.js/blob/master/lib/command.js#L1994
