@@ -1,5 +1,12 @@
 # ChangeLog 
 
+# [1.0.0-next.5](https://github.com/chnliquan/eljs/compare/v1.0.0-next.4...v1.0.0-next.5) (2025-03-23)
+
+
+### 🐛 Bug Fixes
+
+* **create:** cli require hook ([d402b2d](https://github.com/chnliquan/eljs/commit/d402b2ddbd2b732c4f7e183fded361a78ea5ab65)) 
+
 # [1.0.0-next.4](https://github.com/chnliquan/eljs/compare/v1.0.0-next.3...v1.0.0-next.4) (2025-03-23)
 
 
