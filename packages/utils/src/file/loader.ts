@@ -132,6 +132,9 @@ export async function loadTs<T = any>(path: string): Promise<T> {
  * @param path 文件路径
  */
 export function loadTsSync<T>(path: string): T {
+  if (!typescript) {
+    typescript = require('typescript')
+  }
   const compiledPath = `${path.slice(0, -2)}cjs`
 
   try {

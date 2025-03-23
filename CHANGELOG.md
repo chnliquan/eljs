@@ -1,5 +1,12 @@
 # ChangeLog 
 
+# [1.0.0-next.3](https://github.com/chnliquan/eljs/compare/v1.0.0-next.2...v1.0.0-next.3) (2025-03-23)
+
+
+### ♻ Code Refactoring
+
+* **utils:** load ts file ([6f1ab31](https://github.com/chnliquan/eljs/commit/6f1ab314973859cf9cc60d17e175e55d91789fa1)) 
+
 # [1.0.0-next.2](https://github.com/chnliquan/eljs/compare/v1.0.0-next.1...v1.0.0-next.2) (2025-03-23)
 
 
