@@ -111,8 +111,8 @@ export default (api: Api) => {
       await run(packageManager, cliArgs, {
         cwd: pkgRootPath,
         verbose: true,
-        stdout: 'inherit',
         stdin: 'inherit',
+        stderr: 'inherit',
       })
 
       logger.ready(
