@@ -145,31 +145,29 @@ async function getIncrementVersion(
   if (canary) {
     return getCanaryVersion(referenceVersionMap.latest, api.cwd)
   } else {
-    logger.info(`- Local version: ${chalk.bold.cyanBright(localVersion)}`)
+    logger.info(`Local version: ${chalk.bold.cyanBright(localVersion)}`)
 
     if (remoteLatestVersion) {
       logger.info(
-        `- Remote latest version: ${chalk.bold.cyanBright(
-          remoteLatestVersion,
-        )}`,
+        `Remote latest version: ${chalk.bold.cyanBright(remoteLatestVersion)}`,
       )
     }
 
     if (remoteAlphaVersion && (!prereleaseId || prereleaseId === 'alpha')) {
       logger.info(
-        `- Remote alpha version: ${chalk.bold.cyanBright(remoteAlphaVersion)}`,
+        `Remote alpha version: ${chalk.bold.cyanBright(remoteAlphaVersion)}`,
       )
     }
 
     if (remoteBetaVersion && (!prereleaseId || prereleaseId === 'beta')) {
       logger.info(
-        `- Remote beta version: ${chalk.bold.cyanBright(remoteBetaVersion)}`,
+        `Remote beta version: ${chalk.bold.cyanBright(remoteBetaVersion)}`,
       )
     }
 
     if (remoteRcVersion && (!prereleaseId || prereleaseId === 'rc')) {
       logger.info(
-        `- Remote rc version: ${chalk.bold.cyanBright(remoteRcVersion)}`,
+        `Remote rc version: ${chalk.bold.cyanBright(remoteRcVersion)}`,
       )
     }
   }

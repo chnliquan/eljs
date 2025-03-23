@@ -1,5 +1,15 @@
 # ChangeLog 
 
+# [1.0.0-next.2](https://github.com/chnliquan/eljs/compare/v1.0.0-next.1...v1.0.0-next.2) (2025-03-23)
+
+
+### ♻ Code Refactoring
+
+* add cli name ([87e9019](https://github.com/chnliquan/eljs/commit/87e90190c9e721685fd5963503ce30a3900eb752))
+* error handler ([c8c4deb](https://github.com/chnliquan/eljs/commit/c8c4deb7c97b46e4a3c4978ca5093e410845aad1))
+* **utils:** git operate ([4eaadbf](https://github.com/chnliquan/eljs/commit/4eaadbfa2af47e84a7192b3c7f496a758eedd69e))
+* **utils:** logger color ([aa37b4e](https://github.com/chnliquan/eljs/commit/aa37b4e9c7cabbfcdfe9468c9d24c79ca055637e)) 
+
 # [1.0.0-next.1](https://github.com/chnliquan/eljs/compare/v1.0.0-next.0...v1.0.0-next.1) (2025-03-22)
 
 
