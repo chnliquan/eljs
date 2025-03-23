@@ -1,5 +1,12 @@
 # ChangeLog 
 
+# [1.0.0-next.4](https://github.com/chnliquan/eljs/compare/v1.0.0-next.3...v1.0.0-next.4) (2025-03-23)
+
+
+### ♻ Code Refactoring
+
+* **utils:** import lazy ([761d1eb](https://github.com/chnliquan/eljs/commit/761d1eb43bb88dc09fd92b6b8d20482a109535cd)) 
+
 # [1.0.0-next.3](https://github.com/chnliquan/eljs/compare/v1.0.0-next.2...v1.0.0-next.3) (2025-03-23)
 
 
