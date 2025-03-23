@@ -5,16 +5,7 @@ import yaml from 'js-yaml'
 import { dirname } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import parseJson from 'parse-json'
-import {
-  type TranspileOptions,
-  findConfigFile,
-  ModuleKind,
-  ModuleResolutionKind,
-  readConfigFile,
-  ScriptTarget,
-  sys,
-  transpileModule,
-} from 'typescript'
+import type { TranspileOptions } from 'typescript'
 
 import { isPathExists, isPathExistsSync } from './is'
 import { readFile, readFileSync } from './read'
@@ -94,28 +85,32 @@ export function loadJsSync<T>(path: string): T {
   }
 }
 
+let typescript: typeof import('typescript')
 /**
  * 加载 ts 文件
  * @param path 文件路径
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function loadTs<T = any>(path: string): Promise<T> {
+  if (!typescript) {
+    typescript = require('typescript')
+  }
   const compiledPath = `${path.slice(0, -2)}cjs`
 
   try {
     const config = resolveTsConfig(dirname(path)) ?? {}
     config.compilerOptions = {
       ...config.compilerOptions,
-      module: ModuleKind.NodeNext,
-      moduleResolution: ModuleResolutionKind.NodeNext,
-      target: ScriptTarget.ES2022,
+      module: typescript.ModuleKind.NodeNext,
+      moduleResolution: typescript.ModuleResolutionKind.NodeNext,
+      target: typescript.ScriptTarget.ES2022,
       noEmit: false,
     }
     const content = await readFile(path)
     let transpiledContent = ''
 
     try {
-      transpiledContent = transpileModule(content, config).outputText
+      transpiledContent = typescript.transpileModule(content, config).outputText
     } catch (error) {
       const err = error as Error
       err.message = `TypeScript Error in ${path}: ${err.message}`
@@ -143,16 +138,16 @@ export function loadTsSync<T>(path: string): T {
     const config = resolveTsConfig(dirname(path)) ?? {}
     config.compilerOptions = {
       ...config.compilerOptions,
-      module: ModuleKind.NodeNext,
-      moduleResolution: ModuleResolutionKind.NodeNext,
-      target: ScriptTarget.ES2022,
+      module: typescript.ModuleKind.NodeNext,
+      moduleResolution: typescript.ModuleResolutionKind.NodeNext,
+      target: typescript.ScriptTarget.ES2022,
       noEmit: false,
     }
     const content = readFileSync(path)
     let transpiledContent = ''
 
     try {
-      transpiledContent = transpileModule(content, config).outputText
+      transpiledContent = typescript.transpileModule(content, config).outputText
     } catch (error) {
       const err = error as Error
       err.message = `TypeScript Error in ${path}: ${err.message}`
@@ -242,12 +237,14 @@ export function loadYamlSync<T>(path: string): T {
  * @param dir 文件夹
  */
 export function resolveTsConfig(dir: string): TranspileOptions {
-  const path = findConfigFile(dir, fileName => {
-    return sys.fileExists(fileName)
+  const path = typescript.findConfigFile(dir, fileName => {
+    return typescript.sys.fileExists(fileName)
   })
 
   if (path !== undefined) {
-    const { config, error } = readConfigFile(path, path => sys.readFile(path))
+    const { config, error } = typescript.readConfigFile(path, path =>
+      typescript.sys.readFile(path),
+    )
 
     if (error) {
       throw new Error(`Error in ${path}: ${error.messageText.toString()}`)

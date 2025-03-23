@@ -53,5 +53,17 @@
     "@types/concat-stream": "^2.0.3",
     "@types/minimist": "^1.2.5",
     "@types/update-notifier": "^6.0.8"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   }
 }

@@ -39,5 +39,9 @@
     "lodash": "^4.17.21",
     "pkg-up": "^3.1.0",
     "tapable": "^2.2.1"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   }
 }

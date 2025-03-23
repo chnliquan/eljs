@@ -5,6 +5,10 @@ Release npm package easily
 ## Installation
 
 ```bash
+$ pnpm add @eljs/release -D
+// or
+$ yarn add @eljs/release -D
+// ro
 $ npm i @eljs/release -D
 ```
 

@@ -37,10 +37,13 @@
     "@eljs/create": "workspace:*",
     "@eljs/utils": "workspace:*",
     "commander": "^13.1.0",
-    "typescript": "5.2.2",
     "update-notifier": "^5.1.0"
   },
   "devDependencies": {
     "@types/update-notifier": "^6.0.8"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   }
 }
