@@ -1,10 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { isESModule } from '@/type'
-import importFresh from 'import-fresh'
-import yaml from 'js-yaml'
 import { dirname } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import parseJson from 'parse-json'
 import type { TranspileOptions } from 'typescript'
 
 import { isPathExists, isPathExistsSync } from './is'
@@ -70,11 +67,16 @@ export async function loadJs<T>(path: string): Promise<T> {
   }
 }
 
+let importFresh: typeof import('import-fresh')
 /**
  * 加载 js 文件
  * @param path 文件路径
  */
 export function loadJsSync<T>(path: string): T {
+  if (!importFresh) {
+    importFresh = require('import-fresh')
+  }
+
   try {
     const content = importFresh(path)
     return content as T
@@ -167,11 +169,15 @@ export function loadTsSync<T>(path: string): T {
   }
 }
 
+let parseJson: typeof import('parse-json')
 /**
  * 加载 json 文件
  * @param path 文件路径
  */
 export async function loadJson<T>(path: string): Promise<T> {
+  if (!parseJson) {
+    parseJson = require('parse-json')
+  }
   const content = await readFile(path)
 
   try {
@@ -189,6 +195,9 @@ export async function loadJson<T>(path: string): Promise<T> {
  * @param path 文件路径
  */
 export function loadJsonSync<T>(path: string): T {
+  if (!parseJson) {
+    parseJson = require('parse-json')
+  }
   const content = readFileSync(path)
 
   try {
@@ -201,11 +210,15 @@ export function loadJsonSync<T>(path: string): T {
   }
 }
 
+let yaml: typeof import('js-yaml')
 /**
  * 加载 yaml 文件
  * @param path 文件路径
  */
 export async function loadYaml<T>(path: string): Promise<T> {
+  if (!yaml) {
+    yaml = require('js-yaml')
+  }
   const content = await readFile(path)
 
   try {
@@ -223,6 +236,9 @@ export async function loadYaml<T>(path: string): Promise<T> {
  * @param path 文件路径
  */
 export function loadYamlSync<T>(path: string): T {
+  if (!yaml) {
+    yaml = require('js-yaml')
+  }
   const content = readFileSync(path)
 
   try {
