@@ -1,5 +1,12 @@
 # ChangeLog 
 
+# [1.0.0-next.7](https://github.com/chnliquan/eljs/compare/v1.0.0-next.6...v1.0.0-next.7) (2025-03-24)
+
+
+### ♻ Code Refactoring
+
+* interface ([571c09f](https://github.com/chnliquan/eljs/commit/571c09f45fce571b25c6de7826f52de73a9d1cdf)) 
+
 # [1.0.0-next.6](https://github.com/chnliquan/eljs/compare/v1.0.0-next.5...v1.0.0-next.6) (2025-03-24)
 
 
