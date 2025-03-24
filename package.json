@@ -1,6 +1,6 @@
 {
   "name": "eljs",
-  "version": "1.0.0-next.5",
+  "version": "1.0.0-next.6",
   "private": true,
   "description": "node utility monorepo",
   "repository": {

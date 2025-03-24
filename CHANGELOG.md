@@ -1,5 +1,12 @@
 # ChangeLog 
 
+# [1.0.0-next.6](https://github.com/chnliquan/eljs/compare/v1.0.0-next.5...v1.0.0-next.6) (2025-03-24)
+
+
+### 🐛 Bug Fixes
+
+* **release:** pnpm install suspend ([1745f3f](https://github.com/chnliquan/eljs/commit/1745f3f664bb2e7951b6447b1793392e0ef71fad)) 
+
 # [1.0.0-next.5](https://github.com/chnliquan/eljs/compare/v1.0.0-next.4...v1.0.0-next.5) (2025-03-23)
 
 
