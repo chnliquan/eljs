@@ -1,5 +1,6 @@
 import { release, resolveBin } from '@eljs/release'
 import { isGitBehindRemote, isGitClean, logger } from '@eljs/utils'
+import { EOL } from 'node:os'
 import { $, argv } from 'zx'
 
 const skipTests = argv.skipTests
@@ -9,6 +10,11 @@ const skipRequireClean = argv.skipRequireClean
 $.verbose = true
 
 main()
+  .then(() => process.exit(0))
+  .catch(error => {
+    console.error(`release error:${EOL}${error}`)
+    process.exit(1)
+  })
 
 async function main(): Promise<void> {
   if (!skipRequireClean) {
@@ -39,6 +45,7 @@ async function main(): Promise<void> {
     console.log(`(skipped)`)
   }
 
+  // https://github.com/chnliquan/eljs/tree/master/packages/release#configuration
   await release(argv._[0], {
     ...argv,
     git: {

@@ -1,19 +1,23 @@
 import {
+  chalk,
   getWorkspaces,
   logger,
-  PackageJson,
+  type PackageJson,
   readJson,
   sleep,
 } from '@eljs/utils'
-import path from 'path'
+import { EOL } from 'node:os'
+import path from 'node:path'
 import { $, argv } from 'zx'
 
 $.verbose = true
 
-main().catch((err: Error) => {
-  console.error(`add owner error: ${err.message}.`)
-  process.exit(1)
-})
+main()
+  .then(() => process.exit(0))
+  .catch(error => {
+    console.error(`add owner error:${EOL}${error}`)
+    process.exit(1)
+  })
 
 async function main(): Promise<void> {
   const owners = argv._
@@ -23,19 +27,21 @@ async function main(): Promise<void> {
   }
 
   const rootPath = path.resolve(__dirname, '../')
-  const pkgPaths = await getWorkspaces(rootPath)
+  const workspaces = await getWorkspaces(rootPath)
 
   for (const owner of owners) {
-    for (const pkgPath of pkgPaths) {
+    for (const workspace of workspaces) {
       const { name: pkgName } = await readJson<PackageJson>(
-        path.resolve(pkgPath, 'package.json'),
+        path.resolve(workspace, 'package.json'),
       )
 
       try {
         await $`pnpm owner add ${owner} ${pkgName}`
-        logger.ready(`${owner} now has the owner permission of ${pkgName}.`)
+        logger.ready(
+          `${chalk.bold(owner)} now has the owner permission of ${pkgName}.`,
+        )
       } catch (err) {
-        await sleep(100)
+        await sleep(200)
         await $`npm cache clean --force`
       }
     }

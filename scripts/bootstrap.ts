@@ -18,10 +18,12 @@ import { argv, chalk } from 'zx'
 
 const step = logger.step('Bootstrap')
 
-main().catch((err: Error) => {
-  console.error(`bootstrap error: ${err.message}.`)
-  process.exit(1)
-})
+main()
+  .then(() => process.exit(0))
+  .catch(error => {
+    console.error(`bootstrap error:${EOL}${error.message}.`)
+    process.exit(1)
+  })
 
 async function main(): Promise<void> {
   const rootPath = path.resolve(__dirname, '../')
@@ -129,17 +131,15 @@ function ensureReadme(name: string, dirname: string, shortName: string): void {
   const readmePath = path.resolve(dirname, `README.md`)
 
   if (!isPathExistsSync(readmePath)) {
-    step('Generate readme.md')
+    step('Generate README.md')
     safeWriteFileSync(
       readmePath,
       `
 # ${name}
 
-eljs ${shortName}
+${name}
 
-## 快速开始
-
-### 1. 安装
+## Installation
 
 \`\`\`bash
 $ pnpm add ${name}
@@ -149,7 +149,7 @@ $ yarn add ${name}
 $ npm i ${name} -S
 \`\`\`
 
-### 2. 使用
+## Usage
 
 \`\`\`ts
 import ${camelCase(shortName)} from '${name}'
@@ -158,45 +158,42 @@ import ${camelCase(shortName)} from '${name}'
 ## API
 
 
-## 开发
+## Development
 
 \`\`\`bash
 $ pnpm run dev --filter ${name}
 // or
-$ pnpm -F '${name}' run dev
+$ pnpm -F ${name} run dev
 \`\`\`
 
-## 发布
+## Publish
 
-### 1. [语义化提交 Commit](https://www.conventionalcommits.org/en/v1.0.0/#summary) 
+### 1. [Conventional Commit](https://www.conventionalcommits.org/en/v1.0.0/#summary) 
 
 \`\`\`bash
 $ git commit -m 'feat(${shortName}): add some feature'
 $ git commit -m 'fix(${shortName}): fix some bug'
 \`\`\`
 
-### 2. 编译（可选）
+### 2. Compile（optional）
 
 \`\`\`bash
 $ pnpm run build --filter ${name}
 // or
-$ pnpm -F '${name}' run build
+$ pnpm -F ${name} run build
 \`\`\`
 
-### 3. 执行发包命令
+### 3. Release
 
 \`\`\`bash
 $ pnpm run release
 
 Options:
-  --skipTests          跳过单元测试
-  --skipBuild          跳过打包
-  --skipGitCheck       跳过 git 检查
-  --skipRegistryCheck  跳过 npm 仓库检查
-  --skipOwnershipCheck 跳过发布权限检查
-  --skipSyncCnpm       跳过同步 cnpm
+  --skipTests             Skip unit tests.
+  --skipBuild             Skip package build.
+  --skipRequireClean      Skip git working tree check.
 \`\`\`
-  `.trim() + EOL,
+  `.trim() + '\n',
     )
   }
 }
