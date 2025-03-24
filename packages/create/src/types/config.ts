@@ -1,15 +1,47 @@
 import type { UserConfig } from '@eljs/pluggable'
 
 /**
- * 配置项
+ * Template
+ */
+export interface Template {
+  /**
+   * 模版源类型
+   */
+  type: 'npm' | 'git'
+  /**
+   * 模版值
+   */
+  value: string
+  /**
+   * 仓库地址
+   */
+  registry?: string
+}
+
+/**
+ * Create Configuration
  */
 export interface Config extends UserConfig {
   /**
-   * 是否启用默认问询
+   * Template
+   */
+  template?: string | Template
+  /**
+   * Working directory
+   * @default process.cwd()
+   */
+  cwd?: string
+  /**
+   * Whether override existing directory
+   * @default false
+   */
+  override?: boolean
+  /**
+   * Whether enable default prompts
    */
   defaultQuestions?: boolean
   /**
-   * 是否启用 git 初始化
+   * Whether enable git initialize
    */
   gitInit?: boolean
 }

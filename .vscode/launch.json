@@ -9,7 +9,7 @@
       "runtimeExecutable": "tsx",
       "runtimeArgs": [
         "--tsconfig",
-        "${workspaceFolder}/packages/utils/tsconfig.json"
+        "${workspaceFolder}/packages/release/tsconfig.json"
       ],
       "program": "${file}",
       "windows": {
@@ -51,8 +51,8 @@
       },
       "args": [
         // "--help",
-        "--cwd=/Users/ender/kwai/technology/polyrepo-release",
-        // "--cwd=/Users/ender/kwai/technology/monorepo-release",
+        // "--cwd=/Users/ender/kwai/technology/polyrepo-release",
+        "--cwd=/Users/ender/kwai/technology/monorepo-release",
         // "--git.independent",
         // "--no-git.requireClean",
         // "--no-git.changelog",

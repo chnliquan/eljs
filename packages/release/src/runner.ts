@@ -25,7 +25,7 @@ import { AppError, parseVersion } from './utils'
 const debug = createDebugger('release:config')
 
 /**
- * 运行器类
+ * Runner class
  */
 export class Runner extends Pluggable<Config> {
   /**

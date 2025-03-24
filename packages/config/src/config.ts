@@ -10,21 +10,27 @@ import { extname, join } from 'node:path'
 import { addFileExt, getAbsFiles } from './utils'
 
 /**
- * 配置管理器类参数
+ * ConfigManager constructor options
  */
 export interface ConfigManagerOptions {
   /**
-   * 默认配置文件（config.ts）
+   * Working directory
+   * @default process.cwd()
+   */
+  cwd?: string
+  /**
+   * Default config files
+   * @example
+   * config.ts、config.js、config.json
    */
   defaultConfigFiles: string[]
   /**
-   * 默认配置文件扩展（dev => config.dev.ts，prod => config.prod.ts）
+   * Default config extensions
+   * @example
+   * .dev => config.dev.ts
+   * .prod => config.prod.ts
    */
   defaultConfigExts?: string[]
-  /**
-   * 当前工作目录
-   */
-  cwd?: string
 }
 
 /**

@@ -1,3 +1,5 @@
+import type { RunCommandOptions } from '@/cp'
+import { isArray, isObject } from '@/type'
 import type { PackageManager } from '@/types'
 import execa from 'execa'
 
@@ -6,15 +8,7 @@ import { getPackageManager } from './package-manager'
 /**
  * 安装依赖配置项
  */
-export interface InstallDepsOptions {
-  /**
-   * 当前工作目录
-   */
-  cwd?: string
-  /**
-   * 包管理器
-   */
-  packageManager?: PackageManager
+export interface InstallDepsOptions extends RunCommandOptions {
   /**
    * 运行时依赖
    */
@@ -28,17 +22,35 @@ export interface InstallDepsOptions {
 /**
  * 安装指定依赖
  * @param options.cwd 当前工作目录
- * @param options.packageManager 包管理器
  * @param options.dependencies 运行时依赖
  * @param options.devDependencies 开发时依赖
  */
-export async function installDeps(options?: InstallDepsOptions): Promise<void> {
-  const {
-    cwd = process.cwd(),
-    packageManager = await getPackageManager(cwd),
-    dependencies,
-    devDependencies,
-  } = options || {}
+export async function installDeps(options?: InstallDepsOptions): Promise<void>
+/**
+ * 安装指定依赖
+ * @param packageManager 包管理器
+ * @param options.cwd 当前工作目录
+ * @param options.dependencies 运行时依赖
+ * @param options.devDependencies 开发时依赖
+ */
+export async function installDeps(
+  packageManager: PackageManager,
+  options?: InstallDepsOptions,
+): Promise<void>
+export async function installDeps(
+  packageManager?: PackageManager | InstallDepsOptions,
+  options?: InstallDepsOptions,
+): Promise<void> {
+  if (isObject(packageManager)) {
+    options = packageManager
+    packageManager = undefined
+  }
+
+  if (!packageManager) {
+    packageManager = await getPackageManager(options?.cwd)
+  }
+
+  const { dependencies, devDependencies, ...rest } = options || {}
 
   if (dependencies) {
     await installDependencies(dependencies)
@@ -54,53 +66,73 @@ export async function installDeps(options?: InstallDepsOptions): Promise<void> {
       devStr,
       ...deps,
     ].filter(Boolean) as string[]
-    await execa(packageManager, cliArgs, {
-      encoding: 'utf8',
-      cwd,
-      env: process.env,
-      stderr: 'inherit',
-      stdout: 'inherit',
-    })
+    await execa(packageManager as PackageManager, cliArgs, rest)
   }
 }
 
 /**
- * 安装项目依赖配置项
+ * 安装项目依赖
+ * @param options 可选配置项
  */
-export interface InstallOptions {
-  /**
-   * 当前工作目录
-   */
-  cwd?: string
-  /**
-   * 命令行参数
-   */
-  args?: string[]
-  /**
-   * 包管理器
-   */
-  packageManager?: PackageManager
-}
-
+export async function install(options?: RunCommandOptions): Promise<void>
 /**
  * 安装项目依赖
- * @param options.cwd 当前工作目录
- * @param options.args 命令行参数
- * @param options.packageManager 包管理器
+ * @param args 命令行参数
+ * @param options 可选配置项
  */
-export async function install(options?: InstallOptions): Promise<void> {
-  const {
-    cwd = process.cwd(),
-    args = [],
-    packageManager = await getPackageManager(cwd),
-  } = options || {}
+export async function install(
+  args: string[],
+  options?: RunCommandOptions,
+): Promise<void>
+/**
+ * 安装项目依赖
+ * @param packageManager 包管理器
+ * @param options 可选配置项
+ */
+export async function install(
+  packageManager: PackageManager,
+  options?: RunCommandOptions,
+): Promise<void>
+/**
+ * 安装项目依赖
+ * @param packageManager 包管理器
+ * @param args 命令行参数
+ * @param options 可选配置项
+ */
+export async function install(
+  packageManager: PackageManager,
+  args: string[],
+  options?: RunCommandOptions,
+): Promise<void>
+export async function install(
+  packageManager?: PackageManager | string[] | RunCommandOptions,
+  args?: string[] | RunCommandOptions,
+  options?: RunCommandOptions,
+): Promise<void> {
+  if (isObject(packageManager)) {
+    options = packageManager
+    args = []
+    packageManager = undefined
+  }
 
-  const cliArgs = [packageManager === 'yarn' ? '' : 'install', ...args].filter(
-    Boolean,
-  )
+  if (isArray(packageManager)) {
+    options = args as RunCommandOptions
+    args = packageManager
+  }
 
-  await execa(packageManager, cliArgs, {
-    stdio: 'inherit',
-    cwd,
-  })
+  if (isObject(args)) {
+    options = args
+    args = []
+  }
+
+  if (!packageManager) {
+    packageManager = await getPackageManager(options?.cwd)
+  }
+
+  const cliArgs = [
+    packageManager === 'yarn' ? '' : 'install',
+    ...(args ? (args as string[]) : []),
+  ].filter(Boolean)
+
+  await execa(packageManager as PackageManager, cliArgs, options)
 }

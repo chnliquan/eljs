@@ -78,11 +78,9 @@ export default (api: Api) => {
           )} failed.`,
         )
 
-        if (settledResult.reason?.message) {
-          console.log(`Error: ${settledResult.reason.message}`)
-        } else {
-          console.log(settledResult.reason)
-        }
+        const errorMessage =
+          settledResult.reason?.message ?? settledResult.reason
+        console.log(`Error: ${errorMessage}`)
       }
     }
 
@@ -112,7 +110,6 @@ export default (api: Api) => {
         cwd: pkgRootPath,
         verbose: true,
         stdin: 'inherit',
-        stderr: 'inherit',
       })
 
       logger.ready(

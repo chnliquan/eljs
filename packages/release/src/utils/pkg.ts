@@ -19,7 +19,7 @@ export async function updatePackageLock(
   let command = ''
 
   if (packageManager === 'pnpm') {
-    command = 'pnpm install --prefer-offline'
+    command = 'pnpm install --lockfile-only'
   } else if (packageManager === 'yarn') {
     command = 'yarn install --frozen-lockfile'
   } else if (packageManager === 'bun') {
@@ -28,7 +28,20 @@ export async function updatePackageLock(
     command = 'npm install --package-lock-only'
   }
 
-  await runCommand(command, options)
+  try {
+    const child = runCommand(command, {
+      ...options,
+    })
+    child.stdout?.on('data', data => {
+      const stdout = data.toString()
+      if (stdout.includes('ERR_PNPM_NO_MATCHING_VERSION')) {
+        child.kill()
+      }
+    })
+    await child
+  } catch (error) {
+    //...
+  }
 }
 
 /**

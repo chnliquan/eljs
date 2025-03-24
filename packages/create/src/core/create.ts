@@ -1,4 +1,5 @@
-import type { CreateOptions } from '@/types'
+import type { Config, Template } from '@/types'
+import { AppError } from '@/utils'
 import {
   confirm,
   createDebugger,
@@ -16,7 +17,6 @@ import { readdir } from 'node:fs/promises'
 import { EOL } from 'node:os'
 import path, { join } from 'node:path'
 
-import { AppError } from '@/utils'
 import { Download } from './download'
 import { Runner } from './runner'
 
@@ -24,6 +24,19 @@ const TARGET_DIR_WHITE_LIST = ['.git', 'LICENSE']
 
 const debug = createDebugger('create:class')
 
+/**
+ * Create constructor options
+ */
+export interface CreateOptions extends Omit<Config, 'template'> {
+  /**
+   * Template
+   */
+  template: string | Template
+}
+
+/**
+ * Create class
+ */
 export class Create {
   /**
    * 构造函数参数

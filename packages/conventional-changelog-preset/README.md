@@ -1,6 +1,6 @@
 # @eljs/changelog-preset
 
-eljs release default changelog-preset
+eljs release default changelog-preset, fork from angular preset
 
 ## Angular Convention
 

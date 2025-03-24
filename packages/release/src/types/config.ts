@@ -3,7 +3,7 @@ import type { UserConfig } from '@eljs/pluggable'
 import type { PrereleaseId } from './npm'
 
 /**
- * Config
+ * Release Configuration
  */
 export interface Config extends UserConfig {
   /**

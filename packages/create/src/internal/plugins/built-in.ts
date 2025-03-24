@@ -67,10 +67,8 @@ export default (api: Api) => {
     logger.info('📦 Installing additional dependencies...')
     console.log()
 
-    await install({
+    await install(packageManager, args, {
       cwd: api.paths.target,
-      args,
-      packageManager,
     })
   })
 }
