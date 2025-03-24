@@ -1,28 +1,40 @@
-import type { Template } from '@/types'
+import type { RemoteTemplate } from '@/types'
 import {
   chalk,
   downloadGitRepo,
   downloadNpmTarball,
   getNpmPackage,
+  isPathExists,
   pkgNameAnalysis,
   readJson,
-  runCommand,
+  remove,
+  run,
   type PackageJson,
 } from '@eljs/utils'
 import path from 'node:path'
 import ora, { type Ora } from 'ora'
 
+/**
+ * 下载构造函数
+ */
+export interface DownloadOptions extends RemoteTemplate {
+  /**
+   * 当前工作目录
+   */
+  cwd?: string
+}
+
 export class Download {
   /**
    * 构造函数参数
    */
-  public constructorOptions: Template
+  public constructorOptions: DownloadOptions
   /**
    * spinner
    */
   private _spinner: Ora
 
-  public constructor(options: Template) {
+  public constructor(options: DownloadOptions) {
     this.constructorOptions = options
     this._spinner = ora()
   }
@@ -37,7 +49,7 @@ export class Download {
         return this._downloadGit(value)
       default:
         throw new Error(
-          `Download type must be npm or git, but got ${chalk.bold(type)}`,
+          `Download type must be \`npm\` or \`git\`, but got ${chalk.bold(type)}`,
         )
     }
   }
@@ -45,11 +57,12 @@ export class Download {
   /**
    * 下载 npm 压缩包
    * @param name 包名
-   * @param registry 源仓库
+   * @param registry 仓库源
    */
   private async _downloadNpmTarball(name: string, registry?: string) {
     const { name: pkgName, version } = pkgNameAnalysis(name)
     const data = await getNpmPackage(pkgName, {
+      cwd: this.constructorOptions.cwd,
       version,
       registry,
     })
@@ -63,19 +76,27 @@ export class Download {
     }
 
     const projectName = chalk.cyanBright(`${pkgName}@${data.version}`)
-    this._spinner.start(`Downloading ${projectName}`)
+    let templateRootPath = ''
 
     try {
-      const { tarball } = data.dist
-      const templateDir = await downloadNpmTarball(tarball)
-      this._spinner.succeed()
-      await this._installDependencies(templateDir, projectName)
-      return templateDir
-    } catch (error) {
-      this._spinner.fail()
-      const err = error as Error
-      err.message = `Download ${projectName} failed: ${err.message}`
-      throw err
+      try {
+        this._spinner.start(`Downloading ${projectName}`)
+        const { tarball } = data.dist
+        templateRootPath = await downloadNpmTarball(tarball)
+        this._spinner.succeed()
+      } catch (error) {
+        this._spinner.fail()
+        const err = error as Error
+        err.message = `Download ${projectName} failed: ${err.message}`
+        throw err
+      }
+
+      await this._installDependencies(templateRootPath, projectName)
+      return templateRootPath
+    } finally {
+      if (await isPathExists(templateRootPath)) {
+        await remove(templateRootPath)
+      }
     }
   }
 
@@ -84,34 +105,42 @@ export class Download {
    * @param url git url
    */
   private async _downloadGit(url: string) {
-    this._spinner.start(`Downloading ${url}`)
+    let templateRootPath = ''
 
     try {
-      const templateDir = await downloadGitRepo(url)
-      this._spinner.succeed()
-      await this._installDependencies(templateDir, url)
-      return templateDir
-    } catch (error) {
-      this._spinner.fail()
-      const err = error as Error
-      err.message = `Download ${url} failed: ${err.message}`
-      throw err
+      try {
+        this._spinner.start(`Downloading ${url}`)
+        templateRootPath = await downloadGitRepo(url)
+        this._spinner.succeed()
+      } catch (error) {
+        this._spinner.fail()
+        const err = error as Error
+        err.message = `Download ${url} failed: ${err.message}`
+        throw err
+      }
+
+      await this._installDependencies(templateRootPath, url)
+      return templateRootPath
+    } finally {
+      if (await isPathExists(templateRootPath)) {
+        await remove(templateRootPath)
+      }
     }
   }
 
   /**
    * 安装依赖
-   * @param root 项目根目录
+   * @param cwd 当前工作目录
    * @param projectName 项目名称
    */
-  private async _installDependencies(root: string, projectName: string) {
+  private async _installDependencies(cwd: string, projectName: string) {
     try {
-      const pkg: PackageJson = await readJson(path.join(root, './package.json'))
+      const pkg: PackageJson = await readJson(path.join(cwd, './package.json'))
 
-      if (pkg.dependencies && Object.keys(pkg.dependencies)?.length > 0) {
+      if (pkg?.dependencies?.length) {
         this._spinner.start(`Installing ${projectName}`)
-        await runCommand('npm install --production', {
-          cwd: root,
+        await run('npm', ['install', '--production'], {
+          cwd,
         })
         this._spinner.succeed()
       }

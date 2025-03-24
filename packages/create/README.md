@@ -28,19 +28,19 @@ Options:
 
 ## Configuration
 
-create a **create.config.ts** file in the project root
+Create a **create.config.ts** file in the project root
 
 ```ts
 export interface Config {
-  /**
-   * 模板
-   */
-  template?: string | Template
   /**
    * Working directory
    * @default process.cwd()
    */
   cwd?: string
+  /**
+   * Local template path or remote template
+   */
+  template?: string | Template
   /**
    * Whether override existing directory
    * @default false
@@ -65,9 +65,9 @@ export interface Config {
 }
 
 /**
- * Template
+ * Remote Template
  */
-export interface Template {
+export interface RemoteTemplate {
   /**
    * 模版源类型
    */

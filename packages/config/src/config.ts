@@ -34,7 +34,7 @@ export interface ConfigManagerOptions {
 }
 
 /**
- * 配置管理器类
+ * ConfigManager class
  */
 export class ConfigManager {
   /**

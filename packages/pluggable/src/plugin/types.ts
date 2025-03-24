@@ -1,15 +1,17 @@
+import type { PluginDeclaration } from '@/pluggable'
+
 /**
  * 插件返回类型
  */
 export interface PluginReturnType {
   /**
-   * 预设路径集合
+   * 预设定义集合
    */
-  presets?: string[]
+  presets?: PluginDeclaration[]
   /**
-   * 插件路径集合
+   * 插件定义集合
    */
-  plugins?: string[]
+  plugins?: PluginDeclaration[]
 }
 
 /**
@@ -35,5 +37,6 @@ export type PluginType = `${PluginTypeEnum}`
  * 插件是否可执行
  */
 export interface Enable {
-  (...args: unknown[]): boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (...args: any[]): boolean
 }

@@ -4,7 +4,8 @@
   "description": "Create a project from a remote template.",
   "keywords": [
     "eljs",
-    "create"
+    "create",
+    "template"
   ],
   "homepage": "https://github.com/chnliquan/eljs/tree/master/packages/create#readme",
   "bugs": {

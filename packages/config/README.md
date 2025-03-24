@@ -53,10 +53,10 @@ export interface ConfigManagerOptions {
 }
 ```
 
-### `configManager.getConfig<T extends object>(): Promise<T>`
+### `configManager.getConfig<T extends object>(): Promise<T | null>`
 
 Asynchronously returns the object after the configuration files merged
 
-### `configManager.getConfigSync<T extends object>(): Promise<T>`
+### `configManager.getConfigSync<T extends object>(): Promise<T | null>`
 
 Synchronously returns the object after the configuration files merged

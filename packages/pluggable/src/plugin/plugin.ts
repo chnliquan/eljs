@@ -17,7 +17,7 @@ import pkgUp from 'pkg-up'
 import type { Enable, PluginReturnType, PluginType } from './types'
 
 /**
- * 插件参数
+ * 构造函数参数
  */
 export interface PluginOptions {
   /**
@@ -39,9 +39,9 @@ export interface PluginOptions {
  */
 export class Plugin {
   /**
-   * 插件参数
+   * 构造函数参数
    */
-  public options: PluginOptions
+  public constructorOptions: PluginOptions
   /**
    * 插件类型
    */
@@ -71,7 +71,7 @@ export class Plugin {
   public apply: () => (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ...args: any[]
-  ) => MaybePromise<PluginReturnType>
+  ) => MaybePromise<PluginReturnType | void>
   /**
    * 插件是否可以执行
    */
@@ -82,14 +82,14 @@ export class Plugin {
   private _cwd: string
 
   public constructor(options: PluginOptions) {
-    this.options = options
+    this.constructorOptions = options
     this.path = winPath(options.path)
     this.type = options.type
     this._cwd = options.cwd
 
     assert(
       isPathExistsSync(this.path),
-      `Invalid ${this.type} ${this.path}, it's not exists.`,
+      `Invalid ${this.type} in ${this.path}, could not be found.`,
     )
 
     let pkg = {} as PackageJson

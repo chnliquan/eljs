@@ -64,7 +64,7 @@ export class PluginApi<T extends Pluggable = Pluggable> {
   public registerMethod(name: string, fn?: MaybePromiseFunction<any>) {
     assert(
       !this.pluggable.pluginMethods[name],
-      `api.registerMethod() failed, method ${name} is already exist.`,
+      `api.registerMethod() failed, method ${name} already exist.`,
     )
 
     this.pluggable.pluginMethods[name] = {
@@ -135,14 +135,14 @@ export class PluginApi<T extends Pluggable = Pluggable> {
    * @param keys 插件 key
    */
   public skipPlugins(keys: string[]) {
-    keys.forEach(key => {
+    for (const key of keys) {
       const plugin = this.pluggable.key2Plugin[key]
-      assert(!(this.plugin.key === key), `plugin ${key} can't skip itself.`)
+      assert(!(this.plugin.key === key), `Plugin ${key} could not skip itself.`)
       assert(
         plugin,
-        `key: ${key} is not be registered by any plugin. You can't skip it.`,
+        `Key: ${key} has not been registered by any plugin, could not be skipped.`,
       )
       this.pluggable.skippedPluginIds.add(plugin.id)
-    })
+    }
   }
 }

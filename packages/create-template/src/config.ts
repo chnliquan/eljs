@@ -1,7 +1,7 @@
 /**
- * 模版配置
+ * 远程模版
  */
-export interface Template {
+export interface RemoteTemplate {
   /**
    * 模版源类型
    */
@@ -31,7 +31,7 @@ export interface TemplateConfig {
    * 模版集合
    */
   templates: {
-    [scene: string]: Record<string, Template>
+    [scene: string]: Record<string, RemoteTemplate>
   }
 }
 

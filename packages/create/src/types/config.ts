@@ -1,9 +1,9 @@
 import type { UserConfig } from '@eljs/pluggable'
 
 /**
- * Template
+ * Remote template
  */
-export interface Template {
+export interface RemoteTemplate {
   /**
    * 模版源类型
    */
@@ -23,14 +23,14 @@ export interface Template {
  */
 export interface Config extends UserConfig {
   /**
-   * Template
-   */
-  template?: string | Template
-  /**
    * Working directory
    * @default process.cwd()
    */
   cwd?: string
+  /**
+   * Local template path or remote template
+   */
+  template?: string | RemoteTemplate
   /**
    * Whether override existing directory
    * @default false

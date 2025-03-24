@@ -87,9 +87,9 @@
         // "--help",
         "--cwd=/Users/ender/kwai/technology/polyrepo-release",
         "-r",
-        // "@eljs/create-plugin-npm-web",
+        "@eljs/create-plugin-npm-web",
         // "@eljs/utils",
-        "./template2",
+        // "./template",
         // "./generator",
         "create-app"
       ],

@@ -4,7 +4,7 @@ import assert from 'node:assert'
 import type { Plugin } from './plugin'
 
 /**
- * 钩子类参数
+ * 构造函数参数
  */
 export interface HookOptions {
   /**
@@ -35,9 +35,9 @@ export interface HookOptions {
  */
 export class Hook {
   /**
-   * 钩子类参数
+   * 构造函数参数
    */
-  public options: HookOptions
+  public constructorOptions: HookOptions
   /**
    * Hook 对应的插件实例
    */
@@ -62,11 +62,11 @@ export class Hook {
   public constructor(options: HookOptions) {
     assert(
       options.key && options.fn,
-      `Invalid hook ${options}, key and fn must supplied.`,
+      `Invalid hook ${options}, \`key\` and \`fn\` must be supplied.`,
     )
 
     const { key, fn, plugin, before, stage } = options
-    this.options = options
+    this.constructorOptions = options
     this.plugin = plugin
     this.key = key
     this.before = before

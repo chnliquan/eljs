@@ -2,7 +2,7 @@ import { Create } from '@eljs/create'
 import { prompts } from '@eljs/utils'
 import assert from 'node:assert'
 
-import { defaultConfig, type Template } from './config'
+import { defaultConfig, type RemoteTemplate } from './config'
 import { objectToArray, onCancel } from './utils'
 
 /**
@@ -50,16 +50,6 @@ export class CreateTemplate {
       template,
     })
     await create.run(projectName)
-  }
-
-  private _formatTemplate(template: Record<string, Template>) {
-    return Object.keys(template).map(key => {
-      const title = template[key].description
-      return {
-        title,
-        value: key,
-      }
-    })
   }
 
   private async _getTemplate() {
@@ -114,5 +104,15 @@ export class CreateTemplate {
     )
 
     return template
+  }
+
+  private _formatTemplate(template: Record<string, RemoteTemplate>) {
+    return Object.keys(template).map(key => {
+      const title = template[key].description
+      return {
+        title,
+        value: key,
+      }
+    })
   }
 }

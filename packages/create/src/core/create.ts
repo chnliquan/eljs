@@ -1,4 +1,4 @@
-import type { Config, Template } from '@/types'
+import type { Config, RemoteTemplate } from '@/types'
 import { AppError } from '@/utils'
 import {
   confirm,
@@ -29,9 +29,9 @@ const debug = createDebugger('create:class')
  */
 export interface CreateOptions extends Omit<Config, 'template'> {
   /**
-   * Template
+   * Local template path or remote template
    */
-  template: string | Template
+  template: string | RemoteTemplate
 }
 
 /**
@@ -43,7 +43,7 @@ export class Create {
    */
   public constructorOptions: CreateOptions
   /**
-   * 当前路径
+   * 当前工作目录
    */
   public cwd: string
   /**
@@ -68,8 +68,8 @@ export class Create {
   }
 
   /**
-   * 执行创建
-   * @param projectName 项目名
+   * 运行创建流程
+   * @param projectName 项目名称
    */
   public async run(projectName: string) {
     try {
@@ -105,7 +105,7 @@ export class Create {
 
       if (!generatorFile && !configFile) {
         throw new AppError(
-          `Invalid template in ${this._templateRootPath}, missing \`create.config.ts\` or \`generators/index.ts\`.`,
+          `Invalid template ${this._templateRootPath}, missing \`create.config.ts\` or \`generators/index.ts\`.`,
         )
       }
 
@@ -161,14 +161,14 @@ export class Create {
     if (isString(this.template)) {
       // 处理本地模版
       if (this.template.startsWith('.') || this.template.startsWith('/')) {
-        const path = join(this.cwd, this.template)
+        const templateRootPath = join(this.cwd, this.template)
 
-        if (!(await isDirectory(path))) {
+        if (!(await isDirectory(templateRootPath))) {
           throw new AppError(`Invalid local template ${this.template}.`)
         }
 
+        this._templateRootPath = templateRootPath
         this._isLocal = true
-        this._templateRootPath = path
         return
       }
 

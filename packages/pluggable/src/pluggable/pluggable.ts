@@ -15,7 +15,7 @@ import {
 } from './types'
 
 /**
- * 可插拔类参数
+ * 构造函数参数
  */
 export interface PluggableOptions {
   /**
@@ -98,7 +98,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
   public constructor(options: PluggableOptions) {
     assert(
       isPathExistsSync(options.cwd),
-      `Invalid cwd ${options.cwd}, it's not found.`,
+      `Invalid cwd ${options.cwd}, could not be found.`,
     )
 
     this.constructorOptions = options
@@ -213,7 +213,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
     const [plugin, pluginOptions] = currentPlugin
     assert(
       !this.plugins[plugin.id],
-      `${plugin.type} ${plugin.id} is already registered by ${
+      `${plugin.type} ${plugin.id} has already been registered by ${
         this.plugins[plugin.id]?.path
       }, ${plugin.type} from ${plugin.path} register failed.`,
     )
@@ -242,12 +242,12 @@ export class Pluggable<T extends UserConfig = UserConfig> {
     plugin.time.register = new Date().getTime() - registrationStart.getTime()
 
     if (plugin.type === PluginTypeEnum.Plugin) {
-      assert(!pluginResult, `plugin should return nothing.`)
+      assert(!pluginResult, `Plugin should return nothing.`)
     }
 
     assert(
       !this.key2Plugin[plugin.key],
-      `key ${plugin.key} is already registered by ${
+      `Key ${plugin.key} has already been registered by ${
         this.key2Plugin[plugin.key]?.path
       }, ${plugin.type} from ${plugin.path} register failed.`,
     )
@@ -296,7 +296,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
         type = ApplyPluginTypeEnum.Add
       } else {
         throw new Error(
-          `Invalid applyPlugins arguments, type must be supplied for key ${key}.`,
+          `Invalid applyPlugins arguments, \`type\` must be supplied for key ${key}.`,
         )
       }
     }
@@ -308,7 +308,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
       case ApplyPluginTypeEnum.Add: {
         assert(
           !('initialValue' in options) || Array.isArray(initialValue),
-          `applyPlugins failed, \`options.initialValue\` must be Array if \`options.type\` is add.`,
+          `ApplyPlugins failed, \`options.initialValue\` must be array if \`options.type\` added.`,
         )
 
         const tapableAdd = new AsyncSeriesWaterfallHook(['memo'])
@@ -427,7 +427,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
 
       default:
         throw new Error(
-          `applyPlugins failed, type is not defined or is not matched, got ${type}.`,
+          `ApplyPlugins failed, type not defined or matched, got ${type}.`,
         )
     }
   }
@@ -451,7 +451,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
       return false
     }
 
-    if (isFunction(enable)) {
+    if (typeof enable === 'function') {
       return enable()
     }
 
