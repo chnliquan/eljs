@@ -8,14 +8,14 @@ import { remove, removeSync } from './remove'
  * 移动文件
  * @param from 源路径
  * @param to 目标路径
- * @param override 是否覆盖
+ * @param overwrite 是否覆盖
  */
 export async function move(
   from: string,
   to: string,
-  override?: boolean,
+  overwrite?: boolean,
 ): Promise<void> {
-  if (override) {
+  if (overwrite) {
     await remove(to)
     await fsp.rename(from, to)
     return
@@ -32,10 +32,10 @@ export async function move(
  * 移动文件
  * @param from 源路径
  * @param to 目标路径
- * @param override 是否覆盖
+ * @param overwrite 是否覆盖
  */
-export function moveSync(from: string, to: string, override?: boolean): void {
-  if (override) {
+export function moveSync(from: string, to: string, overwrite?: boolean): void {
+  if (overwrite) {
     removeSync(to)
     fs.renameSync(from, to)
     return

@@ -20,13 +20,13 @@ $ npx init @eljs/template@latest <project-name>
 Usage: create-template [options] <project-name>
 
 Arguments:
-  project-name               Project name.
+  project-name               Project name
 
 Options:
-  -v, --version              Output the current version.
-  --cwd <cwd>                Specify the working directory.
-  -s, --scene <scene>        Specify the application scene.
-  -t, --template <template>  Specify the application template.
-  -r, --override             Force override existing directory.
+  -v, --version              Output the current version
+  --cwd <cwd>                Specify the working directory
+  -s, --scene <scene>        Specify the application scene
+  -t, --template <template>  Specify the application template
+  -f, --force                Force overwrite existing directory
   -h, --help                 display help for command
 ```

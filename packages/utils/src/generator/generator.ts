@@ -123,9 +123,9 @@ export class Generator extends BaseGenerator {
     if (!isPathExistsSync(this._dest)) {
       mkdirSync(this._dest)
     } else {
-      const override = await this.checkDir(this._dest)
+      const overwrite = await this.checkDir(this._dest)
 
-      if (!override) {
+      if (!overwrite) {
         return
       }
     }

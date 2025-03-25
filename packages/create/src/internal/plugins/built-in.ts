@@ -4,11 +4,13 @@ import {
   deepMerge,
   install,
   isFunction,
+  isObject,
   isPathExists,
   logger,
   readJson,
   writeJson,
   type PackageJson,
+  type RunCommandOptions,
 } from '@eljs/utils'
 import { join } from 'node:path'
 
@@ -22,16 +24,29 @@ export default (api: Api) => {
     },
   )
 
-  api.registerMethod('install', async (args: string[]) => {
-    const { packageManager = 'pnpm' } = api.appData
+  api.registerMethod(
+    'install',
+    async (
+      args?: string[] | RunCommandOptions,
+      options?: RunCommandOptions,
+    ) => {
+      const { packageManager = 'pnpm' } = api.appData
 
-    logger.info('📦 Installing additional dependencies ...')
-    console.log()
+      console.log()
+      logger.info('📦 Installing additional dependencies ...')
 
-    await install(packageManager, args, {
-      cwd: api.paths.target,
-    })
-  })
+      if (isObject(args)) {
+        options = args
+        args = []
+      }
+
+      await install(packageManager, (args || []) as string[], {
+        cwd: api.paths.target,
+        stdout: 'inherit',
+        ...options,
+      })
+    },
+  )
 
   api.onGenerateDone(
     async () => {

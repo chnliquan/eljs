@@ -77,7 +77,7 @@
     "node": ">=16.0.0",
     "pnpm": ">=8.0.0"
   },
-  "overrides": {
+  "overwrites": {
     "esbuild": "0.25.0"
   }
 }

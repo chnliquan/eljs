@@ -20,10 +20,10 @@ $ npx @eljs/create <template> <project-name>
 Usage: create [options] <template> <project-name>
 
 Options:
-  -v, --version   Output the current version.
-  --cwd <cwd>     Specify the working directory.
-  -r, --override  Force override existing directory.
-  --no-install    Skip install dependencies when create done.
+  -v, --version   Output the current version
+  --cwd <cwd>     Specify the working directory
+  -f, --force     Force overwrite existing directory
+  --no-install    Skip install dependencies when create done
   -h, --help      display help for command
 ```
 
@@ -43,16 +43,18 @@ export interface Config {
    */
   template?: string | Template
   /**
-   * Whether override existing directory
+   * Whether overwrite existing directory
    * @default false
    */
-  override?: boolean
+  force?: boolean
   /**
    * Whether enable default prompts
+   * @default true
    */
   defaultQuestions?: boolean
   /**
-   * Whether git initialize when create done
+   * Whether initialize git when create done
+   * @default true
    */
   gitInit?: boolean
   /**

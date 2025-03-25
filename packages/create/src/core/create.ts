@@ -79,9 +79,9 @@ export class Create {
       if (!(await isPathExists(targetDir))) {
         await mkdir(targetDir)
       } else {
-        const override = await this._checkTargetDir(targetDir)
+        const overwrite = await this._checkTargetDir(targetDir)
 
-        if (!override) {
+        if (!overwrite) {
           return
         }
         await remove(targetDir)
@@ -125,7 +125,7 @@ export class Create {
    * @param targetDir 目标文件夹
    */
   private async _checkTargetDir(targetDir: string): Promise<boolean> {
-    if (this.constructorOptions.override) {
+    if (this.constructorOptions.force) {
       return true
     }
 
@@ -137,7 +137,7 @@ export class Create {
       )
       files.forEach(file => console.log(' - ' + file))
       console.log()
-      return confirm(`Are you sure to override the current folder?`, true)
+      return confirm(`Are you sure to overwrite the current folder?`, true)
     }
 
     return true

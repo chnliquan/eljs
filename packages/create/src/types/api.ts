@@ -4,6 +4,7 @@ import type {
   CopyFileOptions,
   PackageJson,
   RenderTemplateOptions,
+  RunCommandOptions,
 } from '@eljs/utils'
 
 /**
@@ -79,8 +80,14 @@ export type Api = PluginApi<Runner> &
     resolve: (...paths: string[]) => string
     /**
      * 安装依赖
-     * @param args 命令行参数
+     * @param options 可选配置项
      */
-    install(args?: string[]): Promise<void>
+    install(options?: RunCommandOptions): Promise<void>
+    /**
+     * 安装依赖
+     * @param args 命令行参数
+     * @param options 可选配置项
+     */
+    install(args: string[], option?: RunCommandOptions): Promise<void>
     // #endregion
   }

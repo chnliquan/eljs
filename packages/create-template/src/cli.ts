@@ -28,13 +28,13 @@ async function cli() {
 
   program
     .name('create-template')
-    .description('Create a new project powered by @eljs/create.')
-    .version(pkg.version, '-v, --version', 'Output the current version.')
-    .argument('<project-name>', 'Project name.')
-    .option('--cwd <cwd>', 'Specify the working directory.')
-    .option('-s, --scene <scene>', 'Specify the application scene.')
-    .option('-t, --template <template>', 'Specify the application template.')
-    .option('-r, --override', 'Force override existing directory.')
+    .description('Create a new project powered by @eljs/create')
+    .version(pkg.version, '-v, --version', 'Output the current version')
+    .argument('<project-name>', 'Project name')
+    .option('--cwd <cwd>', 'Specify the working directory')
+    .option('-s, --scene <scene>', 'Specify a application scene')
+    .option('-t, --template <template>', 'Specify a application template')
+    .option('-f, --force', 'Force overwrite existing directory')
     .action(async (projectName, options) => {
       debug?.(`projectName:`, projectName)
       debug?.(`options:%O`, options)

@@ -11,8 +11,7 @@ export default async (api: Api) => {
     },
   })
 
-  api.register(
-    'addQuestions',
+  api.addQuestions(
     () => {
       return [
         {
@@ -51,8 +50,7 @@ export default async (api: Api) => {
     },
   )
 
-  api.register(
-    'addQuestions',
+  api.addQuestions(
     () => {
       return [
         {

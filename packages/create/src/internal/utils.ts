@@ -27,6 +27,6 @@ export function getGitHref(gitUrl: string) {
     return _gitHref
   }
 
-  _gitHref = gitUrlAnalysis(gitUrl)?.href || '${gitUrl}'
+  _gitHref = gitUrlAnalysis(gitUrl)?.href || '${gitHref}'
   return _gitHref
 }

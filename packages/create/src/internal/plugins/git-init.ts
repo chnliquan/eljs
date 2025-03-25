@@ -25,15 +25,15 @@ export default async (api: Api) => {
     return true
   }
 
-  api.register(
-    'onGenerateDone',
+  api.onGenerateDone(
     async () => {
       const initGit = await shouldInitGit()
 
       if (initGit) {
         console.log()
-        logger.info(`🗃 Initializing git repository ...`)
-        run('git', ['init'], {
+        logger.info(`🗃  Initializing git repository ...`)
+
+        await run('git', ['init'], {
           cwd: api.paths.target,
           verbose: false,
         })

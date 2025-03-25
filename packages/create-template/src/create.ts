@@ -24,7 +24,7 @@ export interface CreateTemplateOptions {
   /**
    * 是否覆盖文件
    */
-  override?: boolean
+  force?: boolean
 }
 
 export class CreateTemplate {

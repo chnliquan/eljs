@@ -84,9 +84,9 @@
         "DEBUG": "create*"
       },
       "args": [
-        "--help",
-        "--cwd=/Users/ender/kwai/technology/polyrepo-release",
-        "-r",
+        // "--help",
+        "--cwd=/Users/ender/kwai/technology",
+        "-f",
         "@eljs/create-plugin-npm-web",
         // "@eljs/utils",
         // "./template",
@@ -118,7 +118,7 @@
         "--cwd=/Users/ender/kwai/technology/polyrepo-release",
         "--scene=npm",
         // "--template=template-npm-web",
-        "-r"
+        "-f"
       ],
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]

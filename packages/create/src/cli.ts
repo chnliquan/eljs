@@ -38,12 +38,12 @@ async function cli() {
 
   program
     .name('create')
-    .description('Create a project from a remote template.')
-    .version(pkg.version, '-v, --version', 'Output the current version.')
+    .description('Create a project from a remote template')
+    .version(pkg.version, '-v, --version', 'Output the current version')
     .arguments('<template> <project-name>')
-    .option('--cwd <cwd>', 'Specify the working directory.')
-    .option('-r, --override', 'Force override existing directory.')
-    .option('--no-install', 'Skip install dependencies when create done.')
+    .option('--cwd <cwd>', 'Specify the working directory')
+    .option('-f, --force', 'Force overwrite existing directory')
+    .option('--no-install', 'Skip install dependencies when create done')
     .action(async (template, projectName, options) => {
       debug?.(`template:`, template)
       debug?.(`projectName:`, projectName)
