@@ -1,5 +1,14 @@
 # ChangeLog 
 
+# [1.0.0-next.10](https://github.com/chnliquan/eljs/compare/v1.0.0-next.9...v1.0.0-next.10) (2025-03-25)
+
+
+### ✨ Features
+
+* **create:** add default config ([70fbb2c](https://github.com/chnliquan/eljs/commit/70fbb2c4ae1303205613dcdbc8733c99ba79c1fc))
+* **create:** add default config ([9276823](https://github.com/chnliquan/eljs/commit/9276823876c4caed219257a53ffd297fdc55f752))
+* **create:** set install stdout to inherit ([94ffb12](https://github.com/chnliquan/eljs/commit/94ffb1213e12c3d1d31f661e1c9bab2c3db5fdc1)) 
+
 # [1.0.0-next.9](https://github.com/chnliquan/eljs/compare/v1.0.0-next.8...v1.0.0-next.9) (2025-03-25)
 
 
