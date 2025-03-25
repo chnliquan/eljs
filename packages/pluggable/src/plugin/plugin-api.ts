@@ -12,7 +12,7 @@ import { Plugin } from './plugin'
 import { PluginTypeEnum, type Enable } from './types'
 
 /**
- * 插件 API 类
+ * 插件 Api 类
  */
 export class PluginApi<T extends Pluggable = Pluggable> {
   /**

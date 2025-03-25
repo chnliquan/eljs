@@ -158,7 +158,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
   }
 
   /**
-   * 获取插件 API
+   * 获取插件 Api
    * @param plugin 插件
    */
   protected getPluginApi(plugin: Plugin): PluginApi {

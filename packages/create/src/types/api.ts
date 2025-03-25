@@ -8,7 +8,7 @@ import type {
 } from '@eljs/utils'
 
 /**
- * 插件 api 参数
+ * 插件 Api 参数
  */
 export type Api = PluginApi<Runner> &
   PluggablePluginApi &

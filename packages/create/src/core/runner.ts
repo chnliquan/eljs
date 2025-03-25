@@ -141,7 +141,7 @@ export class Runner extends Pluggable<Config> {
       {},
       defaultConfig,
       this.constructorOptions,
-      this.userConfig,
+      this.userConfig || {},
     ) as RequiredRecursive<Config>
   }
 }
@@ -150,7 +150,7 @@ export class Runner extends Pluggable<Config> {
  * 运行器插件 Api
  */
 export interface RunnerPluginApi extends PluggablePluginApi {
-  // #region 插件 API 属性
+  // #region 插件 Api 属性
   /**
    * 用户配置
    */
