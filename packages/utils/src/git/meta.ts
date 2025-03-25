@@ -8,9 +8,9 @@ import path from 'node:path'
 import { URL } from 'node:url'
 
 /**
- * 基础 git 仓库信息
+ * git 远程仓库信息
  */
-export interface BaseGitRepoInfo {
+export interface GitRemoteRepository {
   /**
    * git 仓库名称
    */
@@ -36,7 +36,7 @@ export interface BaseGitRepoInfo {
 /**
  * git 仓库信息
  */
-export interface GitRepoInfo extends BaseGitRepoInfo {
+export interface GitRepository extends GitRemoteRepository {
   /**
    * git 仓库分支
    */
@@ -205,8 +205,8 @@ export async function getGitLatestTag(
 ): Promise<string> {
   if (isObject(match)) {
     options = match
-    match = undefined
     args = []
+    match = undefined
   }
 
   if (isObject(args)) {
@@ -230,7 +230,7 @@ export async function getGitLatestTag(
  * 解析 git 地址
  * @param url git 地址
  */
-export function gitUrlAnalysis(url: string): BaseGitRepoInfo | null {
+export function gitUrlAnalysis(url: string): GitRemoteRepository | null {
   if (!url) {
     return null
   }
@@ -251,6 +251,8 @@ export function gitUrlAnalysis(url: string): BaseGitRepoInfo | null {
       const parsedUrl = new URL(url)
       hostname = parsedUrl.hostname || ''
       repo = parsedUrl.pathname?.slice(1)?.replace(/\.git$/, '') || ''
+    } else {
+      return null
     }
 
     let group = ''
@@ -283,10 +285,10 @@ export function gitUrlAnalysis(url: string): BaseGitRepoInfo | null {
  * @param dir 文件目录
  * @param exact 是否在当前目录下提取
  */
-export function getGitRepoInfoSync(
+export function getGitRepositorySync(
   dir: string,
   exact?: boolean,
-): GitRepoInfo | null {
+): GitRepository | null {
   const gitDir = exact
     ? path.join(dir, '.git')
     : getProjectGitDirSync(dir) || ''
@@ -295,7 +297,7 @@ export function getGitRepoInfoSync(
     return null
   }
 
-  const gitRepoInfo: GitRepoInfo = {
+  const GitRepository: GitRepository = {
     name: '',
     group: '',
     href: '',
@@ -310,28 +312,28 @@ export function getGitRepoInfoSync(
     const config = ini.parse(readFileSync(path.join(gitDir, 'config')))
     // remote
     if (config['remote "origin"']) {
-      gitRepoInfo.ssh = config['remote "origin"'].url
+      GitRepository.ssh = config['remote "origin"'].url
 
-      if (gitRepoInfo.ssh) {
-        Object.assign(gitRepoInfo, gitUrlAnalysis(gitRepoInfo.ssh))
+      if (GitRepository.ssh) {
+        Object.assign(GitRepository, gitUrlAnalysis(GitRepository.ssh))
       }
     }
 
     if (config['user']) {
-      gitRepoInfo.author = config['user'].name
-      gitRepoInfo.email = config['user'].email
+      GitRepository.author = config['user'].name
+      GitRepository.email = config['user'].email
     }
 
     // branch
     const gitHead = readFileSync(path.join(gitDir, 'HEAD'))
-    gitRepoInfo.branch = gitHead
+    GitRepository.branch = gitHead
       .replace('ref: refs/heads/', '')
       .replace(EOL, '')
   } catch (err) {
     return null
   }
 
-  return gitRepoInfo
+  return GitRepository
 }
 
 /**
@@ -339,10 +341,10 @@ export function getGitRepoInfoSync(
  * @param dir 文件目录
  * @param exact 是否在当前目录下提取
  */
-export async function getGitRepoInfo(
+export async function getGitRepository(
   dir: string,
   exact?: boolean,
-): Promise<GitRepoInfo | null> {
+): Promise<GitRepository | null> {
   const gitDir = exact
     ? path.join(dir, '.git')
     : (await getProjectGitDir(dir)) || ''
@@ -351,7 +353,7 @@ export async function getGitRepoInfo(
     return null
   }
 
-  const gitRepoInfo: GitRepoInfo = {
+  const GitRepository: GitRepository = {
     name: '',
     group: '',
     href: '',
@@ -366,28 +368,28 @@ export async function getGitRepoInfo(
     const config = ini.parse(await readFile(path.join(gitDir, 'config')))
     // remote
     if (config['remote "origin"']) {
-      gitRepoInfo.ssh = config['remote "origin"'].url
+      GitRepository.ssh = config['remote "origin"'].url
 
-      if (gitRepoInfo.ssh) {
-        Object.assign(gitRepoInfo, gitUrlAnalysis(gitRepoInfo.ssh))
+      if (GitRepository.ssh) {
+        Object.assign(GitRepository, gitUrlAnalysis(GitRepository.ssh))
       }
     }
 
     if (config['user']) {
-      gitRepoInfo.author = config['user'].name
-      gitRepoInfo.email = config['user'].email
+      GitRepository.author = config['user'].name
+      GitRepository.email = config['user'].email
     }
 
     // branch
     const gitHead = await readFile(path.join(gitDir, 'HEAD'))
-    gitRepoInfo.branch = gitHead
+    GitRepository.branch = gitHead
       .replace('ref: refs/heads/', '')
       .replace(EOL, '')
   } catch (err) {
     return null
   }
 
-  return gitRepoInfo
+  return GitRepository
 }
 
 /**

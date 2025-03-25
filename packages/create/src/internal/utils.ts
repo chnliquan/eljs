@@ -22,13 +22,11 @@ export function getGitUrl(targetDir: string) {
 
 let _gitHref = ''
 
-export function getGitHref(targetDir: string, gitUrl?: string) {
+export function getGitHref(gitUrl: string) {
   if (_gitHref) {
     return _gitHref
   }
 
-  gitUrl = gitUrl || getGitUrl(targetDir)
-
-  _gitHref = gitUrlAnalysis(gitUrl)?.href || ''
+  _gitHref = gitUrlAnalysis(gitUrl)?.href || '${gitUrl}'
   return _gitHref
 }

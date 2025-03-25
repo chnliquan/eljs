@@ -1,7 +1,7 @@
 import type { Api } from '@/types'
 import path from 'node:path'
 
-import { author, email, getGitUrl } from '../constants'
+import { author, email, getGitUrl } from '../utils'
 
 export default async (api: Api) => {
   api.describe({

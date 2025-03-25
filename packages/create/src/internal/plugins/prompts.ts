@@ -4,7 +4,7 @@ import { prompts } from '@eljs/utils'
 import dayjs from 'dayjs'
 import { execSync } from 'node:child_process'
 
-import { author, email, getGitHref, getGitUrl } from '../constants'
+import { author, email, getGitHref, getGitUrl } from '../utils'
 
 export default (api: Api) => {
   api.modifyPrompts(async (memo, { questions }) => {
@@ -25,8 +25,8 @@ export default (api: Api) => {
   })
 
   api.modifyPrompts(memo => {
-    const gitUrl = getGitUrl(api.paths.target)
-    const gitHref = getGitHref(api.paths.target, memo.gitUrl)
+    const gitUrl = memo.gitUrl ?? getGitUrl(api.paths.target) ?? '${gitUrl}'
+    const gitHref = getGitHref(gitUrl)
     const year = dayjs().format('YYYY')
     const date = dayjs().format('YYYY-MM-DD')
     const dateTime = dayjs().format('YYYY-MM-DD hh:mm:ss')
