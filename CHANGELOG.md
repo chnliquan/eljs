@@ -1,5 +1,18 @@
 # ChangeLog 
 
+# [1.0.0-next.9](https://github.com/chnliquan/eljs/compare/v1.0.0-next.8...v1.0.0-next.9) (2025-03-25)
+
+
+### ✨ Features
+
+* **create:** default prompts ([e38385e](https://github.com/chnliquan/eljs/commit/e38385e3f3f3e6fdc065d02b46ec25afb58b9689))
+* **create:** support install when create done ([de37a8b](https://github.com/chnliquan/eljs/commit/de37a8b48fad3bd0a67f5136346202f5ba0a2a3e))
+
+
+### 🐛 Bug Fixes
+
+* **utils:** has global ([65b7e8c](https://github.com/chnliquan/eljs/commit/65b7e8c9d5a5ce14be51dad6414097718eb06b1a)) 
+
 # [1.0.0-next.8](https://github.com/chnliquan/eljs/compare/v1.0.0-next.7...v1.0.0-next.8) (2025-03-25)
 
 
