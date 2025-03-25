@@ -98,7 +98,9 @@ export function updatePackageDependencies(
       depValue.startsWith('workspace') &&
       !/^workspace:[^\s]+/.test(depValue)
     ) {
-      throw new Error(`Invalid workspace protocol ${depValue} in ${depName}.`)
+      throw new Error(
+        `Invalid workspace protocol \`${depValue}\` in \`${depName}\`.`,
+      )
     }
 
     logger.info(`${pkg.name} -> ${type} -> ${depName}@${version}`)

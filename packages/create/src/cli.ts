@@ -1,16 +1,27 @@
-import { chalk, createDebugger, readJson, type PackageJson } from '@eljs/utils'
+import {
+  chalk,
+  createDebugger,
+  logger,
+  readJson,
+  type PackageJson,
+} from '@eljs/utils'
 import { Command, program } from 'commander'
 import path from 'node:path'
 import updateNotifier from 'update-notifier'
 
 import { Create } from './core'
-import { onCancel } from './utils'
+import { AppError, onCancel } from './utils'
 
 const debug = createDebugger('create:cli')
 
 cli()
   .then(() => process.exit(0))
-  .catch(() => {
+  .catch(error => {
+    if (error instanceof AppError) {
+      logger.error(error.message)
+    } else {
+      console.error(error)
+    }
     process.exit(1)
   })
 

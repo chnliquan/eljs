@@ -117,7 +117,7 @@ export class Plugin {
 
         if (!(typeof apply === 'function')) {
           throw new Error(
-            `Load ${this.type} failed in ${this.path}, expected function, but got ${apply}.`,
+            `Load \`${this.type}\` failed in ${this.path}, expected function, but got \`${apply}\`.`,
           )
         }
 
@@ -126,7 +126,7 @@ export class Plugin {
         const err = error as Error
         err.message = err.message.replace(
           /Load (\/.*?) failed:/,
-          `Load ${this.type} failed in ${this.path}:`,
+          `Load \`${this.type}\` failed in ${this.path}:`,
         )
         throw err
       }
@@ -244,7 +244,9 @@ export class Plugin {
           extensions: ['.tsx', '.ts', '.mjs', '.jsx', '.js'],
         })
       } catch (_) {
-        throw new Error(`Invalid plugin ${pluginName}, can not be resolved.`)
+        throw new Error(
+          `Invalid plugin \`${pluginName}\`, can not be resolved.`,
+        )
       }
 
       return [

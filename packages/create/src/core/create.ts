@@ -20,8 +20,6 @@ import path, { join } from 'node:path'
 import { Download } from './download'
 import { Runner } from './runner'
 
-const TARGET_DIR_WHITE_LIST = ['.git', 'LICENSE']
-
 const debug = createDebugger('create:class')
 
 /**
@@ -115,13 +113,6 @@ export class Create {
       })
 
       await runner.run(targetDir, projectName)
-    } catch (error) {
-      if (error instanceof AppError) {
-        logger.error(error.message)
-      } else {
-        console.log(error)
-      }
-      throw error
     } finally {
       if (!this._isLocal && (await isPathExists(this._templateRootPath))) {
         await remove(this._templateRootPath)
@@ -138,9 +129,7 @@ export class Create {
       return true
     }
 
-    const files = (await readdir(targetDir)).filter(
-      file => !TARGET_DIR_WHITE_LIST.includes(file),
-    )
+    const files = await readdir(targetDir)
 
     if (files.length) {
       logger.warn(

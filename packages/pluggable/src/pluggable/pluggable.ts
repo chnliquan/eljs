@@ -427,7 +427,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
 
       default:
         throw new Error(
-          `ApplyPlugins failed, type not defined or matched, got ${type}.`,
+          `ApplyPlugins failed, type not defined or matched, got \`${type}\`.`,
         )
     }
   }

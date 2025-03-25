@@ -15,5 +15,10 @@ $ npm i @eljs/utils -S
 ## Usage
 
 ```ts
-import utils from '@eljs/utils'
+import { run, logger } from '@eljs/utils'
+
+// run shell command
+await run('pnpm', ['install'])
+// logger
+logger.info('info')
 ```

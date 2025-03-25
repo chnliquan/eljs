@@ -100,7 +100,7 @@ export class CreateTemplate {
 
     assert(
       template,
-      `Selected scene: ${sceneAnswer} and template name: ${templateAnswer} not corresponding any template configuration.`,
+      `The selected scene \`${sceneAnswer}\` and template \`${templateAnswer}\` do not corresponding any configuration.`,
     )
 
     return template

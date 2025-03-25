@@ -4,10 +4,8 @@ import {
   downloadGitRepo,
   downloadNpmTarball,
   getNpmPackage,
-  isPathExists,
   pkgNameAnalysis,
   readJson,
-  remove,
   run,
   type PackageJson,
 } from '@eljs/utils'
@@ -49,7 +47,7 @@ export class Download {
         return this._downloadGit(value)
       default:
         throw new Error(
-          `Download type must be \`npm\` or \`git\`, but got ${chalk.bold(type)}`,
+          `Download type must be \`npm\` or \`git\`, but got \`type\`.`,
         )
     }
   }
@@ -79,25 +77,19 @@ export class Download {
     let templateRootPath = ''
 
     try {
-      try {
-        this._spinner.start(`Downloading ${projectName}`)
-        const { tarball } = data.dist
-        templateRootPath = await downloadNpmTarball(tarball)
-        this._spinner.succeed()
-      } catch (error) {
-        this._spinner.fail()
-        const err = error as Error
-        err.message = `Download ${projectName} failed: ${err.message}`
-        throw err
-      }
-
-      await this._installDependencies(templateRootPath, projectName)
-      return templateRootPath
-    } finally {
-      if (await isPathExists(templateRootPath)) {
-        await remove(templateRootPath)
-      }
+      this._spinner.start(`Downloading ${projectName}`)
+      const { tarball } = data.dist
+      templateRootPath = await downloadNpmTarball(tarball)
+      this._spinner.succeed()
+    } catch (error) {
+      this._spinner.fail()
+      const err = error as Error
+      err.message = `Download ${projectName} failed: ${err.message}`
+      throw err
     }
+
+    await this._installDependencies(templateRootPath, projectName)
+    return templateRootPath
   }
 
   /**
@@ -108,24 +100,18 @@ export class Download {
     let templateRootPath = ''
 
     try {
-      try {
-        this._spinner.start(`Downloading ${url}`)
-        templateRootPath = await downloadGitRepo(url)
-        this._spinner.succeed()
-      } catch (error) {
-        this._spinner.fail()
-        const err = error as Error
-        err.message = `Download ${url} failed: ${err.message}`
-        throw err
-      }
-
-      await this._installDependencies(templateRootPath, url)
-      return templateRootPath
-    } finally {
-      if (await isPathExists(templateRootPath)) {
-        await remove(templateRootPath)
-      }
+      this._spinner.start(`Downloading ${url}`)
+      templateRootPath = await downloadGitRepo(url)
+      this._spinner.succeed()
+    } catch (error) {
+      this._spinner.fail()
+      const err = error as Error
+      err.message = `Download ${url} failed: ${err.message}`
+      throw err
     }
+
+    await this._installDependencies(templateRootPath, url)
+    return templateRootPath
   }
 
   /**
@@ -135,9 +121,10 @@ export class Download {
    */
   private async _installDependencies(cwd: string, projectName: string) {
     try {
-      const pkg: PackageJson = await readJson(path.join(cwd, './package.json'))
+      const { dependencies }: PackageJson =
+        (await readJson(path.join(cwd, './package.json'))) || {}
 
-      if (pkg?.dependencies?.length) {
+      if (dependencies && Object.keys(dependencies).length > 0) {
         this._spinner.start(`Installing ${projectName}`)
         await run('npm', ['install', '--production'], {
           cwd,

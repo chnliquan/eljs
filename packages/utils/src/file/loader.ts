@@ -266,7 +266,9 @@ export function resolveTsConfig(dir: string): TranspileOptions {
     )
 
     if (error) {
-      throw new Error(`Error in ${path}: ${error.messageText.toString()}`)
+      throw new Error(
+        `Resolve file ${path} failed: ${error.messageText.toString()}`,
+      )
     }
 
     return config

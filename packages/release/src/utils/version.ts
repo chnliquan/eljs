@@ -57,7 +57,7 @@ export function parseVersion(version: string) {
   const parsed = semver.parse(version)
 
   if (!parsed) {
-    throw new Error(`Invalid semantic version ${version}.`)
+    throw new Error(`Invalid semantic version \`${version}\`.`)
   }
 
   const isPrerelease = Boolean(parsed.prerelease.length)
