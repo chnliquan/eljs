@@ -1,5 +1,12 @@
 # ChangeLog 
 
+# [1.0.0-next.8](https://github.com/chnliquan/eljs/compare/v1.0.0-next.7...v1.0.0-next.8) (2025-03-25)
+
+
+### 🐛 Bug Fixes
+
+* **create:** download ([08b04c1](https://github.com/chnliquan/eljs/commit/08b04c1b7cd7828d7087e3dc91e4613bf77e14c8)) 
+
 # [1.0.0-next.7](https://github.com/chnliquan/eljs/compare/v1.0.0-next.6...v1.0.0-next.7) (2025-03-24)
 
 
