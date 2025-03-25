@@ -32,7 +32,7 @@ export default async (api: Api) => {
 
       if (initGit) {
         console.log()
-        logger.info(`🗃 Initializing git repository...`)
+        logger.info(`🗃 Initializing git repository ...`)
         run('git', ['init'], {
           cwd: api.paths.target,
           verbose: false,

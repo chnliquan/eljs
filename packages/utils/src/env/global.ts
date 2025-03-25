@@ -15,7 +15,7 @@ export function hasGlobalInstallation(bin: string): Promise<boolean> {
 
   return execa(bin, ['--version'])
     .then(data => {
-      return /^\d+.\d+.\d+$/.test(data.stdout)
+      return /\d+.\d+.\d+/.test(data.stdout)
     })
     .then(value => {
       cache.set(cacheKey, value)
