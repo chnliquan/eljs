@@ -74,7 +74,7 @@ export default (api: Api) => {
 
   api.onGenerateDone(
     async () => {
-      if (api.userConfig?.install !== false) {
+      if (api.config.install) {
         await api.install()
       }
 

@@ -21,14 +21,13 @@ export interface ConfigManagerOptions {
   /**
    * Default config files
    * @example
-   * config.ts、config.js、config.json
+   * ['config.ts', 'config.js']
    */
   defaultConfigFiles: string[]
   /**
    * Default config extensions
    * @example
-   * .dev => config.dev.ts
-   * .prod => config.prod.ts
+   * ['dev', 'staging'] => ['config.dev.ts', 'config.staging.ts']
    */
   defaultConfigExts?: string[]
 }

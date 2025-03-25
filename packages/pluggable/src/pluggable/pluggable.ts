@@ -31,11 +31,15 @@ export interface PluggableOptions {
    */
   plugins?: PluginDeclaration[]
   /**
-   * 默认配置文件（config.ts）
+   * 默认配置文件
+   * @example
+   * ['config.ts', 'config.js']
    */
-  defaultConfigFiles: string[]
+  defaultConfigFiles?: string[]
   /**
-   * 默认配置文件扩展（dev => config.dev.ts，prod => config.prod.ts）
+   * 默认配置文件扩展名
+   * @example
+   * ['dev', 'staging'] => ['config.dev.ts', 'config.staging.ts']
    */
   defaultConfigExts?: string[]
 }
@@ -51,11 +55,11 @@ export class Pluggable<T extends UserConfig = UserConfig> {
   /**
    * 配置文件管理器
    */
-  public configManager: ConfigManager
+  public configManager: ConfigManager | null = null
   /**
    * 用户配置项
    */
-  public userConfig: T = Object.create(null)
+  public userConfig: T | null = null
   /**
    * 钩子映射表
    */
@@ -100,13 +104,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
       isPathExistsSync(options.cwd),
       `Invalid cwd ${options.cwd}, could not be found.`,
     )
-
     this.constructorOptions = options
-    this.configManager = new ConfigManager({
-      defaultConfigFiles: options.defaultConfigFiles || [],
-      defaultConfigExts: options.defaultConfigExts,
-      cwd: options.cwd,
-    })
   }
 
   /**
@@ -115,6 +113,11 @@ export class Pluggable<T extends UserConfig = UserConfig> {
   protected async load() {
     this._state = PluggableStateEnum.Init
 
+    this.configManager = new ConfigManager({
+      defaultConfigFiles: this.constructorOptions.defaultConfigFiles || [],
+      defaultConfigExts: this.constructorOptions.defaultConfigExts,
+      cwd: this.constructorOptions.cwd,
+    })
     this.userConfig = (await this.configManager.getConfig()) as T
 
     const constructorPresets = this.constructorOptions.presets || []
@@ -465,7 +468,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
 export interface PluggablePluginApi {
   // #region 插件属性
   /**
-   * 当前执行路径
+   * 当前工作目录
    */
   cwd: typeof Pluggable.prototype.cwd
   // #endregion

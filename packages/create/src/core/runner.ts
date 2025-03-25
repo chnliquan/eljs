@@ -1,3 +1,4 @@
+import { defaultConfig } from '@/default'
 import {
   RunnerStageEnum,
   type AppData,
@@ -13,12 +14,16 @@ import {
   type PluggableOptions,
   type PluggablePluginApi,
 } from '@eljs/pluggable'
-import { prompts } from '@eljs/utils'
+import { deepMerge, prompts, type RequiredRecursive } from '@eljs/utils'
 
 /**
  * 运行器
  */
 export class Runner extends Pluggable<Config> {
+  /**
+   * 配置项
+   */
+  public config!: RequiredRecursive<Config>
   /**
    * 执行阶段
    */
@@ -59,7 +64,7 @@ export class Runner extends Pluggable<Config> {
 
   public async run(target: string, projectName: string): Promise<void> {
     await this.load()
-    this.stage = RunnerStageEnum.Init
+    await this._resolveConfig()
 
     this.paths = await this.applyPlugins('modifyPaths', {
       initialValue: {
@@ -91,7 +96,6 @@ export class Runner extends Pluggable<Config> {
       args: { cwd: this.cwd },
     })
 
-    this.stage = RunnerStageEnum.CollectPrompts
     this.prompts = await this.applyPlugins('modifyPrompts', {
       initialValue: {} as Prompts,
       args: { questions },
@@ -131,17 +135,26 @@ export class Runner extends Pluggable<Config> {
 
     await this.applyPlugins('onGenerateDone')
   }
+
+  private async _resolveConfig() {
+    this.config = deepMerge(
+      {},
+      defaultConfig,
+      this.constructorOptions,
+      this.userConfig,
+    ) as RequiredRecursive<Config>
+  }
 }
 
 /**
- * 运行器插件 API
+ * 运行器插件 Api
  */
 export interface RunnerPluginApi extends PluggablePluginApi {
   // #region 插件 API 属性
   /**
    * 用户配置
    */
-  userConfig: Config | null
+  config: typeof Runner.prototype.config
   /**
    * 应用数据，可通过 `modifyAppData` 方法修改
    */
