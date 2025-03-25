@@ -213,7 +213,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
     const [plugin, pluginOptions] = currentPlugin
     assert(
       !this.plugins[plugin.id],
-      `${plugin.type} ${plugin.id} has already been registered by ${
+      `${plugin.type} \`${plugin.id}\` has already been registered by ${
         this.plugins[plugin.id]?.path
       }, ${plugin.type} from ${plugin.path} register failed.`,
     )
@@ -247,7 +247,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
 
     assert(
       !this.key2Plugin[plugin.key],
-      `Key ${plugin.key} has already been registered by ${
+      `\`${plugin.key}\` has already been registered by ${
         this.key2Plugin[plugin.key]?.path
       }, ${plugin.type} from ${plugin.path} register failed.`,
     )
@@ -308,7 +308,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
       case ApplyPluginTypeEnum.Add: {
         assert(
           !('initialValue' in options) || Array.isArray(initialValue),
-          `ApplyPlugins failed, \`options.initialValue\` must be array if \`options.type\` added.`,
+          `ApplyPlugins failed, \`options.initialValue\` must be an array when \`options.type\` added.`,
         )
 
         const tapableAdd = new AsyncSeriesWaterfallHook(['memo'])

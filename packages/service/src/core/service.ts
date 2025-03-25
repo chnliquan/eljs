@@ -270,15 +270,14 @@ export class Service<T extends ServiceOpts = ServiceOpts> {
     opts.plugin.time.register = new Date().getTime() - dateStart.getTime()
 
     if (opts.plugin.type === 'plugin') {
-      assert(!pluginRet, `plugin should return nothing.`)
+      assert(!pluginRet, `Plugin should return nothing`)
     }
 
-    // key should be unique
     assert(
       !this.keyToPluginMap[opts.plugin.key],
-      `key ${opts.plugin.key} is already registered by ${
+      `\`${opts.plugin.key}\` has been already registered by ${
         this.keyToPluginMap[opts.plugin.key]?.path
-      }, ${opts.plugin.type} from ${opts.plugin.path} register failed.`,
+      }, ${opts.plugin.type} from ${opts.plugin.path} register failed`,
     )
 
     this.keyToPluginMap[opts.plugin.key] = opts.plugin

@@ -126,9 +126,7 @@ function checkVersion(value: ReleaseType) {
   }
 
   if (!semver.valid(value)) {
-    throw new InvalidArgumentError(
-      `Should be a valid semantic version, but got ${value}.`,
-    )
+    throw new InvalidArgumentError(`Invalid semantic version \`${value}\`.`)
   }
 
   // if startsWith 'v', need to remove it

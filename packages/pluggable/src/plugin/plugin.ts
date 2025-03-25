@@ -89,7 +89,7 @@ export class Plugin {
 
     assert(
       isPathExistsSync(this.path),
-      `Invalid ${this.type} in ${this.path}, could not be found.`,
+      `Invalid \`${this.type}\` in ${this.path}, could not be found.`,
     )
 
     let pkg = {} as PackageJson

@@ -163,6 +163,10 @@ export class Runner extends Pluggable<Config> {
     }
   }
 
+  /**
+   * 发布步骤打印
+   * @param message 信息
+   */
   public step(message: string): void {
     return logger.step('Release', `${message}${EOL}`)
   }
@@ -273,6 +277,10 @@ export interface RunnerPluginApi extends PluggablePluginApi {
   // #endregion
 
   // #region 插件方法
+  /**
+   * 发布步骤打印
+   * @param message 信息
+   */
   step: (message: string) => void
   // #endregion
 }

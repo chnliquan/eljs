@@ -28,7 +28,9 @@ const debug = createDebugger('release:version')
 export default (api: Api) => {
   api.onCheck(async ({ releaseTypeOrVersion }) => {
     if (releaseTypeOrVersion && !isVersionValid(releaseTypeOrVersion, true)) {
-      throw new AppError(`Invalid semantic version ${releaseTypeOrVersion}.`)
+      throw new AppError(
+        `Invalid semantic version \`${releaseTypeOrVersion}\`.`,
+      )
     }
   })
 
@@ -53,18 +55,18 @@ export default (api: Api) => {
 
       if (prereleaseId && prereleaseId !== preid) {
         throw new AppError(
-          `Should input ${prereleaseId} tag, but got ${version}.`,
+          `Expected a ${prereleaseId} tag, but got \`${version}\`.`,
         )
       }
 
       if ((prereleaseId || prerelease === true) && !isPrerelease) {
         throw new AppError(
-          `Should input prerelease type tag, but got ${version}.`,
+          `Expected a prerelease type, but got \`${version}\`.`,
         )
       }
 
       if (!prereleaseId && prerelease === false && isPrerelease) {
-        throw new AppError(`Should input release type, but got ${version}.`)
+        throw new AppError(`Expected a release type, but got \`${version}\`.`)
       }
 
       await checkVersion(
@@ -226,7 +228,7 @@ async function getIncrementVersion(
       answer = await prompts({
         name: 'value',
         type: 'text',
-        message: 'Input custom version:',
+        message: 'Please input the custom version:',
       })
       return answer.value
     }
@@ -341,11 +343,11 @@ async function checkVersion(
   registry?: string,
 ) {
   if (!semver.valid(version)) {
-    throw new AppError(`Invalid semantic version ${version}.`)
+    throw new AppError(`Invalid semantic version \`${version}\`.`)
   }
 
   if (await isVersionExist(pkgName, version, registry)) {
-    throw new AppError(`${pkgName} has published ${version} already.`)
+    throw new AppError(`${pkgName} has published \`${version}\` already.`)
   }
 }
 
@@ -359,11 +361,11 @@ async function confirmVersion(api: Api, version: string): Promise<string> {
   let confirmMessage = ''
 
   if (validPkgNames.length === 1) {
-    confirmMessage = `Are you sure to bump the version to ${chalk.bold.cyanBright(
+    confirmMessage = `Are you sure to bump version to ${chalk.bold.cyanBright(
       version,
     )}`
   } else {
-    console.log(`The packages to be bumped are as follows:${EOL}`)
+    console.log(`The packages will be bumped are as follows:${EOL}`)
 
     for (const pkgName of validPkgNames) {
       console.log(` - ${chalk.cyanBright(`${pkgName}@${version}`)}`)
