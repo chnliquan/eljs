@@ -23,6 +23,7 @@ Options:
   -v, --version   Output the current version.
   --cwd <cwd>     Specify the working directory.
   -r, --override  Force override existing directory.
+  --no-install    Skip install dependencies when create done.
   -h, --help      display help for command
 ```
 
@@ -51,9 +52,14 @@ export interface Config {
    */
   defaultQuestions?: boolean
   /**
-   * Whether enable git initialize
+   * Whether git initialize when create done
    */
   gitInit?: boolean
+  /**
+   * Whether install dependencies when create done
+   * @default true
+   */
+  install?: boolean
   /**
    * Preset Definition Collection
    */

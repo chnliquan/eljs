@@ -43,6 +43,7 @@ async function cli() {
     .arguments('<template> <project-name>')
     .option('--cwd <cwd>', 'Specify the working directory.')
     .option('-r, --override', 'Force override existing directory.')
+    .option('--no-install', 'Skip install dependencies when create done.')
     .action(async (template, projectName, options) => {
       debug?.(`template:`, template)
       debug?.(`projectName:`, projectName)

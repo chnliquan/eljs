@@ -81,6 +81,6 @@ export type Api = PluginApi<Runner> &
      * 安装依赖
      * @param args 命令行参数
      */
-    install(args: string[]): Promise<void>
+    install(args?: string[]): Promise<void>
     // #endregion
   }

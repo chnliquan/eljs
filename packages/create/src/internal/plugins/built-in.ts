@@ -22,8 +22,18 @@ export default (api: Api) => {
     },
   )
 
-  api.register(
-    'onGenerateDone',
+  api.registerMethod('install', async (args: string[]) => {
+    const { packageManager = 'pnpm' } = api.appData
+
+    logger.info('📦 Installing additional dependencies ...')
+    console.log()
+
+    await install(packageManager, args, {
+      cwd: api.paths.target,
+    })
+  })
+
+  api.onGenerateDone(
     async () => {
       const pkgJsonPath = join(api.paths.target, 'package.json')
       let pkg = api.appData.pkg
@@ -47,9 +57,12 @@ export default (api: Api) => {
     },
   )
 
-  api.register(
-    'onGenerateDone',
-    () => {
+  api.onGenerateDone(
+    async () => {
+      if (api.userConfig?.install !== false) {
+        await api.install()
+      }
+
       logger.ready(
         `🎉  Created project ${chalk.cyanBright.bold(
           api.appData.projectName,
@@ -60,15 +73,4 @@ export default (api: Api) => {
       stage: Infinity,
     },
   )
-
-  api.registerMethod('install', async (args: string[]) => {
-    const { packageManager = 'pnpm' } = api.appData
-
-    logger.info('📦 Installing additional dependencies...')
-    console.log()
-
-    await install(packageManager, args, {
-      cwd: api.paths.target,
-    })
-  })
 }

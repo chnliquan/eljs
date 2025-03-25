@@ -84,7 +84,7 @@
         "DEBUG": "create*"
       },
       "args": [
-        // "--help",
+        "--help",
         "--cwd=/Users/ender/kwai/technology/polyrepo-release",
         "-r",
         "@eljs/create-plugin-npm-web",

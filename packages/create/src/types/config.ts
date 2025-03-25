@@ -41,7 +41,12 @@ export interface Config extends UserConfig {
    */
   defaultQuestions?: boolean
   /**
-   * Whether enable git initialize
+   * Whether git initialize when create done
    */
   gitInit?: boolean
+  /**
+   * Whether install dependencies when create done
+   * @default true
+   */
+  install?: boolean
 }
