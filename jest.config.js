@@ -6,7 +6,6 @@ module.exports = {
   globals: {
     __DEV__: true,
     __TEST__: true,
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     __VERSION__: require('./package.json').version,
     __GLOBAL__: false,
     __ESM__: true,

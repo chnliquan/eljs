@@ -1,5 +1,3 @@
-/* eslint-disable no-undef */
-/* eslint-disable @typescript-eslint/naming-convention */
 module.exports = {
   root: true,
   parser: '@typescript-eslint/parser',
@@ -38,5 +36,5 @@ module.exports = {
     ],
     'import/order': 'off',
   },
-  ignorePatterns: ['**/bin', '**/lib', '**/esm', '**/dist', '**/*.d.ts'],
+  ignorePatterns: ['**/*.js', '**/*.d.ts'],
 }
