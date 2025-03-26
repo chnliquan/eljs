@@ -1,4 +1,4 @@
-import { Runner, type RunnerPluginApi } from '@/core'
+import { type RunnerPluginApi } from '@/core'
 import type { PluggablePluginApi, PluginApi } from '@eljs/pluggable'
 import type {
   CopyFileOptions,
@@ -10,7 +10,7 @@ import type {
 /**
  * 插件 Api 参数
  */
-export type Api = PluginApi<Runner> &
+export type Api = Omit<PluginApi, 'registerPresets' | 'registerPlugins'> &
   PluggablePluginApi &
   RunnerPluginApi & {
     // #region 插件工具方法
@@ -65,12 +65,12 @@ export type Api = PluginApi<Runner> &
     ) => Promise<void>
     /**
      * 扩展 package.json
-     * @param partialPkgJson 部分 packageJson 数据
+     * @param partial pkgJson 数据
      */
-    extendPackage(partialPkgJson: PackageJson): void
+    extendPackage(partial: PackageJson): void
     /**
      * 扩展 package.json
-     * @param fn packageJson 获取函数
+     * @param fn pkgJson 获取函数
      */
     extendPackage(fn: (memo: PackageJson) => PackageJson): void
     /**

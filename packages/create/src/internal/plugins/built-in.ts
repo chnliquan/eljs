@@ -3,7 +3,6 @@ import {
   chalk,
   deepMerge,
   install,
-  isFunction,
   isObject,
   isPathExists,
   logger,
@@ -19,8 +18,8 @@ export default (api: Api) => {
     'extendPackage',
     (fn: (pkg: PackageJson) => PackageJson | PackageJson) => {
       const pkg = api.appData.pkg
-      const toMerge = (isFunction(fn) ? fn(pkg) : fn) ?? {}
-      api.appData.pkg = deepMerge(api.appData.pkg, toMerge)
+      const toMerged = (typeof fn === 'function' ? fn(pkg) : fn) ?? {}
+      api.appData.pkg = deepMerge(api.appData.pkg, toMerged)
     },
   )
 
