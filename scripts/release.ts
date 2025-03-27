@@ -55,7 +55,7 @@ async function main(): Promise<void> {
     npm: {
       ...argv.npm,
       requireOwner: false,
-      cnpm: true,
+      syncCnpm: true,
     },
   })
 }

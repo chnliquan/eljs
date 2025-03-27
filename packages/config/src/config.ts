@@ -14,22 +14,22 @@ import { addFileExt, getAbsFiles } from './utils'
  */
 export interface ConfigManagerOptions {
   /**
-   * Working directory
-   * @default process.cwd()
-   */
-  cwd?: string
-  /**
    * Default config files
    * @example
    * ['config.ts', 'config.js']
    */
   defaultConfigFiles: string[]
   /**
-   * Default config extensions
+   * Default config file extensions
    * @example
    * ['dev', 'staging'] => ['config.dev.ts', 'config.staging.ts']
    */
   defaultConfigExts?: string[]
+  /**
+   * Working directory
+   * @default process.cwd()
+   */
+  cwd?: string
 }
 
 /**

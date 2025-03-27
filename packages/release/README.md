@@ -1,6 +1,6 @@
 # @eljs/release
 
-Release npm package easily
+Release npm package easily.
 
 ## Installation
 
@@ -35,30 +35,29 @@ $ npx @eljs/release [version]
 Usage: release [options] [version]
 
 Arguments:
-  version                              Specify the bump version.
+  version                              Specify the bump version
 
 Options:
-  -v, --version                        Output the current version.
-  --cwd <cwd>                          Specify the working directory.
-  --git.independent                    Generate git tag independent.
-  --no-git.requireClean                Skip check git working tree clean.
-  --no-git.changelog                   Skip generate changelog.
-  --no-git.commit                      Skip the commit release step.
-  --no-git.push                        Skip the push release step.
-  --git.requireBranch <requireBranch>  Require that the release is on a particular branch.
-  --npm.prerelease                     Specify the release type as prerelease.
-  --npm.canary                         Specify the release type as canary.
-  --npm.cnpm                           Sync to cnpm when release done.
-  --no-npm.requireOwner                Skip check npm owner step.
-  --no-npm.confirm                      Skip the confirm bump version release step.
-  --npm.prereleaseId <prereleaseId>    Specify the prereleaseId.
-  --no-github.release                  Skip the github release step.
+  -v, --version                        Output the current version
+  --cwd <cwd>                          Specify the working directory
+  --git.independent                    Generate git tag independent
+  --no-git.requireClean                Skip git working tree clean check
+  --no-git.changelog                   Skip changelog generation
+  --no-git.commit                      Skip git commit
+  --no-git.push                        Skip git push
+  --git.requireBranch <requireBranch>  Require that the release is on a particular branch
+  --npm.prerelease                     Specify the release type as prerelease  --npm.canary                         Specify the release type as canary
+  --npm.syncCnpm                       Sync to cnpm when release done
+  --no-npm.requireOwner                Skip npm owner check
+  --no-npm.confirm                      Skip confirm bump version
+  --npm.prereleaseId <prereleaseId>    Specify the prereleaseId
+  --no-github.release                  Skip the github release step
   -h, --help                           display help for command
 ```
 
 ## Configuration
 
-create a **release.config.ts** file in the project root
+Create a **release.config.ts** file in the project root.
 
 ```ts
 export interface Config {
@@ -104,7 +103,7 @@ export interface Config {
      */
     independent?: boolean
     /**
-     * Whether commit changes
+     * Whether to commit changes
      * @default true
      */
     commit?: boolean
@@ -118,7 +117,7 @@ export interface Config {
      */
     commitArgs?: string[] | string
     /**
-     * Whether push to remote
+     * Whether to push remote
      * @default true
      */
     push?: boolean
@@ -144,7 +143,7 @@ export interface Config {
     /**
      * Prerelease id
      */
-    prereleaseId?: PrereleaseId
+    prereleaseId?: 'alpha' | 'beta' | 'rc'
     /**
      * Whether to use canary version
      * @default false
@@ -163,24 +162,24 @@ export interface Config {
      * Whether to sync cnpm
      * @default false
      */
-    cnpm?: boolean
+    syncCnpm?: boolean
   }
   /**
    * Github config
    */
   github?: {
     /**
-     * Whether to release github
+     * Whether to create a github release
      * @default true
      */
     release?: boolean
   }
   /**
-   * Preset Definition Collection
+   * Preset definitions
    */
   presets?: PluginDeclaration[]
   /**
-   * Plugin Definition Collection
+   * Plugin definitions
    */
   plugins?: PluginDeclaration[]
 }

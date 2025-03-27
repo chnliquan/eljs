@@ -1,4 +1,4 @@
-import type { PluginDeclaration } from '@/pluggable'
+import type { PluginDeclaration, ResolvedPlugin } from '@/pluggable'
 
 /**
  * 插件返回类型
@@ -12,6 +12,20 @@ export interface PluginReturnType {
    * 插件定义集合
    */
   plugins?: PluginDeclaration[]
+}
+
+/**
+ * 解析后的插件返回类型
+ */
+export interface ResolvedPluginReturnType {
+  /**
+   * 解析后的预设
+   */
+  presets?: ResolvedPlugin[]
+  /**
+   * 解析后的插件
+   */
+  plugins?: ResolvedPlugin[]
 }
 
 /**

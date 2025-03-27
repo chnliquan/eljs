@@ -12,7 +12,7 @@ import { Plugin } from './plugin'
 import { PluginTypeEnum, type Enable } from './types'
 
 /**
- * 插件 Api 类
+ * PluginApi class
  */
 export class PluginApi<T extends Pluggable = Pluggable> {
   /**
@@ -48,7 +48,7 @@ export class PluginApi<T extends Pluggable = Pluggable> {
     key: HookOptions['key'],
     fn: HookOptions['fn'],
     options: Omit<HookOptions, 'plugin' | 'key' | 'fn'> = {},
-  ) {
+  ): void {
     this.pluggable.hooks[key] ||= []
     this.pluggable.hooks[key].push(
       new Hook({ ...options, key, fn, plugin: this.plugin }),
@@ -61,7 +61,7 @@ export class PluginApi<T extends Pluggable = Pluggable> {
    * @param fn 执行函数
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public registerMethod(name: string, fn?: MaybePromiseFunction<any>) {
+  public registerMethod(name: string, fn?: MaybePromiseFunction<any>): void {
     assert(
       !this.pluggable.pluginMethods[name],
       `api.registerMethod() failed, method \`${name}\` already exist.`,
@@ -91,7 +91,7 @@ export class PluginApi<T extends Pluggable = Pluggable> {
   public registerPresets(
     remainingPresets: ResolvedPlugin[],
     presets: unknown[],
-  ) {
+  ): void {
     assert(
       this.pluggable.state === PluggableStateEnum.InitPresets,
       `api.registerPresets() failed, it should only be used during the presets state.`,
@@ -114,7 +114,7 @@ export class PluginApi<T extends Pluggable = Pluggable> {
   public registerPlugins(
     remainingPlugins: ResolvedPlugin[],
     plugins: unknown[],
-  ) {
+  ): void {
     assert(
       this.pluggable.state === PluggableStateEnum.InitPresets ||
         this.pluggable.state === PluggableStateEnum.InitPlugins,
@@ -134,7 +134,7 @@ export class PluginApi<T extends Pluggable = Pluggable> {
    * 跳过插件
    * @param keys 插件 key
    */
-  public skipPlugins(keys: string[]) {
+  public skipPlugins(keys: string[]): void {
     for (const key of keys) {
       const plugin = this.pluggable.key2Plugin[key]
       assert(

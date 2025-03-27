@@ -9,7 +9,7 @@ import { sleep } from './timer'
  * @param delay 延时
  */
 export async function retry<T>(
-  fn: () => Promise<T>,
+  fn: MaybePromiseFunction<T>,
   retries = 3,
   delay = 100,
 ): Promise<T> {
@@ -34,7 +34,7 @@ export async function retry<T>(
  * @param delay 延时
  */
 export async function retryWithValue<T>(
-  fn: MaybePromiseFunction<T | undefined | null>,
+  fn: MaybePromiseFunction<T>,
   retries = 3,
   delay = 100,
 ): Promise<T | undefined> {

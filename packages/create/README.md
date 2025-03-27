@@ -1,6 +1,6 @@
 # @eljs/create
 
-Create a project from a remote template
+Create a project from a remote template.
 
 ## Installation
 
@@ -29,7 +29,7 @@ Options:
 
 ## Configuration
 
-Create a **create.config.ts** file in the project root
+Create a **create.config.ts** file in the project root.
 
 ```ts
 export interface Config {
@@ -63,11 +63,11 @@ export interface Config {
    */
   install?: boolean
   /**
-   * Preset Definition Collection
+   * Preset definitions
    */
   presets?: PluginDeclaration[]
   /**
-   * Plugin Definition Collection
+   * Plugin definitions
    */
   plugins?: PluginDeclaration[]
 }
@@ -77,15 +77,15 @@ export interface Config {
  */
 export interface RemoteTemplate {
   /**
-   * 模版源类型
+   * Template type
    */
   type: 'npm' | 'git'
   /**
-   * 模版值
+   * Template value
    */
   value: string
   /**
-   * 仓库地址
+   * Npm registry
    */
   registry?: string
 }

@@ -28,26 +28,26 @@ async function cli() {
 
   program
     .name('release')
-    .description('Release npm package easily.')
-    .version(pkg.version, '-v, --version', 'Output the current version.')
-    .argument('[version]', 'Specify the bump version.', checkVersion)
-    .option('--cwd <cwd>', 'Specify the working directory.')
-    .option('--git.independent', 'Generate git tag independent.')
-    .option('--no-git.requireClean', 'Skip check git working tree clean.')
-    .option('--no-git.changelog', 'Skip generate changelog.')
-    .option('--no-git.commit', 'Skip the commit release step.')
-    .option('--no-git.push', 'Skip the push release step.')
+    .description('Release npm package easily')
+    .version(pkg.version, '-v, --version', 'Output the current version')
+    .argument('[version]', 'Specify the bump version', checkVersion)
+    .option('--cwd <cwd>', 'Specify the working directory')
+    .option('--git.independent', 'Generate git tag independent')
+    .option('--no-git.requireClean', 'Skip git working tree clean check')
+    .option('--no-git.changelog', 'Skip changelog generation')
+    .option('--no-git.commit', 'Skip git commit')
+    .option('--no-git.push', 'Skip git push')
     .option(
       '--git.requireBranch <requireBranch>',
-      'Require that the release is on a particular branch.',
+      'Require that the release is on a particular branch',
     )
-    .option('--npm.prerelease', 'Specify the release type as prerelease.')
-    .option('--npm.canary', 'Specify the release type as canary.')
-    .option('--npm.cnpm', 'Sync to cnpm when release done.')
-    .option('--no-npm.requireOwner', 'Skip check npm owner step.')
-    .option('--no-npm.confirm', 'Skip the confirm bump version release step.')
-    .option('--npm.prereleaseId <prereleaseId>', 'Specify the prereleaseId.')
-    .option('--no-github.release', 'Skip the github release step.')
+    .option('--npm.prerelease', 'Specify the release type as prerelease')
+    .option('--npm.canary', 'Specify the release type as canary')
+    .option('--npm.syncCnpm', 'Sync to cnpm when release done')
+    .option('--no-npm.requireOwner', 'Skip npm owner check')
+    .option('--no-npm.confirm', 'Skip confirm bump version')
+    .option('--npm.prereleaseId <prereleaseId>', 'Specify the prereleaseId')
+    .option('--no-github.release', 'Skip github release')
     .action(async (version, opts) => {
       debug?.(`version:`, version)
       debug?.(`opts:%O`, opts)

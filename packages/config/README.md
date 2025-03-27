@@ -1,6 +1,6 @@
 # @eljs/config
 
-Load your config file
+Load your config file.
 
 ## Installation
 
@@ -28,35 +28,34 @@ configManager.getConfig()
 
 ### `new ConfigManager(options: ConfigManagerOptions): ConfigManager`
 
-Create config manager
+Create a config manager instance.
 
 ```ts
 export interface ConfigManagerOptions {
+  /**
+   * Default config files
+   * @example
+   * ['config.ts', 'config.js']
+   */
+  defaultConfigFiles: string[]
+  /**
+   * Default config file extensions
+   * @example
+   * ['dev', 'staging'] => ['config.dev.ts', 'config.staging.ts']
+   */
+  defaultConfigExts?: string[]
   /**
    * Working directory
    * @default process.cwd()
    */
   cwd?: string
-  /**
-   * Default config files
-   * @example
-   * config.ts、config.js、config.json
-   */
-  defaultConfigFiles: string[]
-  /**
-   * Default config extensions
-   * @example
-   * .dev => config.dev.ts
-   * .prod => config.prod.ts
-   */
-  defaultConfigExts?: string[]
 }
 ```
 
 ### `configManager.getConfig<T extends object>(): Promise<T | null>`
 
-Asynchronously returns the object after the configuration files merged
+Return the config object after the configuration files merged asynchronously.
 
 ### `configManager.getConfigSync<T extends object>(): Promise<T | null>`
 
-Synchronously returns the object after the configuration files merged
+Return the config object after the configuration files merged synchronously.

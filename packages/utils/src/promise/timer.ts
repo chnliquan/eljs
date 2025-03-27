@@ -25,9 +25,9 @@ export function timeout<T>(
         finished = true
         resolve(data)
       })
-      .catch((err: unknown) => {
+      .catch(error => {
         finished = true
-        reject(err)
+        reject(error)
       })
 
     setTimeout(() => maybeTimeout(), ms)

@@ -5,7 +5,7 @@ import path from 'node:path'
 /**
  * 下载配置项
  */
-export interface DownloadGitRepoOptions {
+export interface DownloadGitRepositoryOptions {
   /**
    * 分支
    */
@@ -21,11 +21,11 @@ export interface DownloadGitRepoOptions {
  * @param url git 地址
  * @param options 可选配置项
  */
-export async function downloadGitRepo(
+export async function downloadGitRepository(
   url: string,
-  options: DownloadGitRepoOptions = {},
+  options?: DownloadGitRepositoryOptions,
 ): Promise<string> {
-  const { branch = 'master', dest = await tmpdir(true) } = options
+  const { branch = 'master', dest = await tmpdir(true) } = options || {}
 
   const args = [
     'git',

@@ -1,6 +1,6 @@
 /**
- * 解析 windows 系统地址
- * @param path 路径地址
+ * 解析 windows 系统路径
+ * @param path 文件路径
  */
 export function winPath(path: string): string {
   const isExtendedLengthPath = /^\\\\\?\\/.test(path)

@@ -1,7 +1,7 @@
 import type { RemoteTemplate } from '@/types'
 import {
   chalk,
-  downloadGitRepo,
+  downloadGitRepository,
   downloadNpmTarball,
   getNpmPackage,
   pkgNameAnalysis,
@@ -101,7 +101,7 @@ export class Download {
 
     try {
       this._spinner.start(`Downloading ${url}`)
-      templateRootPath = await downloadGitRepo(url)
+      templateRootPath = await downloadGitRepository(url)
       this._spinner.succeed()
     } catch (error) {
       this._spinner.fail()

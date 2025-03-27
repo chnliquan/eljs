@@ -285,62 +285,6 @@ export function gitUrlAnalysis(url: string): GitRemoteRepository | null {
  * @param dir 文件目录
  * @param exact 是否在当前目录下提取
  */
-export function getGitRepositorySync(
-  dir: string,
-  exact?: boolean,
-): GitRepository | null {
-  const gitDir = exact
-    ? path.join(dir, '.git')
-    : getProjectGitDirSync(dir) || ''
-
-  if (!isPathExistsSync(gitDir)) {
-    return null
-  }
-
-  const GitRepository: GitRepository = {
-    name: '',
-    group: '',
-    href: '',
-    https: '',
-    ssh: '',
-    branch: '',
-    author: '',
-    email: '',
-  }
-
-  try {
-    const config = ini.parse(readFileSync(path.join(gitDir, 'config')))
-    // remote
-    if (config['remote "origin"']) {
-      GitRepository.ssh = config['remote "origin"'].url
-
-      if (GitRepository.ssh) {
-        Object.assign(GitRepository, gitUrlAnalysis(GitRepository.ssh))
-      }
-    }
-
-    if (config['user']) {
-      GitRepository.author = config['user'].name
-      GitRepository.email = config['user'].email
-    }
-
-    // branch
-    const gitHead = readFileSync(path.join(gitDir, 'HEAD'))
-    GitRepository.branch = gitHead
-      .replace('ref: refs/heads/', '')
-      .replace(EOL, '')
-  } catch (err) {
-    return null
-  }
-
-  return GitRepository
-}
-
-/**
- * 获取指定目录的 git 仓库信息
- * @param dir 文件目录
- * @param exact 是否在当前目录下提取
- */
 export async function getGitRepository(
   dir: string,
   exact?: boolean,
@@ -382,6 +326,62 @@ export async function getGitRepository(
 
     // branch
     const gitHead = await readFile(path.join(gitDir, 'HEAD'))
+    GitRepository.branch = gitHead
+      .replace('ref: refs/heads/', '')
+      .replace(EOL, '')
+  } catch (err) {
+    return null
+  }
+
+  return GitRepository
+}
+
+/**
+ * 获取指定目录的 git 仓库信息
+ * @param dir 文件目录
+ * @param exact 是否在当前目录下提取
+ */
+export function getGitRepositorySync(
+  dir: string,
+  exact?: boolean,
+): GitRepository | null {
+  const gitDir = exact
+    ? path.join(dir, '.git')
+    : getProjectGitDirSync(dir) || ''
+
+  if (!isPathExistsSync(gitDir)) {
+    return null
+  }
+
+  const GitRepository: GitRepository = {
+    name: '',
+    group: '',
+    href: '',
+    https: '',
+    ssh: '',
+    branch: '',
+    author: '',
+    email: '',
+  }
+
+  try {
+    const config = ini.parse(readFileSync(path.join(gitDir, 'config')))
+    // remote
+    if (config['remote "origin"']) {
+      GitRepository.ssh = config['remote "origin"'].url
+
+      if (GitRepository.ssh) {
+        Object.assign(GitRepository, gitUrlAnalysis(GitRepository.ssh))
+      }
+    }
+
+    if (config['user']) {
+      GitRepository.author = config['user'].name
+      GitRepository.email = config['user'].email
+    }
+
+    // branch
+    const gitHead = readFileSync(path.join(gitDir, 'HEAD'))
     GitRepository.branch = gitHead
       .replace('ref: refs/heads/', '')
       .replace(EOL, '')
@@ -538,7 +538,7 @@ export function getGitUserSync(): GitUser {
 
 /**
  * 获取工程 git 路径
- * @param dir 文件目录
+ * @param dir 文件夹目录
  */
 export async function getProjectGitDir(
   dir: string,

@@ -25,46 +25,46 @@ class Logger {
       .join(EOL)
   }
 
-  public log(message: string, tag = '') {
+  public log(message: string, tag = ''): void {
     tag
       ? console.log(this.format(this._chalkTag(tag), message))
       : console.log(message)
   }
 
-  public event(message: string) {
+  public event(message: string): void {
     console.log(this.format(prefixes.event, message))
   }
 
-  public info(message: string) {
+  public info(message: string): void {
     console.log(this.format(prefixes.info, message))
   }
 
-  public warn(message: string) {
+  public warn(message: string): void {
     console.warn(this.format(prefixes.warn, message))
   }
 
-  public error(message: string) {
+  public error(message: string): void {
     console.error(this.format(prefixes.error, message))
   }
 
-  public fatal(message: string) {
+  public fatal(message: string): void {
     console.error(this.format(prefixes.fatal, message))
   }
 
-  public wait(message: string) {
+  public wait(message: string): void {
     console.log(this.format(prefixes.wait, message))
   }
 
-  public ready(message: string) {
+  public ready(message: string): void {
     console.log(this.format(prefixes.ready, message))
   }
 
-  public printErrorAndExit(message: string) {
+  public printErrorAndExit(message: string): void {
     this.error(message)
     process.exit(1)
   }
 
-  public clear(title: string) {
+  public clear(title: string): void {
     if (process.stdout.isTTY) {
       const blank = EOL.repeat(process.stdout.rows)
       console.log(blank)

@@ -1,19 +1,19 @@
 import type { UserConfig } from '@eljs/pluggable'
 
 /**
- * Remote template
+ * Remote Template
  */
 export interface RemoteTemplate {
   /**
-   * 模版源类型
+   * Template type
    */
   type: 'npm' | 'git'
   /**
-   * 模版值
+   * Template value
    */
   value: string
   /**
-   * 仓库地址
+   * Npm registry
    */
   registry?: string
 }

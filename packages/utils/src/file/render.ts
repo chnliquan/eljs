@@ -33,14 +33,15 @@ export interface EjsRenderTemplateOptions {
 }
 
 /**
- * 渲染模版字符串
+ * 渲染模版
  * @param template 模版内容
  * @param data 模版数据
  * @param options 可选配置项
  */
 export function renderTemplate(
   template: string,
-  data: Record<string, unknown>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: Record<string, any>,
   options?: RenderTemplateOptions,
 ): string {
   const { type = 'mustache', options: renderOptions } = (options ||

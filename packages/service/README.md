@@ -1,6 +1,6 @@
 # @eljs/service
 
-eljs service
+@eljs/service
 
 ## 快速开始
 
@@ -20,9 +20,6 @@ $ pnpm add @eljs/service
 import service from '@eljs/service'
 ```
 
-## API
-
-
 ## 开发
 
 ```bash
@@ -33,7 +30,7 @@ $ pnpm -F '@eljs/service' dev
 
 ## 发布
 
-### 1. [语义化提交 Commit](https://www.conventionalcommits.org/en/v1.0.0/#summary) 
+### 1. [语义化提交 Commit](https://www.conventionalcommits.org/en/v1.0.0/#summary)
 
 ```bash
 $ git commit -m 'feat(service): add some feature'

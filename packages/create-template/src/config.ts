@@ -3,7 +3,7 @@
  */
 export interface RemoteTemplate {
   /**
-   * 模版源类型
+   * 模版类型
    */
   type: 'npm' | 'git'
   /**
@@ -20,6 +20,9 @@ export interface RemoteTemplate {
   registry?: string
 }
 
+/**
+ * 模版配置项
+ */
 export interface TemplateConfig {
   /**
    * 应用场景

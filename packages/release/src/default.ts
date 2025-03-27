@@ -2,7 +2,7 @@ import type { Config } from './types'
 
 export const defaultConfig: Config = {
   /**
-   * 项目工作目录
+   * 当前工作目录
    */
   cwd: process.cwd(),
   /**
@@ -56,20 +56,20 @@ export const defaultConfig: Config = {
      */
     canary: false,
     /**
-     * 是否同步到 Cnpm
-     */
-    cnpm: false,
-    /**
      * 是否确认版本
      */
     confirm: true,
+    /**
+     * 是否同步到 Cnpm
+     */
+    syncCnpm: false,
   },
   /**
    * github 相关配置项
    */
   github: {
     /**
-     * 是否发布变更
+     * 是否创建 github 变更
      */
     release: true,
   },

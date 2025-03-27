@@ -24,7 +24,7 @@ function isTypeOf(target: unknown, type: string): boolean {
 }
 
 /**
- * 是否是 undefined
+ * 是否为 undefined
  * @param target 目标对象
  */
 export function isUndefined(target: unknown): target is undefined {
@@ -32,7 +32,7 @@ export function isUndefined(target: unknown): target is undefined {
 }
 
 /**
- * 是否是 Null
+ * 是否为 Null
  * @param target 目标对象
  */
 export function isNull(target: unknown): target is undefined {
@@ -40,7 +40,7 @@ export function isNull(target: unknown): target is undefined {
 }
 
 /**
- * 是否是字符串
+ * 是否为字符串
  * @param target 目标对象
  */
 export function isString(target: unknown): target is string {
@@ -48,7 +48,7 @@ export function isString(target: unknown): target is string {
 }
 
 /**
- * 是否是对象
+ * 是否为对象
  * @param target 目标对象
  */
 export function isObject<T = Record<string, unknown>>(
@@ -58,7 +58,7 @@ export function isObject<T = Record<string, unknown>>(
 }
 
 /**
- * 是否是数组
+ * 是否为数组
  * @param target 目标对象
  */
 export function isArray<T = Array<unknown>>(target: unknown): target is T {
@@ -66,7 +66,7 @@ export function isArray<T = Array<unknown>>(target: unknown): target is T {
 }
 
 /**
- * 是否是函数
+ * 是否为函数
  * @param target 目标对象
  */
 // eslint-disable-next-line @typescript-eslint/ban-types
@@ -75,7 +75,7 @@ export function isFunction<T = Function>(target: unknown): target is T {
 }
 
 /**
- * 是否是布尔值
+ * 是否为布尔值
  * @param target 目标对象
  */
 export function isBoolean(target: unknown): target is boolean {
@@ -83,12 +83,10 @@ export function isBoolean(target: unknown): target is boolean {
 }
 
 /**
- * 是否由 Object 扩展的对象
+ * 是否为 Object 扩展的对象
  * @param target 目标对象
  */
-export function isPlainObject<T = Record<string, unknown>>(
-  target: unknown,
-): target is T {
+export function isPlainObject(target: unknown): target is object {
   if (!isObject(target)) {
     return false
   }
@@ -110,16 +108,16 @@ export function isPlainObject<T = Record<string, unknown>>(
 }
 
 /**
- * 是否是 Promise 实例
+ * 是否为 Promise 实例
  * @param target 目标对象
  */
-export function isPromise<T = Promise<unknown>>(target: unknown): target is T {
+export function isPromise<T>(target: unknown): target is Promise<T> {
   return (target &&
     typeof (target as Promise<unknown>).then === 'function') as boolean
 }
 
 /**
- * 是否是 Generator 函数
+ * 是否为 Generator 函数
  * @param target 目标对象
  */
 export function isGeneratorFunction(
@@ -132,7 +130,7 @@ export function isGeneratorFunction(
 }
 
 /**
- * 是否是 Async 函数
+ * 是否为 Async 函数
  * @param target 目标对象
  */
 export function isAsyncFunction(
@@ -144,7 +142,7 @@ export function isAsyncFunction(
 }
 
 /**
- * 是否是 es module
+ * 是否为 es module
  * @param module 模块
  */
 export function isESModule<T>(

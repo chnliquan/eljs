@@ -48,7 +48,7 @@ export interface Config extends UserConfig {
      */
     independent?: boolean
     /**
-     * Whether commit changes
+     * Whether to commit changes
      * @default true
      */
     commit?: boolean
@@ -62,7 +62,7 @@ export interface Config extends UserConfig {
      */
     commitArgs?: string[] | string
     /**
-     * Whether push to remote
+     * Whether to push remote
      * @default true
      */
     push?: boolean
@@ -107,14 +107,14 @@ export interface Config extends UserConfig {
      * Whether to sync cnpm
      * @default false
      */
-    cnpm?: boolean
+    syncCnpm?: boolean
   }
   /**
    * Github config
    */
   github?: {
     /**
-     * Whether to release github
+     * Whether to create a github release
      * @default true
      */
     release?: boolean

@@ -2,6 +2,7 @@ import cp from 'node:child_process'
 import { EOL } from 'node:os'
 import { read } from 'read'
 
+import { isObject } from '@/type'
 import { getExecutableCommand, runCommand } from './command'
 
 /**
@@ -51,23 +52,34 @@ let cachedPassword: string
 
 /**
  * 以 sudo 模式执行命令
+ * @param options 可选配置项
+ */
+export async function sudo(options?: SudoOptions): Promise<void>
+/**
+ * 以 sudo 模式执行命令
  * @param args 命令参数
  * @param options 可选配置项
  */
+export async function sudo(args: string[], options?: SudoOptions): Promise<void>
 export async function sudo(
-  args: string[] = [],
-  options: SudoOptions = {},
+  args?: string[] | SudoOptions,
+  options?: SudoOptions,
 ): Promise<void> {
+  if (isObject(args)) {
+    options = args
+    args = []
+  }
+
   const NEED_PASSWORD = '#node-sudo-passwd#'
   const {
     spawnOptions = {},
     password,
     cachePassword,
     prompt = 'sudo requires your password',
-  } = options
+  } = options || {}
   const bin = (await getExecutableCommand('sudo')) as string
 
-  args = ['-S', '-p', NEED_PASSWORD].concat(args)
+  args = ['-S', '-p', NEED_PASSWORD, ...(args ? (args as string[]) : [])]
   spawnOptions.stdio = 'pipe'
 
   const child = cp.spawn(bin, args, spawnOptions)

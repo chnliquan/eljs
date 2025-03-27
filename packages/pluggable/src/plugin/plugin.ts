@@ -17,25 +17,25 @@ import pkgUp from 'pkg-up'
 import type { Enable, PluginReturnType, PluginType } from './types'
 
 /**
- * 构造函数参数
+ * Plugin constructor options
  */
 export interface PluginOptions {
   /**
-   * 插件类型
+   * Plugin type
    */
   type: PluginType
   /**
-   * 插件入口路径
+   * Plugin root path
    */
   path: string
   /**
-   * 当前工作目录
+   * Working directory
    */
   cwd: string
 }
 
 /**
- * 插件类
+ * Plugin class
  */
 export class Plugin {
   /**

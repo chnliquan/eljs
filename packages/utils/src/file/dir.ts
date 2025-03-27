@@ -4,23 +4,25 @@ import os from 'node:os'
 import path from 'node:path'
 import util from 'node:util'
 
+import { isBoolean } from '@/type'
 import { isPathExists, isPathExistsSync } from './is'
 
 /**
  * 创建文件夹
- * @param dir 文件夹路径
+ * @param path 文件夹路径
  * @param mode 文件夹类型
  */
 export async function mkdir(
-  dir: string,
+  path: string,
   mode?: number | string,
-): Promise<string | void> {
-  if (!(await isPathExists(dir))) {
+): Promise<string | void | undefined> {
+  if (!(await isPathExists(path))) {
     try {
-      return mkdirp(dir, mode)
+      const dir = await mkdirp(path, mode)
+      return dir
     } catch (error) {
       const err = error as Error
-      err.message = `Make dir ${dir} failed: ${err.message}`
+      err.message = `Create directory ${path} failed: ${err.message}`
       throw err
     }
   }
@@ -28,16 +30,19 @@ export async function mkdir(
 
 /**
  * 创建文件夹
- * @param dir 文件夹路径
+ * @param path 文件夹路径
  * @param mode 文件夹类型
  */
-export function mkdirSync(dir: string, mode?: number | string): string | void {
-  if (!isPathExistsSync(dir)) {
+export function mkdirSync(
+  path: string,
+  mode?: number | string,
+): string | void | undefined {
+  if (!isPathExistsSync(path)) {
     try {
-      return mkdirpSync(dir, mode)
+      return mkdirpSync(path, mode)
     } catch (error) {
       const err = error as Error
-      err.message = `Make dir ${dir} failed: ${err.message}`
+      err.message = `Create directory ${path} failed: ${err.message}`
       throw err
     }
   }
@@ -49,13 +54,31 @@ const DEFAULT_TEMP_DIR = '.cli_tmp'
  * 创建临时文件夹
  * @param random 是否随机生成
  */
-export async function tmpdir(random?: boolean): Promise<string> {
+export async function tmpdir(random?: boolean): Promise<string>
+/**
+ * 创建临时文件夹
+ * @param dirname 文件夹名称
+ * @param random 是否随机生成
+ */
+export async function tmpdir(dirname: string, random?: boolean): Promise<string>
+export async function tmpdir(
+  dirname?: string | boolean,
+  random?: boolean,
+): Promise<string> {
+  if (isBoolean(dirname)) {
+    random = dirname
+    dirname = ''
+  }
+
   let tmpdir = ''
 
   if (process.platform === PLATFORM.WIN) {
     tmpdir = os.tmpdir()
   } else {
-    tmpdir = path.join(process.env.HOME || os.homedir(), DEFAULT_TEMP_DIR)
+    tmpdir = path.join(
+      process.env.HOME || os.homedir(),
+      dirname || DEFAULT_TEMP_DIR,
+    )
 
     try {
       await mkdir(tmpdir)
@@ -83,13 +106,34 @@ export async function tmpdir(random?: boolean): Promise<string> {
  * 创建临时文件夹
  * @param random 是否随机生成
  */
-export function tmpdirSync(random?: boolean): string {
+export async function tmpdirSync(random?: boolean): Promise<string>
+/**
+ * 创建临时文件夹
+ * @param dirname 文件夹名称
+ * @param random 是否随机生成
+ */
+export async function tmpdirSync(
+  dirname: string,
+  random?: boolean,
+): Promise<string>
+export async function tmpdirSync(
+  dirname?: string | boolean,
+  random?: boolean,
+): Promise<string> {
+  if (isBoolean(dirname)) {
+    random = dirname
+    dirname = ''
+  }
+
   let tmpdir = ''
 
   if (process.platform === PLATFORM.WIN) {
     tmpdir = os.tmpdir()
   } else {
-    tmpdir = path.join(process.env.HOME || os.homedir(), DEFAULT_TEMP_DIR)
+    tmpdir = path.join(
+      process.env.HOME || os.homedir(),
+      dirname || DEFAULT_TEMP_DIR,
+    )
 
     try {
       mkdirSync(tmpdir)

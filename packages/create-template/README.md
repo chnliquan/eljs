@@ -1,6 +1,6 @@
 # @eljs/create-template
 
-Create a new project powered by @eljs/create
+Create a new project powered by @eljs/create.
 
 ## Installation
 
@@ -13,7 +13,7 @@ $ npm i @eljs/create-template -g
 ```bash
 $ create-template <project-name>
 // or
-$ npx init @eljs/template@latest <project-name>
+$ npx init @eljs/template <project-name>
 ```
 
 ```bash
@@ -27,6 +27,6 @@ Options:
   --cwd <cwd>                Specify the working directory
   -s, --scene <scene>        Specify the application scene
   -t, --template <template>  Specify the application template
-  -f, --force                Force overwrite existing directory
+  -f, --force                Force overwrite the existing directory
   -h, --help                 display help for command
 ```

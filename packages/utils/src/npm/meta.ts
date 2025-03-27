@@ -7,7 +7,7 @@ import urllib from 'urllib'
 import which from 'which'
 
 /**
- * 获取 NPM 仓库
+ * 获取 Npm 仓库
  * @param options 可选配置项
  */
 export async function getNpmRegistry(
@@ -19,7 +19,7 @@ export async function getNpmRegistry(
 }
 
 /**
- * 获取 NPM 用户
+ * 获取 Npm 用户
  * @param options 可选配置项
  */
 export async function getNpmUser(options?: RunCommandOptions): Promise<string> {
@@ -29,7 +29,7 @@ export async function getNpmUser(options?: RunCommandOptions): Promise<string> {
 }
 
 /**
- * NPM 包
+ * Npm 包
  * @link https://github.com/npm/registry/blob/main/docs/REGISTRY-API.md#package
  */
 export interface NpmPackage extends OmitIndexSignature<PackageJson> {
@@ -54,8 +54,8 @@ export interface NpmPackage extends OmitIndexSignature<PackageJson> {
 }
 
 /**
- * 获取 NPM 包
- * @param name NPM 包名
+ * 获取 Npm 包
+ * @param name 包名
  * @param options.cwd 当前工作目录
  * @param options.registry 仓库地址
  * @param options.timeout 超时时间
@@ -69,10 +69,10 @@ export async function getNpmPackage(
   },
 ): Promise<Omit<NpmPackage, 'version'> | null>
 /**
- * 获取指定版本的 NPM 包元信息
- * @param name NPM 包名
- * @param options.version 版本
- * @param options.cwd 工作目录
+ * 获取指定版本的 Npm 包
+ * @param name 包名
+ * @param options.version 包版本
+ * @param options.cwd 当前工作目录
  * @param options.registry 仓库地址
  * @param options.timeout 超时时间
  */
@@ -125,7 +125,7 @@ export async function getNpmPackage(
 }
 
 /**
- * 获取 NPM 前缀
+ * 获取 Npm 前缀
  */
 export async function getNpmPrefix(): Promise<string> {
   if (process.env.GLOBAL_PREFIX) {
@@ -153,7 +153,7 @@ export async function getNpmPrefix(): Promise<string> {
 }
 
 /**
- * 解析后的 NPM 包名
+ * 解析后的 Npm 包名
  */
 export interface ResolvedPkgName {
   /**
@@ -175,9 +175,8 @@ export interface ResolvedPkgName {
 }
 
 /**
- * 解析 NPM 包名
- * @param name NPM 包名
- * @returns NPM 包信息
+ * 解析 Npm 包名
+ * @param name 包名
  * @example
  * '@eljs/utils@1.0.0' => { name: '@eljs/utils', version: '1.0.0', scope: '@eljs', unscopedName: 'utils'  }
  * 'utils@1.0.0' => { name: 'utils', version: '1.0.0, scope: '', unscopedName: 'utils'  }
@@ -195,7 +194,7 @@ export function pkgNameAnalysis(name: string): ResolvedPkgName {
       scope: pairs.length > 1 ? pairs[0] : '',
       unscopedName: pairs[pairs.length],
     }
-  } catch (error) {
+  } catch (_) {
     return {
       name,
       version: 'latest',

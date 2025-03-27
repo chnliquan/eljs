@@ -1,4 +1,10 @@
-import { Plugin, PluginApi, PluginTypeEnum, type Hook } from '@/plugin'
+import {
+  Plugin,
+  PluginApi,
+  PluginTypeEnum,
+  type Hook,
+  type ResolvedPluginReturnType,
+} from '@/plugin'
 import { ConfigManager } from '@eljs/config'
 import { isFunction, isPathExistsSync } from '@eljs/utils'
 import assert from 'node:assert'
@@ -15,29 +21,30 @@ import {
 } from './types'
 
 /**
- * 构造函数参数
+ * Pluggable constructor options
  */
 export interface PluggableOptions {
   /**
-   * 当前工作目录
+   * Working directory
+   * @default process.cwd()
    */
   cwd: string
   /**
-   * 预设定义集合
+   * Preset declarations
    */
   presets?: PluginDeclaration[]
   /**
-   * 插件定义集合
+   * Plugin declarations
    */
   plugins?: PluginDeclaration[]
   /**
-   * 默认配置文件
+   * Default config files
    * @example
    * ['config.ts', 'config.js']
    */
   defaultConfigFiles?: string[]
   /**
-   * 默认配置文件扩展名
+   * Default config file extensions
    * @example
    * ['dev', 'staging'] => ['config.dev.ts', 'config.staging.ts']
    */
@@ -45,7 +52,7 @@ export interface PluggableOptions {
 }
 
 /**
- * 可插拔类
+ * Pluggable class
  */
 export class Pluggable<T extends UserConfig = UserConfig> {
   /**
@@ -110,7 +117,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
   /**
    * 加载预设和插件
    */
-  protected async load() {
+  protected async load(): Promise<void> {
     this._state = PluggableStateEnum.Init
 
     this.configManager = new ConfigManager({
@@ -190,7 +197,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
     currentPreset: ResolvedPlugin,
     remainingPresets: ResolvedPlugin[],
     pluginsFromPresets: ResolvedPlugin[],
-  ) {
+  ): Promise<void> {
     const { presets: nestedPresets = [], plugins: nestedPlugins = [] } =
       await this._initPlugin(
         currentPreset,
@@ -212,7 +219,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
     currentPlugin: ResolvedPlugin,
     remainingPresets: ResolvedPlugin[],
     remainingPlugins?: ResolvedPlugin[],
-  ) {
+  ): Promise<ResolvedPluginReturnType> {
     const [plugin, pluginOptions] = currentPlugin
     assert(
       !this.plugins[plugin.id],
@@ -235,10 +242,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
       remainingPlugins || [],
     )
 
-    const result: {
-      presets: ResolvedPlugin[]
-      plugins: ResolvedPlugin[]
-    } = Object.create(null)
+    const result: ResolvedPluginReturnType = Object.create(null)
 
     const registrationStart = new Date()
     const pluginResult = await plugin.apply()(pluginApi, pluginOptions)
@@ -439,7 +443,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
    * 插件是否可执行
    * @param hook 钩子/插件名
    */
-  protected isPluginEnable(hook: Hook | string) {
+  protected isPluginEnable(hook: Hook | string): boolean {
     let plugin: Plugin
 
     if ((hook as Hook).plugin) {
@@ -463,29 +467,29 @@ export class Pluggable<T extends UserConfig = UserConfig> {
 }
 
 /**
- * 可插拔类插件 Api
+ * Pluggable plugin api
  */
 export interface PluggablePluginApi {
-  // #region 插件属性
+  // #region Plugin class fields
   /**
-   * 当前工作目录
+   * Working directory
    */
   cwd: typeof Pluggable.prototype.cwd
   // #endregion
 
-  // #region 插件方法
+  // #region Plugin methods
   /**
-   * 执行插件
+   * Apply plugins
    */
   applyPlugins: typeof Pluggable.prototype.applyPlugins
   /**
-   * 注册预设
-   * @param presets 预设定义集合
+   * Register presets
+   * @param presets preset declarations
    */
   registerPresets: (presets: PluginDeclaration[]) => void
   /**
-   * 注册插件
-   * @param plugins 插件定义集合
+   * Register plugins
+   * @param plugins plugin declarations
    */
   registerPlugins: (plugins: PluginDeclaration[]) => void
   // #endregion

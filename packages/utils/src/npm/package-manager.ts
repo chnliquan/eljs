@@ -41,7 +41,7 @@ export async function getPackageManager(
  * 获取 lock 文件类型
  * @param cwd 当前工作目录
  */
-export async function getTypeofLockFile(
+async function getTypeofLockFile(
   cwd = process.cwd(),
 ): Promise<PackageManager | null> {
   const key = `has_lockfile_${cwd}`

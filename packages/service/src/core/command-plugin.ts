@@ -1,11 +1,4 @@
-import {
-  chalk,
-  generateFile,
-  installDeps,
-  logger,
-  prompts,
-  updatePackageJson,
-} from '@eljs/utils'
+import { chalk, generateFile, installDeps, logger, prompts } from '@eljs/utils'
 import _ from 'lodash'
 import { EOL } from 'os'
 
@@ -95,7 +88,6 @@ ${api.binName} generate
           args,
           generateFile,
           installDeps,
-          updatePackageJson,
         })
       }
 

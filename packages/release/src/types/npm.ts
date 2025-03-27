@@ -1,9 +1,9 @@
 /**
- * 预发布版本
+ * Prerelease id
  */
 export type PrereleaseId = 'alpha' | 'beta' | 'rc'
 
 /**
- * npm dist tag
+ * Npm dist tag
  */
 export type DistTag = PrereleaseId | 'latest'
