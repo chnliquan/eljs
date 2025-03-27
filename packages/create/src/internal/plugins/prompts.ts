@@ -25,20 +25,28 @@ export default (api: Api) => {
   })
 
   api.modifyPrompts(memo => {
-    const gitUrl = memo.gitUrl ?? getGitUrl(api.paths.target) ?? '${gitUrl}'
-    const gitHref = getGitHref(gitUrl)
+    let gitUrl = memo.gitUrl ?? getGitUrl(api.paths.target)
+    let gitHref = ''
+
+    if (!gitUrl || (!gitUrl.startsWith('git') && !gitUrl.startsWith('http'))) {
+      gitUrl = '{{gitUrl}}'
+      gitHref = '{{gitHref}}'
+    } else {
+      gitHref = getGitHref(gitUrl) || '{{gitHref}}'
+    }
+
     const year = dayjs().format('YYYY')
     const date = dayjs().format('YYYY-MM-DD')
     const dateTime = dayjs().format('YYYY-MM-DD hh:mm:ss')
 
-    let registry: string
+    let registry = 'https://registry.npmjs.org'
 
-    if (gitHref.includes('github.com')) {
-      registry = 'https://registry.npmjs.org'
-    } else {
-      registry =
-        execSync('npm config get registry').toString().trim() ||
-        'https://registry.npmjs.org'
+    if (!gitHref.includes('github')) {
+      try {
+        registry = execSync('npm config get registry').toString().trim()
+      } catch (error) {
+        // ...
+      }
     }
 
     return {

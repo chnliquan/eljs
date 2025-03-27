@@ -12,7 +12,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/chnliquan/eljs"
+    "url": "https://github.com/chnliquan/eljs",
+    "directory": "packages/service"
   },
   "license": "MIT",
   "author": "liquan",
