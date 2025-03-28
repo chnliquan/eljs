@@ -34,7 +34,8 @@ async function cli() {
     .option('--cwd <cwd>', 'Specify the working directory')
     .option('-s, --scene <scene>', 'Specify a application scene')
     .option('-t, --template <template>', 'Specify a application template')
-    .option('-f, --force', 'Force overwrite the existing directory')
+    .option('-f, --force', 'Overwrite target directory if it exists')
+    .option('-m, --merge', 'Merge target directory if it exists')
     .action(async (projectName, options) => {
       debug?.(`projectName:`, projectName)
       debug?.(`options:%O`, options)

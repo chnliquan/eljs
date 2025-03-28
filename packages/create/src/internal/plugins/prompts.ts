@@ -4,11 +4,10 @@ import { prompts } from '@eljs/utils'
 import dayjs from 'dayjs'
 import { execSync } from 'node:child_process'
 
-import { author, email, getGitHref, getGitUrl } from '../utils'
+import { author, email, getGitHref } from '../utils'
 
 export default (api: Api) => {
   api.modifyPrompts(async (memo, { questions }) => {
-    // 仅第一次执行，并且如果当前执行生成 schema 不执行终端输入逻辑
     if (!memo.$$isFirstTime) {
       const answers = await prompts(questions, {
         onCancel,
@@ -25,7 +24,7 @@ export default (api: Api) => {
   })
 
   api.modifyPrompts(memo => {
-    let gitUrl = memo.gitUrl ?? getGitUrl(api.paths.target)
+    let gitUrl = memo.gitUrl
     let gitHref = ''
 
     if (!gitUrl || (!gitUrl.startsWith('git') && !gitUrl.startsWith('http'))) {

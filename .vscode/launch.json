@@ -86,12 +86,15 @@
       "args": [
         // "--help",
         "--cwd=/Users/ender/kwai/technology",
-        "-f",
+        // "--cwd=/Users/ender/kwai/technology/polyrepo-release",
+        // "-f",
+        // "-m",
         "@eljs/create-plugin-npm-web",
         // "@eljs/utils",
         // "./template",
         // "./generator",
-        "create-app"
+        // "create-app"
+        "temp"
       ],
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]

@@ -32,22 +32,27 @@ export interface Config extends UserConfig {
    */
   template?: string | RemoteTemplate
   /**
-   * Whether overwrite existing directory
+   * Whether overwrite target directory if it exists
    * @default false
    */
   force?: boolean
+  /**
+   * Whether merge target directory if it exists
+   * @default false
+   */
+  merge?: boolean
   /**
    * Whether enable default prompts
    * @default true
    */
   defaultQuestions?: boolean
   /**
-   * Whether initialize git when create done
+   * Whether initialize git after create done
    * @default true
    */
   gitInit?: boolean
   /**
-   * Whether install dependencies when create done
+   * Whether install dependencies after create done
    * @default true
    */
   install?: boolean

@@ -1,7 +1,7 @@
 import type { Config, RemoteTemplate } from '@/types'
 import { AppError } from '@/utils'
 import {
-  confirm,
+  chalk,
   createDebugger,
   findUp,
   isDirectory,
@@ -9,12 +9,11 @@ import {
   isString,
   logger,
   mkdir,
+  prompts,
   remove,
   resolve,
   tryPaths,
 } from '@eljs/utils'
-import { readdir } from 'node:fs/promises'
-import { EOL } from 'node:os'
 import path, { join } from 'node:path'
 
 import { Download } from './download'
@@ -76,18 +75,34 @@ export class Create {
       debug?.(`targetDir:`, targetDir)
       debug?.(`projectName:`, projectName)
 
-      if (!(await isPathExists(targetDir))) {
-        await mkdir(targetDir)
-      } else {
-        const overwrite = await this._checkTargetDir(targetDir)
+      if ((await isPathExists(targetDir)) && !this.constructorOptions.merge) {
+        if (this.constructorOptions.force) {
+          await remove(targetDir)
+        } else {
+          logger.clear()
+          const { action } = await prompts([
+            {
+              name: 'action',
+              type: 'select',
+              message: `Target directory ${chalk.cyan(targetDir)} already exists, pick an action:`,
+              choices: [
+                { title: 'Overwrite', value: 'overwrite' },
+                { title: 'Merge', value: 'merge' },
+                { title: 'Cancel', value: false },
+              ],
+            },
+          ])
 
-        if (!overwrite) {
-          return
+          if (!action) {
+            return
+          } else if (action === 'overwrite') {
+            logger.event(`Removing ${chalk.cyan(targetDir)} ...`)
+            await remove(targetDir)
+          }
         }
-        await remove(targetDir)
-        await mkdir(targetDir)
       }
 
+      await mkdir(targetDir)
       await this._resolveTemplate()
       debug?.(`templateRootPath`, this._templateRootPath)
 
@@ -118,29 +133,6 @@ export class Create {
         await remove(this._templateRootPath)
       }
     }
-  }
-
-  /**
-   * 检查目标文件夹
-   * @param targetDir 目标文件夹
-   */
-  private async _checkTargetDir(targetDir: string): Promise<boolean> {
-    if (this.constructorOptions.force) {
-      return true
-    }
-
-    const files = await readdir(targetDir)
-
-    if (files.length) {
-      logger.warn(
-        `The current folder ${targetDir} contains the following files:${EOL}`,
-      )
-      files.forEach(file => console.log(' - ' + file))
-      console.log()
-      return confirm(`Are you sure to overwrite the current folder?`, true)
-    }
-
-    return true
   }
 
   /**

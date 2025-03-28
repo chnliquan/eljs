@@ -22,9 +22,13 @@ export interface CreateTemplateOptions {
    */
   template?: string
   /**
-   * 是否覆盖文件
+   * 是否覆盖已存在文件夹
    */
   force?: boolean
+  /**
+   * 是否合并已存在文件夹
+   */
+  merge?: boolean
 }
 
 export class CreateTemplate {

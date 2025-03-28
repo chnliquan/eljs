@@ -27,6 +27,7 @@ Options:
   --cwd <cwd>                Specify the working directory
   -s, --scene <scene>        Specify the application scene
   -t, --template <template>  Specify the application template
-  -f, --force                Force overwrite the existing directory
+  -f, --force                Overwrite target directory if it exists
+  -m, --merge                Merge target directory if it exists
   -h, --help                 display help for command
 ```

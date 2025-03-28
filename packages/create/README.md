@@ -22,7 +22,8 @@ Usage: create [options] <template> <project-name>
 Options:
   -v, --version   Output the current version
   --cwd <cwd>     Specify the working directory
-  -f, --force     Force overwrite existing directory
+  -f, --force     Overwrite target directory if it exists
+  -m, --merge     Merge target directory if it exists
   --no-install    Skip install dependencies when create done
   -h, --help      display help for command
 ```
@@ -43,22 +44,27 @@ export interface Config {
    */
   template?: string | Template
   /**
-   * Whether overwrite existing directory
+   * Whether overwrite target directory if it exists
    * @default false
    */
   force?: boolean
+  /**
+   * Whether merge target directory if it exists
+   * @default false
+   */
+  merge?: boolean
   /**
    * Whether enable default prompts
    * @default true
    */
   defaultQuestions?: boolean
   /**
-   * Whether initialize git when create done
+   * Whether initialize git after create done
    * @default true
    */
   gitInit?: boolean
   /**
-   * Whether install dependencies when create done
+   * Whether install dependencies after create done
    * @default true
    */
   install?: boolean

@@ -42,7 +42,8 @@ async function cli() {
     .version(pkg.version, '-v, --version', 'Output the current version')
     .arguments('<template> <project-name>')
     .option('--cwd <cwd>', 'Specify the working directory')
-    .option('-f, --force', 'Force overwrite existing directory')
+    .option('-f, --force', 'Overwrite target directory if it exists')
+    .option('-m, --merge', 'Merge target directory if it exists')
     .option('--no-install', 'Skip install dependencies when create done')
     .action(async (template, projectName, options) => {
       debug?.(`template:`, template)

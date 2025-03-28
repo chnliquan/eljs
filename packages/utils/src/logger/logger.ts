@@ -64,7 +64,7 @@ class Logger {
     process.exit(1)
   }
 
-  public clear(title: string): void {
+  public clear(title?: string): void {
     if (process.stdout.isTTY) {
       const blank = EOL.repeat(process.stdout.rows)
       console.log(blank)
