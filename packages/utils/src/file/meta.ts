@@ -15,7 +15,7 @@ export async function fstat(
     return stat
   } catch (error) {
     const err = error as Error
-    err.message = `Stat ${file} faile: ${err.message}`
+    err.message = `Stat ${file} failed: ${err.message}`
     throw err
   }
 }

@@ -118,7 +118,7 @@ export class Create {
 
       if (!generatorFile && !configFile) {
         throw new AppError(
-          `Invalid template ${this._templateRootPath}, missing \`create.config.ts\` or \`generators/index.ts\`.`,
+          `Invalid template ${chalk.cyan(this._templateRootPath)}, missing \`create.config.ts\` or \`generators/index.ts\`.`,
         )
       }
 
@@ -145,7 +145,9 @@ export class Create {
         const templateRootPath = join(this.cwd, this.template)
 
         if (!(await isDirectory(templateRootPath))) {
-          throw new AppError(`Invalid local template ${this.template}.`)
+          throw new AppError(
+            `Invalid local template ${chalk.cyan(this.template)}.`,
+          )
         }
 
         this._templateRootPath = templateRootPath

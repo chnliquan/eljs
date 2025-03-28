@@ -303,7 +303,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
         type = ApplyPluginTypeEnum.Add
       } else {
         throw new Error(
-          `Invalid applyPlugins arguments, \`type\` must be supplied for key ${key}.`,
+          `Invalid applyPlugins arguments, \`type\` must be supplied for key \`${key}\`.`,
         )
       }
     }
@@ -315,7 +315,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
       case ApplyPluginTypeEnum.Add: {
         assert(
           !('initialValue' in options) || Array.isArray(initialValue),
-          `ApplyPlugins failed, \`options.initialValue\` must be an array when \`options.type\` added.`,
+          `ApplyPlugins failed, \`options.initialValue\` must be an array when \`options.type\` is add.`,
         )
 
         const tapableAdd = new AsyncSeriesWaterfallHook(['memo'])
@@ -434,7 +434,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
 
       default:
         throw new Error(
-          `ApplyPlugins failed, type not defined or matched, got \`${type}\`.`,
+          `ApplyPlugins failed, \`type\` not defined or matched, got \`${type}\`.`,
         )
     }
   }

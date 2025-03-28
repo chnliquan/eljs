@@ -1,6 +1,7 @@
 import type { Api } from '@/types'
 import { AppError, generateChangelog } from '@/utils'
 import {
+  chalk,
   gitCommit,
   gitPush,
   gitTag,
@@ -43,7 +44,7 @@ export default (api: Api) => {
 
     if (requireBranch && api.appData.branch !== requireBranch) {
       throw new AppError(
-        `Must be on branch ${requireBranch}, but got ${api.appData.branch}.`,
+        `Require branch ${requireBranch}\`, but got ${chalk.cyan(api.appData.branch)}.`,
       )
     }
   })
@@ -95,7 +96,7 @@ export default (api: Api) => {
     }
 
     await writeFile(CHANGELOG_FILE, changelog)
-    logger.ready(`Generated ${filename} successfully.`)
+    logger.ready(`Generated ${chalk.bold.cyan(filename)} successfully.`)
 
     // const lines = changelog.split(EOL)
     // let firstIndex = -1
@@ -148,7 +149,7 @@ export default (api: Api) => {
             /标签 '.+' 已存在/.test(message)) &&
           latestTag === tagName
         ) {
-          logger.warn(`Tag ${tagName} already exists.`)
+          logger.warn(`Tag ${chalk.cyan(tagName)} already exists.`)
         } else {
           throw error
         }

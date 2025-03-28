@@ -78,7 +78,7 @@ export default (api: Api) => {
       }
 
       logger.ready(
-        `🎉 Created project ${chalk.cyanBright.bold(
+        `🎉 Created project ${chalk.cyan.bold(
           api.appData.projectName,
         )} successfully.`,
       )

@@ -38,7 +38,7 @@ async function main(): Promise<void> {
       try {
         await $`pnpm owner add ${owner} ${pkgName}`
         logger.ready(
-          `${chalk.bold(owner)} now has the owner permission of ${pkgName}.`,
+          `User ${chalk.cyan(owner)} now has the permission of ${pkgName}.`,
         )
       } catch (err) {
         await sleep(200)

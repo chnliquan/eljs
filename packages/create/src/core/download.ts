@@ -47,7 +47,7 @@ export class Download {
         return this._downloadGit(value)
       default:
         throw new Error(
-          `Download type must be \`npm\` or \`git\`, but got \`type\`.`,
+          `Download type must be \`npm\` or \`git\`, but got \`${type}\`.`,
         )
     }
   }
@@ -67,13 +67,11 @@ export class Download {
 
     if (!data) {
       throw new Error(
-        `Access ${chalk.cyanBright(
-          `${pkgName}${version ? `@${version}` : ''}`,
-        )} failed.`,
+        `Access ${pkgName}${version ? `@${version}` : ''} failed.`,
       )
     }
 
-    const projectName = chalk.cyanBright(`${pkgName}@${data.version}`)
+    const projectName = chalk.cyan(`${pkgName}@${data.version}`)
     let templateRootPath = ''
 
     try {

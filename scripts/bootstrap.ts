@@ -39,7 +39,7 @@ async function main(): Promise<void> {
     const shortName =
       pairs.length > 1 ? dirname.replace(`${pairs[0]}/`, '') : dirname
     const name = `@eljs/${shortName}`
-    step(`Initializing ${chalk.cyanBright.bold(name)}`)
+    step(`Initializing ${chalk.cyan(name)}`)
     console.log()
 
     const pkgDir = path.resolve(rootPath, dirname)

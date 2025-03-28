@@ -26,7 +26,9 @@ export default (api: Api) => {
             .map(line => line.split(' ')[0])
 
           if (!owners.includes(user)) {
-            throw new AppError(`The ${user} is not the owner of ${pkgName}.`)
+            throw new AppError(
+              `User ${chalk.cyan(user)} is not the owner of \`${pkgName}\`.`,
+            )
           }
         } catch (error) {
           const err = error as Error
@@ -35,7 +37,7 @@ export default (api: Api) => {
             continue
           }
 
-          throw new AppError(`Invalid ownership of ${pkgName}`)
+          throw new AppError(`Invalid ownership of ${chalk.cyan(pkgName)}.`)
         }
       }
     }
@@ -73,9 +75,7 @@ export default (api: Api) => {
       if (settledResult.status === 'rejected') {
         console.log()
         logger.error(
-          `Published ${chalk.bold.cyanBright(
-            `${validPkgNames[i]}@${version}`,
-          )} failed.`,
+          `Published ${chalk.cyan(`${validPkgNames[i]}@${version}`)} failed.`,
         )
 
         const errorMessage =
@@ -113,7 +113,7 @@ export default (api: Api) => {
       })
 
       logger.ready(
-        `Published ${chalk.bold.cyanBright(`${pkgName}@${version}`)} successfully.`,
+        `Published ${chalk.bold.cyan(`${pkgName}@${version}`)} successfully.`,
       )
     }
   })

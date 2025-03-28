@@ -7,6 +7,7 @@ import {
   type PluggablePluginApi,
 } from '@eljs/pluggable'
 import {
+  chalk,
   createDebugger,
   deepMerge,
   isPathExistsSync,
@@ -42,13 +43,15 @@ export class Runner extends Pluggable<Config> {
     const projectPkgJsonPath = path.join(cwd, 'package.json')
 
     if (!isPathExistsSync(projectPkgJsonPath)) {
-      throw new AppError(`No package.json was found in ${cwd}.`)
+      throw new AppError(`No package.json was found in ${chalk.cyan(cwd)}.`)
     }
 
     const projectPkg = readJsonSync<PackageJson>(projectPkgJsonPath)
 
     if (!projectPkg.version) {
-      throw new AppError(`No version field was found in ${projectPkgJsonPath}.`)
+      throw new AppError(
+        `No version field was found in ${chalk.cyan(projectPkgJsonPath)}.`,
+      )
     }
 
     super({

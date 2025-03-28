@@ -5,11 +5,11 @@ import stripAnsi from 'strip-ansi'
 
 export const prefixes = {
   event: chalk.magenta('event') + ' -',
-  info: chalk.cyan('info') + '  -',
-  warn: chalk.yellow('warn') + '  -',
+  info: chalk.cyan('info') + ' -',
+  warn: chalk.yellow('warn') + ' -',
   error: chalk.red('error') + ' -',
   fatal: chalk.red('fatal') + ' -',
-  wait: chalk.cyan('wait') + '  -',
+  wait: chalk.cyan('wait') + ' -',
   ready: chalk.green('ready') + ' -',
 }
 

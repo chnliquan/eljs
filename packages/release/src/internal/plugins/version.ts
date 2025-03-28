@@ -29,7 +29,7 @@ export default (api: Api) => {
   api.onCheck(async ({ releaseTypeOrVersion }) => {
     if (releaseTypeOrVersion && !isVersionValid(releaseTypeOrVersion, true)) {
       throw new AppError(
-        `Invalid semantic version \`${releaseTypeOrVersion}\`.`,
+        `Invalid semantic version ${chalk.cyan(releaseTypeOrVersion)}.`,
       )
     }
   })
@@ -55,18 +55,20 @@ export default (api: Api) => {
 
       if (prereleaseId && prereleaseId !== preid) {
         throw new AppError(
-          `Expected a ${prereleaseId} tag, but got \`${version}\`.`,
+          `Expected a ${prereleaseId} tag, but got ${chalk.cyan(version)}.`,
         )
       }
 
       if ((prereleaseId || prerelease === true) && !isPrerelease) {
         throw new AppError(
-          `Expected a prerelease type, but got \`${version}\`.`,
+          `Expected a prerelease type, but got ${chalk.cyan(version)}.`,
         )
       }
 
       if (!prereleaseId && prerelease === false && isPrerelease) {
-        throw new AppError(`Expected a release type, but got \`${version}\`.`)
+        throw new AppError(
+          `Expected a release type, but got ${chalk.cyan(version)}.`,
+        )
       }
 
       await checkVersion(
@@ -147,30 +149,22 @@ async function getIncrementVersion(
   if (canary) {
     return getCanaryVersion(referenceVersionMap.latest, api.cwd)
   } else {
-    logger.info(`Local version: ${chalk.bold.cyanBright(localVersion)}`)
+    logger.info(`Local version: ${chalk.cyan(localVersion)}`)
 
     if (remoteLatestVersion) {
-      logger.info(
-        `Remote latest version: ${chalk.bold.cyanBright(remoteLatestVersion)}`,
-      )
+      logger.info(`Remote latest version: ${chalk.cyan(remoteLatestVersion)}`)
     }
 
     if (remoteAlphaVersion && (!prereleaseId || prereleaseId === 'alpha')) {
-      logger.info(
-        `Remote alpha version: ${chalk.bold.cyanBright(remoteAlphaVersion)}`,
-      )
+      logger.info(`Remote alpha version: ${chalk.cyan(remoteAlphaVersion)}`)
     }
 
     if (remoteBetaVersion && (!prereleaseId || prereleaseId === 'beta')) {
-      logger.info(
-        `Remote beta version: ${chalk.bold.cyanBright(remoteBetaVersion)}`,
-      )
+      logger.info(`Remote beta version: ${chalk.cyan(remoteBetaVersion)}`)
     }
 
     if (remoteRcVersion && (!prereleaseId || prereleaseId === 'rc')) {
-      logger.info(
-        `Remote rc version: ${chalk.bold.cyanBright(remoteRcVersion)}`,
-      )
+      logger.info(`Remote rc version: ${chalk.cyan(remoteRcVersion)}`)
     }
   }
 
@@ -271,7 +265,7 @@ function getPrereleaseChoices(
           releaseType === 'prerelease'
             ? pascalCase(releaseType)
             : pascalCase(releaseType) + '  '
-        } (${version})`,
+        } (${chalk.cyan(version)})`,
         value: version,
       }
     }),
@@ -343,11 +337,13 @@ async function checkVersion(
   registry?: string,
 ) {
   if (!semver.valid(version)) {
-    throw new AppError(`Invalid semantic version \`${version}\`.`)
+    throw new AppError(`Invalid semantic version ${chalk.cyan(version)}.`)
   }
 
   if (await isVersionExist(pkgName, version, registry)) {
-    throw new AppError(`${pkgName} has published \`${version}\` already.`)
+    throw new AppError(
+      `Package ${chalk.cyan(`${pkgName}@${version}`)} has been published already.`,
+    )
   }
 }
 
@@ -361,14 +357,12 @@ async function confirmVersion(api: Api, version: string): Promise<string> {
   let confirmMessage = ''
 
   if (validPkgNames.length === 1) {
-    confirmMessage = `Are you sure to bump version to ${chalk.bold.cyanBright(
-      version,
-    )}`
+    confirmMessage = `Are you sure to bump version to ${chalk.cyan(version)}`
   } else {
     console.log(`The packages will be bumped are as follows:${EOL}`)
 
     for (const pkgName of validPkgNames) {
-      console.log(` - ${chalk.cyanBright(`${pkgName}@${version}`)}`)
+      console.log(` - ${chalk.cyan(`${pkgName}@${version}`)}`)
     }
 
     console.log()
