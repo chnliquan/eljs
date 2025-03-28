@@ -1,5 +1,17 @@
 # ChangeLog 
 
+# [1.0.0-next.11](https://github.com/chnliquan/eljs/compare/v1.0.0-next.10...v1.0.0-next.11) (2025-03-28)
+
+
+### ♻ Code Refactoring
+
+* **create:** git url prompt ([997c4c9](https://github.com/chnliquan/eljs/commit/997c4c9fcc2a71a70fe9736881fda4175daab8a8))
+
+
+### ✨ Features
+
+* **create:** support merge directory ([2ab2e69](https://github.com/chnliquan/eljs/commit/2ab2e69135166d351dcb35c68b4d0d56db23a94b)) 
+
 # [1.0.0-next.10](https://github.com/chnliquan/eljs/compare/v1.0.0-next.9...v1.0.0-next.10) (2025-03-25)
 
 

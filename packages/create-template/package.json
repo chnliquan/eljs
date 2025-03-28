@@ -1,6 +1,6 @@
 {
   "name": "@eljs/create-template",
-  "version": "1.0.0-next.10",
+  "version": "1.0.0-next.11",
   "description": "Create a new project powered by @eljs/create.",
   "keywords": [
     "eljs",

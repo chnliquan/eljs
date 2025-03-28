@@ -1,6 +1,6 @@
 {
   "name": "@eljs/release",
-  "version": "1.0.0-next.10",
+  "version": "1.0.0-next.11",
   "description": "Release npm package easily.",
   "keywords": [
     "eljs",
