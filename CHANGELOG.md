@@ -1,5 +1,9 @@
 # ChangeLog 
 
+# [1.0.0](https://github.com/chnliquan/eljs/compare/v1.0.0-next.11...v1.0.0) (2025-03-28)
+
+**Note:** No changes, only version bump. 
+
 # [1.0.0-next.11](https://github.com/chnliquan/eljs/compare/v1.0.0-next.10...v1.0.0-next.11) (2025-03-28)
 
 
