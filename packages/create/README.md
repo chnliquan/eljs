@@ -24,7 +24,7 @@ Options:
   --cwd <cwd>     Specify the working directory
   -f, --force     Overwrite target directory if it exists
   -m, --merge     Merge target directory if it exists
-  --no-install    Skip install dependencies when create done
+  --no-install    Skip install dependencies after create done
   -h, --help      display help for command
 ```
 

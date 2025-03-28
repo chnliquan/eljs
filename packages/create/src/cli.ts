@@ -44,7 +44,7 @@ async function cli() {
     .option('--cwd <cwd>', 'Specify the working directory')
     .option('-f, --force', 'Overwrite target directory if it exists')
     .option('-m, --merge', 'Merge target directory if it exists')
-    .option('--no-install', 'Skip install dependencies when create done')
+    .option('--no-install', 'Skip install dependencies after create done')
     .action(async (template, projectName, options) => {
       debug?.(`template:`, template)
       debug?.(`projectName:`, projectName)
