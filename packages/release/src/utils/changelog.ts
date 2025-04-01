@@ -17,11 +17,12 @@ export interface GenerateChangelogOptions {
 }
 
 /**
- * 生成更新日志
+ * 获取更新日志
+ * @param options.cwd 当前工作目录
  * @param options.independent 是否生成独立 tag
- * @returns
+ * @param options.preset conventional-changelog 预设
  */
-export async function generateChangelog(
+export async function getChangelog(
   options: GenerateChangelogOptions,
 ): Promise<string> {
   const conventionalChangelog = (await import('conventional-changelog')).default

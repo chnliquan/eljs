@@ -1,5 +1,5 @@
 import type { Api } from '@/types'
-import { AppError, generateChangelog } from '@/utils'
+import { AppError, getChangelog } from '@/utils'
 import {
   chalk,
   gitCommit,
@@ -57,7 +57,7 @@ export default (api: Api) => {
         return ''
       }
 
-      return generateChangelog({
+      return getChangelog({
         cwd: api.cwd,
         independent,
         preset: changelog.preset,
