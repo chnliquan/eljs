@@ -1,5 +1,12 @@
 # ChangeLog 
 
+# [1.1.0](https://github.com/chnliquan/eljs/compare/v1.0.0...v1.1.0) (2025-04-01)
+
+
+### ✨ Features
+
+* **release:** support changelog placeholder ([73af6ed](https://github.com/chnliquan/eljs/commit/73af6ed3252a49b93c456fc681d04ac4f211e92d)) 
+
 # [1.0.0](https://github.com/chnliquan/eljs/compare/v1.0.0-next.11...v1.0.0) (2025-03-28)
 
 **Note:** No changes, only version bump. 
