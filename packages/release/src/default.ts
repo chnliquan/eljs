@@ -21,6 +21,10 @@ export const defaultConfig: Config = {
        * 文件名
        */
       filename: 'CHANGELOG.md',
+      /**
+       * 没有变更时的占位符
+       */
+      placeholder: '**Note:** No changes, only version bump.',
     },
     /**
      * 是否生成独立的 git tag

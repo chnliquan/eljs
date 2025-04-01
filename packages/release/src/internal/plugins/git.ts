@@ -73,18 +73,18 @@ export default (api: Api) => {
       return
     }
 
-    const filename = api.config.git.changelog.filename
-    const CHANGELOG_FILE = path.join(api.cwd, filename)
+    const { filename, placeholder } = api.config.git.changelog
+    const changelogFile = path.join(api.cwd, filename)
 
-    api.step('Generating changelog ...')
+    api.step(`Writing changelog to ${changelogFile} ...`)
 
     if (changelog.indexOf('###') === -1) {
       changelog = changelog.replace(new RegExp(EOL, 'g'), '')
-      changelog += `${EOL}${EOL}**Note:** No changes, only version bump.`
+      changelog += `${EOL}${EOL}${placeholder}`
     }
 
-    if (await isPathExists(CHANGELOG_FILE)) {
-      const remain = (await readFile(CHANGELOG_FILE)).trim()
+    if (await isPathExists(changelogFile)) {
+      const remain = (await readFile(changelogFile)).trim()
       changelog = remain.length
         ? remain.replace(
             /# Change\s?Log/,
@@ -95,24 +95,7 @@ export default (api: Api) => {
       changelog = `# ChangeLog ${EOL}${EOL}${changelog}`
     }
 
-    await writeFile(CHANGELOG_FILE, changelog)
-    logger.ready(`Generated ${chalk.bold.cyan(filename)} successfully.`)
-
-    // const lines = changelog.split(EOL)
-    // let firstIndex = -1
-
-    // for (let i = 0; i < lines.length; i++) {
-    //   const line = lines[i]
-
-    //   if (/^#{1,3}/.test(line)) {
-    //     firstIndex = i
-    //     break
-    //   }
-    // }
-
-    // if (firstIndex > -1) {
-    //   changelog = changelog.replace(/##* \[([\d.]+)\]/, '## [Changes]')
-    // }
+    await writeFile(changelogFile, changelog)
   })
 
   api.onRelease(async ({ version }) => {

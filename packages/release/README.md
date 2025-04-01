@@ -92,6 +92,11 @@ export interface Config {
            */
           filename?: string
           /**
+           * Placeholder for when no changes have been made
+           * @default '**Note:** No changes, only version bump.'
+           */
+          placeholder?: string
+          /**
            * Preset of conventional-changelog
            * @link https://github.com/conventional-changelog/conventional-changelog/blob/master/packages/conventional-changelog/README.md#presets
            */
