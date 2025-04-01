@@ -45,7 +45,7 @@ $ pnpm run build
 | test             | Run unit tests                                                                                   |
 | test:w           | Run unit tests in `watch` mode                                                                   |
 
-## Version
+## Version Management
 
 ### 1. [Conventional Commit](https://www.conventionalcommits.org/en/v1.0.0/#summary) 
 
@@ -84,18 +84,18 @@ $ pnpm -F <sub-package-name> run build
 $ pnpm run release
 
 Options:
-  --skipTests         Skip unit tests.
-  --skipBuild         Skip package build.
-  --skipRequireClean  Skip git working tree check.
+  --skipTests         Skip unit tests
+  --skipBuild         Skip package build
+  --skipRequireClean  Skip git working tree check
 ```
 
-## Branch
+## Branch Management
 
 - [git-flow](https://nvie.com/posts/a-successful-git-branching-model/)
 
-<div style="text-align: center;">
-  <img src="https://static.yximgs.com/udata/pkg/ks-ad-fe/chrome-plugin-upload/2022-04-01/1648793291308.92a2b518ac6526d9.png" width="500" />
-</div>
+<p align="center">
+  <img src="https://static.yximgs.com/udata/pkg/ks-ad-fe/chrome-plugin-upload/2022-04-01/1648793291308.92a2b518ac6526d9.png" width="600" />
+</p>
 
 ## LICENSE
 
