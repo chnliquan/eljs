@@ -1,5 +1,14 @@
 # ChangeLog 
 
+## [1.1.2](https://github.com/chnliquan/eljs/compare/v1.1.1...v1.1.2) (2025-04-23)
+
+
+### 🐛 Bug Fixes
+
+* **release:** independent previous tag ([51cb224](https://github.com/chnliquan/eljs/commit/51cb22464cf619b724799401080f44af94d5d325))
+* **utils:** catch get git latest tag error ([f2e2a0b](https://github.com/chnliquan/eljs/commit/f2e2a0b97e938410784d2cd290680b21e92e6af2))
+* **utils:** catch git commit error ([6d9ee2c](https://github.com/chnliquan/eljs/commit/6d9ee2cf8071f8e3e0880ff9f3593f952b383850)) 
+
 ## [1.1.1](https://github.com/chnliquan/eljs/compare/v1.1.0...v1.1.1) (2025-04-23)
 
 
