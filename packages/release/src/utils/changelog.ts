@@ -135,7 +135,7 @@ async function getConventionalChangelogOptions(
 function guessNextTag(context: any, independent?: boolean) {
   const { previousTag, version } = context
 
-  if (independent) {
+  if (independent && previousTag) {
     return previousTag.replace(
       /(\d+\.\d+\.\d+)/,
       version[0] === 'v' ? version.slice(1) : version,
