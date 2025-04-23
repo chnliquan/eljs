@@ -44,8 +44,7 @@ export async function gitCommit(
     const err = error as Error
 
     if (
-      err.message.includes('nothing to commit') ||
-      /working tree clean/.test(err.message) ||
+      /nothing to commit/.test(err.message) ||
       /无文件要提交/.test(err.message)
     ) {
       return
