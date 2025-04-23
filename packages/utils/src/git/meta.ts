@@ -97,7 +97,7 @@ export function getGitUrlSync(cwd: string, exact?: boolean): string {
       return parsed['remote "origin"'].url
     }
   } catch (err) {
-    // catch error
+    // ...
   }
 
   return ''
@@ -221,9 +221,23 @@ export async function getGitLatestTag(
     (match || '*') as string,
     ...(args ? (args as string[]) : []),
   ].filter(Boolean)
-  return run('git', cliArgs, options).then(data => {
-    return data.stdout.trim()
-  })
+
+  try {
+    const { stdout } = await run('git', cliArgs, options)
+    return stdout.trim()
+  } catch (error) {
+    const err = error as Error
+
+    if (
+      /No names found/.test(err.message) ||
+      /没有发现名称/.test(err.message)
+    ) {
+      return ''
+    }
+
+    err.message = `Git latest tag failed: ${err.message}.`
+    throw err
+  }
 }
 
 /**
@@ -297,7 +311,7 @@ export async function getGitRepository(
     return null
   }
 
-  const GitRepository: GitRepository = {
+  const gitRepo: GitRepository = {
     name: '',
     group: '',
     href: '',
@@ -312,28 +326,26 @@ export async function getGitRepository(
     const config = ini.parse(await readFile(path.join(gitDir, 'config')))
     // remote
     if (config['remote "origin"']) {
-      GitRepository.ssh = config['remote "origin"'].url
+      gitRepo.ssh = config['remote "origin"'].url
 
-      if (GitRepository.ssh) {
-        Object.assign(GitRepository, gitUrlAnalysis(GitRepository.ssh))
+      if (gitRepo.ssh) {
+        Object.assign(gitRepo, gitUrlAnalysis(gitRepo.ssh))
       }
     }
 
     if (config['user']) {
-      GitRepository.author = config['user'].name
-      GitRepository.email = config['user'].email
+      gitRepo.author = config['user'].name
+      gitRepo.email = config['user'].email
     }
 
     // branch
     const gitHead = await readFile(path.join(gitDir, 'HEAD'))
-    GitRepository.branch = gitHead
-      .replace('ref: refs/heads/', '')
-      .replace(EOL, '')
+    gitRepo.branch = gitHead.replace('ref: refs/heads/', '').replace(EOL, '')
   } catch (err) {
     return null
   }
 
-  return GitRepository
+  return gitRepo
 }
 
 /**
@@ -353,7 +365,7 @@ export function getGitRepositorySync(
     return null
   }
 
-  const GitRepository: GitRepository = {
+  const gitRepo: GitRepository = {
     name: '',
     group: '',
     href: '',
@@ -368,28 +380,26 @@ export function getGitRepositorySync(
     const config = ini.parse(readFileSync(path.join(gitDir, 'config')))
     // remote
     if (config['remote "origin"']) {
-      GitRepository.ssh = config['remote "origin"'].url
+      gitRepo.ssh = config['remote "origin"'].url
 
-      if (GitRepository.ssh) {
-        Object.assign(GitRepository, gitUrlAnalysis(GitRepository.ssh))
+      if (gitRepo.ssh) {
+        Object.assign(gitRepo, gitUrlAnalysis(gitRepo.ssh))
       }
     }
 
     if (config['user']) {
-      GitRepository.author = config['user'].name
-      GitRepository.email = config['user'].email
+      gitRepo.author = config['user'].name
+      gitRepo.email = config['user'].email
     }
 
     // branch
     const gitHead = readFileSync(path.join(gitDir, 'HEAD'))
-    GitRepository.branch = gitHead
-      .replace('ref: refs/heads/', '')
-      .replace(EOL, '')
+    gitRepo.branch = gitHead.replace('ref: refs/heads/', '').replace(EOL, '')
   } catch (err) {
     return null
   }
 
-  return GitRepository
+  return gitRepo
 }
 
 /**
