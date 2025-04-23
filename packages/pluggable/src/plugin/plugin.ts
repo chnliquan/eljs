@@ -214,7 +214,7 @@ export class Plugin {
 
     function get(type: PluginType) {
       const presetsOrPlugins = type === 'preset' ? presets : plugins
-      if (!presetsOrPlugins) {
+      if (!presetsOrPlugins?.length) {
         return
       }
       return Plugin.resolvePlugins(presetsOrPlugins, type, cwd)
@@ -232,32 +232,38 @@ export class Plugin {
     type: PluginType,
     cwd: string,
   ): ResolvedPlugin[] {
-    return plugins.map(plugin => {
-      const [pluginName, pluginOptions] =
-        typeof plugin === 'string' ? [plugin, null] : plugin
+    return plugins
+      .map(plugin => {
+        const [pluginName, pluginOptions] =
+          typeof plugin === 'string' ? [plugin, null] : plugin
 
-      let resolvedPath = ''
+        let resolvedPath = ''
 
-      try {
-        resolvedPath = resolve.sync(pluginName, {
-          basedir: cwd,
-          extensions: ['.tsx', '.ts', '.mjs', '.jsx', '.js'],
-        })
-      } catch (_) {
-        throw new Error(
-          `Invalid plugin \`${pluginName}\`, can not be resolved.`,
-        )
-      }
+        if (!pluginName) {
+          return
+        }
 
-      return [
-        new Plugin({
-          path: resolvedPath,
-          type,
-          cwd,
-        }),
-        pluginOptions,
-      ] as ResolvedPlugin
-    })
+        try {
+          resolvedPath = resolve.sync(pluginName, {
+            basedir: cwd,
+            extensions: ['.tsx', '.ts', '.mjs', '.jsx', '.js'],
+          })
+        } catch (_) {
+          throw new Error(
+            `Invalid plugin \`${pluginName}\`, can not be resolved.`,
+          )
+        }
+
+        return [
+          new Plugin({
+            path: resolvedPath,
+            type,
+            cwd,
+          }),
+          pluginOptions,
+        ]
+      })
+      .filter(Boolean) as ResolvedPlugin[]
   }
 
   /**
