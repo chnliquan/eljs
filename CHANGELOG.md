@@ -1,5 +1,12 @@
 # ChangeLog 
 
+## [1.1.1](https://github.com/chnliquan/eljs/compare/v1.1.0...v1.1.1) (2025-04-23)
+
+
+### 🐛 Bug Fixes
+
+* **pluggable:** resolve invalid plugin ([285559d](https://github.com/chnliquan/eljs/commit/285559d91e47eb6a0fa4886b73424708ad0d05e8)) 
+
 # [1.1.0](https://github.com/chnliquan/eljs/compare/v1.0.0...v1.1.0) (2025-04-01)
 
 
