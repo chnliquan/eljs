@@ -60,7 +60,7 @@ export default (api: Api) => {
       return getChangelog({
         cwd: api.cwd,
         independent,
-        preset: changelog.preset,
+        ...changelog,
       })
     },
     {

@@ -52,19 +52,24 @@ async function getConventionalChangelogOptions(
     ]
   } else {
     const config = (await import('@eljs/conventional-changelog-preset')).default
+    const tagPrefix = independent ? /^.+@/ : ''
+
     return [
       // https://github.com/conventional-changelog/conventional-changelog/blob/standard-changelog-v6.0.0/packages/conventional-changelog/index.js#L21
+      // options
       {
         cwd,
         config,
-        tagPrefix: independent ? /^.+@/ : '',
-        // tagPrefix: independent ? `${pkgName}@` : '',
+        tagPrefix,
       },
+      // context
       {
         commit: 'commit',
       },
-      undefined,
-      undefined,
+      // gitRawCommitsOpts
+      {},
+      // parserOpts
+      {},
       {
         // https://github.com/conventional-changelog/conventional-changelog/blob/standard-changelog-v6.0.0/packages/conventional-changelog-core/lib/merge-config.js#L305
         finalizeContext: function (
@@ -107,12 +112,7 @@ async function getConventionalChangelogOptions(
             if (context.version === 'Unreleased') {
               context.currentTag = context.currentTag || firstCommitHash
             } else if (!context.currentTag) {
-              context.currentTag = independent
-                ? context.previousTag.replace(
-                    /(\d+\.\d+\.\d+)/,
-                    context.version,
-                  )
-                : guessNextTag(context.previousTag, context.version)
+              context.currentTag = guessNextTag(context, independent)
             }
           }
 
@@ -131,7 +131,17 @@ async function getConventionalChangelogOptions(
   }
 }
 
-function guessNextTag(previousTag: string, version: string) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function guessNextTag(context: any, independent?: boolean) {
+  const { previousTag, version } = context
+
+  if (independent) {
+    return previousTag.replace(
+      /(\d+\.\d+\.\d+)/,
+      version[0] === 'v' ? version.slice(1) : version,
+    )
+  }
+
   if (previousTag) {
     if (previousTag[0] === 'v' && version[0] !== 'v') {
       return 'v' + version
