@@ -44,6 +44,9 @@
   "devDependencies": {
     "@types/update-notifier": "^6.0.8"
   },
+  "engines": {
+    "node": ">=16.20.0"
+  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org"

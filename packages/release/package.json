@@ -35,6 +35,7 @@
   "dependencies": {
     "@eljs/conventional-changelog-preset": "workspace:*",
     "@eljs/pluggable": "workspace:*",
+    "@eljs/utils": "workspace:*",
     "@types/conventional-changelog": "^6.0.0",
     "@types/resolve-bin": "^0.4.3",
     "@types/semver": "^7.5.8",
@@ -42,7 +43,6 @@
     "commander": "^13.1.0",
     "concat-stream": "^2.0.0",
     "conventional-changelog": "^6.0.0",
-    "minimist": "^1.2.8",
     "new-github-release-url": "^1.0.0",
     "open": "^8.4.2",
     "resolve-bin": "^1.0.1",
@@ -51,7 +51,6 @@
   },
   "devDependencies": {
     "@types/concat-stream": "^2.0.3",
-    "@types/minimist": "^1.2.5",
     "@types/update-notifier": "^6.0.8"
   },
   "peerDependencies": {
@@ -61,6 +60,9 @@
     "typescript": {
       "optional": true
     }
+  },
+  "engines": {
+    "node": ">=16.20.0"
   },
   "publishConfig": {
     "access": "public",

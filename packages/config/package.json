@@ -41,6 +41,9 @@
       "optional": true
     }
   },
+  "engines": {
+    "node": ">=16.20.0"
+  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org"
