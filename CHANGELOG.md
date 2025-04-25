@@ -1,5 +1,12 @@
 # ChangeLog 
 
+## [1.1.3](https://github.com/chnliquan/eljs/compare/v1.1.2...v1.1.3) (2025-04-25)
+
+
+### 🐛 Bug Fixes
+
+* deps ([cf936e9](https://github.com/chnliquan/eljs/commit/cf936e9bf5f88bb638dc1ac42b57f51c50916ec1)) 
+
 ## [1.1.2](https://github.com/chnliquan/eljs/compare/v1.1.1...v1.1.2) (2025-04-23)
 
 
