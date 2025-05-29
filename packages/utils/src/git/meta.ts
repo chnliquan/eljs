@@ -197,12 +197,12 @@ export async function getGitLatestTag(
   match: string,
   args: string[],
   options?: RunCommandOptions,
-): Promise<string>
+): Promise<string | null>
 export async function getGitLatestTag(
   match?: string | RunCommandOptions,
   args?: string[] | RunCommandOptions,
   options?: RunCommandOptions,
-): Promise<string> {
+): Promise<string | null> {
   if (isObject(match)) {
     options = match
     args = []
@@ -226,17 +226,13 @@ export async function getGitLatestTag(
     const { stdout } = await run('git', cliArgs, options)
     return stdout.trim()
   } catch (error) {
-    const err = error as Error
-
-    if (
-      /No names found/.test(err.message) ||
-      /没有发现名称/.test(err.message)
-    ) {
-      return ''
-    }
-
-    err.message = `Git latest tag failed: ${err.message}.`
-    throw err
+    return null
+    // if (
+    //   /No names found/.test(err.message) ||
+    //   /没有发现名称/.test(err.message)
+    // ) {
+    //   return ''
+    // }
   }
 }
 

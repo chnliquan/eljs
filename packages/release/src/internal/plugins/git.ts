@@ -126,15 +126,15 @@ export default (api: Api) => {
           verbose: true,
         })
       } catch (error) {
-        const { message } = error as Error
+        const err = error as Error
         if (
-          (/tag '.+' already exists/.test(message) ||
-            /标签 '.+' 已存在/.test(message)) &&
+          (/tag '.+' already exists/.test(err.message) ||
+            /标签 '.+' 已存在/.test(err.message)) &&
           latestTag === tagName
         ) {
           logger.warn(`Tag ${chalk.cyan(tagName)} already exists.`)
         } else {
-          throw error
+          throw err
         }
       }
     }

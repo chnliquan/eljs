@@ -19,7 +19,7 @@ export interface AppData {
   /**
    * 最新 tag
    */
-  latestTag: string
+  latestTag: string | null
   /**
    * 项目 package.json 路径
    */
