@@ -1,5 +1,12 @@
 # ChangeLog 
 
+## [1.1.4](https://github.com/chnliquan/eljs/compare/v1.1.3...v1.1.4) (2025-05-29)
+
+
+### 🐛 Bug Fixes
+
+* **release:** throw require owner error ([2566968](https://github.com/chnliquan/eljs/commit/2566968825f8b168c0831db2338e3115b4291f84)) 
+
 ## [1.1.3](https://github.com/chnliquan/eljs/compare/v1.1.2...v1.1.3) (2025-04-25)
 
 
