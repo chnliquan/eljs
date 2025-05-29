@@ -1,5 +1,12 @@
 # ChangeLog 
 
+## [1.1.5](https://github.com/chnliquan/eljs/compare/v1.1.4...v1.1.5) (2025-05-29)
+
+
+### 🐛 Bug Fixes
+
+* **utils:** get git latest tag error ([22a5b0e](https://github.com/chnliquan/eljs/commit/22a5b0ef55b060574ca16f8d70906a08b8906513)) 
+
 ## [1.1.4](https://github.com/chnliquan/eljs/compare/v1.1.3...v1.1.4) (2025-05-29)
 
 
