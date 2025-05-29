@@ -23,9 +23,9 @@ export default (api: Api) => {
           ).stdout
             .trim()
             .split(EOL)
-            .map(line => line.split(' ')[0])
+            .map(line => line.split(' ')?.[0])
 
-          if (!owners.includes(user)) {
+          if (!owners?.includes(user)) {
             throw new AppError(
               `User ${chalk.cyan(user)} is not the owner of \`${pkgName}\`.`,
             )
@@ -37,7 +37,7 @@ export default (api: Api) => {
             continue
           }
 
-          throw new AppError(`Invalid ownership of ${chalk.cyan(pkgName)}.`)
+          throw err
         }
       }
     }
