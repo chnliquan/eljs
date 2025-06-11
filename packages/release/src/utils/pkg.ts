@@ -34,7 +34,13 @@ export async function updatePackageLock(
     })
     child.stdout?.on('data', data => {
       const stdout = data.toString()
-      if (stdout.includes('ERR_PNPM_NO_MATCHING_VERSION')) {
+      if (stdout.startsWith('ERR_PNPM')) {
+        child.kill()
+      }
+    })
+
+    child.on('close', code => {
+      if (code !== 0) {
         child.kill()
       }
     })
