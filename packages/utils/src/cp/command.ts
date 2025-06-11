@@ -32,7 +32,7 @@ export function parseCommand(command: string): string[] {
 }
 
 /**
- * 执行命令可选配置项
+ * 运行命令可选配置项
  */
 export interface RunCommandOptions extends ExecaOptions {
   /**
@@ -42,6 +42,11 @@ export interface RunCommandOptions extends ExecaOptions {
 }
 
 /**
+ * 运行命令子进程
+ */
+export type RunCommandChildProcess = ExecaChildProcess
+
+/**
  * 运行命令
  * @param command 可运行的命令
  * @param options 可选配置项
@@ -49,7 +54,7 @@ export interface RunCommandOptions extends ExecaOptions {
 export function run(
   command: string,
   options?: RunCommandOptions,
-): ExecaChildProcess
+): RunCommandChildProcess
 /**
  * 运行命令
  * @param command 可运行的命令
@@ -60,12 +65,12 @@ export function run(
   command: string,
   args: string[],
   options?: RunCommandOptions,
-): ExecaChildProcess
+): RunCommandChildProcess
 export function run(
   command: string,
   args?: string[] | RunCommandOptions,
   options?: RunCommandOptions,
-): ExecaChildProcess {
+): RunCommandChildProcess {
   if (isObject(args)) {
     options = args
     args = []
@@ -88,7 +93,7 @@ export function run(
 export function runCommand(
   command: string,
   options?: RunCommandOptions,
-): ExecaChildProcess {
+): RunCommandChildProcess {
   const [cmd, ...args] = parseCommand(command)
   return run(cmd, args, options)
 }

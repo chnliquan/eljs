@@ -4,6 +4,7 @@ import {
   writeJson,
   type PackageJson,
   type PackageManager,
+  type RunCommandChildProcess,
   type RunCommandOptions,
 } from '@eljs/utils'
 
@@ -28,25 +29,27 @@ export async function updatePackageLock(
     command = 'npm install --package-lock-only'
   }
 
+  let child: RunCommandChildProcess | undefined = undefined
+
   try {
-    const child = runCommand(command, {
+    child = runCommand(command, {
       ...options,
     })
     child.stdout?.on('data', data => {
       const stdout = data.toString()
       if (stdout.startsWith('ERR_PNPM')) {
-        child.kill()
+        child?.kill()
       }
     })
 
     child.on('close', code => {
       if (code !== 0) {
-        child.kill()
+        child?.kill()
       }
     })
     await child
-  } catch (error) {
-    //...
+  } catch (_) {
+    child?.kill()
   }
 }
 
