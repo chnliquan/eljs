@@ -1,5 +1,12 @@
 # ChangeLog 
 
+## [1.1.6](https://github.com/chnliquan/eljs/compare/v1.1.5...v1.1.6) (2025-06-11)
+
+
+### 🐛 Bug Fixes
+
+* **release:** update pnpm lock error ([916d4f5](https://github.com/chnliquan/eljs/commit/916d4f57c1a53169f5ba3053c4e72d204f129208)) 
+
 ## [1.1.5](https://github.com/chnliquan/eljs/compare/v1.1.4...v1.1.5) (2025-05-29)
 
 

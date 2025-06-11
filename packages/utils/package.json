@@ -1,6 +1,6 @@
 {
   "name": "@eljs/utils",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "Collection of nodejs utility.",
   "keywords": [
     "eljs",
