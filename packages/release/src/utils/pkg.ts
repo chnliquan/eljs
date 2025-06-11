@@ -22,9 +22,9 @@ export async function updatePackageLock(
   if (packageManager === 'pnpm') {
     command = 'pnpm install --lockfile-only'
   } else if (packageManager === 'yarn') {
-    command = 'yarn install --frozen-lockfile'
+    command = 'yarn install'
   } else if (packageManager === 'bun') {
-    command = 'bun install --frozen-lockfile'
+    command = 'bun install --lockfile-only'
   } else {
     command = 'npm install --package-lock-only'
   }
