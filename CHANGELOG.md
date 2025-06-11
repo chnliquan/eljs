@@ -1,5 +1,13 @@
 # ChangeLog 
 
+## [1.1.7](https://github.com/chnliquan/eljs/compare/v1.1.6...v1.1.7) (2025-06-11)
+
+
+### 🐛 Bug Fixes
+
+* **release:** kill child when update lock error ([7dcd421](https://github.com/chnliquan/eljs/commit/7dcd421d0ed08f620bac59c195695789cfe6328f))
+* **release:** yarn & bun install ([3948096](https://github.com/chnliquan/eljs/commit/3948096f00c993b309b3ff75e68cd45b5a98368a)) 
+
 ## [1.1.6](https://github.com/chnliquan/eljs/compare/v1.1.5...v1.1.6) (2025-06-11)
 
 
