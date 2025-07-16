@@ -1,5 +1,12 @@
 # ChangeLog 
 
+# [1.2.0](https://github.com/chnliquan/eljs/compare/v1.1.7...v1.2.0) (2025-07-16)
+
+
+### ✨ Features
+
+* **utils:** add require class ([59cf01b](https://github.com/chnliquan/eljs/commit/59cf01bf75be38489b431b2b60cf2c9228ddba32)) 
+
 ## [1.1.7](https://github.com/chnliquan/eljs/compare/v1.1.6...v1.1.7) (2025-06-11)
 
 
