@@ -39,7 +39,7 @@ export interface PluginOptions {
  */
 export class Plugin {
   /**
-   * 构造函数参数
+   * 构造函数选项
    */
   public constructorOptions: PluginOptions
   /**
@@ -134,7 +134,7 @@ export class Plugin {
   }
 
   /**
-   * 合并配置项
+   * 合并选项
    * @param options.key 插件唯一 key
    * @param options.enable 插件是否开启
    */

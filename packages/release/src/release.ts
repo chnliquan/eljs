@@ -3,7 +3,7 @@ import type { Config } from './types'
 
 /**
  * 发布 NPM 包
- * @param options 可选配置项
+ * @param options 选项
  * @param version 指定版本
  */
 export async function release(version?: string, options?: Config) {

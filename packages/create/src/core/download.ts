@@ -24,7 +24,7 @@ export interface DownloadOptions extends RemoteTemplate {
 
 export class Download {
   /**
-   * 构造函数参数
+   * 构造函数选项
    */
   public constructorOptions: DownloadOptions
   /**

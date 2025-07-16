@@ -105,7 +105,7 @@ export function getGitUrlSync(cwd: string, exact?: boolean): string {
 
 /**
  * 获取 git 分支
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function getGitBranch(
   options?: RunCommandOptions,
@@ -119,7 +119,7 @@ export async function getGitBranch(
 
 /**
  * 获取 git 远程分支
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function getGitUpstreamBranch(
   options?: RunCommandOptions,
@@ -140,7 +140,7 @@ export async function getGitUpstreamBranch(
 
 /**
  * 获取 git commit 哈希值
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function getGitCommitSha(
   options?: RunCommandOptions,
@@ -148,7 +148,7 @@ export async function getGitCommitSha(
 /**
  * 获取 git commit 哈希值
  * @param short 是否截断
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function getGitCommitSha(
   short: boolean,
@@ -173,7 +173,7 @@ export async function getGitCommitSha(
 
 /**
  * 获取 git 最新 tag
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function getGitLatestTag(
   options?: RunCommandOptions,
@@ -181,7 +181,7 @@ export async function getGitLatestTag(
 /**
  * 获取 git 最新 tag
  * @param match 匹配模式
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function getGitLatestTag(
   match: string,
@@ -191,7 +191,7 @@ export async function getGitLatestTag(
  * 获取 git 最新 tag
  * @param match 匹配模式
  * @param args 命令行参数
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function getGitLatestTag(
   match: string,

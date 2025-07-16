@@ -32,7 +32,7 @@ export function parseCommand(command: string): string[] {
 }
 
 /**
- * 运行命令可选配置项
+ * 运行命令选项
  */
 export interface RunCommandOptions extends ExecaOptions {
   /**
@@ -48,8 +48,8 @@ export type RunCommandChildProcess = ExecaChildProcess
 
 /**
  * 运行命令
- * @param command 可运行的命令
- * @param options 可选配置项
+ * @param command 命令名称
+ * @param options 选项
  */
 export function run(
   command: string,
@@ -57,9 +57,9 @@ export function run(
 ): RunCommandChildProcess
 /**
  * 运行命令
- * @param command 可运行的命令
+ * @param command 命令名称
  * @param args 命令行参数
- * @param options 可选配置项
+ * @param options 选项
  */
 export function run(
   command: string,
@@ -87,8 +87,8 @@ export function run(
 
 /**
  * 运行命令
- * @param command 可运行的命令
- * @param options 可选配置项
+ * @param command 命令名称
+ * @param options 选项
  */
 export function runCommand(
   command: string,

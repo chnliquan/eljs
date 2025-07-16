@@ -3,7 +3,7 @@ import debug, { type Debugger } from 'debug'
 const DEBUG = process.env.DEBUG
 
 /**
- * 调试配置项
+ * 调试选项
  */
 interface DebuggerOptions {
   /**
@@ -19,7 +19,7 @@ interface DebuggerOptions {
 /**
  * 创建调试器
  * @param namespace 命名空间
- * @param options 可选配置项
+ * @param options 选项
  */
 export function createDebugger(
   namespace: string,

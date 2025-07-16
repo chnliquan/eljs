@@ -372,6 +372,9 @@ importers:
       parse-json:
         specifier: ^5.2.0
         version: 5.2.0
+      pirates:
+        specifier: ^4.0.7
+        version: 4.0.7
       prompts:
         specifier: ^2.4.2
         version: 2.4.2
@@ -8148,7 +8151,6 @@ packages:
   /pirates@4.0.7:
     resolution: {integrity: sha512-TfySrs/5nm8fQJDcBDuUng3VOUKsd7S+zqvbOTiGXHfxX4wK31ard+hoNuvkicM/2YFzlpDgABOevKSsB4G/FA==}
     engines: {node: '>= 6'}
-    dev: true
 
   /piscina@4.9.2:
     resolution: {integrity: sha512-Fq0FERJWFEUpB4eSY59wSNwXD4RYqR+nR/WiEVcZW8IWfVBxJJafcgTEZDQo8k3w0sUarJ8RyVbbUF4GQ2LGbQ==}

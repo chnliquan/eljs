@@ -4,7 +4,7 @@ import assert from 'node:assert'
 import type { Plugin } from './plugin'
 
 /**
- * 构造函数参数
+ * 构造函数选项
  */
 export interface HookOptions {
   /**
@@ -35,7 +35,7 @@ export interface HookOptions {
  */
 export class Hook {
   /**
-   * 构造函数参数
+   * 构造函数选项
    */
   public constructorOptions: HookOptions
   /**

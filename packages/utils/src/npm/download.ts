@@ -5,7 +5,7 @@ import download, { type DownloadOptions } from 'download'
 /**
  * 下载 Npm 压缩包
  * @param url Npm 地址
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function downloadNpmTarball(
   url: string,
@@ -15,7 +15,7 @@ export async function downloadNpmTarball(
  * 下载 Npm 压缩包
  * @param url Npm 地址
  * @param dest 目标地址
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function downloadNpmTarball(
   url: string,

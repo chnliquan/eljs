@@ -3,7 +3,7 @@ import { tmpdir } from '@/file'
 import path from 'node:path'
 
 /**
- * 下载配置项
+ * 下载选项
  */
 export interface DownloadGitRepositoryOptions {
   /**
@@ -19,7 +19,7 @@ export interface DownloadGitRepositoryOptions {
 /**
  * 下载 git 仓库
  * @param url git 地址
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function downloadGitRepository(
   url: string,

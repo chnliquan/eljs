@@ -11,7 +11,7 @@ import { renderTemplate, type RenderTemplateOptions } from './render'
 import { writeFile, writeFileSync } from './write'
 
 /**
- * 拷贝文件配置项
+ * 拷贝文件选项
  */
 export interface CopyFileOptions {
   /**
@@ -28,7 +28,7 @@ export interface CopyFileOptions {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: Record<string, any>
   /**
-   * 渲染引擎的配置项
+   * 渲染引擎的选项
    */
   renderOptions?: RenderTemplateOptions
 }
@@ -37,7 +37,7 @@ export interface CopyFileOptions {
  * 拷贝文件
  * @param from 源文件路径
  * @param to 目标文件路径
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function copyFile(
   from: string,
@@ -72,7 +72,7 @@ export async function copyFile(
  * 拷贝文件
  * @param from 源文件路径
  * @param to 目标文件路径
- * @param options 可选配置项
+ * @param options 选项
  */
 export function copyFileSync(
   from: string,
@@ -108,7 +108,7 @@ export function copyFileSync(
  * @param from 源文件路径
  * @param to 目标文件路径
  * @param data 模版数据
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function copyTpl(
   from: string,
@@ -149,7 +149,7 @@ export async function copyTpl(
  * @param from 源文件路径
  * @param to 目标文件路径
  * @param data 模版数据
- * @param options 可选配置项
+ * @param options 选项
  */
 export function copyTplSync(
   from: string,
@@ -189,7 +189,7 @@ export function copyTplSync(
  * 拷贝文件夹
  * @param from 源文件路径
  * @param to 目标文件路径
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function copyDirectory(
   from: string,
@@ -236,7 +236,7 @@ export async function copyDirectory(
  * @param from 源文件路径
  * @param to 目标文件路径
  * @param data 模版数据
- * @param options 可选配置项
+ * @param options 选项
  */
 export function copyDirectorySync(
   from: string,

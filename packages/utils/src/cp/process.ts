@@ -7,7 +7,7 @@ import { getExecutableCommand, runCommand } from './command'
 
 /**
  * 获取命令对应的进程 ID
- * @param command 可运行的命令
+ * @param command 命令名称
  */
 export function getPid(command: string): Promise<number | null> {
   const parse = (data: string, command: string): number | null => {
@@ -52,13 +52,13 @@ let cachedPassword: string
 
 /**
  * 以 sudo 模式执行命令
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function sudo(options?: SudoOptions): Promise<void>
 /**
  * 以 sudo 模式执行命令
  * @param args 命令参数
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function sudo(args: string[], options?: SudoOptions): Promise<void>
 export async function sudo(

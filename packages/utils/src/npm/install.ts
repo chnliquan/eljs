@@ -6,7 +6,7 @@ import execa from 'execa'
 import { getPackageManager } from './package-manager'
 
 /**
- * 安装依赖配置项
+ * 安装依赖选项
  */
 export interface InstallDepsOptions extends RunCommandOptions {
   /**
@@ -72,13 +72,13 @@ export async function installDeps(
 
 /**
  * 安装项目依赖
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function install(options?: RunCommandOptions): Promise<void>
 /**
  * 安装项目依赖
  * @param args 命令行参数
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function install(
   args: string[],
@@ -87,7 +87,7 @@ export async function install(
 /**
  * 安装项目依赖
  * @param packageManager 包管理器
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function install(
   packageManager: PackageManager,
@@ -97,7 +97,7 @@ export async function install(
  * 安装项目依赖
  * @param packageManager 包管理器
  * @param args 命令行参数
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function install(
   packageManager: PackageManager,

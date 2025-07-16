@@ -42,7 +42,7 @@ export class PluginApi<T extends Pluggable = Pluggable> {
    * 注册插件
    * @param key 唯一标识
    * @param fn 执行函数
-   * @param options 可选配置项
+   * @param options 选项
    */
   public register(
     key: HookOptions['key'],

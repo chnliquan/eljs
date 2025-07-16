@@ -8,7 +8,7 @@ import which from 'which'
 
 /**
  * 获取 Npm 仓库
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function getNpmRegistry(
   options?: RunCommandOptions,
@@ -20,7 +20,7 @@ export async function getNpmRegistry(
 
 /**
  * 获取 Npm 用户
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function getNpmUser(options?: RunCommandOptions): Promise<string> {
   return run('npm', ['whoami'], options).then(data => {

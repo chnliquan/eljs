@@ -6,14 +6,14 @@ import Mustache, {
 } from 'mustache'
 
 /**
- * 模版渲染配置项
+ * 模版渲染选项
  */
 export type RenderTemplateOptions =
   | MustacheRenderTemplateOptions
   | EjsRenderTemplateOptions
 
 /**
- * mustache 模版渲染配置项
+ * mustache 模版渲染选项
  */
 export interface MustacheRenderTemplateOptions {
   /**
@@ -25,7 +25,7 @@ export interface MustacheRenderTemplateOptions {
 }
 
 /**
- * ejs 模版渲染配置项
+ * ejs 模版渲染选项
  */
 export interface EjsRenderTemplateOptions {
   type?: 'ejs'
@@ -36,7 +36,7 @@ export interface EjsRenderTemplateOptions {
  * 渲染模版
  * @param template 模版内容
  * @param data 模版数据
- * @param options 可选配置项
+ * @param options 选项
  */
 export function renderTemplate(
   template: string,

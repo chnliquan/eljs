@@ -32,7 +32,7 @@ export class BaseGenerator {
    */
   public prompts: Answers<string>
   /**
-   * 模版渲染配置项
+   * 模版渲染选项
    */
   public renderTemplateOptions: RenderTemplateOptions | undefined
 
@@ -72,7 +72,7 @@ export class BaseGenerator {
    * 拷贝文件
    * @param from 源文件路径
    * @param to 目标文件路径
-   * @param options 可选配置项
+   * @param options 选项
    */
   public copyFileSync(from: string, to: string, options: CopyFileOptions = {}) {
     copyFileSync(from, to, {
@@ -86,7 +86,7 @@ export class BaseGenerator {
    * 拷贝文件
    * @param from 源文件路径
    * @param to 目标文件路径
-   * @param options 可选配置项
+   * @param options 选项
    */
   public async copyFile(
     from: string,
@@ -105,7 +105,7 @@ export class BaseGenerator {
    * @param from 源文件路径
    * @param to 目标文件路径
    * @param data 模版数据
-   * @param options 可选配置项
+   * @param options 选项
    */
   public copyTplSync(
     from: string,
@@ -126,7 +126,7 @@ export class BaseGenerator {
    * @param from 源文件路径
    * @param to 目标文件路径
    * @param data 模版数据
-   * @param options 可选配置项
+   * @param options 选项
    */
   public async copyTpl(
     from: string,
@@ -146,7 +146,7 @@ export class BaseGenerator {
    * 拷贝文件夹
    * @param from 源文件路径
    * @param to 目标文件路径
-   * @param options 可选配置项
+   * @param options 选项
    */
   public copyDirectorySync(
     from: string,
@@ -166,7 +166,7 @@ export class BaseGenerator {
    * 拷贝文件夹
    * @param from 源文件路径
    * @param to 目标文件路径
-   * @param options 可选配置项
+   * @param options 选项
    */
   public async copyDirectory(
     from: string,

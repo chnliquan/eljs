@@ -56,7 +56,7 @@ export interface PluggableOptions {
  */
 export class Pluggable<T extends UserConfig = UserConfig> {
   /**
-   * 构造函数参数
+   * 构造函数选项
    */
   public constructorOptions: PluggableOptions
   /**

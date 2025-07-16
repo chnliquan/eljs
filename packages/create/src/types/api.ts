@@ -18,7 +18,7 @@ export type Api = Omit<PluginApi, 'registerPresets' | 'registerPlugins'> &
      * 拷贝文件
      * @param from 源文件路径
      * @param to 目标文件路径
-     * @param options 可选配置项
+     * @param options 选项
      */
     copyFile: (
       from: string,
@@ -30,7 +30,7 @@ export type Api = Omit<PluginApi, 'registerPresets' | 'registerPlugins'> &
      * @param from 源文件路径
      * @param to 目标文件路径
      * @param data 模版数据
-     * @param options 可选配置项
+     * @param options 选项
      */
     copyTpl: (
       from: string,
@@ -43,7 +43,7 @@ export type Api = Omit<PluginApi, 'registerPresets' | 'registerPlugins'> &
      * @param from 源文件路径
      * @param to 目标文件路径
      * @param data 模版数据
-     * @param options 可选配置项
+     * @param options 选项
      */
     copyDirectory: (
       from: string,
@@ -55,7 +55,7 @@ export type Api = Omit<PluginApi, 'registerPresets' | 'registerPlugins'> &
      * 渲染模版
      * @param path 模版路径
      * @param data 模版数据
-     * @param options 可选配置项
+     * @param options 选项
      */
     render: (
       path: string,
@@ -80,13 +80,13 @@ export type Api = Omit<PluginApi, 'registerPresets' | 'registerPlugins'> &
     resolve: (...paths: string[]) => string
     /**
      * 安装依赖
-     * @param options 可选配置项
+     * @param options 选项
      */
     install(options?: RunCommandOptions): Promise<void>
     /**
      * 安装依赖
      * @param args 命令行参数
-     * @param options 可选配置项
+     * @param options 选项
      */
     install(args: string[], option?: RunCommandOptions): Promise<void>
     // #endregion

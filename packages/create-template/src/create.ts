@@ -6,7 +6,7 @@ import { defaultConfig, type RemoteTemplate } from './config'
 import { objectToArray, onCancel } from './utils'
 
 /**
- * 构造函数参数
+ * 构造函数选项
  */
 export interface CreateTemplateOptions {
   /**
@@ -33,7 +33,7 @@ export interface CreateTemplateOptions {
 
 export class CreateTemplate {
   /**
-   * 构造函数参数
+   * 构造函数选项
    */
   public constructorOptions: CreateTemplateOptions
   /**

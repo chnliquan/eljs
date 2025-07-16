@@ -26,7 +26,7 @@ export interface GeneratorOptions {
    */
   data?: Generator['data']
   /**
-   * 模版渲染配置项
+   * 模版渲染选项
    */
   renderTemplateOptions?: Generator['renderTemplateOptions']
   /**

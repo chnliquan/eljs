@@ -2,7 +2,7 @@ import { run, type RunCommandOptions } from '@/cp'
 
 /**
  * git 是否干净
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function isGitClean(
   options?: RunCommandOptions,
@@ -17,7 +17,7 @@ export async function isGitClean(
 
 /**
  * git 是否落后远程
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function isGitBehindRemote(
   options?: RunCommandOptions,
@@ -39,7 +39,7 @@ export async function isGitBehindRemote(
 
 /**
  * git 是否超前远程
- * @param options 可选配置项
+ * @param options 选项
  */
 export async function isGitAheadRemote(
   options?: RunCommandOptions,
