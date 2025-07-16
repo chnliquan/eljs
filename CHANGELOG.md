@@ -1,5 +1,17 @@
 # ChangeLog 
 
+# [1.3.0](https://github.com/chnliquan/eljs/compare/v1.2.0...v1.3.0) (2025-07-16)
+
+
+### ♻ Code Refactoring
+
+* **release:** remove sync cnpm ([d214941](https://github.com/chnliquan/eljs/commit/d2149410f246efb8327a4d2104909084040f9d69))
+
+
+### 🐛 Bug Fixes
+
+* **utils:** transformer inter ([3d33798](https://github.com/chnliquan/eljs/commit/3d33798473a31a5198a5a09f1ef463dc5a429d27)) 
+
 # [1.2.0](https://github.com/chnliquan/eljs/compare/v1.1.7...v1.2.0) (2025-07-16)
 
 
