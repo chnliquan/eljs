@@ -1,33 +1,17 @@
-import type { Noop } from '@/types'
+import type { AnyFunction, NoopFunction } from '@/types'
 import path from 'node:path'
 import { addHook } from 'pirates'
 
 /**
- * 转换器
+ * 转换器构造函数选项
  */
-export interface Transformer {
+export interface TransformerOptions<T> {
   /**
    * 文件转换函数
-   * @param code 源代码
+   * @param input 源代码
    * @param options 选项
    */
-  transformSync: (
-    input: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    options: Record<string, any>,
-  ) => {
-    code: string
-  }
-}
-
-/**
- * 加载器构造函数选项
- */
-export interface RegisterOptions {
-  /**
-   * 转换器，推荐使用 esbuild、@babel/core
-   */
-  transformer: Transformer
+  transform: T
   /**
    * 文件后缀名
    * @default ['.ts']
@@ -41,17 +25,17 @@ export interface RegisterOptions {
 }
 
 /**
- * 加载器类
+ * 转换器类
  */
-export class Require {
+export class Transformer<T extends AnyFunction> {
   /**
    * 构造函数选项
    */
-  public constructorOptions: RegisterOptions
+  public constructorOptions: TransformerOptions<T>
 
-  private _revert: Noop = () => {}
+  private _revert: NoopFunction = () => {}
 
-  public constructor(options: RegisterOptions) {
+  public constructor(options: TransformerOptions<T>) {
     this.constructorOptions = options
   }
 
@@ -60,10 +44,10 @@ export class Require {
    * @param options 文件转换函数选项
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public apply(options?: Record<string, any>) {
+  public apply(options?: Parameters<T>[1]) {
     const { exts = ['.ts'], ignoreNodeModules } = this.constructorOptions
     this._revert = addHook(
-      (code, filename) => this._transform(code, filename, options || {}),
+      (code, filename) => this._transform(code, filename, (options || {}) as T),
       {
         exts,
         ignoreNodeModules,
@@ -87,23 +71,19 @@ export class Require {
   private _transform(
     input: string,
     filename: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    options: Record<string, any>,
+    options: Parameters<T>[1],
   ) {
     const ext = path.extname(filename)
 
     try {
-      const { code } = this.constructorOptions.transformer.transformSync(
-        input,
-        {
-          sourcefile: filename,
-          loader: ext.slice(1),
-          target: 'es2019',
-          format: 'cjs',
-          logLevel: 'error',
-          ...options,
-        },
-      )
+      const { code } = this.constructorOptions.transform(input, {
+        sourcefile: filename,
+        loader: ext.slice(1),
+        target: 'es2019',
+        format: 'cjs',
+        logLevel: 'error',
+        ...options,
+      })
       return code
     } catch (error) {
       const err = error as Error
