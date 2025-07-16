@@ -47,7 +47,6 @@ Options:
   --no-git.push                        Skip git push
   --git.requireBranch <requireBranch>  Require that the release is on a particular branch
   --npm.prerelease                     Specify the release type as prerelease  --npm.canary                         Specify the release type as canary
-  --npm.syncCnpm                       Sync to cnpm when release done
   --no-npm.requireOwner                Skip npm owner check
   --no-npm.confirm                      Skip confirm bump version
   --npm.prereleaseId <prereleaseId>    Specify the prereleaseId

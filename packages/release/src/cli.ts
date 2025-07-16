@@ -43,7 +43,6 @@ async function cli() {
     )
     .option('--npm.prerelease', 'Specify the release type as prerelease')
     .option('--npm.canary', 'Specify the release type as canary')
-    .option('--npm.syncCnpm', 'Sync to cnpm when release done')
     .option('--no-npm.requireOwner', 'Skip npm owner check')
     .option('--no-npm.confirm', 'Skip confirm bump version')
     .option('--npm.prereleaseId <prereleaseId>', 'Specify the prereleaseId')

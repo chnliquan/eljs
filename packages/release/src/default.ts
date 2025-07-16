@@ -63,10 +63,6 @@ export const defaultConfig: Config = {
      * 是否确认版本
      */
     confirm: true,
-    /**
-     * 是否同步到 Cnpm
-     */
-    syncCnpm: false,
   },
   /**
    * github 相关配置项

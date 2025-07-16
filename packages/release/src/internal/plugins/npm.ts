@@ -1,5 +1,5 @@
 import type { Api } from '@/types'
-import { AppError, syncCnpm } from '@/utils'
+import { AppError } from '@/utils'
 import { chalk, getNpmUser, logger, normalizeArgs, run } from '@eljs/utils'
 import { EOL } from 'node:os'
 
@@ -115,13 +115,6 @@ export default (api: Api) => {
       logger.ready(
         `Published ${chalk.bold.cyan(`${pkgName}@${version}`)} successfully.`,
       )
-    }
-  })
-
-  api.onAfterRelease(async () => {
-    if (api.config.npm.syncCnpm) {
-      api.step('Sync packages to cnpm ...')
-      await syncCnpm(api.appData.validPkgNames)
     }
   })
 }

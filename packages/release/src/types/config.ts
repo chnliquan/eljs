@@ -108,11 +108,6 @@ export interface Config extends UserConfig {
      * Npm publish arguments
      */
     publishArgs?: string | string[]
-    /**
-     * Whether to sync cnpm
-     * @default false
-     */
-    syncCnpm?: boolean
   }
   /**
    * Github config

@@ -39,7 +39,6 @@
     "@types/conventional-changelog": "^6.0.0",
     "@types/resolve-bin": "^0.4.3",
     "@types/semver": "^7.5.8",
-    "cnpm": "^9.4.0",
     "commander": "^13.1.0",
     "concat-stream": "^2.0.0",
     "conventional-changelog": "^6.0.0",
