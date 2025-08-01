@@ -6,6 +6,7 @@ import {
   getMaxVersion,
   getReleaseVersion,
   getRemoteDistTag,
+  isCanaryVersion,
   isVersionExist,
   isVersionValid,
   onCancel,
@@ -95,7 +96,11 @@ export default (api: Api) => {
     }
   })
 
-  api.onAfterBumpVersion(async () => {
+  api.onAfterBumpVersion(async ({ version }) => {
+    if (isCanaryVersion(version)) {
+      return
+    }
+
     api.step('Updating Lockfile ...')
     await updatePackageLock(api.appData.packageManager, {
       cwd: api.cwd,

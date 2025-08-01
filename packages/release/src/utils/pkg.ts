@@ -35,11 +35,16 @@ export async function updatePackageLock(
     child = runCommand(command, {
       ...options,
     })
-    child.stdout?.on('data', data => {
-      const stdout = data.toString()
-      if (stdout.startsWith('ERR_PNPM')) {
+
+    child.stdout?.on('data', chunk => {
+      const content = chunk.toString() as string
+      if (content.startsWith('ERR_PNPM')) {
         child?.kill()
       }
+    })
+
+    child.stderr?.on('data', () => {
+      child?.kill()
     })
 
     child.on('close', code => {
