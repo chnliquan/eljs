@@ -16,6 +16,9 @@ temp
 coverage/
 *.lcov
 
+# jest cache
+.jest-cache/
+
 # dependencies
 node_modules/
 
