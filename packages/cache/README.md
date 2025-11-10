@@ -1,293 +1,263 @@
 # @eljs/cache
 
-A smart, high-performance caching system with zero-config setup and intelligent cleanup.
+一个智能、高性能的缓存系统，支持零配置启用和智能清理
 
-## Features
+## 特性
 
-- 🚀 **Zero Configuration** - Works out of the box with sensible defaults
-- ⚡ **High Performance** - Memory + disk dual-layer caching
-- 🧹 **Smart Cleanup** - Automatic cleanup of expired and invalid cache
-- 🔒 **Type Safe** - Full TypeScript support with generics
-- 🌐 **Cross-Instance** - Global cache sharing across application instances
-- 📊 **Observable** - Built-in statistics and monitoring
-- 🎯 **Flexible** - Customizable key generation, serialization, and validation
+- 🚀 **零配置** - 开箱即用，具有合理的默认设置
+- ⚡ **高性能** - 内存 + 磁盘双层缓存
+- 🧹 **智能清理** - 自动清理过期和无效缓存
+- 🔒 **类型安全** - 完全的 TypeScript 支持和泛型
+- 📊 **可观测** - 内置统计信息和监控
+- 🎯 **灵活** - 可自定义键生成、序列化和验证
 
-## Installation
+## 安装
 
 ```bash
-npm install @eljs/cache
-# or
 pnpm add @eljs/cache
-# or  
-yarn add @eljs/cache
 ```
 
-## Quick Start
+## 快速开始
 
 ```typescript
 import { Cache } from '@eljs/cache'
 
-// Create a cache instance with default settings
+// 创建缓存实例
 const cache = new Cache<string>()
 
-// Cache a file-based resource
+// 基于文件的缓存
 await cache.set('./config.json', 'cached data')
 const data = await cache.get('./config.json')
 
-// Cache by key
-await cache.setByData('my data', { timestamp: Date.now() })
+// 基于数据的缓存
+await cache.setByData('my data')
 const result = await cache.getByKey('generated-key')
 ```
 
-## Usage
+## 基础用法
 
-### Basic Caching
+### 文件缓存
 
 ```typescript
 import { Cache } from '@eljs/cache'
 
-// File-based caching with default settings
 const cache = new Cache<MyDataType>()
 
-// Set cache for a file
+// 设置文件缓存
 await cache.set('./data.json', myData)
 
-// Get cache for a file (returns null if not found or invalid)
+// 获取文件缓存（如果未找到或无效则返回 null）
 const cachedData = await cache.get('./data.json')
 
 if (cachedData) {
-  console.log('Cache hit!', cachedData)
+  console.log('缓存命中!', cachedData)
 } else {
-  console.log('Cache miss - need to load from source')
+  console.log('缓存未命中 - 需要从源加载')
 }
 ```
 
-### Configuration
+### 数据缓存
 
 ```typescript
-// Simple configuration
-const cache = new Cache<MyDataType>({
-  enabled: true,                    // Enable/disable cache (default: true)
-  cacheDir: './my-cache',          // Custom cache directory
-  ttlDays: 7,                      // Cache TTL in days (default: 7)
-  autoCleanup: true,               // Auto cleanup on startup (default: true)  
-  maxFiles: 1000,                  // Max cache files (default: 1000)
-})
+// 缓存任意数据
+await cache.setByData({ id: '123', name: 'test' })
+
+// 通过键获取数据
+const cachedItem = await cache.getByKey('generated-key')
 ```
 
-### Custom Functions
+## 配置选项
 
 ```typescript
-// Advanced configuration with custom functions
+import { Cache, CacheOptions } from '@eljs/cache'
+
+const options: CacheOptions<MyDataType> = {
+  enabled: true,           // 启用/禁用缓存（默认：true）
+  cacheDir: './my-cache',  // 自定义缓存目录（默认：系统临时目录）
+  ttlDays: 7,              // 缓存 TTL 天数（默认：7）
+  autoCleanup: true,       // 启动时自动清理（默认：true）
+  maxFiles: 1000,          // 最大缓存文件数（默认：1000）
+}
+
+const cache = new Cache<MyDataType>(options)
+```
+
+## 自定义函数
+
+### 自定义键生成器
+
+```typescript
 const cache = new Cache<MyData>({
-  // Basic options
-  ttlDays: 7,
-  cacheDir: './cache',
-  
-  // Custom key generation
-  keyGenerator: (data) => data.id,
-  
-  // Custom serialization
-  serializer: {
-    serialize: (data) => JSON.stringify(data),
-    deserialize: (str) => JSON.parse(str)
-  },
-  
-  // Custom validation
-  validator: async (entry, filePath) => {
-    // Custom validation logic
-    return entry.data.isValid
+  keyGenerator: (data) => {
+    // 根据数据生成唯一键
+    return `${data.type}-${data.id}`
   }
 })
 ```
 
-## Advanced Usage
+### 自定义序列化器
 
-### Cache Statistics
+```typescript
+const cache = new Cache<MyData>({
+  serializer: {
+    serialize: (data) => {
+      // 自定义序列化逻辑
+      return JSON.stringify(data)
+    },
+    deserialize: (str) => {
+      // 自定义反序列化逻辑
+      return JSON.parse(str)
+    }
+  }
+})
+```
+
+### 自定义验证器
+
+```typescript
+const cache = new Cache<MyData>({
+  validator: async (entry, filePath) => {
+    // 自定义验证逻辑
+    return entry.data.isValid && Date.now() - entry.timestamp < 86400000
+  }
+})
+```
+
+## 缓存管理
+
+### 获取统计信息
 
 ```typescript
 const stats = await cache.getStats()
 
 console.log({
-  hits: stats.hits,
-  misses: stats.misses,
-  hitRate: `${(stats.hitRate * 100).toFixed(1)}%`,
-  files: stats.files,
-  diskUsage: `${(stats.diskUsage / 1024).toFixed(1)}KB`
+  hits: stats.hits,                   // 命中次数
+  misses: stats.misses,               // 未命中次数
+  hitRate: stats.hitRate,             // 命中率 (0-1)
+  files: stats.files,                   // 缓存文件数
+  diskUsage: stats.diskUsage          // 磁盘使用量（字节）
+})
+
+// 格式化显示
+console.log(`命中率: ${(stats.hitRate * 100).toFixed(1)}%`)
+console.log(`磁盘使用: ${(stats.diskUsage / 1024 / 1024).toFixed(2)}MB`)
+```
+
+### 清理过期缓存
+
+```typescript
+const cleanupResult = await cache.cleanup()
+
+console.log({
+  removed: cleanupResult.removed,      // 删除的文件数
+  totalSize: cleanupResult.totalSize,  // 释放的空间（字节）
+  errors: cleanupResult.errors         // 错误信息
 })
 ```
 
-### Cache Management
+### 清空所有缓存
 
 ```typescript
-// Manual cleanup
-const result = await cache.cleanup()
-console.log(`Cleaned ${result.removed} files, freed ${result.totalSize} bytes`)
-
-// Clear all cache
+// 清空内存和磁盘缓存
 await cache.clear()
-
-// Global operations
-const globalStats = await GlobalCacheManager.getInstance().getAllCacheStats()
-await GlobalCacheManager.getInstance().cleanupAllCaches()
 ```
 
-### Environment Variables
-
-```bash
-# Set global cache directory
-export ELJS_CACHE_DIR="/path/to/cache"
-```
-
-## Real-world Example
+## 完整示例
 
 ```typescript
-import { GlobalCacheManager } from '@eljs/cache'
+import { Cache, CacheOptions } from '@eljs/cache'
 
-// Plugin system with caching
-class PluginLoader {
-  private cache = GlobalCacheManager.getInstance()
-    .getCache('plugins', { ttlDays: 7 })
-
-  async loadPlugin(path: string) {
-    // Try cache first
-    let plugin = await this.cache.get(path)
-    
-    if (!plugin) {
-      // Cache miss - load from disk
-      console.log('Loading plugin from disk:', path)
-      plugin = await this.loadFromDisk(path)
-      
-      // Cache for next time
-      await this.cache.set(path, plugin)
-    } else {
-      console.log('Plugin loaded from cache:', path)
-    }
-    
-    return plugin
-  }
-  
-  async getStats() {
-    return await this.cache.getStats()
-  }
+interface UserData {
+  id: string
+  name: string
+  email: string
+  lastUpdated: number
 }
 
-// Usage - each instance shares the same cache
-const loader1 = new PluginLoader()
-const loader2 = new PluginLoader()
+// 创建用户数据缓存
+const userCache = new Cache<UserData>({
+  cacheDir: './user-cache',
+  ttlDays: 1,
+  keyGenerator: (user) => `user-${user.id}`,
+  validator: async (entry) => {
+    // 验证数据是否过期（1小时）
+    return Date.now() - entry.data.lastUpdated < 3600000
+  }
+})
 
-await loader1.loadPlugin('./plugin.js') // Loads from disk
-await loader2.loadPlugin('./plugin.js') // Loads from cache!
+class UserService {
+  async getUser(userId: string): Promise<UserData | null> {
+    // 尝试从缓存获取
+    let user = await userCache.getByKey(`user-${userId}`)
+    
+    if (!user) {
+      // 缓存未命中，从数据库加载
+      user = await this.loadUserFromDatabase(userId)
+      
+      if (user) {
+        // 保存到缓存
+        await userCache.setByData(user)
+      }
+    }
+    
+    return user
+  }
+  
+  async loadUserFromDatabase(userId: string): Promise<UserData | null> {
+    // 模拟数据库查询
+    return {
+      id: userId,
+      name: 'John Doe',
+      email: 'john@example.com',
+      lastUpdated: Date.now()
+    }
+  }
+  
+  async getUserStats() {
+    return await userCache.getStats()
+  }
+}
 ```
 
-## Performance
+## 缓存失效机制
 
-Typical performance improvements with caching enabled:
+缓存在以下情况下自动失效：
 
-- **Small projects (5-10 files)**: 60-70% faster loading
-- **Medium projects (10-20 files)**: 70-80% faster loading  
-- **Large projects (20+ files)**: 75-85% faster loading
+1. **TTL 过期** - 基于 `ttlDays` 设置
+2. **文件修改时间变更** - 检测文件更新
+3. **文件大小变更** - 检测文件修改
+4. **内容哈希变更** - 针对小文件（<50KB）
+5. **自定义验证失败** - 如果自定义验证器返回 false
 
-## Cache Invalidation
+## 环境变量
 
-Cache is automatically invalidated when:
+```bash
+# 设置全局缓存目录
+export CACHE_DIR=\"/path/to/cache\"
+```
 
-1. **TTL expires** - Based on `ttlDays` setting
-2. **File modification time changes** - Detects file updates
-3. **File size changes** - Detects file modifications
-4. **Content hash changes** - For small files (<50KB)
-5. **Custom validation fails** - If custom validator returns false
+## API 参考
 
-## Best Practices
+### 构造函数
 
-1. **Use appropriate TTL** - Longer for production, shorter for development
-2. **Monitor cache stats** - Track hit rates to optimize configuration
-3. **Namespace your caches** - Use different namespaces for different data types
-4. **Handle cache misses gracefully** - Always have fallback logic
-5. **Clean up in CI/CD** - Clear caches in deployment pipelines when needed
-
-## API Reference
-
-### Cache<T>
-
-#### Constructor
 ```typescript
-new Cache<T>(options?: CacheOptions)
+new Cache<T>(options?: CacheOptions<T>)
 ```
 
-#### Methods
-- `get(filePath: string): Promise<T | null>`
-- `set(filePath: string, data: T): Promise<void>`  
-- `getByKey(key: string): Promise<T | null>`
-- `setByData(data: T, metadata?): Promise<void>`
-- `cleanup(): Promise<CleanupResult>`
-- `clear(): Promise<void>`
-- `getStats(): Promise<CacheStats>`
+### 主要方法
 
-### GlobalCacheManager
+**文件缓存**
 
-#### Methods
-- `static getInstance(): GlobalCacheManager`
-- `getCache<T>(namespace: string, options?): Cache<T>`
-- `getAllCacheStats(): Promise<Record<string, CacheStats>>`
-- `cleanupAllCaches(): Promise<Record<string, CleanupResult>>`
-- `clearAllCaches(): Promise<void>`
+- `get(filePath: string): Promise<T | null>` - 获取文件缓存
+- `set(filePath: string, data: T): Promise<void>` - 设置文件缓存
 
-## License
+**数据缓存**
 
-MIT
+- `getByKey(key: string): Promise<T | null>` - 通过键获取缓存
+- `setByData(data: T, metadata?: { timestamp?: number }): Promise<void>` - 缓存数据
 
-## Installation
+**管理方法**
 
-```bash
-$ pnpm add @eljs/cache
-// or
-$ yarn add @eljs/cache
-// or
-$ npm i @eljs/cache -S
-```
-
-## Usage
-
-```ts
-import cache from '@eljs/cache'
-```
-
-## API
-
-
-## Development
-
-```bash
-$ pnpm run dev --filter @eljs/cache
-// or
-$ pnpm -F @eljs/cache run dev
-```
-
-## Publish
-
-### 1. [Conventional Commit](https://www.conventionalcommits.org/en/v1.0.0/#summary) 
-
-```bash
-$ git commit -m 'feat(cache): add some feature'
-$ git commit -m 'fix(cache): fix some bug'
-```
-
-### 2. Compile（optional）
-
-```bash
-$ pnpm run build --filter @eljs/cache
-// or
-$ pnpm -F @eljs/cache run build
-```
-
-### 3. Release
-
-```bash
-$ pnpm run release
-
-Options:
-  --skipTests             Skip unit tests.
-  --skipBuild             Skip package build.
-  --skipRequireClean      Skip git working tree check.
-```
+- `cleanup(): Promise<CleanupResult>` - 清理过期缓存
+- `clear(): Promise<void>` - 清空所有缓存
+- `getStats(): Promise<CacheStats>` - 获取统计信息
