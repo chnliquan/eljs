@@ -1,4 +1,3 @@
-import type { Api } from '@/types'
 import {
   copyDirectory,
   copyFile,
@@ -6,6 +5,8 @@ import {
   type CopyFileOptions,
 } from '@eljs/utils'
 import { resolve } from 'node:path'
+
+import type { Api } from '../../types'
 
 export default (api: Api) => {
   api.registerMethod('resolve', (...paths: string[]) => {

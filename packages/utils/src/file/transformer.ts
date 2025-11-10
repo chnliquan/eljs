@@ -1,6 +1,7 @@
-import type { AnyFunction, NoopFunction } from '@/types'
 import path from 'node:path'
 import { addHook } from 'pirates'
+
+import type { AnyFunction, NoopFunction } from '../types'
 
 /**
  * 转换器构造函数选项

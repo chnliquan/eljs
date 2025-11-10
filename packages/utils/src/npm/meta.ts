@@ -1,10 +1,11 @@
-import { PLATFORM } from '@/constants'
-import { run, type RunCommandOptions } from '@/cp'
-import { isString } from '@/type'
-import type { OmitIndexSignature, PackageJson } from '@/types'
 import path from 'node:path'
 import urllib from 'urllib'
 import which from 'which'
+
+import { PLATFORM } from '../constants'
+import { run, type RunCommandOptions } from '../cp'
+import { isString } from '../type'
+import type { OmitIndexSignature, PackageJson } from '../types'
 
 /**
  * 获取 Npm 仓库

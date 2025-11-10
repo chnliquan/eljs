@@ -1,4 +1,4 @@
-import type { PluginDeclaration, ResolvedPlugin } from '@/pluggable'
+import type { PluginDeclaration, ResolvedPlugin } from '../pluggable'
 
 /**
  * 插件返回类型

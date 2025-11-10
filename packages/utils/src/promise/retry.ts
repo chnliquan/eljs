@@ -1,5 +1,4 @@
-import type { MaybePromiseFunction } from '@/types'
-
+import type { MaybePromiseFunction } from '../types'
 import { sleep } from './timer'
 
 /**

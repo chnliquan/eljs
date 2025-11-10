@@ -1,4 +1,3 @@
-import type { PluginDeclaration, ResolvedPlugin } from '@/pluggable'
 import {
   camelCase,
   fileLoadersSync,
@@ -14,6 +13,7 @@ import assert from 'node:assert'
 import { basename, dirname, extname, join, relative } from 'node:path'
 import pkgUp from 'pkg-up'
 
+import type { PluginDeclaration, ResolvedPlugin } from '../pluggable'
 import type { Enable, PluginReturnType, PluginType } from './types'
 
 /**

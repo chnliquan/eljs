@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { isESModule } from '@/type'
 import { dirname } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { TranspileOptions } from 'typescript'
 
+import { isESModule } from '../type'
 import { isPathExists, isPathExistsSync } from './is'
 import { readFile, readFileSync } from './read'
 import { remove, removeSync } from './remove'

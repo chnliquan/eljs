@@ -1,9 +1,9 @@
-import type { Api } from '@/types'
-import { onCancel } from '@/utils'
 import { prompts } from '@eljs/utils'
 import dayjs from 'dayjs'
 import { execSync } from 'node:child_process'
 
+import type { Api } from '../../types'
+import { onCancel } from '../../utils'
 import { author, email, getGitHref } from '../utils'
 
 export default (api: Api) => {

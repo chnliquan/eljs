@@ -1,7 +1,8 @@
-import type { Api } from '@/types'
 import { getGitUrl, getGitUrlSync, gitUrlAnalysis } from '@eljs/utils'
 import newGithubReleaseUrl from 'new-github-release-url'
 import open from 'open'
+
+import type { Api } from '../../types'
 
 export default (api: Api) => {
   api.describe({

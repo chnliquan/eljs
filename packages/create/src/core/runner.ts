@@ -1,11 +1,3 @@
-import { defaultConfig } from '@/default'
-import {
-  RunnerStageEnum,
-  type AppData,
-  type Config,
-  type Paths,
-  type Prompts,
-} from '@/types'
 import {
   Pluggable,
   type ApplyAdd,
@@ -15,6 +7,15 @@ import {
   type PluggablePluginApi,
 } from '@eljs/pluggable'
 import { deepMerge, prompts, type RequiredRecursive } from '@eljs/utils'
+
+import { defaultConfig } from '../default'
+import {
+  RunnerStageEnum,
+  type AppData,
+  type Config,
+  type Paths,
+  type Prompts,
+} from '../types'
 
 /**
  * 运行器

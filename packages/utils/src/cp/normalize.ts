@@ -1,4 +1,4 @@
-import { isArray } from '@/type'
+import { isArray } from '../type'
 
 /**
  * 格式化参数

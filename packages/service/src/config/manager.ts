@@ -1,5 +1,3 @@
-import { DEFAULT_CONFIG_FILES, LOCAL_EXT, SHORT_ENV } from '@/const'
-import { Env } from '@/types/env'
 import { isPathExistsSync, loadTsSync } from '@eljs/utils'
 import assert from 'assert'
 import deepMerge from 'deepmerge'
@@ -7,6 +5,8 @@ import joi from 'joi'
 import { EOL } from 'os'
 import { join } from 'path'
 
+import { DEFAULT_CONFIG_FILES, LOCAL_EXT, SHORT_ENV } from '../const'
+import { Env } from '../types/env'
 import { addExt, getAbsFiles } from './utils'
 
 export interface ConfigManagerOpts {

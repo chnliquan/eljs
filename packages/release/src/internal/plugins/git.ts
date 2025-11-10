@@ -1,5 +1,3 @@
-import type { Api } from '@/types'
-import { AppError, getChangelog } from '@/utils'
 import {
   chalk,
   gitCommit,
@@ -15,6 +13,9 @@ import {
 } from '@eljs/utils'
 import { EOL } from 'node:os'
 import path from 'node:path'
+
+import type { Api } from '../../types'
+import { AppError, getChangelog } from '../../utils'
 
 export default (api: Api) => {
   api.onCheck(async () => {

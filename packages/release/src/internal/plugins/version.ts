@@ -1,5 +1,16 @@
-import { prereleaseTypes } from '@/constants'
-import type { Api, PrereleaseId } from '@/types'
+import {
+  chalk,
+  confirm,
+  createDebugger,
+  logger,
+  pascalCase,
+  prompts,
+} from '@eljs/utils'
+import { EOL } from 'node:os'
+import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
+
+import { prereleaseTypes } from '../../constants'
+import type { Api, PrereleaseId } from '../../types'
 import {
   AppError,
   getCanaryVersion,
@@ -12,17 +23,7 @@ import {
   onCancel,
   updatePackageLock,
   updatePackageVersion,
-} from '@/utils'
-import {
-  chalk,
-  confirm,
-  createDebugger,
-  logger,
-  pascalCase,
-  prompts,
-} from '@eljs/utils'
-import { EOL } from 'node:os'
-import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
+} from '../../utils'
 
 const debug = createDebugger('release:version')
 

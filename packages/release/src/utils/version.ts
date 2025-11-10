@@ -1,6 +1,6 @@
-import type { DistTag, PrereleaseId } from '@/types'
 import { getGitCommitSha, run } from '@eljs/utils'
 import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
+import type { DistTag, PrereleaseId } from '../types'
 
 export function isPrerelease(version: string): boolean {
   return (

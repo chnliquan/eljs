@@ -1,4 +1,3 @@
-import type { RemoteTemplate } from '@/types'
 import {
   chalk,
   downloadGitRepository,
@@ -11,6 +10,8 @@ import {
 } from '@eljs/utils'
 import path from 'node:path'
 import ora, { type Ora } from 'ora'
+
+import type { RemoteTemplate } from '../types'
 
 /**
  * 下载构造函数

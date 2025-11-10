@@ -105,6 +105,15 @@ importers:
         specifier: ^8.4.1
         version: 8.5.3
 
+  packages/cache:
+    dependencies:
+      '@eljs/utils':
+        specifier: workspace:*
+        version: link:../utils
+      typescript:
+        specifier: '>=5.0.0'
+        version: 5.5.4
+
   packages/config:
     dependencies:
       '@eljs/utils':
@@ -172,6 +181,9 @@ importers:
 
   packages/pluggable:
     dependencies:
+      '@eljs/cache':
+        specifier: workspace:*
+        version: link:../cache
       '@eljs/config':
         specifier: workspace:*
         version: link:../config

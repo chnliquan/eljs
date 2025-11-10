@@ -1,7 +1,8 @@
-import type { Api } from '@/types'
-import { AppError } from '@/utils'
 import { chalk, getNpmUser, logger, normalizeArgs, run } from '@eljs/utils'
 import { EOL } from 'node:os'
+
+import type { Api } from '../../types'
+import { AppError } from '../../utils'
 
 export default (api: Api) => {
   api.onCheck(async () => {

@@ -1,5 +1,3 @@
-import type { Api } from '@/types'
-import { AppError } from '@/utils'
 import {
   chalk,
   getGitBranch,
@@ -11,6 +9,9 @@ import {
   type PackageJson,
 } from '@eljs/utils'
 import path from 'node:path'
+
+import type { Api } from '../../types'
+import { AppError } from '../../utils'
 
 export default (api: Api) => {
   api.modifyAppData(async (memo, { cwd }) => {

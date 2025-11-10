@@ -1,6 +1,7 @@
-import { tmpdir } from '@/file'
-import { isObject } from '@/type'
 import download, { type DownloadOptions } from 'download'
+
+import { tmpdir } from '../file'
+import { isObject } from '../type'
 
 /**
  * 下载 Npm 压缩包

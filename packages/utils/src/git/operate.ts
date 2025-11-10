@@ -1,6 +1,5 @@
-import { run, type RunCommandOptions } from '@/cp'
-import { isObject } from '@/type'
-
+import { run, type RunCommandOptions } from '../cp'
+import { isObject } from '../type'
 import { getGitBranch, getGitUpstreamBranch } from './meta'
 
 /**

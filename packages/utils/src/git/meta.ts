@@ -1,11 +1,12 @@
-import { run, type RunCommandOptions } from '@/cp'
-import { isPathExists, isPathExistsSync, readFile, readFileSync } from '@/file'
-import { isObject } from '@/type'
 import execa from 'execa'
 import ini from 'ini'
 import os, { EOL } from 'node:os'
 import path from 'node:path'
+
 import { URL } from 'node:url'
+import { run, type RunCommandOptions } from '../cp'
+import { isPathExists, isPathExistsSync, readFile, readFileSync } from '../file'
+import { isObject } from '../type'
 
 /**
  * git 远程仓库信息

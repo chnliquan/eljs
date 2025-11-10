@@ -246,9 +246,6 @@ function ensureTsconfig(dirname: string): void {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "declarationDir": "esm",
-    "paths": {
-      "@/*": ["./src/*"]
-    }
   },
   "include": ["src", "../../global.d.ts"]
 }         

@@ -1,4 +1,3 @@
-import { type AppData, type Config } from '@/types'
 import {
   Pluggable,
   type ApplyEvent,
@@ -19,6 +18,7 @@ import {
 import { EOL } from 'node:os'
 import path from 'node:path'
 import type { ReleaseType } from 'semver'
+import { type AppData, type Config } from './types'
 
 import { defaultConfig } from './default'
 import { AppError, parseVersion } from './utils'

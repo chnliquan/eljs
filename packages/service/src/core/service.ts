@@ -1,3 +1,11 @@
+import * as utils from '@eljs/utils'
+import assert from 'assert'
+import fastestLevenshtein from 'fastest-levenshtein'
+import _ from 'lodash'
+import { EOL } from 'os'
+import { AsyncSeriesWaterfallHook } from 'tapable'
+import { ConfigManager } from '../config/manager'
+import { EnableBy } from '../enum'
 import {
   ApplyPluginsType,
   Env,
@@ -12,15 +20,7 @@ import {
   type PluginConfig,
   type ProxyPluginApiPropsExtractorReturnType,
   type UserConfig,
-} from '@/types'
-import * as utils from '@eljs/utils'
-import assert from 'assert'
-import fastestLevenshtein from 'fastest-levenshtein'
-import _ from 'lodash'
-import { EOL } from 'os'
-import { AsyncSeriesWaterfallHook } from 'tapable'
-import { ConfigManager } from '../config/manager'
-import { EnableBy } from '../enum'
+} from '../types'
 import { Command } from './command'
 import { Hook } from './hook'
 import { Plugin } from './plugin'

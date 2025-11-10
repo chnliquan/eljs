@@ -1,5 +1,6 @@
-import type { Plugin } from '@/plugin'
 import type { MaybePromise } from '@eljs/utils'
+
+import type { Plugin } from '../plugin'
 
 /**
  * 插件声明

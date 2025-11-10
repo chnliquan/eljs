@@ -1,11 +1,12 @@
-import { isPathExists } from '@/file'
-import { isObject } from '@/type'
 import chalk from 'chalk'
 import execa, {
   type ExecaChildProcess,
   type Options as ExecaOptions,
 } from 'execa'
 import path from 'node:path'
+
+import { isPathExists } from '../file'
+import { isObject } from '../type'
 
 const SPACES_REGEXP = / +/g
 

@@ -1,10 +1,10 @@
-import { PLATFORM } from '@/constants'
 import { mkdirp, mkdirpSync } from 'mkdirp'
 import os from 'node:os'
 import path from 'node:path'
 import util from 'node:util'
 
-import { isBoolean } from '@/type'
+import { PLATFORM } from '../constants'
+import { isBoolean } from '../type'
 import { isPathExists, isPathExistsSync } from './is'
 
 /**

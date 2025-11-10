@@ -1,5 +1,6 @@
-import type { Api } from '@/types'
 import { hasGit, hasProjectGit, logger, run } from '@eljs/utils'
+
+import type { Api } from '../../types'
 
 export default async (api: Api) => {
   api.describe({

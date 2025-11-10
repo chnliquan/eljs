@@ -1,4 +1,3 @@
-import { type RunnerPluginApi } from '@/core'
 import type { PluggablePluginApi, PluginApi } from '@eljs/pluggable'
 import type {
   CopyFileOptions,
@@ -6,6 +5,8 @@ import type {
   RenderTemplateOptions,
   RunCommandOptions,
 } from '@eljs/utils'
+
+import { type RunnerPluginApi } from '../core'
 
 /**
  * 插件 Api 参数

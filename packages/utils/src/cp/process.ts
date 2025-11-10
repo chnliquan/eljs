@@ -2,7 +2,7 @@ import cp from 'node:child_process'
 import { EOL } from 'node:os'
 import { read } from 'read'
 
-import { isObject } from '@/type'
+import { isObject } from '../type'
 import { getExecutableCommand, runCommand } from './command'
 
 /**

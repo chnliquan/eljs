@@ -1,7 +1,8 @@
-import { PluginType, ServiceStage, type Generator } from '@/types'
 import { isPlainObject, isString, type DistributiveOmit } from '@eljs/utils'
 import assert from 'assert'
+
 import { EnableBy } from '../enum'
+import { PluginType, ServiceStage, type Generator } from '../types'
 import { Command, type CommandOpts } from './command'
 import { Hook, type HookOpts } from './hook'
 import { Plugin } from './plugin'

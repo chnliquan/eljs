@@ -1,8 +1,8 @@
-import type { RunCommandOptions } from '@/cp'
-import { isArray, isObject } from '@/type'
-import type { PackageManager } from '@/types'
 import execa from 'execa'
 
+import type { RunCommandOptions } from '../cp'
+import { isArray, isObject } from '../type'
+import type { PackageManager } from '../types'
 import { getPackageManager } from './package-manager'
 
 /**

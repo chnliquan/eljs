@@ -1,5 +1,6 @@
-import { isNull } from '@/type'
 import prompts, { type Answers, type PromptObject } from 'prompts'
+
+import { isNull } from '../type'
 
 /**
  * 确认问询

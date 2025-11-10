@@ -1,5 +1,6 @@
-import type { Api } from '@/types'
 import path from 'node:path'
+
+import type { Api } from '../../types'
 
 import { author, email, getGitUrl } from '../utils'
 

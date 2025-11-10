@@ -1,11 +1,12 @@
+import { type MaybePromiseFunction } from '@eljs/utils'
+import assert from 'node:assert'
+
 import {
   PluggableStateEnum,
   type Pluggable,
   type PluginDeclaration,
   type ResolvedPlugin,
-} from '@/pluggable'
-import { type MaybePromiseFunction } from '@eljs/utils'
-import assert from 'node:assert'
+} from '../pluggable'
 
 import { Hook, type HookOptions } from './hook'
 import { Plugin } from './plugin'

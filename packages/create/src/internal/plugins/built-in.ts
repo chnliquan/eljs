@@ -1,4 +1,3 @@
-import type { Api } from '@/types'
 import {
   chalk,
   deepMerge,
@@ -12,6 +11,8 @@ import {
   type RunCommandOptions,
 } from '@eljs/utils'
 import { join } from 'node:path'
+
+import type { Api } from '../../types'
 
 export default (api: Api) => {
   api.registerMethod(

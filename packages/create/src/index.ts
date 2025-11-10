@@ -1,5 +1,5 @@
 import './require-hook'
-export { Create } from '@/core'
+export { Create } from './core'
 export * from './default'
 export * from './define'
 export * from './types'

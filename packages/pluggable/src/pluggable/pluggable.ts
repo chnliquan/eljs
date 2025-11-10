@@ -1,14 +1,15 @@
+import { ConfigManager } from '@eljs/config'
+import { isFunction, isPathExistsSync } from '@eljs/utils'
+import assert from 'node:assert'
+import { AsyncSeriesBailHook, AsyncSeriesWaterfallHook } from 'tapable'
+
 import {
   Plugin,
   PluginApi,
   PluginTypeEnum,
   type Hook,
   type ResolvedPluginReturnType,
-} from '@/plugin'
-import { ConfigManager } from '@eljs/config'
-import { isFunction, isPathExistsSync } from '@eljs/utils'
-import assert from 'node:assert'
-import { AsyncSeriesBailHook, AsyncSeriesWaterfallHook } from 'tapable'
+} from '../plugin'
 
 import {
   ApplyPluginTypeEnum,

@@ -1,10 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
+  "include": ["src", "../../global.d.ts"],
   "compilerOptions": {
-    "declarationDir": "esm",
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-  },
-  "include": ["src", "../../global.d.ts"]
+    "declarationDir": "esm"
+  }
 }

@@ -1,10 +1,11 @@
-import { isPathExists, readFile, readJson } from '@/file'
-import { getPackageManager } from '@/npm'
-import type { PackageJson } from '@/types'
 import findUp from 'find-up'
 import { glob } from 'glob'
 import yaml from 'js-yaml'
 import path from 'node:path'
+
+import { isPathExists, readFile, readJson } from '../file'
+import { getPackageManager } from '../npm'
+import type { PackageJson } from '../types'
 
 /**
  * 获取 pnpm 工作目录根路径

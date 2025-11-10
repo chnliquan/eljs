@@ -1,5 +1,3 @@
-import type { Config, RemoteTemplate } from '@/types'
-import { AppError } from '@/utils'
 import {
   chalk,
   createDebugger,
@@ -16,6 +14,8 @@ import {
 } from '@eljs/utils'
 import path, { join } from 'node:path'
 
+import type { Config, RemoteTemplate } from '../types'
+import { AppError } from '../utils'
 import { Download } from './download'
 import { Runner } from './runner'
 

@@ -1,10 +1,11 @@
-import type { Api } from '@/types'
 import {
   extractCallDir,
   isDirectory,
   type RenderTemplateOptions,
 } from '@eljs/utils'
 import { basename, join, resolve } from 'node:path'
+
+import type { Api } from '../../types'
 
 export default (api: Api) => {
   api.registerMethod(
