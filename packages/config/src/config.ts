@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   deepMerge,
   fileLoaders,
@@ -51,9 +52,20 @@ export class ConfigManager {
 
   /**
    * 获取配置项
-   * @param configExts 配置文件扩展名
    */
-  public async getConfig<T extends object>(): Promise<T | null> {
+  public async getConfig<
+    T extends Record<string, any> = Record<string, any>,
+  >(): Promise<T | null>
+  /**
+   * 获取配置项（带默认配置）
+   * @param defaultConfig - 默认配置对象，当没有找到配置文件或需要合并时使用
+   */
+  public async getConfig<T extends Record<string, any>>(
+    defaultConfig: T,
+  ): Promise<T>
+  public async getConfig<T extends Record<string, any>>(
+    defaultConfig?: T,
+  ): Promise<T | null> {
     const { defaultConfigFiles, defaultConfigExts, cwd } =
       this.constructorOptions
 
@@ -63,7 +75,7 @@ export class ConfigManager {
     )
 
     if (!mainConfigFile) {
-      return null
+      return defaultConfig || null
     }
 
     let configFiles = [mainConfigFile]
@@ -75,14 +87,31 @@ export class ConfigManager {
       )
     }
 
-    return ConfigManager.getConfig(getAbsFiles(configFiles, cwd))
+    const loadedConfig = (await ConfigManager.getConfig(
+      getAbsFiles(configFiles, cwd),
+    )) as T | null
+
+    if (defaultConfig) {
+      return deepMerge(defaultConfig, loadedConfig || {}) as T
+    }
+
+    return loadedConfig
   }
 
   /**
-   * 获取配置项
-   * @param configExts 配置文件扩展名
+   * 同步获取配置项
    */
-  public getConfigSync<T extends object>(): T | null {
+  public getConfigSync<
+    T extends Record<string, any> = Record<string, any>,
+  >(): T | null
+  /**
+   * 同步获取配置项（带默认配置）
+   * @param defaultConfig - 默认配置对象，当没有找到配置文件或需要合并时使用
+   */
+  public getConfigSync<T extends Record<string, any>>(defaultConfig: T): T
+  public getConfigSync<T extends Record<string, any>>(
+    defaultConfig?: T,
+  ): T | null {
     const { defaultConfigFiles, defaultConfigExts, cwd } =
       this.constructorOptions
 
@@ -92,7 +121,7 @@ export class ConfigManager {
     )
 
     if (!mainConfigFile) {
-      return null
+      return defaultConfig || null
     }
 
     let configFiles = [mainConfigFile]
@@ -104,7 +133,15 @@ export class ConfigManager {
       )
     }
 
-    return ConfigManager.getConfigSync(getAbsFiles(configFiles, cwd))
+    const loadedConfig = ConfigManager.getConfigSync(
+      getAbsFiles(configFiles, cwd),
+    ) as T | null
+
+    if (defaultConfig) {
+      return deepMerge(defaultConfig, loadedConfig || {}) as T
+    }
+
+    return loadedConfig
   }
 
   /**
@@ -168,12 +205,25 @@ export class ConfigManager {
 
   /**
    * 获取配置文件
-   * @param configFiles 配置文件列表
+   * @param configFiles - 配置文件路径列表（绝对路径）
    */
-  public static async getConfig<T extends object>(
+  public static async getConfig<
+    T extends Record<string, any> = Record<string, any>,
+  >(configFiles: string[]): Promise<T | null>
+  /**
+   * 获取配置文件（带默认配置）
+   * @param configFiles - 配置文件路径列表（绝对路径）
+   * @param defaultConfig - 默认配置对象，用作基础配置
+   */
+  public static async getConfig<T extends Record<string, any>>(
     configFiles: string[],
+    defaultConfig: T,
+  ): Promise<T>
+  public static async getConfig<T extends Record<string, any>>(
+    configFiles: string[],
+    defaultConfig?: T,
   ): Promise<T | null> {
-    let config: T | null = null
+    let config: T | null = defaultConfig ? ({ ...defaultConfig } as T) : null
 
     for (const configFile of configFiles) {
       if (await isPathExists(configFile)) {
@@ -181,13 +231,19 @@ export class ConfigManager {
           fileLoaders[extname(configFile) as keyof typeof fileLoaders]
 
         try {
-          const content = (await loader(configFile)) as { default: T }
+          const content = (await loader(configFile)) as any
 
           if (!content) {
-            return config
+            continue
           }
 
-          config = deepMerge(config as T, content.default ?? content) as T
+          const actualConfig = content.default ?? content
+
+          if (config) {
+            config = deepMerge(config, actualConfig) as T
+          } else {
+            config = actualConfig as T
+          }
         } catch (error) {
           const err = error as Error
           err.message = err.message.replace(
@@ -203,13 +259,27 @@ export class ConfigManager {
   }
 
   /**
-   * 获取配置文件
-   * @param configFiles 配置文件列表
+   * 同步获取配置文件
+   * @param configFiles - 配置文件路径列表（绝对路径）
    */
-  public static getConfigSync<T extends object>(
+  public static getConfigSync<
+    T extends Record<string, any> = Record<string, any>,
+  >(configFiles: string[]): T | null
+
+  /**
+   * 同步获取配置文件（带默认配置）
+   * @param configFiles - 配置文件路径列表（绝对路径）
+   * @param defaultConfig - 默认配置对象，用作基础配置
+   */
+  public static getConfigSync<T extends Record<string, any>>(
     configFiles: string[],
+    defaultConfig: T,
+  ): T
+  public static getConfigSync<T extends Record<string, any>>(
+    configFiles: string[],
+    defaultConfig?: T,
   ): T | null {
-    let config: T | null = null
+    let config: T | null = defaultConfig ? ({ ...defaultConfig } as T) : null
 
     for (const configFile of configFiles) {
       if (isPathExistsSync(configFile)) {
@@ -217,13 +287,19 @@ export class ConfigManager {
           fileLoadersSync[extname(configFile) as keyof typeof fileLoadersSync]
 
         try {
-          const content = loader(configFile) as { default: T }
+          const content = loader(configFile) as any
 
           if (!content) {
-            return config
+            continue
           }
 
-          config = deepMerge(config as T, content.default ?? content) as T
+          const actualConfig = content.default ?? content
+
+          if (config) {
+            config = deepMerge(config, actualConfig) as T
+          } else {
+            config = actualConfig as T
+          }
         } catch (error) {
           const err = error as Error
           err.message = err.message.replace(
