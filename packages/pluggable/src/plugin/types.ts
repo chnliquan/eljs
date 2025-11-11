@@ -70,5 +70,5 @@ export type PluginType = `${PluginTypeEnum}`
  */
 export interface Enable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (...参数: any[]): boolean
+  (...args: any[]): boolean
 }

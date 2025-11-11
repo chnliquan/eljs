@@ -1,7 +1,7 @@
 {
   "name": "@eljs/pluggable",
   "version": "1.3.1",
-  "description": "Make pluggable easily.",
+  "description": "A powerful, type-safe plugin system with zero-configuration setup and flexible extensibility.",
   "keywords": [
     "eljs",
     "pluggable"

@@ -1,6 +1,6 @@
 # @eljs/cache
 
-An intelligent, high-performance caching system with zero-configuration setup and smart cleanup capabilities
+An intelligent caching system with zero-configuration setup and smart cleanup capabilities
 
 [![NPM Version](https://img.shields.io/npm/v/@eljs/cache.svg)](https://www.npmjs.com/package/@eljs/cache)
 [![NPM Downloads](https://img.shields.io/npm/dm/@eljs/cache.svg)](https://www.npmjs.com/package/@eljs/cache)

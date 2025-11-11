@@ -1,7 +1,7 @@
 {
   "name": "@eljs/cache",
   "version": "1.3.1",
-  "description": "Smart caching system for improved performance",
+  "description": "An intelligent caching system with zero-configuration setup and smart cleanup capabilities.",
   "keywords": [
     "eljs",
     "cache",
