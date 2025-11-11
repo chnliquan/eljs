@@ -7,13 +7,12 @@ import {
   type PluginDeclaration,
   type ResolvedPlugin,
 } from '../pluggable'
-
 import { Hook, type HookOptions } from './hook'
 import { Plugin } from './plugin'
 import { PluginTypeEnum, type Enable } from './types'
 
 /**
- * PluginApi class
+ * 插件 Api 类
  */
 export class PluginApi<T extends Pluggable = Pluggable> {
   /**

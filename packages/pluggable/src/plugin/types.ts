@@ -1,6 +1,24 @@
 import type { PluginDeclaration, ResolvedPlugin } from '../pluggable'
 
 /**
+ * 插件类构造函数选项
+ */
+export interface PluginOptions {
+  /**
+   * 插件类型
+   */
+  type: PluginType
+  /**
+   * 插件根路径
+   */
+  path: string
+  /**
+   * 工作目录
+   */
+  cwd: string
+}
+
+/**
  * 插件返回类型
  */
 export interface PluginReturnType {
@@ -52,5 +70,5 @@ export type PluginType = `${PluginTypeEnum}`
  */
 export interface Enable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (...args: any[]): boolean
+  (...参数: any[]): boolean
 }

@@ -10,11 +10,11 @@ import {
   type Hook,
   type ResolvedPluginReturnType,
 } from '../plugin'
-
 import {
   ApplyPluginTypeEnum,
   PluggableStateEnum,
   type ApplyPluginsOptions,
+  type PluggableOptions,
   type PluginDeclaration,
   type PluginMethods,
   type ResolvedPlugin,
@@ -22,38 +22,7 @@ import {
 } from './types'
 
 /**
- * Pluggable constructor options
- */
-export interface PluggableOptions {
-  /**
-   * Working directory
-   * @default process.cwd()
-   */
-  cwd: string
-  /**
-   * Preset declarations
-   */
-  presets?: PluginDeclaration[]
-  /**
-   * Plugin declarations
-   */
-  plugins?: PluginDeclaration[]
-  /**
-   * Default config files
-   * @example
-   * ['config.ts', 'config.js']
-   */
-  defaultConfigFiles?: string[]
-  /**
-   * Default config file extensions
-   * @example
-   * ['dev', 'staging'] => ['config.dev.ts', 'config.staging.ts']
-   */
-  defaultConfigExts?: string[]
-}
-
-/**
- * Pluggable class
+ * 可插拔类
  */
 export class Pluggable<T extends UserConfig = UserConfig> {
   /**
@@ -468,29 +437,29 @@ export class Pluggable<T extends UserConfig = UserConfig> {
 }
 
 /**
- * Pluggable plugin api
+ * 可插拔插件 Api
  */
 export interface PluggablePluginApi {
-  // #region Plugin class fields
+  // #region 插件类字段
   /**
-   * Working directory
+   * 工作目录
    */
   cwd: typeof Pluggable.prototype.cwd
   // #endregion
 
-  // #region Plugin methods
+  // #region 插件方法
   /**
-   * Apply plugins
+   * 执行插件
    */
   applyPlugins: typeof Pluggable.prototype.applyPlugins
   /**
-   * Register presets
-   * @param presets preset declarations
+   * 注册预设
+   * @param presets 预设声明集合
    */
   registerPresets: (presets: PluginDeclaration[]) => void
   /**
-   * Register plugins
-   * @param plugins plugin declarations
+   * 注册插件
+   * @param plugins 插件声明集合
    */
   registerPlugins: (plugins: PluginDeclaration[]) => void
   // #endregion

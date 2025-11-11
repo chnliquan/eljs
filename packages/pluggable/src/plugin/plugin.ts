@@ -14,28 +14,15 @@ import { basename, dirname, extname, join, relative } from 'node:path'
 import pkgUp from 'pkg-up'
 
 import type { PluginDeclaration, ResolvedPlugin } from '../pluggable'
-import type { Enable, PluginReturnType, PluginType } from './types'
+import type {
+  Enable,
+  PluginOptions,
+  PluginReturnType,
+  PluginType,
+} from './types'
 
 /**
- * Plugin constructor options
- */
-export interface PluginOptions {
-  /**
-   * Plugin type
-   */
-  type: PluginType
-  /**
-   * Plugin root path
-   */
-  path: string
-  /**
-   * Working directory
-   */
-  cwd: string
-}
-
-/**
- * Plugin class
+ * 插件类
  */
 export class Plugin {
   /**

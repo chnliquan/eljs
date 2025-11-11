@@ -3,17 +3,51 @@ import type { MaybePromise } from '@eljs/utils'
 import type { Plugin } from '../plugin'
 
 /**
+ * 可插拔类构造函数选项
+ */
+export interface PluggableOptions {
+  /**
+   * 工作目录
+   * @default process.cwd()
+   */
+  cwd: string
+  /**
+   * 预设声明集合
+   */
+  presets?: PluginDeclaration[]
+  /**
+   * 插件声明集合
+   */
+  plugins?: PluginDeclaration[]
+  /**
+   * 默认配置文件列表
+   * @example
+   * ['config.ts', 'config.js']
+   */
+  defaultConfigFiles?: string[]
+  /**
+   * 默认配置文件扩展名
+   * @example
+   * ['dev', 'staging'] => ['config.dev.ts', 'config.staging.ts']
+   */
+  defaultConfigExts?: string[]
+}
+
+/**
  * 插件声明
  */
-export type PluginDeclaration<Options extends object = object> =
-  | string
-  | string[]
-  | [string, Options]
+export type PluginDeclaration<
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Options extends Record<string, any> = Record<string, any>,
+> = string | string[] | [string, Options]
 
 /**
  * 解析后的插件
  */
-export type ResolvedPlugin<Options extends object = object> = [Plugin, Options]
+export type ResolvedPlugin<
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Options extends Record<string, any> = Record<string, any>,
+> = [Plugin, Options]
 
 /**
  * 用户配置项
