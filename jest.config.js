@@ -1,3 +1,6 @@
+const path = require('path')
+const tsconfig = require(path.join(__dirname, './tsconfig.base.json'))
+
 // https://jestjs.io/docs/configuration
 module.exports = {
   testEnvironment: 'node',
@@ -9,13 +12,8 @@ module.exports = {
       'ts-jest',
       {
         tsconfig: {
-          target: 'es2019',
-          sourceMap: true,
-          esModuleInterop: true,
-          allowSyntheticDefaultImports: true,
-          verbatimModuleSyntax: false,
-          skipLibCheck: true,
-          isolatedModules: true,
+          ...tsconfig.compilerOptions,
+          verbatimModuleSyntax: false,  // Jest 需要设为 false
         },
         useESM: false,
       },

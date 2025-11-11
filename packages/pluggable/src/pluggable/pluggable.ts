@@ -231,20 +231,23 @@ export class Pluggable<T extends UserConfig = UserConfig> {
 
     this.key2Plugin[plugin.key] = plugin
 
-    if (pluginResult?.presets) {
-      result.presets = Plugin.resolvePlugins(
-        pluginResult.presets,
-        PluginTypeEnum.Preset,
-        this.cwd,
-      )
-    }
+    // Only presets can return additional presets/plugins
+    if (plugin.type === PluginTypeEnum.Preset && pluginResult) {
+      if (pluginResult.presets) {
+        result.presets = Plugin.resolvePlugins(
+          pluginResult.presets,
+          PluginTypeEnum.Preset,
+          this.cwd,
+        )
+      }
 
-    if (pluginResult?.plugins) {
-      result.plugins = Plugin.resolvePlugins(
-        pluginResult.plugins,
-        PluginTypeEnum.Plugin,
-        this.cwd,
-      )
+      if (pluginResult.plugins) {
+        result.plugins = Plugin.resolvePlugins(
+          pluginResult.plugins,
+          PluginTypeEnum.Plugin,
+          this.cwd,
+        )
+      }
     }
 
     return result
