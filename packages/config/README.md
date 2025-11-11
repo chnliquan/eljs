@@ -4,7 +4,7 @@ Powerful configuration file loader with type-safe configuration management
 
 [![NPM Version](https://img.shields.io/npm/v/@eljs/config.svg)](https://www.npmjs.com/package/@eljs/config)
 [![NPM Downloads](https://img.shields.io/npm/dm/@eljs/config.svg)](https://www.npmjs.com/package/@eljs/config)
-[![License](https://img.shields.io/npm/l/@eljs/config.svg)](https://github.com/chnliquan/eljs/blob/master/packages/config/LICENSE)
+[![License](https://img.shields.io/npm/l/@eljs/config.svg)](https://github.com/chnliquan/eljs/blob/master/LICENSE)
 
 ## ✨ Features
 
