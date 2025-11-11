@@ -13,7 +13,8 @@ module.exports = {
       {
         tsconfig: {
           ...tsconfig.compilerOptions,
-          verbatimModuleSyntax: false,  // Jest 需要设为 false
+          verbatimModuleSyntax: false,
+          noUnusedLocals: false,
         },
         useESM: false,
       },

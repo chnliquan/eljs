@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as path from 'node:path'
 
-import { ConfigManager, ConfigManagerOptions } from '../src/config'
+import { ConfigManager, type ConfigManagerOptions } from '../src'
 import { cleanupDir, createConfigFile, createTempDir } from './test-utils'
 
 describe('ConfigManager 基础功能测试', () => {
