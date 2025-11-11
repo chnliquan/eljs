@@ -14,7 +14,7 @@
     "boot": "tsx scripts/bootstrap",
     "build": "turbo run build",
     "clean": "turbo run clean",
-    "coverage": "jest --runInBand --colors --coverage",
+    "coverage": "npm run test -- --coverage",
     "dev": "turbo run dev",
     "format": "prettier --write 'packages/**/*.{ts,tsx}'",
     "preinstall": "npx only-allow pnpm",
@@ -28,7 +28,7 @@
     "release:minor": "tsx scripts/release minor",
     "release:patch": "tsx scripts/release patch",
     "test": "jest --runInBand --colors",
-    "test:w": "jest --runInBand --colors --watch"
+    "test:w": "npm run test -- --watch"
   },
   "lint-staged": {
     "packages/**/*.{ts,tsx}": [
