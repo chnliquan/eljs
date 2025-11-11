@@ -8,33 +8,11 @@ import {
 } from '@eljs/utils'
 import { extname, join } from 'node:path'
 
+import type { ConfigManagerOptions } from './types'
 import { addFileExt, getAbsFiles } from './utils'
 
 /**
- * ConfigManager constructor options
- */
-export interface ConfigManagerOptions {
-  /**
-   * Default config files
-   * @example
-   * ['config.ts', 'config.js']
-   */
-  defaultConfigFiles: string[]
-  /**
-   * Default config file extensions
-   * @example
-   * ['dev', 'staging'] => ['config.dev.ts', 'config.staging.ts']
-   */
-  defaultConfigExts?: string[]
-  /**
-   * Working directory
-   * @default process.cwd()
-   */
-  cwd?: string
-}
-
-/**
- * ConfigManager class
+ * 配置管理器类
  */
 export class ConfigManager {
   /**
@@ -42,7 +20,7 @@ export class ConfigManager {
    */
   public constructorOptions: ConfigManagerOptions
   /**
-   * 主配置文件
+   * 主配置文件路径
    */
   public mainConfigFile?: string
 
@@ -167,7 +145,7 @@ export class ConfigManager {
   }
 
   /**
-   * 获取主配置文件
+   * 同步获取主配置文件
    * @param configFiles 默认配置文件列表
    * @param cwd 当前工作目录
    */
@@ -190,8 +168,8 @@ export class ConfigManager {
 
   /**
    * 获取配置文件列表
-   * @param mainConfigFile 主配置文件
-   * @param configExts 配置文件扩展名
+   * @param mainConfigFile 主配置文件路径
+   * @param configExts 配置文件扩展名列表
    */
   public static getConfigFiles(
     mainConfigFile: string,
@@ -231,7 +209,7 @@ export class ConfigManager {
           fileLoaders[extname(configFile) as keyof typeof fileLoaders]
 
         try {
-          const content = (await loader(configFile)) as any
+          const content: T | null = await loader(configFile)
 
           if (!content) {
             continue
@@ -287,7 +265,7 @@ export class ConfigManager {
           fileLoadersSync[extname(configFile) as keyof typeof fileLoadersSync]
 
         try {
-          const content = loader(configFile) as any
+          const content: T | null = loader(configFile)
 
           if (!content) {
             continue
