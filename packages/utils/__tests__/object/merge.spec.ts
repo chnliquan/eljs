@@ -93,7 +93,7 @@ describe('对象工具函数', () => {
       const obj2 = { arr: [3, 4] }
       const result = deepMerge(obj1, obj2)
 
-      expect(result).toEqual({ arr: [3, 4] })
+      expect(result).toEqual({ arr: [1, 2, 3, 4] })
     })
 
     it('应该处理空对象', () => {

@@ -53,7 +53,7 @@ export function deepMerge(
     }
 
     return deepmerge(acc, current as Record<string, any>, {
-      arrayMerge: (destinationArray: any, sourceArray: any) => sourceArray,
+      // arrayMerge: (destinationArray: any, sourceArray: any) => sourceArray,
     })
   }, {})
 }
