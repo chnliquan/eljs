@@ -24,11 +24,11 @@
       "request": "launch",
       "name": "Debug Jest File",
       "runtimeExecutable": "node",
-      "program": "${workspaceFolder}/node_modules/.bin/jest",
+      "program": "${workspaceFolder}/node_modules/jest/bin/jest.js",
       "windows": {
-        "program": "${workspaceFolder}/node_modules/jest/bin/jest"
+        "program": "${workspaceFolder}/node_modules/jest/bin/jest.js"
       },
-      "args": ["${fileBasenameNoExtension}", "--config", "jest.config.js"],
+      "args": ["${file}", "--runInBand", "--no-cache", "--forceExit"],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]

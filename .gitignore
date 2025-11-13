@@ -1,28 +1,31 @@
-# system
-.DS_Store
+# System
+.DS_Store/
 .idea/
 
-# temp
-temp
-*.log
+# Cache
+.jest-cache/
+.turbo/
 *.cache
+.eslintcache
+
+# Temporary
+temp/
+*.log
 *.diff
 *.patch
 *.tmp
-.turbo
-.eslintcache
 
-# coverage
+# Coverage
 coverage/
 *.lcov
 
-# jest cache
-.jest-cache/
-
-# dependencies
+# Dependency
 node_modules/
 
-# others
-lib/
+# Build
+dist/
 esm/
+lib/
+
+# Other
 *.local.*

@@ -118,9 +118,9 @@ export async function copyTpl(
   options?: CopyFileOptions,
 ): Promise<void> {
   const { basedir, renderOptions } = options || {}
-  const tpl = await readFile(from)
 
   try {
+    const tpl = await readFile(from)
     const content = renderTemplate(tpl, data, renderOptions)
     let destFile = convertFilePrefix(to.replace(/\.tpl$/, ''))
 
@@ -159,9 +159,9 @@ export function copyTplSync(
   options?: CopyFileOptions,
 ): void {
   const { basedir, renderOptions } = options || {}
-  const tpl = readFileSync(from)
 
   try {
+    const tpl = readFileSync(from)
     const content = renderTemplate(tpl, data, renderOptions)
     let destFile = convertFilePrefix(to.replace(/\.tpl$/, ''))
 

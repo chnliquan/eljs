@@ -193,7 +193,7 @@ export function pkgNameAnalysis(name: string): ResolvedPkgName {
       name: pkgName,
       version: pkgVersion,
       scope: pairs.length > 1 ? pairs[0] : '',
-      unscopedName: pairs[pairs.length],
+      unscopedName: pairs[pairs.length - 1],
     }
   } catch (_) {
     return {

@@ -8,6 +8,9 @@ import type { PackageManager } from '../types'
 
 const cache = new Map()
 
+// 导出cache以便测试使用
+export { cache }
+
 /**
  * 获取包管理器
  * @param cwd 当前工作目录

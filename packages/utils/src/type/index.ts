@@ -1,3 +1,9 @@
+import type {
+  AnyAsyncFunction,
+  AnyConstructorFunction,
+  AnyFunction,
+} from '../types'
+
 function isTypeOf(target: unknown, type: string): boolean {
   if (!type) {
     return false
@@ -66,12 +72,144 @@ export function isArray<T = Array<unknown>>(target: unknown): target is T {
 }
 
 /**
- * 是否为函数
+ * 是否为函数（包括异步函数和生成器函数）
  * @param target 目标对象
  */
-// eslint-disable-next-line @typescript-eslint/ban-types
-export function isFunction<T = Function>(target: unknown): target is T {
-  return isTypeOf(target, 'function')
+export function isFunction<T extends AnyFunction = AnyFunction>(
+  target: unknown,
+): target is T {
+  return typeof target === 'function'
+}
+
+/**
+ * 获取函数构造器（安全方式）
+ * @param fn 函数
+ * @returns 构造器或null
+ */
+function getFunctionConstructor(
+  fn: AnyFunction,
+): AnyConstructorFunction | null {
+  try {
+    return fn.constructor as AnyConstructorFunction
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 是否为 AsyncGenerator 函数
+ * @param target 目标对象
+ */
+export function isAsyncGeneratorFunction(target: unknown): boolean {
+  if (typeof target !== 'function') {
+    return false
+  }
+
+  const constructor = getFunctionConstructor(target as AnyFunction)
+  if (constructor?.name === 'AsyncGeneratorFunction') {
+    return true
+  }
+
+  // 检查 Object.prototype.toString
+  const objectString = Object.prototype.toString.call(target)
+  if (objectString === '[object AsyncGeneratorFunction]') {
+    return true
+  }
+
+  // 字符串检查（编译后的形式）
+  const fnString = target.toString()
+  return fnString.includes('__asyncGenerator')
+}
+
+/**
+ * 是否为 Generator 函数
+ * @param target 目标对象
+ */
+export function isGeneratorFunction(
+  target: unknown,
+): target is GeneratorFunction {
+  if (typeof target !== 'function') {
+    return false
+  }
+
+  // 1. 构造器名检查（最可靠的原生方式）
+  const constructor = getFunctionConstructor(target as AnyFunction)
+  if (constructor?.name === 'GeneratorFunction') {
+    return true
+  }
+
+  // 2. Object.prototype.toString 检查
+  const objectString = Object.prototype.toString.call(target)
+  if (objectString === '[object GeneratorFunction]') {
+    return true
+  }
+
+  // 3. 字符串模式检查（用于检测编译/转换后的代码）
+  const fnString = target.toString()
+
+  // 排除异步生成器函数
+  if (isAsyncGeneratorFunction(target)) {
+    return false
+  }
+
+  // 排除编译后的异步函数（它们内部可能包含 function*）
+  if (fnString.includes('__awaiter')) {
+    return false
+  }
+
+  // 检查是否是真正的生成器函数
+  // 生成器函数的模式：function* 或 function *
+  return /function\s*\*/.test(fnString)
+}
+
+/**
+ * 是否为 Async 函数
+ * @param target 目标对象
+ */
+export function isAsyncFunction(target: unknown): target is AnyAsyncFunction {
+  if (typeof target !== 'function') {
+    return false
+  }
+
+  // 1. 构造器名检查（最可靠的原生方式）
+  const constructor = getFunctionConstructor(target as AnyFunction)
+  if (constructor?.name === 'AsyncFunction') {
+    return true
+  }
+
+  // 2. Object.prototype.toString 检查
+  const objectString = Object.prototype.toString.call(target)
+  if (objectString === '[object AsyncFunction]') {
+    return true
+  }
+
+  // 3. 检查异步生成器函数（它们也是异步的）
+  if (isAsyncGeneratorFunction(target)) {
+    return true
+  }
+
+  // 4. 字符串模式检查（用于检测编译/转换后的代码）
+  const fnString = target.toString()
+
+  // 原生异步函数模式
+  if (fnString.startsWith('async ') || /^async\s*function/.test(fnString)) {
+    return true
+  }
+
+  // 异步箭头函数模式
+  if (
+    /^\s*async\s*\(/.test(fnString) ||
+    /^\s*async\s*\w+\s*=>/.test(fnString)
+  ) {
+    return true
+  }
+
+  // TypeScript 编译后的模式（使用 __awaiter helper）
+  if (fnString.includes('__awaiter')) {
+    return true
+  }
+
+  return false
 }
 
 /**
@@ -114,31 +252,6 @@ export function isPlainObject(target: unknown): target is object {
 export function isPromise<T>(target: unknown): target is Promise<T> {
   return (target &&
     typeof (target as Promise<unknown>).then === 'function') as boolean
-}
-
-/**
- * 是否为 Generator 函数
- * @param target 目标对象
- */
-export function isGeneratorFunction(
-  target: unknown,
-): target is AsyncGeneratorFunction {
-  return (
-    typeof target === 'function' &&
-    target.constructor.name === 'GeneratorFunction'
-  )
-}
-
-/**
- * 是否为 Async 函数
- * @param target 目标对象
- */
-export function isAsyncFunction(
-  target: unknown,
-): target is AsyncGeneratorFunction {
-  return (
-    typeof target === 'function' && target.constructor.name === 'AsyncFunction'
-  )
 }
 
 /**

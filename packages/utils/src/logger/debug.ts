@@ -1,7 +1,5 @@
 import debug, { type Debugger } from 'debug'
 
-const DEBUG = process.env.DEBUG
-
 /**
  * 调试选项
  */
@@ -40,7 +38,8 @@ export function createDebugger(
 
   if (enabled && onlyWhenFocused) {
     const ns = typeof onlyWhenFocused === 'string' ? onlyWhenFocused : namespace
-    enabled = !!DEBUG?.includes(ns)
+    // 动态读取环境变量而不是使用模块顶部的常量
+    enabled = !!process.env.DEBUG?.includes(ns)
   }
 
   if (enabled) {

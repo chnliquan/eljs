@@ -140,5 +140,7 @@ export async function getWorkspaces(
     packageRootPath.push(cwd)
   }
 
+  // 缓存结果
+  cache.set(cacheKey, packageRootPath)
   return packageRootPath
 }

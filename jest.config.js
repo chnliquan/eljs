@@ -13,10 +13,13 @@ module.exports = {
       {
         tsconfig: {
           ...tsconfig.compilerOptions,
+          sourceMap: true,
+          inlineSourceMap: false,
           verbatimModuleSyntax: false,
           noUnusedLocals: false,
         },
         useESM: false,
+        isolatedModules: false,
       },
     ],
   },
@@ -24,6 +27,7 @@ module.exports = {
   coverageReporters: ['html', 'lcov', 'text', 'text-summary'],
   collectCoverageFrom: [
     'packages/*/src/**/*.ts',
+    '!packages/*/.fatherrc.ts',
     '!packages/*/src/**/*.d.ts',
     '!packages/*/src/**/*.spec.ts',
     '!packages/*/src/**/*.test.ts',
@@ -58,4 +62,15 @@ module.exports = {
   testTimeout: 10000,
   clearMocks: true,
   restoreMocks: true,
+  // 改善错误堆栈跟踪
+  collectCoverageFrom: [
+    'packages/*/src/**/*.ts',
+    '!packages/*/src/**/*.d.ts',
+    '!packages/*/src/**/*.spec.ts',
+    '!packages/*/src/**/*.test.ts',
+  ],
+  // 启用更详细的错误信息
+  bail: false,
+  // 改善source map支持
+  extensionsToTreatAsEsm: [],
 }
