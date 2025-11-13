@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 /* eslint-disable @typescript-eslint/naming-convention */
 import type { PluginOptions } from '../src'
 import { Plugin, PluginTypeEnum } from '../src'
@@ -31,7 +32,7 @@ jest.mock('@eljs/utils', () => ({
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { isPathExistsSync, fileLoadersSync } = require('@eljs/utils')
 
-describe('Plugin', () => {
+describe('插件', () => {
   let mockCwd: string
   let validOptions: PluginOptions
 
@@ -186,6 +187,145 @@ describe('Plugin', () => {
           presets: undefined,
           plugins: undefined,
         })
+      })
+    })
+
+    describe('resolvePlugins', () => {
+      beforeEach(() => {
+        const { resolve } = require('@eljs/utils')
+        resolve.sync.mockReturnValue('/resolved/plugin/path.js')
+      })
+
+      it('应该解析字符串插件声明', () => {
+        const result = Plugin.resolvePlugins(
+          ['plugin-name'],
+          PluginTypeEnum.Plugin,
+          mockCwd,
+        )
+
+        expect(result).toHaveLength(1)
+        expect(result[0][0]).toBeInstanceOf(Plugin)
+        expect(result[0][1]).toBeNull()
+      })
+
+      it('应该解析带有选项的插件声明', () => {
+        const options = { option1: 'value1' }
+        const result = Plugin.resolvePlugins(
+          [['plugin-name', options]],
+          PluginTypeEnum.Plugin,
+          mockCwd,
+        )
+
+        expect(result).toHaveLength(1)
+        expect(result[0][0]).toBeInstanceOf(Plugin)
+        expect(result[0][1]).toEqual(options)
+      })
+
+      it('应该过滤空的插件名', () => {
+        const result = Plugin.resolvePlugins(
+          ['', 'valid-plugin'],
+          PluginTypeEnum.Plugin,
+          mockCwd,
+        )
+
+        expect(result).toHaveLength(1)
+        expect(result[0][0]).toBeInstanceOf(Plugin)
+      })
+
+      it('应该对无法解析的插件抛出错误', () => {
+        const { resolve } = require('@eljs/utils')
+        resolve.sync.mockImplementation(() => {
+          throw new Error('Cannot resolve module')
+        })
+
+        expect(() => {
+          Plugin.resolvePlugins(
+            ['invalid-plugin'],
+            PluginTypeEnum.Plugin,
+            mockCwd,
+          )
+        }).toThrow('Invalid plugin `invalid-plugin`, can not be resolved.')
+      })
+    })
+
+    describe('getPresetsAndPlugins 完整场景', () => {
+      beforeEach(() => {
+        jest
+          .spyOn(Plugin, 'resolvePlugins')
+          .mockReturnValue([[new Plugin(validOptions), {}]])
+      })
+
+      it('应该返回解析后的预设和插件', () => {
+        const result = Plugin.getPresetsAndPlugins(
+          mockCwd,
+          ['preset1'],
+          ['plugin1'],
+        )
+
+        expect(result.presets).toHaveLength(1)
+        expect(result.plugins).toHaveLength(1)
+      })
+
+      it('应该处理只有预设的情况', () => {
+        const result = Plugin.getPresetsAndPlugins(
+          mockCwd,
+          ['preset1'],
+          undefined,
+        )
+
+        expect(result.presets).toHaveLength(1)
+        expect(result.plugins).toBeUndefined()
+      })
+
+      it('应该处理只有插件的情况', () => {
+        const result = Plugin.getPresetsAndPlugins(mockCwd, undefined, [
+          'plugin1',
+        ])
+
+        expect(result.presets).toBeUndefined()
+        expect(result.plugins).toHaveLength(1)
+      })
+    })
+
+    describe('constructor 边界情况', () => {
+      it('应该处理没有package.json的情况', () => {
+        const pkgUp = require('pkg-up')
+        pkgUp.sync.mockReturnValue(null)
+
+        const plugin = new Plugin(validOptions)
+
+        expect(plugin).toBeInstanceOf(Plugin)
+        expect(plugin.id).toBeTruthy()
+        expect(plugin.key).toBeTruthy()
+      })
+
+      it('应该处理不同的文件扩展名', () => {
+        const tsOptions = {
+          ...validOptions,
+          path: '/mock/plugin/index.ts',
+        }
+
+        fileLoadersSync['.ts'] = jest
+          .fn()
+          .mockReturnValue({ default: jest.fn() })
+
+        const plugin = new Plugin(tsOptions)
+        const applyResult = plugin.apply()
+
+        expect(typeof applyResult).toBe('function')
+      })
+
+      it('应该处理加载模块时的错误', () => {
+        fileLoadersSync['.js'].mockImplementation(() => {
+          const error = new Error('Load /some/path failed: module not found')
+          throw error
+        })
+
+        const plugin = new Plugin(validOptions)
+
+        expect(() => plugin.apply()).toThrow(
+          /Load `plugin` failed in .*: module not found/,
+        )
       })
     })
   })

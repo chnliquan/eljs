@@ -1,11 +1,23 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { MaybePromiseFunction } from '@eljs/utils'
 import { Pluggable } from '../src/pluggable/pluggable'
 import type { PluggableOptions } from '../src/pluggable/types'
 import { ApplyPluginTypeEnum, PluggableStateEnum } from '../src/pluggable/types'
+import { Plugin, PluginApi } from '../src/plugin'
 import type { Hook } from '../src/plugin/hook'
-import { Plugin } from '../src/plugin/plugin'
 import { PluginTypeEnum } from '../src/plugin/types'
 import { createTempDir } from './setup'
+
+// Type helper for accessing internal pluggable methods
+interface PluggableWithInternals {
+  applyPlugins: (
+    key: string,
+    options?: {
+      type?: ApplyPluginTypeEnum
+      initialValue?: unknown
+      args?: unknown
+    },
+  ) => Promise<unknown>
+}
 
 // Mock the config manager
 jest.mock('@eljs/config', () => ({
@@ -64,7 +76,17 @@ class TestablePluggable extends Pluggable {
   // Provide a way to set state for testing
   public setStateForTesting(state: PluggableStateEnum): void {
     // Use bracket notation to access private property
-    ;(this as any)._state = state
+    ;(this as unknown as { _state: PluggableStateEnum })._state = state
+  }
+
+  // Expose protected load method for testing
+  public testLoad(): Promise<void> {
+    return this.load()
+  }
+
+  // Expose protected getPluginApi method for testing
+  public testGetPluginApi(plugin: Plugin): PluginApi {
+    return this.getPluginApi(plugin)
   }
 }
 
@@ -104,17 +126,17 @@ function createTestHook(
     constructorOptions: {
       plugin,
       key: 'testHook',
-      fn: jest.fn(),
+      fn: jest.fn() as MaybePromiseFunction,
       ...hookData,
     },
     plugin,
     key: 'testHook',
-    fn: jest.fn(),
+    fn: jest.fn() as MaybePromiseFunction,
     ...hookData,
   } as Hook
 }
 
-describe('Pluggable', () => {
+describe('可插拔系统', () => {
   let mockCwd: string
   let pluggable: TestablePluggable
 
@@ -123,8 +145,8 @@ describe('Pluggable', () => {
     jest.clearAllMocks()
   })
 
-  describe('constructor', () => {
-    it('should create Pluggable instance with valid options', () => {
+  describe('构造函数', () => {
+    it('应该创建有效选项的可插拔实例', () => {
       const options: PluggableOptions = {
         cwd: mockCwd,
         presets: [],
@@ -144,7 +166,7 @@ describe('Pluggable', () => {
       expect(pluggable.skippedPluginIds).toBeInstanceOf(Set)
     })
 
-    it('should handle missing optional properties', () => {
+    it('应该处理缺失的可选属性', () => {
       const minimalOptions: PluggableOptions = { cwd: mockCwd }
       pluggable = new TestablePluggable(minimalOptions)
 
@@ -153,14 +175,14 @@ describe('Pluggable', () => {
     })
   })
 
-  describe('applyPlugins - type inference', () => {
+  describe('执行插件 - 类型推断', () => {
     beforeEach(() => {
       pluggable = new TestablePluggable({ cwd: mockCwd })
       // Set state to loaded to allow applyPlugins
       pluggable.setStateForTesting(PluggableStateEnum.Loaded)
     })
 
-    it('should infer Event type from "on" prefix', async () => {
+    it('应该从"on"前缀推断事件类型', async () => {
       pluggable.hooks['onStart'] = []
 
       const result = await pluggable.applyPlugins('onStart')
@@ -168,7 +190,7 @@ describe('Pluggable', () => {
       expect(result).toBe(0) // tapable returns 0 for event hooks
     })
 
-    it('should infer Get type from "get" prefix', async () => {
+    it('应该从"get"前缀推断获取类型', async () => {
       pluggable.hooks['getConfig'] = []
 
       const result = await pluggable.applyPlugins('getConfig')
@@ -176,17 +198,20 @@ describe('Pluggable', () => {
       expect(result).toBeUndefined() // AsyncSeriesBailHook returns undefined when no results
     })
 
-    it('should infer Modify type from "modify" prefix', async () => {
+    it('应该从"modify"前缀推断修改类型', async () => {
       pluggable.hooks['modifyConfig'] = []
 
-      const result = await (pluggable as any).applyPlugins('modifyConfig', {
-        initialValue: { test: true },
-      })
+      const result = await (pluggable as PluggableWithInternals).applyPlugins(
+        'modifyConfig',
+        {
+          initialValue: { test: true },
+        },
+      )
 
       expect(result).toEqual({ test: true })
     })
 
-    it('should infer Add type from "add" prefix', async () => {
+    it('应该从"add"前缀推断添加类型', async () => {
       pluggable.hooks['addPlugins'] = []
 
       const result = await pluggable.applyPlugins('addPlugins')
@@ -194,27 +219,29 @@ describe('Pluggable', () => {
       expect(result).toEqual([])
     })
 
-    it('should throw error for ambiguous key without type', async () => {
+    it('应该对没有类型的模糊键抛出错误', async () => {
       await expect(pluggable.applyPlugins('ambiguousKey')).rejects.toThrow(
         'Invalid applyPlugins arguments, `type` must be supplied for key `ambiguousKey`.',
       )
     })
 
-    it('should throw error for invalid type', async () => {
+    it('应该对无效类型抛出错误', async () => {
       await expect(
-        pluggable.applyPlugins('testKey', { type: 'invalid' as any }),
+        pluggable.applyPlugins('testKey', {
+          type: 'invalid' as unknown as ApplyPluginTypeEnum,
+        }),
       ).rejects.toThrow(
         'ApplyPlugins failed, `type` not defined or matched, got `invalid`.',
       )
     })
   })
 
-  describe('isPluginEnable', () => {
+  describe('插件是否启用', () => {
     beforeEach(() => {
       pluggable = new TestablePluggable({ cwd: mockCwd })
     })
 
-    it('should return true for enabled plugin hook', () => {
+    it('应该对启用的插件钩子返回true', () => {
       const hook = createTestHook(mockCwd, {
         id: 'test-plugin',
         enable: () => true,
@@ -225,7 +252,7 @@ describe('Pluggable', () => {
       expect(result).toBe(true)
     })
 
-    it('should return false for disabled plugin hook', () => {
+    it('应该对禁用的插件钩子返回false', () => {
       const hook = createTestHook(mockCwd, {
         id: 'test-plugin',
         enable: () => false,
@@ -236,7 +263,7 @@ describe('Pluggable', () => {
       expect(result).toBe(false)
     })
 
-    it('should return false for skipped plugin', () => {
+    it('应该对跳过的插件返回false', () => {
       const hook = createTestHook(mockCwd, {
         id: 'skipped-plugin',
         enable: () => true,
@@ -249,7 +276,7 @@ describe('Pluggable', () => {
       expect(result).toBe(false)
     })
 
-    it('should handle plugin key string parameter', () => {
+    it('应该处理插件键字符串参数', () => {
       pluggable.key2Plugin['test-plugin'] = createTestPlugin(
         mockCwd,
         'test-plugin-id',
@@ -263,11 +290,11 @@ describe('Pluggable', () => {
       expect(result).toBe(true)
     })
 
-    it('should handle function enable condition', () => {
+    it('应该处理函数启用条件', () => {
       const enableFn = jest.fn().mockReturnValue(false)
       const hook = createTestHook(mockCwd, {
         id: 'test-plugin',
-        enable: enableFn as any,
+        enable: enableFn as unknown as () => boolean,
       })
 
       const result = pluggable.testIsPluginEnable(hook)
@@ -277,13 +304,13 @@ describe('Pluggable', () => {
     })
   })
 
-  describe('basic hook execution', () => {
+  describe('基础钩子执行', () => {
     beforeEach(() => {
       pluggable = new TestablePluggable({ cwd: mockCwd })
       pluggable.setStateForTesting(PluggableStateEnum.Loaded)
     })
 
-    it('should execute add hooks correctly', async () => {
+    it('应该正确执行添加钩子', async () => {
       const mockFn = jest.fn().mockResolvedValue(['item1'])
       const plugin = createTestPlugin(mockCwd, 'plugin1', {
         time: { hooks: {} as Record<string, number[]> },
@@ -296,16 +323,19 @@ describe('Pluggable', () => {
       } as Hook
       pluggable.hooks['addItems'] = [hook]
 
-      const result = await (pluggable as any).applyPlugins('addItems', {
-        type: ApplyPluginTypeEnum.Add,
-        initialValue: ['initial'],
-      })
+      const result = await (pluggable as PluggableWithInternals).applyPlugins(
+        'addItems',
+        {
+          type: ApplyPluginTypeEnum.Add,
+          initialValue: ['initial'],
+        },
+      )
 
       expect(result).toEqual(['initial', 'item1'])
       expect(mockFn).toHaveBeenCalled()
     })
 
-    it('should execute modify hooks correctly', async () => {
+    it('应该正确执行修改钩子', async () => {
       const mockFn = jest.fn().mockResolvedValue({ modified: true })
       const plugin = createTestPlugin(mockCwd, 'plugin1', {
         time: { hooks: {} as Record<string, number[]> },
@@ -318,16 +348,19 @@ describe('Pluggable', () => {
       } as Hook
       pluggable.hooks['modifyConfig'] = [hook]
 
-      const result = await (pluggable as any).applyPlugins('modifyConfig', {
-        type: ApplyPluginTypeEnum.Modify,
-        initialValue: { original: true },
-      })
+      const result = await (pluggable as PluggableWithInternals).applyPlugins(
+        'modifyConfig',
+        {
+          type: ApplyPluginTypeEnum.Modify,
+          initialValue: { original: true },
+        },
+      )
 
       expect(result).toEqual({ modified: true })
       expect(mockFn).toHaveBeenCalledWith({ original: true }, undefined)
     })
 
-    it('should skip disabled plugins in hook execution', async () => {
+    it('应该在钩子执行中跳过禁用的插件', async () => {
       const enabledFn = jest.fn().mockResolvedValue(['enabled'])
       const disabledFn = jest.fn().mockResolvedValue(['disabled'])
 
@@ -363,17 +396,20 @@ describe('Pluggable', () => {
 
       pluggable.hooks['addItems'] = [enabledHook, disabledHook]
 
-      const result = await (pluggable as any).applyPlugins('addItems', {
-        type: ApplyPluginTypeEnum.Add,
-        initialValue: [],
-      })
+      const result = await (pluggable as PluggableWithInternals).applyPlugins(
+        'addItems',
+        {
+          type: ApplyPluginTypeEnum.Add,
+          initialValue: [],
+        },
+      )
 
       expect(result).toEqual(['enabled'])
       expect(enabledFn).toHaveBeenCalled()
       expect(disabledFn).not.toHaveBeenCalled()
     })
 
-    it('should track hook execution performance', async () => {
+    it('应该跟踪钩子执行性能', async () => {
       const mockFn = jest.fn().mockResolvedValue(['result'])
       const mockPlugin = createTestPlugin(mockCwd, 'test-plugin', {
         time: { hooks: {} as Record<string, number[]> },
@@ -387,10 +423,13 @@ describe('Pluggable', () => {
 
       pluggable.hooks['addItems'] = [hook]
 
-      const result = await (pluggable as any).applyPlugins('addItems', {
-        type: ApplyPluginTypeEnum.Add,
-        initialValue: [],
-      })
+      const result = await (pluggable as PluggableWithInternals).applyPlugins(
+        'addItems',
+        {
+          type: ApplyPluginTypeEnum.Add,
+          initialValue: [],
+        },
+      )
 
       expect(result).toEqual(['result'])
       expect(mockFn).toHaveBeenCalled()
@@ -398,6 +437,151 @@ describe('Pluggable', () => {
       expect(mockPlugin.time.hooks['addItems']).toHaveLength(1)
       expect(typeof mockPlugin.time.hooks['addItems'][0]).toBe('number')
       expect(mockPlugin.time.hooks['addItems'][0]).toBeGreaterThanOrEqual(0)
+    })
+  })
+
+  describe('加载功能', () => {
+    beforeEach(() => {
+      pluggable = new TestablePluggable({ cwd: mockCwd })
+      // Mock Plugin.getPresetsAndPlugins to return empty results
+      jest.spyOn(Plugin, 'getPresetsAndPlugins').mockReturnValue({
+        plugins: [],
+        presets: [],
+      })
+    })
+
+    it('应该成功加载空的预设和插件', async () => {
+      await pluggable.testLoad()
+
+      expect(pluggable.state).toBe(PluggableStateEnum.Loaded)
+      expect(pluggable.userConfig).toEqual({})
+      expect(pluggable.configManager).toBeTruthy()
+    })
+
+    it('应该处理加载过程中的状态变化', async () => {
+      await pluggable.testLoad()
+
+      expect(pluggable.state).toBe(PluggableStateEnum.Loaded)
+    })
+  })
+
+  describe('获取插件API', () => {
+    beforeEach(() => {
+      pluggable = new TestablePluggable({ cwd: mockCwd })
+    })
+
+    it('应该为插件创建代理API', () => {
+      const plugin = createTestPlugin(mockCwd, 'test-plugin')
+
+      const pluginApi = pluggable.testGetPluginApi(plugin)
+
+      expect(pluginApi).toBeTruthy()
+      expect(pluginApi.pluggable).toBe(pluggable)
+      expect(pluginApi.plugin).toBe(plugin)
+    })
+
+    it('应该通过代理访问可插拔属性', () => {
+      const plugin = createTestPlugin(mockCwd, 'test-plugin')
+
+      const pluginApi = pluggable.testGetPluginApi(plugin)
+
+      // Just verify the proxy structure exists
+      expect(pluginApi.pluggable).toBe(pluggable)
+      expect(pluginApi.plugin).toBe(plugin)
+    })
+  })
+
+  describe('添加类型钩子错误处理', () => {
+    beforeEach(() => {
+      pluggable = new TestablePluggable({ cwd: mockCwd })
+      pluggable.setStateForTesting(PluggableStateEnum.Loaded)
+    })
+
+    it('应该对添加类型的无效初始值抛出错误', async () => {
+      pluggable.hooks['addItems'] = []
+
+      await expect(
+        (pluggable as PluggableWithInternals).applyPlugins('addItems', {
+          type: ApplyPluginTypeEnum.Add,
+          initialValue: 'not an array',
+        }),
+      ).rejects.toThrow(
+        'ApplyPlugins failed, `options.initialValue` must be an array when `options.type` is add.',
+      )
+    })
+  })
+
+  describe('获取和事件类型钩子', () => {
+    beforeEach(() => {
+      pluggable = new TestablePluggable({ cwd: mockCwd })
+      pluggable.setStateForTesting(PluggableStateEnum.Loaded)
+    })
+
+    it('应该正确执行获取钩子', async () => {
+      const mockFn = jest.fn().mockResolvedValue('result')
+      const plugin = createTestPlugin(mockCwd, 'plugin1', {
+        time: { hooks: {} as Record<string, number[]> },
+      })
+      const hook = {
+        fn: mockFn,
+        plugin,
+        constructorOptions: { plugin, key: 'getConfig', fn: mockFn },
+        key: 'getConfig',
+      } as Hook
+      pluggable.hooks['getConfig'] = [hook]
+
+      const result = await (pluggable as PluggableWithInternals).applyPlugins(
+        'getConfig',
+        {
+          type: ApplyPluginTypeEnum.Get,
+          args: { param: 'test' },
+        },
+      )
+
+      expect(result).toBe('result')
+      expect(mockFn).toHaveBeenCalledWith({ param: 'test' })
+    })
+
+    it('应该正确执行事件钩子', async () => {
+      const mockFn = jest.fn().mockResolvedValue(undefined)
+      const plugin = createTestPlugin(mockCwd, 'plugin1', {
+        time: { hooks: {} as Record<string, number[]> },
+      })
+      const hook = {
+        fn: mockFn,
+        plugin,
+        constructorOptions: { plugin, key: 'onStart', fn: mockFn },
+        key: 'onStart',
+      } as Hook
+      pluggable.hooks['onStart'] = [hook]
+
+      const result = await (pluggable as PluggableWithInternals).applyPlugins(
+        'onStart',
+        {
+          type: ApplyPluginTypeEnum.Event,
+          args: { eventData: 'test' },
+        },
+      )
+
+      expect(result).toBe(0)
+      expect(mockFn).toHaveBeenCalledWith({ eventData: 'test' })
+    })
+  })
+
+  describe('插件启用状态检查', () => {
+    beforeEach(() => {
+      pluggable = new TestablePluggable({ cwd: mockCwd })
+    })
+
+    it('应该处理没有启用条件的插件', () => {
+      const hook = createTestHook(mockCwd, {
+        id: 'test-plugin',
+        // 没有设置 enable 属性
+      })
+
+      const result = pluggable.testIsPluginEnable(hook)
+
+      expect(result).toBe(true) // 默认应该返回true
     })
   })
 })

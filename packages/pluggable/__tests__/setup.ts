@@ -1,11 +1,22 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { PluggableOptions, Plugin } from '../src'
+import type { PluginTypeEnum } from '../src/plugin/types'
 
-// Simple setup file without complex mocks
+interface MockPluginOptions {
+  key?: string
+  type?: PluginTypeEnum
+  enable?: () => boolean
+  apply?: jest.MockedFunction<() => void>
+  [key: string]: unknown
+}
+
 export const createTempDir = (): string => {
   return `/tmp/test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 }
 
-export const createMockPlugin = (id: string, options: any = {}) => {
+export const createMockPlugin = (
+  id: string,
+  options: MockPluginOptions = {},
+): Plugin => {
   const mockPlugin = {
     id,
     key: options.key || id,
@@ -16,11 +27,13 @@ export const createMockPlugin = (id: string, options: any = {}) => {
     apply: jest.fn(() => options.apply || jest.fn()),
     merge: jest.fn(),
     ...options,
-  }
+  } as unknown as Plugin
   return mockPlugin
 }
 
-export const createMockConfig = (overrides: any = {}) => ({
+export const createMockConfig = (
+  overrides: Partial<PluggableOptions> = {},
+): PluggableOptions => ({
   cwd: createTempDir(),
   presets: [],
   plugins: [],

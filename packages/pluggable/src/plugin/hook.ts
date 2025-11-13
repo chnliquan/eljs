@@ -26,8 +26,7 @@ export interface HookOptions {
   /**
    * 钩子执行函数
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  fn: MaybePromiseFunction<any>
+  fn: MaybePromiseFunction
 }
 
 /**

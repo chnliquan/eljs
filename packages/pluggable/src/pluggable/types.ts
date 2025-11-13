@@ -1,4 +1,4 @@
-import type { MaybePromise } from '@eljs/utils'
+import type { AnyFunction, MaybePromise } from '@eljs/utils'
 
 import type { Plugin } from '../plugin'
 
@@ -101,8 +101,7 @@ export interface PluginMethods {
     /**
      * 执行函数
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    fn: (...args: any[]) => void
+    fn: AnyFunction
   }
 }
 

@@ -1,9 +1,9 @@
 import type { PluggableOptions, PluginDeclaration } from '../src'
 import { ApplyPluginTypeEnum, PluggableStateEnum } from '../src'
 
-describe('Types', () => {
-  describe('PluggableOptions', () => {
-    it('should accept valid pluggable options', () => {
+describe('类型定义', () => {
+  describe('可插拔选项', () => {
+    it('应该接受有效的可插拔选项', () => {
       const options: PluggableOptions = {
         cwd: '/test/cwd',
         presets: ['preset1'],
@@ -22,7 +22,7 @@ describe('Types', () => {
       expect(options.defaultConfigExts).toEqual(['dev', 'prod'])
     })
 
-    it('should work with minimal options', () => {
+    it('应该处理最小选项', () => {
       const options: PluggableOptions = {
         cwd: '/test/cwd',
       }

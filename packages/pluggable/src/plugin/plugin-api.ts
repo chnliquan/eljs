@@ -60,8 +60,7 @@ export class PluginApi<T extends Pluggable = Pluggable> {
    * @param name 方法名
    * @param fn 执行函数
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public registerMethod(name: string, fn?: MaybePromiseFunction<any>): void {
+  public registerMethod(name: string, fn?: MaybePromiseFunction): void {
     assert(
       !this.pluggable.pluginMethods[name],
       `api.registerMethod() failed, method \`${name}\` already exist.`,

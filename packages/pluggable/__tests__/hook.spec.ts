@@ -1,10 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { HookOptions } from '../src'
 import { Hook } from '../src'
+import type { Plugin } from '../src/plugin'
 import { createMockPlugin } from './setup'
 
-describe('Hook', () => {
-  let mockPlugin: any
+describe('钩子', () => {
+  let mockPlugin: Plugin
   let validOptions: HookOptions
 
   beforeEach(() => {
@@ -18,8 +18,8 @@ describe('Hook', () => {
     }
   })
 
-  describe('constructor', () => {
-    it('should create hook with valid options', () => {
+  describe('构造函数', () => {
+    it('应该创建带有有效选项的钩子', () => {
       const hook = new Hook(validOptions)
 
       expect(hook.plugin).toBe(mockPlugin)
@@ -30,21 +30,21 @@ describe('Hook', () => {
       expect(hook.constructorOptions).toEqual(validOptions)
     })
 
-    it('should create hook with before option', () => {
+    it('应该创建带有before选项的钩子', () => {
       const options = { ...validOptions, before: 'anotherHook' }
       const hook = new Hook(options)
 
       expect(hook.before).toBe('anotherHook')
     })
 
-    it('should create hook with custom stage', () => {
+    it('应该创建带有自定义阶段的钩子', () => {
       const options = { ...validOptions, stage: 100 }
       const hook = new Hook(options)
 
       expect(hook.stage).toBe(100)
     })
 
-    it('should throw error when key is missing', () => {
+    it('应该在缺少key时抛出错误', () => {
       const options = { ...validOptions, key: '' }
 
       expect(() => new Hook(options)).toThrow(
@@ -52,15 +52,18 @@ describe('Hook', () => {
       )
     })
 
-    it('should throw error when fn is missing', () => {
-      const options = { ...validOptions, fn: null as any }
+    it('应该在缺少fn时抛出错误', () => {
+      const options = {
+        ...validOptions,
+        fn: null as unknown as HookOptions['fn'],
+      }
 
       expect(() => new Hook(options)).toThrow(
         'Invalid hook [object Object], `key` and `fn` must be supplied.',
       )
     })
 
-    it('should handle undefined optional properties', () => {
+    it('应该处理未定义的可选属性', () => {
       const options = {
         plugin: mockPlugin,
         key: 'testHook',
@@ -75,8 +78,8 @@ describe('Hook', () => {
     })
   })
 
-  describe('properties', () => {
-    it('should expose all required properties', () => {
+  describe('属性', () => {
+    it('应该暴露所有必需的属性', () => {
       const hook = new Hook(validOptions)
 
       expect(hook).toHaveProperty('plugin')
@@ -87,7 +90,7 @@ describe('Hook', () => {
       expect(hook).toHaveProperty('constructorOptions')
     })
 
-    it('should maintain reference to original function', () => {
+    it('应该保持对原始函数的引用', () => {
       const mockFn = jest.fn()
       const options = { ...validOptions, fn: mockFn }
       const hook = new Hook(options)
