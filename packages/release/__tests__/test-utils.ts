@@ -17,16 +17,16 @@ export async function createTempProject(
   tempDir: string
   cleanup: () => Promise<void>
 }> {
-  const tempDir = await mkdtemp(join(tmpdir(), 'release-test-'))
+  const tempDir = await mkdtemp(join(tmpdir(), 'release-it-'))
 
   const defaultPackageJson: PackageJson = {
-    name: 'test-package',
+    name: 'it-package',
     version: '1.0.0',
-    description: 'Test package for release testing',
+    description: 'it package for release iting',
     main: 'index.js',
     scripts: {},
     keywords: [],
-    author: 'Test Author',
+    author: 'it Author',
     license: 'MIT',
     ...packageJson,
   }
@@ -60,15 +60,15 @@ export function createMockAppData(
     registry: 'https://registry.npmjs.org',
     branch: 'main',
     latestTag: 'v1.0.0',
-    projectPkgJsonPath: '/test/package.json',
+    projectPkgJsonPath: '/it/package.json',
     projectPkg: {
-      name: 'test-project',
+      name: 'it-project',
       version: '1.0.0',
-      description: 'Test project',
+      description: 'it project',
       main: 'index.js',
       scripts: {},
       keywords: [],
-      author: 'Test Author',
+      author: 'it Author',
       license: 'MIT',
       dependencies: {},
       devDependencies: {},
@@ -90,11 +90,11 @@ export function createMockAppData(
       config: {},
       publishConfig: {},
     },
-    pkgJsonPaths: ['/test/package.json'],
+    pkgJsonPaths: ['/it/package.json'],
     pkgs: [],
-    pkgNames: ['test-project'],
-    validPkgRootPaths: ['/test'],
-    validPkgNames: ['test-project'],
+    pkgNames: ['it-project'],
+    validPkgRootPaths: ['/it'],
+    validPkgNames: ['it-project'],
     packageManager: 'npm',
     ...overrides,
   }

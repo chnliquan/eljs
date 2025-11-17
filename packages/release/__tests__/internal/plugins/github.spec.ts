@@ -61,7 +61,7 @@ describe('GitHub 插件测试', () => {
           release: true,
         },
       } as Config,
-      cwd: '/test/project',
+      cwd: '/it/project',
     }
 
     jest.clearAllMocks()
@@ -87,7 +87,7 @@ describe('GitHub 插件测试', () => {
   })
 
   describe('插件注册', () => {
-    test('应该注册所有必需的钩子方法', () => {
+    it('应该注册所有必需的钩子方法', () => {
       githubPlugin(mockApi as unknown as Api)
 
       expect(mockApi.describe).toHaveBeenCalledWith({
@@ -98,7 +98,7 @@ describe('GitHub 插件测试', () => {
   })
 
   describe('插件启用条件测试', () => {
-    test('应该在 GitHub 仓库中启用', () => {
+    it('应该在 GitHub 仓库中启用', () => {
       ;(
         getGitUrlSync as jest.MockedFunction<typeof getGitUrlSync>
       ).mockReturnValue('https://github.com/user/repo.git')
@@ -106,11 +106,11 @@ describe('GitHub 插件测试', () => {
       githubPlugin(mockApi as unknown as Api)
       const describeCall = mockApi.describe.mock.calls[0][0]
 
-      const isEnabled = describeCall.enable({ cwd: '/test/project' })
+      const isEnabled = describeCall.enable({ cwd: '/it/project' })
       expect(isEnabled).toBe(true)
     })
 
-    test('应该在非 GitHub 仓库中禁用', () => {
+    it('应该在非 GitHub 仓库中禁用', () => {
       ;(
         getGitUrlSync as jest.MockedFunction<typeof getGitUrlSync>
       ).mockReturnValue('https://gitlab.com/user/repo.git')
@@ -118,7 +118,7 @@ describe('GitHub 插件测试', () => {
       githubPlugin(mockApi as unknown as Api)
       const describeCall = mockApi.describe.mock.calls[0][0]
 
-      const isEnabled = describeCall.enable({ cwd: '/test/project' })
+      const isEnabled = describeCall.enable({ cwd: '/it/project' })
       expect(isEnabled).toBe(false)
     })
   })
@@ -131,7 +131,7 @@ describe('GitHub 插件测试', () => {
       onReleaseHandler = mockApi.onRelease.mock.calls[0][0] as OnReleaseHandler
     })
 
-    test('应该创建 GitHub 发布', async () => {
+    it('应该创建 GitHub 发布', async () => {
       const versionInfo = {
         version: '1.1.0',
         isPrerelease: false,
@@ -152,7 +152,7 @@ describe('GitHub 插件测试', () => {
       )
     })
 
-    test('应该为预发布版本标记 isPrerelease', async () => {
+    it('应该为预发布版本标记 isPrerelease', async () => {
       const versionInfo = {
         version: '1.1.0-beta.1',
         isPrerelease: true,
@@ -170,7 +170,7 @@ describe('GitHub 插件测试', () => {
       })
     })
 
-    test('当禁用 GitHub 发布时应该跳过', async () => {
+    it('当禁用 GitHub 发布时应该跳过', async () => {
       mockApi.config.github!.release = false
 
       const versionInfo = {
@@ -187,7 +187,7 @@ describe('GitHub 插件测试', () => {
       expect(open).not.toHaveBeenCalled()
     })
 
-    test('当没有 changelog 时应该跳过', async () => {
+    it('当没有 changelog 时应该跳过', async () => {
       const versionInfo = {
         version: '1.1.0',
         isPrerelease: false,
@@ -202,7 +202,7 @@ describe('GitHub 插件测试', () => {
       expect(open).not.toHaveBeenCalled()
     })
 
-    test('当无法获取 Git URL 时应该跳过', async () => {
+    it('当无法获取 Git URL 时应该跳过', async () => {
       ;(getGitUrl as jest.MockedFunction<typeof getGitUrl>).mockResolvedValue(
         '',
       )
@@ -220,7 +220,7 @@ describe('GitHub 插件测试', () => {
       expect(open).not.toHaveBeenCalled()
     })
 
-    test('当无法解析仓库 URL 时应该跳过', async () => {
+    it('当无法解析仓库 URL 时应该跳过', async () => {
       ;(
         gitUrlAnalysis as jest.MockedFunction<typeof gitUrlAnalysis>
       ).mockReturnValue(null)
@@ -247,7 +247,7 @@ describe('GitHub 插件测试', () => {
       onReleaseHandler = mockApi.onRelease.mock.calls[0][0] as OnReleaseHandler
     })
 
-    test('应该处理 getGitUrl 错误', async () => {
+    it('应该处理 getGitUrl 错误', async () => {
       ;(getGitUrl as jest.MockedFunction<typeof getGitUrl>).mockRejectedValue(
         new Error('Git URL error'),
       )
@@ -265,7 +265,7 @@ describe('GitHub 插件测试', () => {
       )
     })
 
-    test('应该处理 open 错误', async () => {
+    it('应该处理 open 错误', async () => {
       ;(open as jest.MockedFunction<typeof open>).mockRejectedValue(
         new Error('Open failed'),
       )
@@ -283,27 +283,27 @@ describe('GitHub 插件测试', () => {
   })
 
   describe('插件导出验证', () => {
-    test('应该是一个函数', () => {
+    it('应该是一个函数', () => {
       expect(typeof githubPlugin).toBe('function')
     })
 
-    test('应该接受 API 参数', () => {
+    it('应该接受 API 参数', () => {
       expect(githubPlugin.length).toBe(1)
     })
 
-    test('应该没有返回值', () => {
+    it('应该没有返回值', () => {
       const result = githubPlugin(mockApi as unknown as Api)
       expect(result).toBeUndefined()
     })
   })
 
   describe('GitHub 插件集成测试', () => {
-    test('应该完整执行 GitHub 发布流程', async () => {
+    it('应该完整执行 GitHub 发布流程', async () => {
       githubPlugin(mockApi as unknown as Api)
 
       // 1. 检查插件是否启用
       const describeCall = mockApi.describe.mock.calls[0][0]
-      const isEnabled = describeCall.enable({ cwd: '/test/project' })
+      const isEnabled = describeCall.enable({ cwd: '/it/project' })
       expect(isEnabled).toBe(true)
 
       // 2. 执行发布流程
@@ -322,7 +322,7 @@ describe('GitHub 插件测试', () => {
       expect(open).toHaveBeenCalled()
     })
 
-    test('应该处理不同版本类型', async () => {
+    it('应该处理不同版本类型', async () => {
       githubPlugin(mockApi as unknown as Api)
       const onReleaseHandler = mockApi.onRelease.mock
         .calls[0][0] as OnReleaseHandler

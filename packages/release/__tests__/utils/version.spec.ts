@@ -34,39 +34,39 @@ describe('版本处理工具函数测试', () => {
 
   describe('预发布版本检测函数', () => {
     describe('isPrerelease', () => {
-      test('应该正确识别 alpha 预发布版本', () => {
+      it('应该正确识别 alpha 预发布版本', () => {
         expect(isPrerelease('1.0.0-alpha.1')).toBe(true)
         expect(isPrerelease('2.1.0-alpha.2')).toBe(true)
       })
 
-      test('应该正确识别 beta 预发布版本', () => {
+      it('应该正确识别 beta 预发布版本', () => {
         expect(isPrerelease('1.0.0-beta.1')).toBe(true)
         expect(isPrerelease('2.1.0-beta.2')).toBe(true)
       })
 
-      test('应该正确识别 rc 预发布版本', () => {
+      it('应该正确识别 rc 预发布版本', () => {
         expect(isPrerelease('1.0.0-rc.1')).toBe(true)
         expect(isPrerelease('2.1.0-rc.2')).toBe(true)
       })
 
-      test('应该正确识别 canary 预发布版本', () => {
+      it('应该正确识别 canary 预发布版本', () => {
         expect(isPrerelease('1.0.0-canary.1')).toBe(true)
         expect(isPrerelease('2.1.0-canary.20231113-abc123')).toBe(true)
       })
 
-      test('应该正确识别正式版本', () => {
+      it('应该正确识别正式版本', () => {
         expect(isPrerelease('1.0.0')).toBe(false)
         expect(isPrerelease('2.1.3')).toBe(false)
       })
     })
 
     describe('isAlphaVersion', () => {
-      test('应该正确识别 alpha 版本', () => {
+      it('应该正确识别 alpha 版本', () => {
         expect(isAlphaVersion('1.0.0-alpha.1')).toBe(true)
         expect(isAlphaVersion('1.0.0-alpha.2')).toBe(true)
       })
 
-      test('应该正确排除非 alpha 版本', () => {
+      it('应该正确排除非 alpha 版本', () => {
         expect(isAlphaVersion('1.0.0-beta.1')).toBe(false)
         expect(isAlphaVersion('1.0.0-rc.1')).toBe(false)
         expect(isAlphaVersion('1.0.0')).toBe(false)
@@ -74,12 +74,12 @@ describe('版本处理工具函数测试', () => {
     })
 
     describe('isBetaVersion', () => {
-      test('应该正确识别 beta 版本', () => {
+      it('应该正确识别 beta 版本', () => {
         expect(isBetaVersion('1.0.0-beta.1')).toBe(true)
         expect(isBetaVersion('2.1.0-beta.3')).toBe(true)
       })
 
-      test('应该正确排除非 beta 版本', () => {
+      it('应该正确排除非 beta 版本', () => {
         expect(isBetaVersion('1.0.0-alpha.1')).toBe(false)
         expect(isBetaVersion('1.0.0-rc.1')).toBe(false)
         expect(isBetaVersion('1.0.0')).toBe(false)
@@ -87,12 +87,12 @@ describe('版本处理工具函数测试', () => {
     })
 
     describe('isRcVersion', () => {
-      test('应该正确识别 rc 版本', () => {
+      it('应该正确识别 rc 版本', () => {
         expect(isRcVersion('1.0.0-rc.1')).toBe(true)
         expect(isRcVersion('2.1.0-rc.2')).toBe(true)
       })
 
-      test('应该正确排除非 rc 版本', () => {
+      it('应该正确排除非 rc 版本', () => {
         expect(isRcVersion('1.0.0-alpha.1')).toBe(false)
         expect(isRcVersion('1.0.0-beta.1')).toBe(false)
         expect(isRcVersion('1.0.0')).toBe(false)
@@ -100,12 +100,12 @@ describe('版本处理工具函数测试', () => {
     })
 
     describe('isCanaryVersion', () => {
-      test('应该正确识别 canary 版本', () => {
+      it('应该正确识别 canary 版本', () => {
         expect(isCanaryVersion('1.0.0-canary.1')).toBe(true)
         expect(isCanaryVersion('2.1.0-canary.20231113-abc123')).toBe(true)
       })
 
-      test('应该正确排除非 canary 版本', () => {
+      it('应该正确排除非 canary 版本', () => {
         expect(isCanaryVersion('1.0.0-alpha.1')).toBe(false)
         expect(isCanaryVersion('1.0.0-beta.1')).toBe(false)
         expect(isCanaryVersion('1.0.0')).toBe(false)
@@ -115,19 +115,19 @@ describe('版本处理工具函数测试', () => {
 
   describe('版本验证函数', () => {
     describe('isVersionValid', () => {
-      test('应该验证有效的语义化版本', () => {
+      it('应该验证有效的语义化版本', () => {
         expect(isVersionValid('1.0.0')).toBe(true)
         expect(isVersionValid('1.2.3')).toBe(true)
         expect(isVersionValid('1.0.0-alpha.1')).toBe(true)
       })
 
-      test('应该拒绝无效的语义化版本', () => {
+      it('应该拒绝无效的语义化版本', () => {
         expect(isVersionValid('1.0')).toBe(false)
         expect(isVersionValid('invalid')).toBe(false)
         expect(isVersionValid('')).toBe(false)
       })
 
-      test('当 releaseType 为 true 时应该接受发布类型', () => {
+      it('当 releaseType 为 true 时应该接受发布类型', () => {
         expect(isVersionValid('major', true)).toBe(true)
         expect(isVersionValid('minor', true)).toBe(true)
         expect(isVersionValid('patch', true)).toBe(true)
@@ -137,7 +137,7 @@ describe('版本处理工具函数测试', () => {
         expect(isVersionValid('prerelease', true)).toBe(true)
       })
 
-      test('当 releaseType 为 false 时应该拒绝发布类型', () => {
+      it('当 releaseType 为 false 时应该拒绝发布类型', () => {
         expect(isVersionValid('major', false)).toBe(false)
         expect(isVersionValid('minor', false)).toBe(false)
         expect(isVersionValid('invalid', false)).toBe(false)
@@ -147,7 +147,7 @@ describe('版本处理工具函数测试', () => {
 
   describe('版本解析函数', () => {
     describe('parseVersion', () => {
-      test('应该正确解析正式版本', () => {
+      it('应该正确解析正式版本', () => {
         const result = parseVersion('1.2.3')
         expect(result).toEqual({
           version: '1.2.3',
@@ -156,7 +156,7 @@ describe('版本处理工具函数测试', () => {
         })
       })
 
-      test('应该正确解析预发布版本', () => {
+      it('应该正确解析预发布版本', () => {
         const result = parseVersion('1.2.3-alpha.1')
         expect(result).toEqual({
           version: '1.2.3-alpha.1',
@@ -165,7 +165,7 @@ describe('版本处理工具函数测试', () => {
         })
       })
 
-      test('应该正确解析带数字预发布标识的版本', () => {
+      it('应该正确解析带数字预发布标识的版本', () => {
         const result = parseVersion('1.2.3-1')
         expect(result).toEqual({
           version: '1.2.3-1',
@@ -174,14 +174,14 @@ describe('版本处理工具函数测试', () => {
         })
       })
 
-      test('应该对无效版本抛出错误', () => {
+      it('应该对无效版本抛出错误', () => {
         expect(() => parseVersion('invalid')).toThrow(
           'Invalid semantic version `invalid`.',
         )
         expect(() => parseVersion('')).toThrow('Invalid semantic version ``.')
       })
 
-      test('应该正确处理复杂预发布版本', () => {
+      it('应该正确处理复杂预发布版本', () => {
         const result = parseVersion('2.0.0-beta.2')
         expect(result).toEqual({
           version: '2.0.0-beta.2',
@@ -194,52 +194,52 @@ describe('版本处理工具函数测试', () => {
 
   describe('版本存在性检查', () => {
     describe('isVersionExist', () => {
-      test('应该在版本存在时返回 true', async () => {
+      it('应该在版本存在时返回 true', async () => {
         const mockRun = run as jest.MockedFunction<typeof run>
-        mockRun.mockResolvedValue({ stdout: '@test/package@1.0.0' } as Awaited<
+        mockRun.mockResolvedValue({ stdout: '@it/package@1.0.0' } as Awaited<
           ReturnType<typeof run>
         >)
 
-        const result = await isVersionExist('test-package', '1.0.0')
+        const result = await isVersionExist('it-package', '1.0.0')
         expect(result).toBe(true)
         expect(mockRun).toHaveBeenCalledWith('npm', [
           'view',
-          'test-package@1.0.0',
+          'it-package@1.0.0',
         ])
       })
 
-      test('应该在版本不存在时返回 false', async () => {
+      it('应该在版本不存在时返回 false', async () => {
         const mockRun = run as jest.MockedFunction<typeof run>
         mockRun.mockResolvedValue({ stdout: '' } as Awaited<
           ReturnType<typeof run>
         >)
 
-        const result = await isVersionExist('test-package', '1.0.0')
+        const result = await isVersionExist('it-package', '1.0.0')
         expect(result).toBe(false)
       })
 
-      test('应该在命令执行失败时返回 false', async () => {
+      it('应该在命令执行失败时返回 false', async () => {
         const mockRun = run as jest.MockedFunction<typeof run>
         mockRun.mockRejectedValue(new Error('命令执行失败'))
 
-        const result = await isVersionExist('test-package', '1.0.0')
+        const result = await isVersionExist('it-package', '1.0.0')
         expect(result).toBe(false)
       })
 
-      test('应该使用指定的 registry', async () => {
+      it('应该使用指定的 registry', async () => {
         const mockRun = run as jest.MockedFunction<typeof run>
-        mockRun.mockResolvedValue({ stdout: '@test/package@1.0.0' } as Awaited<
+        mockRun.mockResolvedValue({ stdout: '@it/package@1.0.0' } as Awaited<
           ReturnType<typeof run>
         >)
 
         await isVersionExist(
-          'test-package',
+          'it-package',
           '1.0.0',
           'https://custom-registry.com',
         )
         expect(mockRun).toHaveBeenCalledWith('npm', [
           'view',
-          'test-package@1.0.0',
+          'it-package@1.0.0',
           '--registry',
           'https://custom-registry.com',
         ])
@@ -249,48 +249,48 @@ describe('版本处理工具函数测试', () => {
 
   describe('版本处理工具函数', () => {
     describe('getStableVersion', () => {
-      test('应该从预发布版本中提取稳定版本', () => {
+      it('应该从预发布版本中提取稳定版本', () => {
         expect(getStableVersion('1.2.3-alpha.1')).toBe('1.2.3')
         expect(getStableVersion('2.0.0-beta.2')).toBe('2.0.0')
         expect(getStableVersion('1.0.0-rc.1')).toBe('1.0.0')
       })
 
-      test('应该返回稳定版本本身', () => {
+      it('应该返回稳定版本本身', () => {
         expect(getStableVersion('1.2.3')).toBe('1.2.3')
         expect(getStableVersion('2.0.0')).toBe('2.0.0')
       })
     })
 
     describe('getMaxVersion', () => {
-      test('应该返回最大的版本', () => {
+      it('应该返回最大的版本', () => {
         expect(getMaxVersion('1.0.0', '1.1.0', '1.0.1')).toBe('1.1.0')
         expect(getMaxVersion('2.0.0', '1.9.9')).toBe('2.0.0')
       })
 
-      test('应该忽略空版本', () => {
+      it('应该忽略空版本', () => {
         expect(getMaxVersion('1.0.0', '', '1.1.0')).toBe('1.1.0')
         expect(getMaxVersion('', '1.0.0')).toBe('1.0.0')
       })
 
-      test('应该处理单个版本', () => {
+      it('应该处理单个版本', () => {
         expect(getMaxVersion('1.0.0')).toBe('1.0.0')
       })
     })
 
     describe('getReleaseVersion', () => {
-      test('应该正确计算 major 版本升级', () => {
+      it('应该正确计算 major 版本升级', () => {
         expect(getReleaseVersion('1.2.3', 'major')).toBe('2.0.0')
       })
 
-      test('应该正确计算 minor 版本升级', () => {
+      it('应该正确计算 minor 版本升级', () => {
         expect(getReleaseVersion('1.2.3', 'minor')).toBe('1.3.0')
       })
 
-      test('应该正确计算 patch 版本升级', () => {
+      it('应该正确计算 patch 版本升级', () => {
         expect(getReleaseVersion('1.2.3', 'patch')).toBe('1.2.4')
       })
 
-      test('应该正确计算预发布版本升级', () => {
+      it('应该正确计算预发布版本升级', () => {
         expect(getReleaseVersion('1.2.3', 'premajor', 'alpha')).toBe(
           '2.0.0-alpha.0',
         )
@@ -299,7 +299,7 @@ describe('版本处理工具函数测试', () => {
         )
       })
 
-      test('应该使用默认预发布 ID', () => {
+      it('应该使用默认预发布 ID', () => {
         expect(getReleaseVersion('1.2.3', 'premajor')).toBe('2.0.0-beta.0')
       })
     })
@@ -307,16 +307,16 @@ describe('版本处理工具函数测试', () => {
 
   describe('基准版本计算', () => {
     describe('getReferenceVersion', () => {
-      test('应该在没有远程版本时返回本地版本', () => {
+      it('应该在没有远程版本时返回本地版本', () => {
         expect(getReferenceVersion('1.0.0', '', 'latest')).toBe('1.0.0')
       })
 
-      test('应该为 latest 标签返回较大的版本', () => {
+      it('应该为 latest 标签返回较大的版本', () => {
         expect(getReferenceVersion('1.0.0', '1.1.0', 'latest')).toBe('1.1.0')
         expect(getReferenceVersion('1.1.0', '1.0.0', 'latest')).toBe('1.1.0')
       })
 
-      test('应该为预发布标签正确处理稳定版本', () => {
+      it('应该为预发布标签正确处理稳定版本', () => {
         expect(
           getReferenceVersion('1.0.0-alpha.1', '1.0.0-alpha.2', 'alpha'),
         ).toBe('1.0.0-alpha.2')
@@ -329,7 +329,7 @@ describe('版本处理工具函数测试', () => {
 
   describe('Canary 版本生成', () => {
     describe('getCanaryVersion', () => {
-      test('应该生成正确的 canary 版本', async () => {
+      it('应该生成正确的 canary 版本', async () => {
         const mockGetGitCommitSha = getGitCommitSha as jest.MockedFunction<
           typeof getGitCommitSha
         >
@@ -346,7 +346,7 @@ describe('版本处理工具函数测试', () => {
         jest.restoreAllMocks()
       })
 
-      test('应该为预发布版本生成 canary 版本', async () => {
+      it('应该为预发布版本生成 canary 版本', async () => {
         const mockGetGitCommitSha = getGitCommitSha as jest.MockedFunction<
           typeof getGitCommitSha
         >
@@ -362,7 +362,7 @@ describe('版本处理工具函数测试', () => {
         jest.restoreAllMocks()
       })
 
-      test('应该使用指定的工作目录', async () => {
+      it('应该使用指定的工作目录', async () => {
         const mockGetGitCommitSha = getGitCommitSha as jest.MockedFunction<
           typeof getGitCommitSha
         >
@@ -380,7 +380,7 @@ describe('版本处理工具函数测试', () => {
         jest.restoreAllMocks()
       })
 
-      test('应该正确处理已经是 canary 版本的情况', async () => {
+      it('应该正确处理已经是 canary 版本的情况', async () => {
         const mockGetGitCommitSha = getGitCommitSha as jest.MockedFunction<
           typeof getGitCommitSha
         >

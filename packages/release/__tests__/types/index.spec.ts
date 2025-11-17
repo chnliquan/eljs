@@ -15,7 +15,7 @@ import type {
 
 describe('类型定义测试', () => {
   describe('PrereleaseId 类型', () => {
-    test('应该接受有效的预发布标识符', () => {
+    it('应该接受有效的预发布标识符', () => {
       const validIds: PrereleaseId[] = ['alpha', 'beta', 'rc']
 
       validIds.forEach(id => {
@@ -23,7 +23,7 @@ describe('类型定义测试', () => {
       })
     })
 
-    test('PrereleaseId 应该是字符串字面量类型', () => {
+    it('PrereleaseId 应该是字符串字面量类型', () => {
       // TypeScript 编译时验证
       const alpha: PrereleaseId = 'alpha'
       const beta: PrereleaseId = 'beta'
@@ -36,7 +36,7 @@ describe('类型定义测试', () => {
   })
 
   describe('DistTag 类型', () => {
-    test('应该接受所有有效的 dist tag', () => {
+    it('应该接受所有有效的 dist tag', () => {
       const validTags: DistTag[] = ['latest', 'alpha', 'beta', 'rc']
 
       validTags.forEach(tag => {
@@ -44,7 +44,7 @@ describe('类型定义测试', () => {
       })
     })
 
-    test('DistTag 应该包含 PrereleaseId 和 latest', () => {
+    it('DistTag 应该包含 PrereleaseId 和 latest', () => {
       const latest: DistTag = 'latest'
       const alpha: DistTag = 'alpha'
       const beta: DistTag = 'beta'
@@ -58,24 +58,24 @@ describe('类型定义测试', () => {
   })
 
   describe('Config 类型', () => {
-    test('应该允许空配置对象', () => {
+    it('应该允许空配置对象', () => {
       const config: Config = {}
       expect(typeof config).toBe('object')
     })
 
-    test('应该允许部分配置', () => {
+    it('应该允许部分配置', () => {
       const config: Config = {
-        cwd: '/test/path',
+        cwd: '/it/path',
         git: {
           requireClean: false,
         },
       }
 
-      expect(config.cwd).toBe('/test/path')
+      expect(config.cwd).toBe('/it/path')
       expect(config.git?.requireClean).toBe(false)
     })
 
-    test('应该允许完整的 git 配置', () => {
+    it('应该允许完整的 git 配置', () => {
       const config: Config = {
         git: {
           requireClean: true,
@@ -99,7 +99,7 @@ describe('类型定义测试', () => {
       expect(config.git?.changelog).not.toBe(false)
     })
 
-    test('应该允许禁用 changelog', () => {
+    it('应该允许禁用 changelog', () => {
       const config: Config = {
         git: {
           changelog: false,
@@ -109,7 +109,7 @@ describe('类型定义测试', () => {
       expect(config.git?.changelog).toBe(false)
     })
 
-    test('应该允许完整的 npm 配置', () => {
+    it('应该允许完整的 npm 配置', () => {
       const config: Config = {
         npm: {
           requireOwner: true,
@@ -125,7 +125,7 @@ describe('类型定义测试', () => {
       expect(config.npm?.publishArgs).toEqual(['--tag', 'beta'])
     })
 
-    test('应该允许 github 配置', () => {
+    it('应该允许 github 配置', () => {
       const config: Config = {
         github: {
           release: true,
@@ -135,7 +135,7 @@ describe('类型定义测试', () => {
       expect(config.github?.release).toBe(true)
     })
 
-    test('应该支持字符串或数组类型的参数', () => {
+    it('应该支持字符串或数组类型的参数', () => {
       const configWithString: Config = {
         git: {
           commitArgs: '--no-verify',
@@ -162,16 +162,16 @@ describe('类型定义测试', () => {
   })
 
   describe('AppData 类型', () => {
-    test('应该包含所有必需的字段', () => {
+    it('应该包含所有必需的字段', () => {
       // 创建一个简化的 PackageJson 对象用于测试
       const mockPackageJson = {
-        name: 'test-project',
+        name: 'it-project',
         version: '1.0.0',
-        description: 'Test project',
+        description: 'it project',
         main: 'index.js',
         scripts: {},
         keywords: [],
-        author: 'Test Author',
+        author: 'it Author',
         license: 'MIT',
       } as PackageJson
 
@@ -184,9 +184,9 @@ describe('类型定义测试', () => {
         projectPkg: mockPackageJson as Required<PackageJson>,
         pkgJsonPaths: ['/project/package.json'],
         pkgs: [mockPackageJson as Required<PackageJson>],
-        pkgNames: ['test-project'],
+        pkgNames: ['it-project'],
         validPkgRootPaths: ['/project'],
-        validPkgNames: ['test-project'],
+        validPkgNames: ['it-project'],
         packageManager: 'pnpm',
       }
 
@@ -196,7 +196,7 @@ describe('类型定义测试', () => {
       expect(Array.isArray(appData.validPkgNames)).toBe(true)
     })
 
-    test('应该允许 latestTag 为 null', () => {
+    it('应该允许 latestTag 为 null', () => {
       const appData: Partial<AppData> = {
         latestTag: null,
       }
@@ -204,7 +204,7 @@ describe('类型定义测试', () => {
       expect(appData.latestTag).toBeNull()
     })
 
-    test('应该支持扩展字段', () => {
+    it('应该支持扩展字段', () => {
       const appData: AppData & { customField?: string } = {
         cliVersion: '1.0.0',
         registry: 'https://registry.npmjs.org',
@@ -225,7 +225,7 @@ describe('类型定义测试', () => {
       expect(appData.customField).toBe('custom value')
     })
 
-    test('应该支持不同的包管理器', () => {
+    it('应该支持不同的包管理器', () => {
       const npmData: Partial<AppData> = { packageManager: 'npm' }
       const yarnData: Partial<AppData> = { packageManager: 'yarn' }
       const pnpmData: Partial<AppData> = { packageManager: 'pnpm' }
@@ -239,7 +239,7 @@ describe('类型定义测试', () => {
   })
 
   describe('Api 类型', () => {
-    test('Api 类型应该从多个接口继承', () => {
+    it('Api 类型应该从多个接口继承', () => {
       // 这个测试主要验证类型定义的正确性
       // 在实际使用中，Api 类型会包含多个接口的属性
       const mockApi: Partial<Api> = {
@@ -251,14 +251,14 @@ describe('类型定义测试', () => {
   })
 
   describe('类型兼容性测试', () => {
-    test('PrereleaseId 应该兼容 DistTag', () => {
+    it('PrereleaseId 应该兼容 DistTag', () => {
       const prereleaseId: PrereleaseId = 'alpha'
       const distTag: DistTag = prereleaseId // 应该可以赋值
 
       expect(distTag).toBe('alpha')
     })
 
-    test('Config 应该支持嵌套的可选属性', () => {
+    it('Config 应该支持嵌套的可选属性', () => {
       const config: Config = {
         git: {
           changelog: {
@@ -272,32 +272,32 @@ describe('类型定义测试', () => {
       expect(config.git?.changelog).not.toBe(false)
     })
 
-    test('应该支持类型推断', () => {
+    it('应该支持类型推断', () => {
       // TypeScript 应该能够推断出正确的类型
       const config = {
-        cwd: '/test',
+        cwd: '/it',
         git: {
           requireClean: false,
         },
       } satisfies Config
 
-      expect(config.cwd).toBe('/test')
+      expect(config.cwd).toBe('/it')
       expect(config.git?.requireClean).toBe(false)
     })
   })
 
   describe('类型约束测试', () => {
-    test('Config 应该继承自 UserConfig', () => {
+    it('Config 应该继承自 UserConfig', () => {
       // Config 接口扩展了 UserConfig，所以应该包含相关属性
       const config: Config = {
-        cwd: '/test',
+        cwd: '/it',
         // UserConfig 的属性也应该可用
       }
 
       expect(typeof config).toBe('object')
     })
 
-    test('AppData 应该包含必需和可选的字段', () => {
+    it('AppData 应该包含必需和可选的字段', () => {
       const minimalAppData: Partial<AppData> = {
         cliVersion: '1.0.0',
         registry: '',
@@ -319,7 +319,7 @@ describe('类型定义测试', () => {
   })
 
   describe('类型导出验证', () => {
-    test('所有类型都应该能够正确导入', () => {
+    it('所有类型都应该能够正确导入', () => {
       // 通过能够声明这些类型变量来验证导入成功
       const prereleaseId: PrereleaseId = 'alpha'
       const distTag: DistTag = 'latest'
@@ -330,7 +330,7 @@ describe('类型定义测试', () => {
       expect(typeof config).toBe('object')
     })
 
-    test('类型定义应该是稳定的', () => {
+    it('类型定义应该是稳定的', () => {
       // 验证类型的基本特性
       const types = {
         PrereleaseId: ['alpha', 'beta', 'rc'],

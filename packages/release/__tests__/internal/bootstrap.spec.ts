@@ -73,7 +73,7 @@ describe('Bootstrap 插件测试', () => {
   })
 
   describe('插件注册', () => {
-    test('应该注册 modifyAppData 方法', () => {
+    it('应该注册 modifyAppData 方法', () => {
       bootstrapPlugin(mockApi as unknown as Api)
 
       expect(mockApi.modifyAppData).toHaveBeenCalledTimes(1)
@@ -82,7 +82,7 @@ describe('Bootstrap 插件测试', () => {
   })
 
   describe('modifyAppData 功能', () => {
-    test('应该处理单个包的项目', async () => {
+    it('应该处理单个包的项目', async () => {
       const mockPackageJson = {
         name: 'test-package',
         version: '1.0.0',
@@ -126,7 +126,7 @@ describe('Bootstrap 插件测试', () => {
       )
     })
 
-    test('应该处理 monorepo 项目', async () => {
+    it('应该处理 monorepo 项目', async () => {
       const workspaces = [
         '/test/project/packages/pkg1',
         '/test/project/packages/pkg2',
@@ -165,7 +165,7 @@ describe('Bootstrap 插件测试', () => {
       expect(result.validPkgNames).toEqual(['pkg1', 'pkg3'])
     })
 
-    test('应该跳过不存在 package.json 的目录', async () => {
+    it('应该跳过不存在 package.json 的目录', async () => {
       const workspaces = [
         '/test/project/packages/pkg1',
         '/test/project/packages/pkg2',
@@ -196,7 +196,7 @@ describe('Bootstrap 插件测试', () => {
       expect(readJson).toHaveBeenCalledTimes(1)
     })
 
-    test('应该警告没有名称的包并跳过', async () => {
+    it('应该警告没有名称的包并跳过', async () => {
       const mockPackageWithoutName = {
         version: '1.0.0',
         // 缺少 name 字段
@@ -232,7 +232,7 @@ describe('Bootstrap 插件测试', () => {
       expect(result.validPkgNames).toEqual(['valid-package'])
     })
 
-    test('应该正确区分公开包和私有包', async () => {
+    it('应该正确区分公开包和私有包', async () => {
       const workspaces = [
         '/test/project/packages/public-pkg',
         '/test/project/packages/private-pkg',
@@ -268,7 +268,7 @@ describe('Bootstrap 插件测试', () => {
       ])
     })
 
-    test('应该获取 Git 相关信息', async () => {
+    it('应该获取 Git 相关信息', async () => {
       ;(
         getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue([mockCwd])
@@ -298,7 +298,7 @@ describe('Bootstrap 插件测试', () => {
       expect(result.latestTag).toBe('v1.2.0')
     })
 
-    test('应该从项目配置中获取 registry', async () => {
+    it('应该从项目配置中获取 registry', async () => {
       ;(
         getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue([mockCwd])
@@ -326,7 +326,7 @@ describe('Bootstrap 插件测试', () => {
       expect(result.registry).toBe('https://custom-registry.com')
     })
 
-    test('当没有有效包时应该抛出 AppError', async () => {
+    it('当没有有效包时应该抛出 AppError', async () => {
       ;(
         getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue([mockCwd])
@@ -348,7 +348,7 @@ describe('Bootstrap 插件测试', () => {
       )
     })
 
-    test('应该处理空的工作空间列表', async () => {
+    it('应该处理空的工作空间列表', async () => {
       ;(
         getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue([])
@@ -363,7 +363,7 @@ describe('Bootstrap 插件测试', () => {
       ).rejects.toThrow('No valid package to publish')
     })
 
-    test('应该保持原有的 memo 属性', async () => {
+    it('应该保持原有的 memo 属性', async () => {
       ;(
         getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue([mockCwd])
@@ -393,7 +393,7 @@ describe('Bootstrap 插件测试', () => {
   })
 
   describe('错误处理', () => {
-    test('应该处理 getWorkspaces 抛出的错误', async () => {
+    it('应该处理 getWorkspaces 抛出的错误', async () => {
       ;(
         getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
       ).mockRejectedValue(new Error('获取工作空间失败'))
@@ -408,7 +408,7 @@ describe('Bootstrap 插件测试', () => {
       ).rejects.toThrow('获取工作空间失败')
     })
 
-    test('应该处理 readJson 抛出的错误', async () => {
+    it('应该处理 readJson 抛出的错误', async () => {
       ;(
         getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue([mockCwd])
@@ -426,7 +426,7 @@ describe('Bootstrap 插件测试', () => {
       ).rejects.toThrow('读取 package.json 失败')
     })
 
-    test('应该处理 getGitBranch 抛出的错误', async () => {
+    it('应该处理 getGitBranch 抛出的错误', async () => {
       ;(
         getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue([mockCwd])
@@ -451,15 +451,15 @@ describe('Bootstrap 插件测试', () => {
   })
 
   describe('插件导出验证', () => {
-    test('应该是一个函数', () => {
+    it('应该是一个函数', () => {
       expect(typeof bootstrapPlugin).toBe('function')
     })
 
-    test('应该接受 API 参数', () => {
+    it('应该接受 API 参数', () => {
       expect(bootstrapPlugin.length).toBe(1)
     })
 
-    test('应该没有返回值', () => {
+    it('应该没有返回值', () => {
       const result = bootstrapPlugin(mockApi as unknown as Api)
       expect(result).toBeUndefined()
     })

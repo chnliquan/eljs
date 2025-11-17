@@ -58,7 +58,7 @@ describe('更新日志生成工具函数测试', () => {
   })
 
   describe('getChangelog 函数', () => {
-    test('应该使用默认配置生成更新日志', async () => {
+    it('应该使用默认配置生成更新日志', async () => {
       const options: GenerateChangelogOptions = {}
       const expectedChangelog = '# Changelog\n\n## v1.0.0\n- 新功能'
 
@@ -92,7 +92,7 @@ describe('更新日志生成工具函数测试', () => {
       )
     })
 
-    test('应该使用指定的工作目录', async () => {
+    it('应该使用指定的工作目录', async () => {
       const options: GenerateChangelogOptions = {
         cwd: '/custom/path',
       }
@@ -118,7 +118,7 @@ describe('更新日志生成工具函数测试', () => {
       )
     })
 
-    test('应该使用独立标签前缀', async () => {
+    it('应该使用独立标签前缀', async () => {
       const options: GenerateChangelogOptions = {
         independent: true,
       }
@@ -144,10 +144,10 @@ describe('更新日志生成工具函数测试', () => {
       )
     })
 
-    test('应该使用指定的预设', async () => {
+    it('应该使用指定的预设', async () => {
       const options: GenerateChangelogOptions = {
         preset: 'angular',
-        cwd: '/test/path',
+        cwd: '/it/path',
       }
 
       mockStream.pipe.mockImplementation(concatStream => {
@@ -161,25 +161,25 @@ describe('更新日志生成工具函数测试', () => {
 
       const conventionalChangelog = require('conventional-changelog').default
       expect(conventionalChangelog).toHaveBeenCalledWith({
-        cwd: '/test/path',
+        cwd: '/it/path',
         preset: 'angular',
       })
     })
 
-    test('应该正确处理流错误', async () => {
+    it('应该正确处理流错误', async () => {
       const options: GenerateChangelogOptions = {}
-      const testError = new Error('流处理错误')
+      const itError = new Error('流处理错误')
 
       mockStream.on.mockImplementation((event, callback) => {
         if (event === 'error') {
-          setTimeout(() => callback(testError), 0)
+          setTimeout(() => callback(itError), 0)
         }
       })
 
       await expect(getChangelog(options)).rejects.toThrow('流处理错误')
     })
 
-    test('应该正确去除结果中的空白字符', async () => {
+    it('应该正确去除结果中的空白字符', async () => {
       const options: GenerateChangelogOptions = {}
       const rawChangelog = '\n\n  # Changelog\n\n## v1.0.0  \n  \n'
 
@@ -194,7 +194,7 @@ describe('更新日志生成工具函数测试', () => {
       expect(result).toBe('# Changelog\n\n## v1.0.0')
     })
 
-    test('应该处理空的更新日志内容', async () => {
+    it('应该处理空的更新日志内容', async () => {
       const options: GenerateChangelogOptions = {}
 
       mockStream.pipe.mockImplementation(concatStream => {
@@ -217,7 +217,7 @@ describe('更新日志生成工具函数测试', () => {
 
       mockStream.pipe.mockImplementation(concatStream => {
         setTimeout(() => {
-          concatStream.callback(Buffer.from('test'))
+          concatStream.callback(Buffer.from('it'))
         }, 0)
         return concatStream
       })
@@ -229,7 +229,7 @@ describe('更新日志生成工具函数测试', () => {
       finalizeContext = writerOpts.finalizeContext
     })
 
-    test('应该正确处理有 keyCommit 但没有 currentTag 的情况', () => {
+    it('应该正确处理有 keyCommit 但没有 currentTag 的情况', () => {
       // 这个测试检验 finalizeContext 的内部逻辑
       // 由于 finalizeContext 是复杂的内部函数，我们简化测试逻辑
       const context = {
@@ -257,7 +257,7 @@ describe('更新日志生成工具函数测试', () => {
       expect(typeof result).toBe('object')
     })
 
-    test('应该处理独立标签的情况', () => {
+    it('应该处理独立标签的情况', () => {
       const context = {
         gitSemverTags: ['package-a@1.0.0'],
         currentTag: null,
@@ -280,7 +280,7 @@ describe('更新日志生成工具函数测试', () => {
       expect(result.linkCompare).toBe(true)
     })
 
-    test('应该正确设置 linkCompare', () => {
+    it('应该正确设置 linkCompare', () => {
       const context = {
         gitSemverTags: ['v1.0.0'],
         currentTag: 'v1.1.0',
@@ -293,7 +293,7 @@ describe('更新日志生成工具函数测试', () => {
       expect(result.linkCompare).toBe(true)
     })
 
-    test('应该处理 Unreleased 版本', () => {
+    it('应该处理 Unreleased 版本', () => {
       const context = {
         gitSemverTags: ['v1.0.0'],
         currentTag: null,
@@ -307,7 +307,7 @@ describe('更新日志生成工具函数测试', () => {
       expect(result.currentTag).toBe('latest123')
     })
 
-    test('应该使用 lastCommitHash 作为 previousTag 的后备', () => {
+    it('应该使用 lastCommitHash 作为 previousTag 的后备', () => {
       const context = {
         gitSemverTags: [],
         currentTag: 'v1.0.0',
@@ -336,7 +336,7 @@ describe('更新日志生成工具函数测试', () => {
   })
 
   describe('guessNextTag 函数行为', () => {
-    test('应该正确猜测下一个标签（独立模式）', async () => {
+    it('应该正确猜测下一个标签（独立模式）', async () => {
       // 这个测试通过调用 getChangelog 并检查 finalizeContext 的行为来间接测试 guessNextTag
       const options: GenerateChangelogOptions = {
         independent: true,
@@ -344,7 +344,7 @@ describe('更新日志生成工具函数测试', () => {
 
       mockStream.pipe.mockImplementation(concatStream => {
         setTimeout(() => {
-          concatStream.callback(Buffer.from('test'))
+          concatStream.callback(Buffer.from('it'))
         }, 0)
         return concatStream
       })
@@ -364,12 +364,12 @@ describe('更新日志生成工具函数测试', () => {
       )
     })
 
-    test('应该正确处理不同的版本格式', async () => {
+    it('应该正确处理不同的版本格式', async () => {
       const options: GenerateChangelogOptions = {}
 
       mockStream.pipe.mockImplementation(concatStream => {
         setTimeout(() => {
-          concatStream.callback(Buffer.from('test'))
+          concatStream.callback(Buffer.from('it'))
         }, 0)
         return concatStream
       })

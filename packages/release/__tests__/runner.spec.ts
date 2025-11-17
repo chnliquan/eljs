@@ -27,66 +27,64 @@ describe('Runner 类测试', () => {
     // 重新设置基本的模拟
     const { isPathExistsSync, readJsonSync, logger } = require('@eljs/utils')
     isPathExistsSync.mockReturnValue(true)
-    readJsonSync.mockReturnValue({ name: 'test-package', version: '1.0.0' })
+    readJsonSync.mockReturnValue({ name: 'it-package', version: '1.0.0' })
     logger.error = jest.fn()
     logger.step = jest.fn()
   })
 
   describe('Runner 构造函数', () => {
-    test('应该成功创建 Runner 实例', () => {
+    it('应该成功创建 Runner 实例', () => {
       const runner = new Runner()
 
       expect(runner).toBeInstanceOf(Runner)
       expect(runner.appData).toBeDefined()
     })
 
-    test('应该使用指定的工作目录', () => {
+    it('应该使用指定的工作目录', () => {
       const cwd = '/custom/path'
       const runner = new Runner({ cwd })
 
       expect(runner).toBeInstanceOf(Runner)
     })
 
-    test('应该正确验证 package.json 路径', () => {
+    it('应该正确验证 package.json 路径', () => {
       const { isPathExistsSync } = require('@eljs/utils')
-      const testPath = '/test/project'
+      const itPath = '/it/project'
 
-      new Runner({ cwd: testPath })
+      new Runner({ cwd: itPath })
 
-      expect(isPathExistsSync).toHaveBeenCalledWith(
-        '/test/project/package.json',
-      )
+      expect(isPathExistsSync).toHaveBeenCalledWith('/it/project/package.json')
     })
 
-    test('当 package.json 不存在时应该抛出 AppError', () => {
+    it('当 package.json 不存在时应该抛出 AppError', () => {
       const { isPathExistsSync } = require('@eljs/utils')
       isPathExistsSync.mockReturnValue(false)
 
       expect(() => new Runner()).toThrow()
     })
 
-    test('当 package.json 没有 version 字段时应该抛出 AppError', () => {
+    it('当 package.json 没有 version 字段时应该抛出 AppError', () => {
       const { readJsonSync } = require('@eljs/utils')
-      readJsonSync.mockReturnValue({ name: 'test' })
+      readJsonSync.mockReturnValue({ name: 'it' })
 
       expect(() => new Runner()).toThrow()
     })
 
-    test('应该正确设置 appData', () => {
-      const mockPkg = { name: 'test-package', version: '2.0.0' }
+    it('应该正确设置 appData', () => {
+      const mockPkg = { name: 'it-package', version: '2.0.0' }
       const { readJsonSync } = require('@eljs/utils')
       readJsonSync.mockReturnValue(mockPkg)
 
-      const runner = new Runner({ cwd: '/test/path' })
+      const runner = new Runner({ cwd: '/it/path' })
 
       expect(runner.appData.projectPkg).toEqual(mockPkg)
-      expect(runner.appData.projectPkgJsonPath).toBe('/test/path/package.json')
+      expect(runner.appData.projectPkgJsonPath).toBe('/it/path/package.json')
     })
 
-    test('应该正确传递配置到 Pluggable', () => {
+    it('应该正确传递配置到 Pluggable', () => {
       const { Pluggable } = require('@eljs/pluggable')
       const config: Config = {
-        cwd: '/test',
+        cwd: '/it',
         presets: ['preset1'],
         plugins: ['plugin1'],
       }
@@ -95,7 +93,7 @@ describe('Runner 类测试', () => {
 
       expect(Pluggable).toHaveBeenCalledWith(
         expect.objectContaining({
-          cwd: '/test',
+          cwd: '/it',
           presets: [expect.stringMatching(/internal/), 'preset1'],
           plugins: ['plugin1'],
           defaultConfigFiles: ['release.config.ts', 'release.config.js'],
@@ -103,7 +101,7 @@ describe('Runner 类测试', () => {
       )
     })
 
-    test('应该正确处理默认值', () => {
+    it('应该正确处理默认值', () => {
       const { Pluggable } = require('@eljs/pluggable')
 
       new Runner()
@@ -117,29 +115,29 @@ describe('Runner 类测试', () => {
       )
     })
 
-    test('应该验证 version 字段的有效性', () => {
+    it('应该验证 version 字段的有效性', () => {
       const { readJsonSync } = require('@eljs/utils')
       const validVersions = ['1.0.0', '0.1.0', '10.20.30', '1.0.0-alpha.1']
 
       validVersions.forEach(version => {
-        readJsonSync.mockReturnValue({ name: 'test', version })
+        readJsonSync.mockReturnValue({ name: 'it', version })
         expect(() => new Runner()).not.toThrow()
       })
     })
 
-    test('应该拒绝无效的 version 字段', () => {
+    it('应该拒绝无效的 version 字段', () => {
       const { readJsonSync } = require('@eljs/utils')
       const invalidVersions = [null, undefined, '', false, 0]
 
       invalidVersions.forEach(version => {
-        readJsonSync.mockReturnValue({ name: 'test', version })
+        readJsonSync.mockReturnValue({ name: 'it', version })
         expect(() => new Runner()).toThrow()
       })
     })
   })
 
   describe('Runner step 方法', () => {
-    test('应该调用 logger.step 方法', () => {
+    it('应该调用 logger.step 方法', () => {
       const { logger } = require('@eljs/utils')
       const runner = new Runner()
       const message = '测试步骤'
@@ -149,7 +147,7 @@ describe('Runner 类测试', () => {
       expect(logger.step).toHaveBeenCalledWith('Release', `${message}\n`)
     })
 
-    test('应该正确格式化不同类型的消息', () => {
+    it('应该正确格式化不同类型的消息', () => {
       const { logger } = require('@eljs/utils')
       const runner = new Runner()
 
@@ -167,7 +165,7 @@ describe('Runner 类测试', () => {
       expect(logger.step).toHaveBeenNthCalledWith(3, 'Release', '发布成功\n')
     })
 
-    test('应该处理空消息', () => {
+    it('应该处理空消息', () => {
       const { logger } = require('@eljs/utils')
       const runner = new Runner()
 
@@ -176,7 +174,7 @@ describe('Runner 类测试', () => {
       expect(logger.step).toHaveBeenCalledWith('Release', '\n')
     })
 
-    test('应该处理特殊字符', () => {
+    it('应该处理特殊字符', () => {
       const { logger } = require('@eljs/utils')
       const runner = new Runner()
       const message = '发布 v1.0.0 🚀'
@@ -186,11 +184,11 @@ describe('Runner 类测试', () => {
       expect(logger.step).toHaveBeenCalledWith('Release', `${message}\n`)
     })
 
-    test('应该正确添加换行符', () => {
+    it('应该正确添加换行符', () => {
       const { logger } = require('@eljs/utils')
       const runner = new Runner()
 
-      runner.step('Test')
+      runner.step('it')
 
       expect(logger.step).toHaveBeenCalledWith(
         'Release',
@@ -198,7 +196,7 @@ describe('Runner 类测试', () => {
       )
     })
 
-    test('应该处理长消息', () => {
+    it('应该处理长消息', () => {
       const { logger } = require('@eljs/utils')
       const runner = new Runner()
       const longMessage = 'x'.repeat(1000)
@@ -210,12 +208,12 @@ describe('Runner 类测试', () => {
   })
 
   describe('Runner run 方法基础测试', () => {
-    test('run 方法应该存在', () => {
+    it('run 方法应该存在', () => {
       const runner = new Runner()
       expect(typeof runner.run).toBe('function')
     })
 
-    test('run 方法应该是异步的', () => {
+    it('run 方法应该是异步的', () => {
       const runner = new Runner()
       // 由于模拟环境的限制，检查函数是否返回 Promise 即可
       const result = runner.run()
@@ -223,7 +221,7 @@ describe('Runner 类测试', () => {
       result.catch(() => {}) // 避免未处理的 rejection
     })
 
-    test('run 方法应该接受不同参数类型', () => {
+    it('run 方法应该接受不同参数类型', () => {
       const runner = new Runner()
 
       expect(() => {
@@ -235,7 +233,7 @@ describe('Runner 类测试', () => {
   })
 
   describe('Runner 错误处理', () => {
-    test('应该处理文件系统访问错误', () => {
+    it('应该处理文件系统访问错误', () => {
       const { isPathExistsSync } = require('@eljs/utils')
       isPathExistsSync.mockImplementation(() => {
         throw new Error('Permission denied')
@@ -244,7 +242,7 @@ describe('Runner 类测试', () => {
       expect(() => new Runner()).toThrow()
     })
 
-    test('应该处理 JSON 解析错误', () => {
+    it('应该处理 JSON 解析错误', () => {
       const { readJsonSync } = require('@eljs/utils')
       readJsonSync.mockImplementation(() => {
         throw new SyntaxError('Malformed JSON')
@@ -253,21 +251,21 @@ describe('Runner 类测试', () => {
       expect(() => new Runner()).toThrow()
     })
 
-    test('应该正确使用 chalk 来格式化错误消息', () => {
+    it('应该正确使用 chalk 来格式化错误消息', () => {
       const { isPathExistsSync, chalk } = require('@eljs/utils')
       isPathExistsSync.mockReturnValue(false)
       chalk.cyan.mockReturnValue('[styled-path]')
 
-      expect(() => new Runner({ cwd: '/test' })).toThrow()
-      expect(chalk.cyan).toHaveBeenCalledWith('/test')
+      expect(() => new Runner({ cwd: '/it' })).toThrow()
+      expect(chalk.cyan).toHaveBeenCalledWith('/it')
     })
   })
 
   describe('Runner 配置验证和处理', () => {
-    test('应该接受各种配置组合', () => {
+    it('应该接受各种配置组合', () => {
       const configs = [
         {},
-        { cwd: '/test' },
+        { cwd: '/it' },
         { presets: ['preset1'] },
         { plugins: ['plugin1'] },
         { git: { requireClean: false } },
@@ -280,7 +278,7 @@ describe('Runner 类测试', () => {
       })
     })
 
-    test('应该正确处理 presets 数组', () => {
+    it('应该正确处理 presets 数组', () => {
       const { Pluggable } = require('@eljs/pluggable')
 
       // 空数组
@@ -313,7 +311,7 @@ describe('Runner 类测试', () => {
       )
     })
 
-    test('应该正确处理 plugins 数组', () => {
+    it('应该正确处理 plugins 数组', () => {
       const { Pluggable } = require('@eljs/pluggable')
 
       // 空数组
@@ -335,7 +333,7 @@ describe('Runner 类测试', () => {
   })
 
   describe('Runner 属性和方法验证', () => {
-    test('应该有所有必需的公共属性', () => {
+    it('应该有所有必需的公共属性', () => {
       const runner = new Runner()
 
       expect(runner).toHaveProperty('appData')
@@ -347,7 +345,7 @@ describe('Runner 类测试', () => {
       ).toBe(true)
     })
 
-    test('应该有所有必需的公共方法', () => {
+    it('应该有所有必需的公共方法', () => {
       const runner = new Runner()
 
       expect(typeof runner.step).toBe('function')
@@ -355,7 +353,7 @@ describe('Runner 类测试', () => {
       expect(typeof runner.applyPlugins).toBe('function')
     })
 
-    test('appData 应该有正确的初始结构', () => {
+    it('appData 应该有正确的初始结构', () => {
       const runner = new Runner()
 
       expect(runner.appData).toHaveProperty('projectPkgJsonPath')
@@ -366,7 +364,7 @@ describe('Runner 类测试', () => {
   })
 
   describe('Runner 边界条件测试', () => {
-    test('应该处理各种路径格式', () => {
+    it('应该处理各种路径格式', () => {
       const paths = [
         '/absolute/path',
         './relative/path',
@@ -380,7 +378,7 @@ describe('Runner 类测试', () => {
       })
     })
 
-    test('应该处理特殊的 package.json 内容', () => {
+    it('应该处理特殊的 package.json 内容', () => {
       const { readJsonSync } = require('@eljs/utils')
       const specialPackages = [
         { name: 'normal-package', version: '1.0.0' },
@@ -391,7 +389,7 @@ describe('Runner 类测试', () => {
           name: 'complex-package',
           version: '1.0.0-beta.1',
           description: 'A complex package with many fields',
-          keywords: ['test', 'complex'],
+          keywords: ['it', 'complex'],
         },
       ]
 
@@ -402,7 +400,7 @@ describe('Runner 类测试', () => {
       })
     })
 
-    test('应该处理大型配置对象', () => {
+    it('应该处理大型配置对象', () => {
       const largeConfig: Config = {
         presets: Array.from({ length: 50 }, (_, i) => `preset-${i}`),
         plugins: Array.from({ length: 50 }, (_, i) => `plugin-${i}`),

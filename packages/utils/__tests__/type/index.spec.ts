@@ -16,7 +16,7 @@ import {
 
 describe('类型检查工具函数', () => {
   describe('基础类型检查', () => {
-    test('isUndefined 检查 undefined', () => {
+    it('isUndefined 检查 undefined', () => {
       expect(isUndefined(undefined)).toBe(true)
       expect(isUndefined(null)).toBe(false)
       expect(isUndefined(0)).toBe(false)
@@ -26,7 +26,7 @@ describe('类型检查工具函数', () => {
       expect(isUndefined(false)).toBe(false)
     })
 
-    test('isNull 检查 null', () => {
+    it('isNull 检查 null', () => {
       expect(isNull(null)).toBe(true)
       expect(isNull(undefined)).toBe(false)
       expect(isNull(0)).toBe(false)
@@ -36,7 +36,7 @@ describe('类型检查工具函数', () => {
       expect(isNull(false)).toBe(false)
     })
 
-    test('isString 检查字符串', () => {
+    it('isString 检查字符串', () => {
       expect(isString('')).toBe(true)
       expect(isString('hello')).toBe(true)
       expect(isString('0')).toBe(true)
@@ -50,7 +50,7 @@ describe('类型检查工具函数', () => {
       expect(isString(undefined)).toBe(false)
     })
 
-    test('isObject 检查对象', () => {
+    it('isObject 检查对象', () => {
       expect(isObject({})).toBe(true)
       expect(isObject({ a: 1 })).toBe(true)
       expect(isObject(new Object())).toBe(true)
@@ -63,7 +63,7 @@ describe('类型检查工具函数', () => {
       expect(isObject(() => {})).toBe(false)
     })
 
-    test('isArray 检查数组', () => {
+    it('isArray 检查数组', () => {
       expect(isArray([])).toBe(true)
       expect(isArray([1, 2, 3])).toBe(true)
       expect(isArray([])).toBe(true)
@@ -75,7 +75,7 @@ describe('类型检查工具函数', () => {
       expect(isArray(undefined)).toBe(false)
     })
 
-    test('isFunction 检查函数', () => {
+    it('isFunction 检查函数', () => {
       expect(isFunction(() => {})).toBe(true)
       expect(isFunction(function () {})).toBe(true)
       expect(isFunction(function named() {})).toBe(true)
@@ -94,7 +94,7 @@ describe('类型检查工具函数', () => {
       expect(isFunction(undefined)).toBe(false)
     })
 
-    test('isBoolean 检查布尔值', () => {
+    it('isBoolean 检查布尔值', () => {
       expect(isBoolean(true)).toBe(true)
       expect(isBoolean(false)).toBe(true)
       expect(isBoolean(Boolean(1))).toBe(true)
@@ -113,7 +113,7 @@ describe('类型检查工具函数', () => {
   })
 
   describe('复杂类型检查', () => {
-    test('isPlainObject 检查纯对象', () => {
+    it('isPlainObject 检查纯对象', () => {
       expect(isPlainObject({})).toBe(true)
       expect(isPlainObject({ a: 1 })).toBe(true)
       expect(isPlainObject(Object.create(null))).toBe(true)
@@ -141,7 +141,7 @@ describe('类型检查工具函数', () => {
       expect(isPlainObject(objWithProto)).toBe(false)
     })
 
-    test('isPromise 检查 Promise', () => {
+    it('isPromise 检查 Promise', () => {
       expect(isPromise(Promise.resolve())).toBe(true)
       expect(isPromise(Promise.reject().catch(() => {}))).toBe(true)
       expect(isPromise(new Promise(() => {}))).toBe(true)
@@ -173,7 +173,7 @@ describe('类型检查工具函数', () => {
       expect(isPromise(noThen)).toBe(false)
     })
 
-    test('isGeneratorFunction 检查生成器函数', () => {
+    it('isGeneratorFunction 检查生成器函数', () => {
       function* generatorFunction() {
         yield 1
       }
@@ -202,7 +202,7 @@ describe('类型检查工具函数', () => {
       expect(isGeneratorFunction(123)).toBe(false)
     })
 
-    test('isAsyncFunction 检查异步函数', () => {
+    it('isAsyncFunction 检查异步函数', () => {
       async function asyncFunction() {
         return 'test'
       }
@@ -231,7 +231,7 @@ describe('类型检查工具函数', () => {
       expect(isAsyncFunction(123)).toBe(false)
     })
 
-    test('isESModule 检查 ES 模块', () => {
+    it('isESModule 检查 ES 模块', () => {
       const esModule = { __esModule: true, default: '默认值' }
       expect(isESModule(esModule)).toBe(true)
 

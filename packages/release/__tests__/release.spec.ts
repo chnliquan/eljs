@@ -13,7 +13,7 @@ describe('发布函数核心测试', () => {
   })
 
   describe('release 函数基本功能', () => {
-    test('应该能够创建 Runner 实例并执行发布', async () => {
+    it('应该能够创建 Runner 实例并执行发布', async () => {
       // 不模拟 Runner，而是实际创建它
       const mockRun = jest.fn().mockResolvedValue(undefined)
 
@@ -25,7 +25,7 @@ describe('发布函数核心测试', () => {
       expect(mockRun).toHaveBeenCalledWith(undefined)
     })
 
-    test('应该使用指定版本调用 run 方法', async () => {
+    it('应该使用指定版本调用 run 方法', async () => {
       const mockRun = jest.fn().mockResolvedValue(undefined)
       jest.spyOn(Runner.prototype, 'run').mockImplementation(mockRun)
 
@@ -35,7 +35,7 @@ describe('发布函数核心测试', () => {
       expect(mockRun).toHaveBeenCalledWith(version)
     })
 
-    test('应该使用指定配置创建 Runner 实例', async () => {
+    it('应该使用指定配置创建 Runner 实例', async () => {
       const mockRun = jest.fn().mockResolvedValue(undefined)
       jest.spyOn(Runner.prototype, 'run').mockImplementation(mockRun)
 
@@ -54,7 +54,7 @@ describe('发布函数核心测试', () => {
       expect(mockRun).toHaveBeenCalledWith(undefined)
     })
 
-    test('应该同时使用版本和配置参数', async () => {
+    it('应该同时使用版本和配置参数', async () => {
       const mockRun = jest.fn().mockResolvedValue(undefined)
       jest.spyOn(Runner.prototype, 'run').mockImplementation(mockRun)
 
@@ -73,14 +73,14 @@ describe('发布函数核心测试', () => {
   })
 
   describe('release 函数错误处理', () => {
-    test('应该正确传播 Runner.run 方法抛出的错误', async () => {
-      const testError = new Error('Runner 执行失败')
-      jest.spyOn(Runner.prototype, 'run').mockRejectedValue(testError)
+    it('应该正确传播 Runner.run 方法抛出的错误', async () => {
+      const itError = new Error('Runner 执行失败')
+      jest.spyOn(Runner.prototype, 'run').mockRejectedValue(itError)
 
       await expect(release()).rejects.toThrow('Runner 执行失败')
     })
 
-    test('应该正确处理 Runner 构造函数抛出的错误', async () => {
+    it('应该正确处理 Runner 构造函数抛出的错误', async () => {
       // 简化这个测试，不去模拟构造函数
       expect(async () => {
         await release(undefined, { cwd: '/non/existent/path' })
@@ -89,7 +89,7 @@ describe('发布函数核心测试', () => {
   })
 
   describe('release 函数参数传递验证', () => {
-    test('当没有传入参数时，应该使用默认值', async () => {
+    it('当没有传入参数时，应该使用默认值', async () => {
       const mockRun = jest.fn().mockResolvedValue(undefined)
       jest.spyOn(Runner.prototype, 'run').mockImplementation(mockRun)
 
@@ -98,7 +98,7 @@ describe('发布函数核心测试', () => {
       expect(mockRun).toHaveBeenCalledWith(undefined)
     })
 
-    test('应该正确处理空字符串版本', async () => {
+    it('应该正确处理空字符串版本', async () => {
       const mockRun = jest.fn().mockResolvedValue(undefined)
       jest.spyOn(Runner.prototype, 'run').mockImplementation(mockRun)
 
@@ -107,7 +107,7 @@ describe('发布函数核心测试', () => {
       expect(mockRun).toHaveBeenCalledWith('')
     })
 
-    test('应该正确处理空配置对象', async () => {
+    it('应该正确处理空配置对象', async () => {
       const mockRun = jest.fn().mockResolvedValue(undefined)
       jest.spyOn(Runner.prototype, 'run').mockImplementation(mockRun)
 
@@ -116,7 +116,7 @@ describe('发布函数核心测试', () => {
       expect(mockRun).toHaveBeenCalledWith(undefined)
     })
 
-    test('应该支持不同类型的版本字符串', async () => {
+    it('应该支持不同类型的版本字符串', async () => {
       const mockRun = jest.fn().mockResolvedValue(undefined)
       jest.spyOn(Runner.prototype, 'run').mockImplementation(mockRun)
 
@@ -131,7 +131,7 @@ describe('发布函数核心测试', () => {
   })
 
   describe('release 函数异步行为验证', () => {
-    test('应该是异步函数并返回 Promise', () => {
+    it('应该是异步函数并返回 Promise', () => {
       const mockRun = jest.fn().mockResolvedValue(undefined)
       jest.spyOn(Runner.prototype, 'run').mockImplementation(mockRun)
 
@@ -139,7 +139,7 @@ describe('发布函数核心测试', () => {
       expect(result).toBeInstanceOf(Promise)
     })
 
-    test('应该等待 Runner.run 方法完成', async () => {
+    it('应该等待 Runner.run 方法完成', async () => {
       let runCompleted = false
       const mockRun = jest.fn().mockImplementation(async () => {
         await new Promise(resolve => setTimeout(resolve, 10))

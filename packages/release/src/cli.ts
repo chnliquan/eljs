@@ -7,13 +7,21 @@ import updateNotifier from 'update-notifier'
 import { release } from './release'
 import { onCancel } from './utils'
 
-const debug = createDebugger('release:cli')
+export function cli() {
+  main()
+    .then(() => process.exit(0))
+    .catch(() => {
+      process.exit(1)
+    })
 
-process.on('SIGINT', () => {
-  onCancel()
-})
+  process.on('SIGINT', () => {
+    onCancel()
+  })
+}
 
-export async function cli() {
+async function main() {
+  const debug = createDebugger('release:cli')
+
   const pkg = await readJson<Required<PackageJson>>(
     path.join(__dirname, '../package.json'),
   )

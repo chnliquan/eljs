@@ -7,7 +7,7 @@ const resolveFilename = mod._resolveFilename
 const createRootPath = path.dirname(require.resolve('../package.json'))
 const utilsRootPath = path.dirname(path.dirname(require.resolve('@eljs/utils')))
 
-const hookPropertyMap = new Map([
+export const hookPropertyMap = new Map([
   ['@eljs/create', createRootPath],
   ['@eljs/utils', utilsRootPath],
 ])
@@ -27,5 +27,3 @@ mod._resolveFilename = function (
 
   return resolveFilename.call(mod, request, parent, isMain, options)
 }
-
-export { hookPropertyMap }

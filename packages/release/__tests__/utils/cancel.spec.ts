@@ -19,7 +19,7 @@ describe('用户取消功能测试', () => {
   })
 
   describe('onCancel 函数基本功能', () => {
-    test('应该记录取消发布事件', () => {
+    it('应该记录取消发布事件', () => {
       const mockLoggerEvent = logger.event as jest.MockedFunction<
         typeof logger.event
       >
@@ -31,7 +31,7 @@ describe('用户取消功能测试', () => {
       expect(mockLoggerEvent).toHaveBeenCalledTimes(1)
     })
 
-    test('应该调用 process.exit(0)', () => {
+    it('应该调用 process.exit(0)', () => {
       onCancel()
 
       // process.exit 已经被全局模拟，我们检查它被调用
@@ -40,25 +40,25 @@ describe('用户取消功能测试', () => {
   })
 
   describe('onCancel 函数类型安全', () => {
-    test('应该是一个无参数无返回值的函数', () => {
+    it('应该是一个无参数无返回值的函数', () => {
       expect(typeof onCancel).toBe('function')
       expect(onCancel.length).toBe(0) // 参数个数为 0
     })
 
-    test('调用时不应该需要任何参数', () => {
+    it('调用时不应该需要任何参数', () => {
       expect(() => onCancel()).not.toThrow()
     })
   })
 
   describe('onCancel 函数行为验证', () => {
-    test('应该使用正确的退出码', () => {
+    it('应该使用正确的退出码', () => {
       onCancel()
 
       expect(process.exit).toHaveBeenCalledWith(0)
       expect(process.exit).not.toHaveBeenCalledWith(1)
     })
 
-    test('应该记录正确的事件消息', () => {
+    it('应该记录正确的事件消息', () => {
       const mockLoggerEvent = logger.event as jest.MockedFunction<
         typeof logger.event
       >
@@ -72,7 +72,7 @@ describe('用户取消功能测试', () => {
   })
 
   describe('onCancel 函数集成行为', () => {
-    test('应该能够在信号处理器中正确工作', () => {
+    it('应该能够在信号处理器中正确工作', () => {
       const signalHandler = () => {
         onCancel()
       }
@@ -83,7 +83,7 @@ describe('用户取消功能测试', () => {
       expect(process.exit).toHaveBeenCalledWith(0)
     })
 
-    test('应该能够多次调用而不出现副作用', () => {
+    it('应该能够多次调用而不出现副作用', () => {
       const mockLoggerEvent = logger.event as jest.MockedFunction<
         typeof logger.event
       >
@@ -104,7 +104,7 @@ describe('用户取消功能测试', () => {
   })
 
   describe('onCancel 函数错误处理', () => {
-    test('当 logger.event 抛出错误时函数应该抛出错误', () => {
+    it('当 logger.event 抛出错误时函数应该抛出错误', () => {
       const mockLoggerEvent = logger.event as jest.MockedFunction<
         typeof logger.event
       >
@@ -118,7 +118,7 @@ describe('用户取消功能测试', () => {
   })
 
   describe('onCancel 函数模块导出', () => {
-    test('应该正确导出 onCancel 函数', () => {
+    it('应该正确导出 onCancel 函数', () => {
       expect(onCancel).toBeDefined()
       expect(typeof onCancel).toBe('function')
     })

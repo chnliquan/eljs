@@ -2,4 +2,6 @@
 'use strict'
 
 require('../lib/require-hook')
-require('../lib/cli')
+const { cli } = require('../lib/cli')
+
+cli()

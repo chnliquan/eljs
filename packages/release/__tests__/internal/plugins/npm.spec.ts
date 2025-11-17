@@ -130,7 +130,7 @@ describe('NPM 插件测试', () => {
   })
 
   describe('插件注册', () => {
-    test('应该注册所有必需的钩子方法', () => {
+    it('应该注册所有必需的钩子方法', () => {
       npmPlugin(mockApi as unknown as Api)
 
       expect(mockApi.onCheck).toHaveBeenCalledWith(expect.any(Function))
@@ -146,7 +146,7 @@ describe('NPM 插件测试', () => {
       onCheckHandler = mockApi.onCheck.mock.calls[0][0] as OnCheckHandler
     })
 
-    test('应该检查 NPM 包所有者', async () => {
+    it('应该检查 NPM 包所有者', async () => {
       mockApi.config.npm!.requireOwner = true
 
       await onCheckHandler({ releaseTypeOrVersion: 'minor' })
@@ -158,7 +158,7 @@ describe('NPM 插件测试', () => {
       })
     })
 
-    test('当用户不是包所有者时应该抛出错误', async () => {
+    it('当用户不是包所有者时应该抛出错误', async () => {
       ;(getNpmUser as jest.MockedFunction<typeof getNpmUser>).mockResolvedValue(
         'unauthorized-user',
       )
@@ -174,7 +174,7 @@ describe('NPM 插件测试', () => {
       )
     })
 
-    test('应该处理包不存在的情况', async () => {
+    it('应该处理包不存在的情况', async () => {
       const notFoundError = new Error('npm ERR! 404 Not Found')
       notFoundError.message = 'npm ERR! 404 Not Found - test-package not found'
       ;(run as jest.MockedFunction<typeof run>).mockRejectedValue(notFoundError)
@@ -185,7 +185,7 @@ describe('NPM 插件测试', () => {
       ).resolves.toBeUndefined()
     })
 
-    test('当不需要检查所有者时应该跳过', async () => {
+    it('当不需要检查所有者时应该跳过', async () => {
       mockApi.config.npm!.requireOwner = false
 
       await onCheckHandler({ releaseTypeOrVersion: 'minor' })
@@ -203,7 +203,7 @@ describe('NPM 插件测试', () => {
       onReleaseHandler = mockApi.onRelease.mock.calls[0][0] as OnReleaseHandler
     })
 
-    test('应该发布包到 NPM', async () => {
+    it('应该发布包到 NPM', async () => {
       const versionInfo = {
         version: '1.1.0',
         isPrerelease: false,
@@ -226,7 +226,7 @@ describe('NPM 插件测试', () => {
       )
     })
 
-    test('应该为预发布版本使用 tag', async () => {
+    it('应该为预发布版本使用 tag', async () => {
       const versionInfo = {
         version: '1.1.0-alpha.1',
         isPrerelease: true,
@@ -245,7 +245,7 @@ describe('NPM 插件测试', () => {
       )
     })
 
-    test('应该处理多个包的发布', async () => {
+    it('应该处理多个包的发布', async () => {
       mockApi.appData.validPkgNames = ['pkg1', 'pkg2']
       mockApi.appData.validPkgRootPaths = ['/test/pkg1', '/test/pkg2']
       const versionInfo = {
@@ -269,7 +269,7 @@ describe('NPM 插件测试', () => {
       )
     })
 
-    test('应该使用自定义发布参数', async () => {
+    it('应该使用自定义发布参数', async () => {
       mockApi.config.npm!.publishArgs = ['--access', 'public']
       const versionInfo = {
         version: '1.1.0',
@@ -288,7 +288,7 @@ describe('NPM 插件测试', () => {
       )
     })
 
-    test('应该处理发布失败情况', async () => {
+    it('应该处理发布失败情况', async () => {
       // 模拟所有发布都失败
       ;(run as jest.MockedFunction<typeof run>).mockRejectedValue(
         new Error('发布失败'),
@@ -308,22 +308,22 @@ describe('NPM 插件测试', () => {
   })
 
   describe('插件导出验证', () => {
-    test('应该是一个函数', () => {
+    it('应该是一个函数', () => {
       expect(typeof npmPlugin).toBe('function')
     })
 
-    test('应该接受 API 参数', () => {
+    it('应该接受 API 参数', () => {
       expect(npmPlugin.length).toBe(1)
     })
 
-    test('应该没有返回值', () => {
+    it('应该没有返回值', () => {
       const result = npmPlugin(mockApi as unknown as Api)
       expect(result).toBeUndefined()
     })
   })
 
   describe('NPM 插件完整功能测试', () => {
-    test('应该完整执行 NPM 工作流', async () => {
+    it('应该完整执行 NPM 工作流', async () => {
       npmPlugin(mockApi as unknown as Api)
 
       const onCheckHandler = mockApi.onCheck.mock.calls[0][0] as OnCheckHandler
@@ -349,7 +349,7 @@ describe('NPM 插件测试', () => {
       )
     })
 
-    test('应该正确处理预发布和正式发布', async () => {
+    it('应该正确处理预发布和正式发布', async () => {
       npmPlugin(mockApi as unknown as Api)
       const onReleaseHandler = mockApi.onRelease.mock
         .calls[0][0] as OnReleaseHandler
@@ -383,7 +383,7 @@ describe('NPM 插件测试', () => {
       )
     })
 
-    test('应该处理空的包名列表', async () => {
+    it('应该处理空的包名列表', async () => {
       mockApi.appData.validPkgNames = []
       mockApi.appData.validPkgRootPaths = []
 
@@ -409,7 +409,7 @@ describe('NPM 插件测试', () => {
   })
 
   describe('错误处理和边界情况', () => {
-    test('应该处理复杂的所有者列表格式', async () => {
+    it('应该处理复杂的所有者列表格式', async () => {
       npmPlugin(mockApi as unknown as Api)
       const onCheckHandler = mockApi.onCheck.mock.calls[0][0] as OnCheckHandler
 
@@ -423,7 +423,7 @@ describe('NPM 插件测试', () => {
       ).resolves.toBeUndefined()
     })
 
-    test('应该处理 404 错误（包不存在）', async () => {
+    it('应该处理 404 错误（包不存在）', async () => {
       npmPlugin(mockApi as unknown as Api)
       const onCheckHandler = mockApi.onCheck.mock.calls[0][0] as OnCheckHandler
 
@@ -437,7 +437,7 @@ describe('NPM 插件测试', () => {
       ).resolves.toBeUndefined()
     })
 
-    test('应该处理获取用户信息失败', async () => {
+    it('应该处理获取用户信息失败', async () => {
       npmPlugin(mockApi as unknown as Api)
       const onCheckHandler = mockApi.onCheck.mock.calls[0][0] as OnCheckHandler
 

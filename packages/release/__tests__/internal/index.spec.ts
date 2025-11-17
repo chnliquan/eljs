@@ -7,7 +7,7 @@ import internalPreset from '../../src/internal/index'
 
 describe('内部预设测试', () => {
   describe('internalPreset 函数', () => {
-    test('应该返回包含插件列表的对象', () => {
+    it('应该返回包含插件列表的对象', () => {
       const result = internalPreset()
 
       expect(result).toBeDefined()
@@ -15,7 +15,7 @@ describe('内部预设测试', () => {
       expect(Array.isArray(result.plugins)).toBe(true)
     })
 
-    test('应该包含所有必需的插件', () => {
+    it('应该包含所有必需的插件', () => {
       const result = internalPreset()
       const plugins = result.plugins
 
@@ -30,7 +30,7 @@ describe('内部预设测试', () => {
       expect(plugins.some(plugin => plugin.includes('github'))).toBe(true)
     })
 
-    test('应该使用 require.resolve 解析插件路径', () => {
+    it('应该使用 require.resolve 解析插件路径', () => {
       const result = internalPreset()
 
       result.plugins.forEach(plugin => {
@@ -41,7 +41,7 @@ describe('内部预设测试', () => {
       })
     })
 
-    test('插件应该按照正确的顺序排列', () => {
+    it('插件应该按照正确的顺序排列', () => {
       const result = internalPreset()
       const plugins = result.plugins
 
@@ -54,7 +54,7 @@ describe('内部预设测试', () => {
       expect(plugins[5]).toContain('github') // github 应该是最后一个
     })
 
-    test('应该是纯函数（无副作用）', () => {
+    it('应该是纯函数（无副作用）', () => {
       const result1 = internalPreset()
       const result2 = internalPreset()
 
@@ -62,7 +62,7 @@ describe('内部预设测试', () => {
       expect(result1).not.toBe(result2) // 应该返回新的对象实例
     })
 
-    test('返回的对象应该只包含 plugins 属性', () => {
+    it('返回的对象应该只包含 plugins 属性', () => {
       const result = internalPreset()
       const keys = Object.keys(result)
 
@@ -71,7 +71,7 @@ describe('内部预设测试', () => {
   })
 
   describe('插件路径有效性', () => {
-    test('所有插件路径都应该能够被 require 解析', () => {
+    it('所有插件路径都应该能够被 require 解析', () => {
       const result = internalPreset()
 
       result.plugins.forEach(pluginPath => {
@@ -81,7 +81,7 @@ describe('内部预设测试', () => {
       })
     })
 
-    test('插件文件应该存在', () => {
+    it('插件文件应该存在', () => {
       const result = internalPreset()
 
       result.plugins.forEach(pluginPath => {
@@ -94,7 +94,7 @@ describe('内部预设测试', () => {
   })
 
   describe('预设配置结构', () => {
-    test('应该符合 pluggable 预设格式', () => {
+    it('应该符合 pluggable 预设格式', () => {
       const result = internalPreset()
 
       // 应该有 plugins 数组
@@ -107,13 +107,13 @@ describe('内部预设测试', () => {
       })
     })
 
-    test('不应该包含 presets 属性', () => {
+    it('不应该包含 presets 属性', () => {
       const result = internalPreset()
 
       expect(result).not.toHaveProperty('presets')
     })
 
-    test('不应该包含其他不相关的属性', () => {
+    it('不应该包含其他不相关的属性', () => {
       const result = internalPreset()
       const allowedKeys = ['plugins', 'presets']
 

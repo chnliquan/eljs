@@ -7,22 +7,22 @@ import * as utilsIndex from '../../src/utils/index'
 
 describe('工具函数模块导出测试', () => {
   describe('模块导出验证', () => {
-    test('应该导出 cancel 模块的函数', () => {
+    it('应该导出 cancel 模块的函数', () => {
       expect(utilsIndex.onCancel).toBeDefined()
       expect(typeof utilsIndex.onCancel).toBe('function')
     })
 
-    test('应该导出 changelog 模块的函数', () => {
+    it('应该导出 changelog 模块的函数', () => {
       expect(utilsIndex.getChangelog).toBeDefined()
       expect(typeof utilsIndex.getChangelog).toBe('function')
     })
 
-    test('应该导出 error 模块的类', () => {
+    it('应该导出 error 模块的类', () => {
       expect(utilsIndex.AppError).toBeDefined()
       expect(typeof utilsIndex.AppError).toBe('function')
     })
 
-    test('应该导出 npm 模块的函数', () => {
+    it('应该导出 npm 模块的函数', () => {
       expect(utilsIndex.getRemoteDistTag).toBeDefined()
       expect(typeof utilsIndex.getRemoteDistTag).toBe('function')
 
@@ -30,7 +30,7 @@ describe('工具函数模块导出测试', () => {
       expect(typeof utilsIndex.syncCnpm).toBe('function')
     })
 
-    test('应该导出 pkg 模块的函数', () => {
+    it('应该导出 pkg 模块的函数', () => {
       expect(utilsIndex.updatePackageLock).toBeDefined()
       expect(typeof utilsIndex.updatePackageLock).toBe('function')
 
@@ -41,7 +41,7 @@ describe('工具函数模块导出测试', () => {
       expect(typeof utilsIndex.updatePackageDependencies).toBe('function')
     })
 
-    test('应该导出 version 模块的函数', () => {
+    it('应该导出 version 模块的函数', () => {
       expect(utilsIndex.isPrerelease).toBeDefined()
       expect(typeof utilsIndex.isPrerelease).toBe('function')
 
@@ -84,7 +84,7 @@ describe('工具函数模块导出测试', () => {
   })
 
   describe('导出内容完整性验证', () => {
-    test('所有导出的函数应该都已定义', () => {
+    it('所有导出的函数应该都已定义', () => {
       const expectedExports = [
         // cancel.ts
         'onCancel',
@@ -123,7 +123,7 @@ describe('工具函数模块导出测试', () => {
       })
     })
 
-    test('导出的模块应该没有未定义的值', () => {
+    it('导出的模块应该没有未定义的值', () => {
       const exportValues = Object.values(utilsIndex)
       exportValues.forEach(value => {
         expect(value).toBeDefined()
@@ -131,7 +131,7 @@ describe('工具函数模块导出测试', () => {
       })
     })
 
-    test('所有导出的函数应该是可调用的', () => {
+    it('所有导出的函数应该是可调用的', () => {
       const functionExports = [
         'onCancel',
         'getChangelog',
@@ -161,7 +161,7 @@ describe('工具函数模块导出测试', () => {
       })
     })
 
-    test('AppError 类应该是可实例化的', () => {
+    it('AppError 类应该是可实例化的', () => {
       expect(typeof utilsIndex.AppError).toBe('function')
       const error = new utilsIndex.AppError('测试错误')
       expect(error).toBeInstanceOf(Error)
@@ -172,7 +172,7 @@ describe('工具函数模块导出测试', () => {
   })
 
   describe('模块导出类型验证', () => {
-    test('版本检测函数应该接受字符串参数', () => {
+    it('版本检测函数应该接受字符串参数', () => {
       const versionCheckers = [
         utilsIndex.isPrerelease,
         utilsIndex.isAlphaVersion,
@@ -188,7 +188,7 @@ describe('工具函数模块导出测试', () => {
       })
     })
 
-    test('版本处理函数应该是异步或同步函数', () => {
+    it('版本处理函数应该是异步或同步函数', () => {
       // 同步函数
       const syncFunctions = [
         utilsIndex.isVersionValid,
@@ -219,14 +219,14 @@ describe('工具函数模块导出测试', () => {
   })
 
   describe('模块边界情况测试', () => {
-    test('导入模块时不应该抛出错误', () => {
+    it('导入模块时不应该抛出错误', () => {
       expect(() => {
         const module = utilsIndex
         return module
       }).not.toThrow()
     })
 
-    test('导出的对象应该是冻结的或可扩展的', () => {
+    it('导出的对象应该是冻结的或可扩展的', () => {
       // 确保导出的模块是稳定的
       const originalKeys = Object.keys(utilsIndex)
       expect(originalKeys.length).toBeGreaterThan(0)

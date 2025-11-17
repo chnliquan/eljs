@@ -18,7 +18,7 @@ import { PackageManagerEnum } from '../../src/types'
 
 describe('Types 模块测试', () => {
   describe('Function Types 函数类型', () => {
-    test('NoopFunction 应该是无参数无返回值的函数', () => {
+    it('NoopFunction 应该是无参数无返回值的函数', () => {
       const noopFn: NoopFunction = () => {}
       const noopFn2: NoopFunction = function () {}
 
@@ -28,7 +28,7 @@ describe('Types 模块测试', () => {
       expect(noopFn2()).toBeUndefined()
     })
 
-    test('AnyFunction 应该接受任意参数并返回任意值', () => {
+    it('AnyFunction 应该接受任意参数并返回任意值', () => {
       const anyFn: AnyFunction = (a: number, b: string) => a + b.length
       const anyFn2: AnyFunction = (...args: unknown[]) => args.length
       const anyFn3: AnyFunction = () => 'hello'
@@ -41,7 +41,7 @@ describe('Types 模块测试', () => {
       expect(anyFn3()).toBe('hello')
     })
 
-    test('AnyGeneratorFunction 应该返回生成器', () => {
+    it('AnyGeneratorFunction 应该返回生成器', () => {
       const generatorFn: AnyGeneratorFunction = function* (start: number) {
         yield start
         yield start + 1
@@ -56,7 +56,7 @@ describe('Types 模块测试', () => {
       expect(generator.next().done).toBe(true)
     })
 
-    test('AnyAsyncFunction 应该返回 Promise', async () => {
+    it('AnyAsyncFunction 应该返回 Promise', async () => {
       const asyncFn: AnyAsyncFunction = async (value: number) => value * 2
       const asyncFn2: AnyAsyncFunction = async () => 'async result'
 
@@ -67,7 +67,7 @@ describe('Types 模块测试', () => {
       await expect(asyncFn2()).resolves.toBe('async result')
     })
 
-    test('AnyAsyncGeneratorFunction 应该返回异步生成器', async () => {
+    it('AnyAsyncGeneratorFunction 应该返回异步生成器', async () => {
       const asyncGeneratorFn: AnyAsyncGeneratorFunction = async function* (
         start: number,
       ) {
@@ -84,7 +84,7 @@ describe('Types 模块测试', () => {
       expect((await asyncGenerator.next()).done).toBe(true)
     })
 
-    test('AnyConstructorFunction 应该是构造函数类型', () => {
+    it('AnyConstructorFunction 应该是构造函数类型', () => {
       class TestClass {
         public constructor(
           public value: string,
@@ -103,7 +103,7 @@ describe('Types 模块测试', () => {
   })
 
   describe('Object Types 对象类型', () => {
-    test('DistributiveOmit 应该分布式地省略属性', () => {
+    it('DistributiveOmit 应该分布式地省略属性', () => {
       interface User {
         id: number
         name: string
@@ -154,7 +154,7 @@ describe('Types 模块测试', () => {
       expect(unionItem2.name).toBe('Admin')
     })
 
-    test('OmitIndexSignature 应该移除索引签名', () => {
+    it('OmitIndexSignature 应该移除索引签名', () => {
       interface TestInterface {
         specificProp: string
         anotherProp: number
@@ -173,7 +173,7 @@ describe('Types 模块测试', () => {
       expect(obj.anotherProp).toBe(42)
     })
 
-    test('RequiredRecursive 应该递归地将所有属性变为必需', () => {
+    it('RequiredRecursive 应该递归地将所有属性变为必需', () => {
       interface NestedOptional {
         name?: string
         details?: {
@@ -205,7 +205,7 @@ describe('Types 模块测试', () => {
       expect(requiredObj.details.address.city).toBe('New York')
     })
 
-    test('RequiredRecursive 应该保持函数类型不变', () => {
+    it('RequiredRecursive 应该保持函数类型不变', () => {
       interface WithFunction {
         callback?: () => string
         asyncCallback?: () => Promise<number>
@@ -223,7 +223,7 @@ describe('Types 模块测试', () => {
       expect(obj.callback()).toBe('test')
     })
 
-    test('RequiredRecursive 应该保持数组类型不变', () => {
+    it('RequiredRecursive 应该保持数组类型不变', () => {
       interface WithArrays {
         numbers?: number[]
         nested?: {
@@ -248,7 +248,7 @@ describe('Types 模块测试', () => {
   })
 
   describe('Package Types 包管理器类型', () => {
-    test('PackageManagerEnum 应该包含所有包管理器', () => {
+    it('PackageManagerEnum 应该包含所有包管理器', () => {
       expect(PackageManagerEnum.npm).toBe('npm')
       expect(PackageManagerEnum.yarn).toBe('yarn')
       expect(PackageManagerEnum.pnpm).toBe('pnpm')
@@ -263,7 +263,7 @@ describe('Types 模块测试', () => {
       ])
     })
 
-    test('PackageManager 类型应该是包管理器字符串字面量', () => {
+    it('PackageManager 类型应该是包管理器字符串字面量', () => {
       const npmManager: PackageManager = 'npm'
       const yarnManager: PackageManager = 'yarn'
       const pnpmManager: PackageManager = 'pnpm'
@@ -275,7 +275,7 @@ describe('Types 模块测试', () => {
       expect(bunManager).toBe('bun')
     })
 
-    test('PackageJson 应该定义完整的包配置结构', () => {
+    it('PackageJson 应该定义完整的包配置结构', () => {
       const packageJson: PackageJson = {
         name: '@test/package',
         version: '1.0.0',
@@ -342,7 +342,7 @@ describe('Types 模块测试', () => {
       expect(packageJson.customField).toBe('custom value')
     })
 
-    test('PackageJson 应该支持最小配置', () => {
+    it('PackageJson 应该支持最小配置', () => {
       const minimalPackage: PackageJson = {
         name: 'minimal-package',
         version: '0.0.1',
@@ -352,7 +352,7 @@ describe('Types 模块测试', () => {
       expect(minimalPackage.version).toBe('0.0.1')
     })
 
-    test('PackageJson 应该支持 bin 为字符串', () => {
+    it('PackageJson 应该支持 bin 为字符串', () => {
       const packageWithStringBin: PackageJson = {
         name: 'cli-package',
         version: '1.0.0',
@@ -364,7 +364,7 @@ describe('Types 模块测试', () => {
   })
 
   describe('Promise Types Promise 类型', () => {
-    test('MaybePromise 应该支持 Promise 和非 Promise 值', () => {
+    it('MaybePromise 应该支持 Promise 和非 Promise 值', () => {
       const syncValue: MaybePromise<string> = 'hello'
       const asyncValue: MaybePromise<string> = Promise.resolve('world')
 
@@ -381,7 +381,7 @@ describe('Types 模块测试', () => {
       expect(promiseLikeCheck(Promise.resolve(42))).toBe('object')
     })
 
-    test('MaybePromise 应该在实际使用中工作正常', async () => {
+    it('MaybePromise 应该在实际使用中工作正常', async () => {
       function getValue(sync: boolean): MaybePromise<string> {
         return sync ? 'sync value' : Promise.resolve('async value')
       }
@@ -393,7 +393,7 @@ describe('Types 模块测试', () => {
       await expect(asyncResult).resolves.toBe('async value')
     })
 
-    test('MaybePromiseFunction 应该支持同步和异步函数', async () => {
+    it('MaybePromiseFunction 应该支持同步和异步函数', async () => {
       const syncFunction: MaybePromiseFunction<string> = (name: string) =>
         `Hello, ${name}!`
       const asyncFunction: MaybePromiseFunction<string> = async (
@@ -407,7 +407,7 @@ describe('Types 模块测试', () => {
       await expect(promiseLikeFunction(5)).resolves.toBe(10)
     })
 
-    test('MaybePromiseFunction 应该支持多个参数', () => {
+    it('MaybePromiseFunction 应该支持多个参数', () => {
       const multiArgFunction: MaybePromiseFunction<string> = (
         greeting: string,
         name: string,
@@ -427,7 +427,7 @@ describe('Types 模块测试', () => {
   })
 
   describe('类型兼容性测试', () => {
-    test('类型应该正确分配', () => {
+    it('类型应该正确分配', () => {
       // 测试函数类型的兼容性
       const testFn: AnyFunction = () => 'test'
       const noopTestFn: NoopFunction = () => {}
@@ -436,7 +436,7 @@ describe('Types 模块测试', () => {
       expect(typeof noopTestFn).toBe('function')
     })
 
-    test('枚举应该与字符串类型兼容', () => {
+    it('枚举应该与字符串类型兼容', () => {
       function usePackageManager(pm: PackageManager) {
         return `Using ${pm}`
       }
@@ -445,7 +445,7 @@ describe('Types 模块测试', () => {
       expect(usePackageManager('yarn')).toBe('Using yarn')
     })
 
-    test('复杂嵌套类型应该正常工作', () => {
+    it('复杂嵌套类型应该正常工作', () => {
       interface DeepNestedOptional {
         level1?: {
           level2?: {
@@ -492,7 +492,7 @@ describe('Types 模块测试', () => {
       expect(typeof deepObj.functions.generator).toBe('function')
     })
 
-    test('联合类型应该正确处理', () => {
+    it('联合类型应该正确处理', () => {
       interface TypeA {
         type: 'A'
         valueA: string
@@ -524,7 +524,7 @@ describe('Types 模块测试', () => {
       expect('valueB' in objB).toBe(true)
     })
 
-    test('索引签名移除应该精确工作', () => {
+    it('索引签名移除应该精确工作', () => {
       interface WithComplexIndex {
         [key: string]: unknown
         [key: number]: string
@@ -546,7 +546,7 @@ describe('Types 模块测试', () => {
       expect(obj.specificBoolean).toBe(true)
     })
 
-    test('MaybePromise 在复杂场景中应该工作', () => {
+    it('MaybePromise 在复杂场景中应该工作', () => {
       async function processValues<T>(values: MaybePromise<T>[]): Promise<T[]> {
         const results: T[] = []
         for (const value of values) {
@@ -571,7 +571,7 @@ describe('Types 模块测试', () => {
       })
     })
 
-    test('函数类型应该在运行时正常工作', async () => {
+    it('函数类型应该在运行时正常工作', async () => {
       // 测试生成器函数
       const generator: AnyGeneratorFunction = function* (start: number) {
         yield start
@@ -599,7 +599,7 @@ describe('Types 模块测试', () => {
       expect((await asyncGen.next()).value).toBe(22)
     })
 
-    test('PackageJson 的复杂配置应该工作', () => {
+    it('PackageJson 的复杂配置应该工作', () => {
       const complexPackageJson: PackageJson = {
         name: '@scope/complex-package',
         version: '2.1.0-beta.1',

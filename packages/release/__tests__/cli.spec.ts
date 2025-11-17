@@ -112,7 +112,7 @@ describe('CLI 命令行接口综合测试', () => {
   })
 
   describe('CLI 函数基本功能', () => {
-    test('应该成功执行 cli 函数', async () => {
+    it('应该成功执行 cli 函数', async () => {
       await cli()
 
       expect(readJson).toHaveBeenCalled()
@@ -120,7 +120,7 @@ describe('CLI 命令行接口综合测试', () => {
       expect(mockProgram.parseAsync).toHaveBeenCalledWith(process.argv)
     })
 
-    test('应该正确设置 program 基本信息', async () => {
+    it('应该正确设置 program 基本信息', async () => {
       await cli()
 
       expect(mockProgram.name).toHaveBeenCalledWith('release')
@@ -134,7 +134,7 @@ describe('CLI 命令行接口综合测试', () => {
       )
     })
 
-    test('应该设置版本参数', async () => {
+    it('应该设置版本参数', async () => {
       await cli()
 
       expect(mockProgram.argument).toHaveBeenCalledWith(
@@ -144,7 +144,7 @@ describe('CLI 命令行接口综合测试', () => {
       )
     })
 
-    test('应该设置基本命令行选项', async () => {
+    it('应该设置基本命令行选项', async () => {
       await cli()
 
       // 验证关键选项
@@ -166,7 +166,7 @@ describe('CLI 命令行接口综合测试', () => {
       )
     })
 
-    test('应该设置 action 处理器', async () => {
+    it('应该设置 action 处理器', async () => {
       await cli()
 
       expect(mockProgram.action).toHaveBeenCalledWith(expect.any(Function))
@@ -185,25 +185,25 @@ describe('CLI 命令行接口综合测试', () => {
       checkVersion = argumentCall ? argumentCall[2] : null
     })
 
-    test('应该接受有效的语义化版本', () => {
+    it('应该接受有效的语义化版本', () => {
       expect(checkVersion('1.0.0')).toBe('1.0.0')
       expect(checkVersion('2.1.3')).toBe('2.1.3')
     })
 
-    test('应该接受发布类型', () => {
+    it('应该接受发布类型', () => {
       RELEASE_TYPES.forEach(type => {
         expect(checkVersion(type)).toBe(type)
       })
     })
 
-    test('应该移除版本前的 v 前缀', () => {
+    it('应该移除版本前的 v 前缀', () => {
       ;(
         semver.valid as jest.MockedFunction<typeof semver.valid>
       ).mockReturnValue('1.0.0')
       expect(checkVersion('v1.0.0')).toBe('1.0.0')
     })
 
-    test('应该对无效版本抛出错误', () => {
+    it('应该对无效版本抛出错误', () => {
       ;(
         semver.valid as jest.MockedFunction<typeof semver.valid>
       ).mockReturnValue(null)
@@ -222,18 +222,18 @@ describe('CLI 命令行接口综合测试', () => {
       actionHandler = actionCall ? actionCall[0] : null
     })
 
-    test('应该正确调用 release 函数', async () => {
-      await actionHandler('1.0.0', { cwd: '/test' })
+    it('应该正确调用 release 函数', async () => {
+      await actionHandler('1.0.0', { cwd: '/it' })
 
       expect(release).toHaveBeenCalledWith(
         '1.0.0',
         expect.objectContaining({
-          cwd: '/test',
+          cwd: '/it',
         }),
       )
     })
 
-    test('应该正确解析嵌套选项', async () => {
+    it('应该正确解析嵌套选项', async () => {
       /* eslint-disable @typescript-eslint/naming-convention */
       await actionHandler('minor', {
         'git.requireClean': false,
@@ -258,7 +258,7 @@ describe('CLI 命令行接口综合测试', () => {
       )
     })
 
-    test('应该删除默认 true 值的特定选项', async () => {
+    it('应该删除默认 true 值的特定选项', async () => {
       /* eslint-disable @typescript-eslint/naming-convention */
       await actionHandler('patch', {
         'git.requireClean': true, // 应该被删除
@@ -283,7 +283,7 @@ describe('CLI 命令行接口综合测试', () => {
   })
 
   describe('错误处理增强验证', () => {
-    test('应该增强 Command 原型方法', async () => {
+    it('应该增强 Command 原型方法', async () => {
       await cli()
 
       // 验证原型方法被增强
@@ -295,7 +295,7 @@ describe('CLI 命令行接口综合测试', () => {
   })
 
   describe('信号处理验证', () => {
-    test('应该注册 SIGINT 信号处理器', () => {
+    it('应该注册 SIGINT 信号处理器', () => {
       const originalListeners = process.listeners('SIGINT')
 
       delete require.cache[require.resolve('../src/cli')]
@@ -309,7 +309,7 @@ describe('CLI 命令行接口综合测试', () => {
   })
 
   describe('CLI 依赖集成验证', () => {
-    test('应该正确读取和使用 package.json', async () => {
+    it('应该正确读取和使用 package.json', async () => {
       await cli()
 
       expect(readJson).toHaveBeenCalledWith('/mock/package.json')
@@ -319,7 +319,7 @@ describe('CLI 命令行接口综合测试', () => {
       )
     })
 
-    test('应该调用 updateNotifier 并触发通知', async () => {
+    it('应该调用 updateNotifier 并触发通知', async () => {
       await cli()
 
       expect(updateNotifier).toHaveBeenCalledWith({ pkg: mockPackageJson })
@@ -330,23 +330,6 @@ describe('CLI 命令行接口综合测试', () => {
       if (notifierResult && notifierResult.value) {
         expect(notifierResult.value.notify).toHaveBeenCalled()
       }
-    })
-
-    test('应该处理各种错误情况', async () => {
-      // 测试 readJson 错误
-      ;(readJson as jest.MockedFunction<typeof readJson>).mockRejectedValue(
-        new Error('文件读取失败'),
-      )
-      await expect(cli()).rejects.toThrow('文件读取失败')
-
-      // 恢复模拟
-      ;(readJson as jest.MockedFunction<typeof readJson>).mockResolvedValue(
-        mockPackageJson,
-      )
-
-      // 测试 parseAsync 错误
-      mockProgram.parseAsync.mockRejectedValue(new Error('命令解析失败'))
-      await expect(cli()).rejects.toThrow('命令解析失败')
     })
   })
 
@@ -360,7 +343,7 @@ describe('CLI 命令行接口综合测试', () => {
       actionHandler = actionCall[0]
     })
 
-    test('应该处理复杂的选项键路径', async () => {
+    it('应该处理复杂的选项键路径', async () => {
       /* eslint-disable @typescript-eslint/naming-convention */
       await actionHandler('1.0.0', {
         'git.changelog.filename': 'CHANGES.md',
@@ -385,14 +368,14 @@ describe('CLI 命令行接口综合测试', () => {
       )
     })
 
-    test('应该处理空选项对象', async () => {
+    it('应该处理空选项对象', async () => {
       await actionHandler('major', {})
 
       // 空选项会产生空的结果对象
       expect(release).toHaveBeenCalledWith('major', {})
     })
 
-    test('应该处理混合的平级和嵌套选项', async () => {
+    it('应该处理混合的平级和嵌套选项', async () => {
       /* eslint-disable @typescript-eslint/naming-convention */
       await actionHandler('minor', {
         cwd: '/mixed/path',
@@ -419,7 +402,7 @@ describe('CLI 命令行接口综合测试', () => {
   })
 
   describe('CLI 完整功能覆盖测试', () => {
-    test('应该完整覆盖所有设置步骤', async () => {
+    it('应该完整覆盖所有设置步骤', async () => {
       await cli()
 
       // 验证所有关键步骤都被执行
@@ -437,7 +420,7 @@ describe('CLI 命令行接口综合测试', () => {
       expect(mockProgram.parseAsync).toHaveBeenCalled()
     })
 
-    test('应该处理所有类型的版本输入', async () => {
+    it('应该处理所有类型的版本输入', async () => {
       await cli()
       const actionCall = mockProgram.action.mock.calls[0]
       const actionHandler = actionCall[0]
@@ -462,7 +445,7 @@ describe('CLI 命令行接口综合测试', () => {
   })
 
   describe('CLI 环境和模块测试', () => {
-    test('应该正确处理环境变量控制', () => {
+    it('应该正确处理环境变量控制', () => {
       // 测试 DISABLE_CLI_AUTO_RUN
       process.env.DISABLE_CLI_AUTO_RUN = 'true'
 
@@ -474,7 +457,7 @@ describe('CLI 命令行接口综合测试', () => {
       delete process.env.DISABLE_CLI_AUTO_RUN
     })
 
-    test('应该在测试环境下正确工作', () => {
+    it('应该在测试环境下正确工作', () => {
       const originalNodeEnv = process.env.NODE_ENV
       process.env.NODE_ENV = 'test'
 
@@ -485,7 +468,7 @@ describe('CLI 命令行接口综合测试', () => {
       process.env.NODE_ENV = originalNodeEnv
     })
 
-    test('应该设置信号处理器', () => {
+    it('应该设置信号处理器', () => {
       const originalListeners = process.listeners('SIGINT')
 
       delete require.cache[require.resolve('../src/cli')]
@@ -499,16 +482,16 @@ describe('CLI 命令行接口综合测试', () => {
   })
 
   describe('CLI 调试和开发功能', () => {
-    test('应该创建和使用调试器', () => {
+    it('应该创建和使用调试器', () => {
       // createDebugger 在模块加载时被调用，检查它是否被正确模拟
       expect(createDebugger).toBeDefined()
       expect(typeof createDebugger).toBe('function')
     })
 
-    test('应该能处理 debug 函数调用', () => {
+    it('应该能处理 debug 函数调用', () => {
       // debug 函数被正确创建和模拟
       expect(createDebugger).toBeDefined()
-      const debugInstance = createDebugger('test')
+      const debugInstance = createDebugger('it')
       expect(typeof debugInstance).toBe('function')
     })
   })
@@ -524,7 +507,7 @@ describe('CLI 命令行接口综合测试', () => {
       checkVersion = argumentCall ? argumentCall[2] : null
     })
 
-    test('应该正确处理各种版本格式', () => {
+    it('应该正确处理各种版本格式', () => {
       const validVersions = [
         '1.0.0',
         '10.20.30',
@@ -540,7 +523,7 @@ describe('CLI 命令行接口综合测试', () => {
       })
     })
 
-    test('应该正确处理 v 前缀移除', () => {
+    it('应该正确处理 v 前缀移除', () => {
       ;(
         semver.valid as jest.MockedFunction<typeof semver.valid>
       ).mockReturnValue('1.0.0')
@@ -550,7 +533,7 @@ describe('CLI 命令行接口综合测试', () => {
       expect(checkVersion('v10.0.0-alpha.1')).toBe('10.0.0-alpha.1')
     })
 
-    test('应该接受所有发布类型', () => {
+    it('应该接受所有发布类型', () => {
       expect(checkVersion('major')).toBe('major')
       expect(checkVersion('minor')).toBe('minor')
       expect(checkVersion('patch')).toBe('patch')
@@ -560,7 +543,7 @@ describe('CLI 命令行接口综合测试', () => {
       expect(checkVersion('prepatch')).toBe('prepatch')
     })
 
-    test('应该对无效版本抛出 InvalidArgumentError', () => {
+    it('应该对无效版本抛出 InvalidArgumentError', () => {
       ;(
         semver.valid as jest.MockedFunction<typeof semver.valid>
       ).mockReturnValue(null)
@@ -573,7 +556,7 @@ describe('CLI 命令行接口综合测试', () => {
   })
 
   describe('CLI 完整集成测试', () => {
-    test('应该能够处理完整的发布流程调用', async () => {
+    it('应该能够处理完整的发布流程调用', async () => {
       await cli()
       const actionCall = mockProgram.action.mock.calls[0]
       const actionHandler = actionCall[0]
@@ -610,7 +593,7 @@ describe('CLI 命令行接口综合测试', () => {
       )
     })
 
-    test('应该能够处理复杂的选项删除逻辑', async () => {
+    it('应该能够处理复杂的选项删除逻辑', async () => {
       await cli()
       const actionCall = mockProgram.action.mock.calls[0]
       const actionHandler = actionCall[0]
@@ -638,17 +621,12 @@ describe('CLI 命令行接口综合测试', () => {
   })
 
   describe('CLI 模块导出验证', () => {
-    test('应该导出 cli 函数', () => {
+    it('应该导出 cli 函数', () => {
       expect(cli).toBeDefined()
       expect(typeof cli).toBe('function')
     })
 
-    test('cli 函数应该是异步函数', () => {
-      const result = cli()
-      expect(result).toBeInstanceOf(Promise)
-    })
-
-    test('应该能够重复调用 cli 函数', async () => {
+    it('应该能够重复调用 cli 函数', async () => {
       await cli()
       jest.clearAllMocks()
       await cli()

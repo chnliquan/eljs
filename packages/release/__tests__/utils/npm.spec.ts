@@ -35,7 +35,7 @@ describe('NPM 工具函数测试', () => {
   })
 
   describe('getRemoteDistTag 函数', () => {
-    test('应该正确获取远程 dist tag', async () => {
+    it('应该正确获取远程 dist tag', async () => {
       const mockNpmMeta = {
         'dist-tags': {
           latest: '1.0.0',
@@ -47,7 +47,7 @@ describe('NPM 工具函数测试', () => {
 
       ;(getNpmPackage as jest.Mock).mockResolvedValue(mockNpmMeta)
 
-      const result = await getRemoteDistTag(['test-package'])
+      const result = await getRemoteDistTag(['it-package'])
 
       expect(result).toEqual({
         latest: '1.0.0',
@@ -55,10 +55,10 @@ describe('NPM 工具函数测试', () => {
         beta: '1.1.0-beta.1',
         rc: '1.1.0-rc.1',
       })
-      expect(getNpmPackage).toHaveBeenCalledWith('test-package', undefined)
+      expect(getNpmPackage).toHaveBeenCalledWith('it-package', undefined)
     })
 
-    test('应该使用指定的选项', async () => {
+    it('应该使用指定的选项', async () => {
       const mockNpmMeta = {
         'dist-tags': {
           latest: '2.0.0',
@@ -75,9 +75,9 @@ describe('NPM 工具函数测试', () => {
 
       ;(getNpmPackage as jest.Mock).mockResolvedValue(mockNpmMeta)
 
-      const result = await getRemoteDistTag(['test-package'], options)
+      const result = await getRemoteDistTag(['it-package'], options)
 
-      expect(getNpmPackage).toHaveBeenCalledWith('test-package', options)
+      expect(getNpmPackage).toHaveBeenCalledWith('it-package', options)
       expect(result).toEqual({
         latest: '2.0.0',
         alpha: '2.1.0-alpha.1',
@@ -86,7 +86,7 @@ describe('NPM 工具函数测试', () => {
       })
     })
 
-    test('应该处理多个包名，返回第一个有效的', async () => {
+    it('应该处理多个包名，返回第一个有效的', async () => {
       const mockNpmMeta2 = {
         'dist-tags': {
           latest: '1.5.0',
@@ -102,7 +102,7 @@ describe('NPM 工具函数测试', () => {
 
       const result = await getRemoteDistTag([
         'non-existent-package',
-        'test-package-2',
+        'it-package-2',
       ])
 
       expect(getNpmPackage).toHaveBeenCalledTimes(2)
@@ -113,7 +113,7 @@ describe('NPM 工具函数测试', () => {
       )
       expect(getNpmPackage).toHaveBeenNthCalledWith(
         2,
-        'test-package-2',
+        'it-package-2',
         undefined,
       )
       expect(result).toEqual({
@@ -124,16 +124,16 @@ describe('NPM 工具函数测试', () => {
       })
     })
 
-    test('应该处理没有 dist-tags 的包', async () => {
+    it('应该处理没有 dist-tags 的包', async () => {
       const mockNpmMeta = {
-        name: 'test-package',
+        name: 'it-package',
         version: '1.0.0',
         // 没有 dist-tags 字段
       }
 
       ;(getNpmPackage as jest.Mock).mockResolvedValue(mockNpmMeta)
 
-      const result = await getRemoteDistTag(['test-package'])
+      const result = await getRemoteDistTag(['it-package'])
 
       expect(result).toEqual({
         latest: '',
@@ -143,7 +143,7 @@ describe('NPM 工具函数测试', () => {
       })
     })
 
-    test('应该处理所有包都不存在的情况', async () => {
+    it('应该处理所有包都不存在的情况', async () => {
       ;(getNpmPackage as jest.Mock).mockResolvedValue(null)
 
       const result = await getRemoteDistTag([
@@ -159,7 +159,7 @@ describe('NPM 工具函数测试', () => {
       })
     })
 
-    test('应该处理空包名数组', async () => {
+    it('应该处理空包名数组', async () => {
       const result = await getRemoteDistTag([])
 
       expect(result).toEqual({
@@ -171,7 +171,7 @@ describe('NPM 工具函数测试', () => {
       expect(getNpmPackage).not.toHaveBeenCalled()
     })
 
-    test('应该正确处理部分 dist-tags', async () => {
+    it('应该正确处理部分 dist-tags', async () => {
       const mockNpmMeta = {
         'dist-tags': {
           latest: '1.0.0',
@@ -181,7 +181,7 @@ describe('NPM 工具函数测试', () => {
 
       ;(getNpmPackage as jest.Mock).mockResolvedValue(mockNpmMeta)
 
-      const result = await getRemoteDistTag(['test-package'])
+      const result = await getRemoteDistTag(['it-package'])
 
       expect(result).toEqual({
         latest: '1.0.0',
@@ -193,7 +193,7 @@ describe('NPM 工具函数测试', () => {
   })
 
   describe('syncCnpm 函数', () => {
-    test('应该正确同步单个包到 cnpm', async () => {
+    it('应该正确同步单个包到 cnpm', async () => {
       ;(resolveBin.sync as jest.Mock).mockReturnValue('/usr/bin/cnpm')
       ;(run as jest.Mock).mockResolvedValue({
         stdout: '',
@@ -201,21 +201,18 @@ describe('NPM 工具函数测试', () => {
         exitCode: 0,
       })
 
-      const result = await syncCnpm(['test-package'])
+      const result = await syncCnpm(['it-package'])
 
       expect(resolveBin.sync).toHaveBeenCalledWith('cnpm')
-      expect(run).toHaveBeenCalledWith('/usr/bin/cnpm', [
-        'sync',
-        'test-package',
-      ])
+      expect(run).toHaveBeenCalledWith('/usr/bin/cnpm', ['sync', 'it-package'])
       expect(logger.ready).toHaveBeenCalledWith(
-        'Sync [cyan]test-package[/cyan] to cnpm.',
+        'Sync [cyan]it-package[/cyan] to cnpm.',
       )
       expect(result).toHaveLength(1)
       expect(result[0].status).toBe('fulfilled')
     })
 
-    test('应该正确同步多个包到 cnpm', async () => {
+    it('应该正确同步多个包到 cnpm', async () => {
       const packages = ['package-1', 'package-2', 'package-3']
 
       ;(resolveBin.sync as jest.Mock).mockReturnValue('/usr/local/bin/cnpm')
@@ -261,7 +258,7 @@ describe('NPM 工具函数测试', () => {
       })
     })
 
-    test('应该并发执行同步操作', async () => {
+    it('应该并发执行同步操作', async () => {
       const packages = ['package-1', 'package-2']
       let runCallCount = 0
 
@@ -281,7 +278,7 @@ describe('NPM 工具函数测试', () => {
       expect(endTime - startTime).toBeLessThan(50) // 应该远小于 20ms
     })
 
-    test('应该处理单个包同步失败的情况', async () => {
+    it('应该处理单个包同步失败的情况', async () => {
       const packages = ['success-package', 'fail-package']
 
       ;(resolveBin.sync as jest.Mock).mockReturnValue('/usr/bin/cnpm')
@@ -305,7 +302,7 @@ describe('NPM 工具函数测试', () => {
       )
     })
 
-    test('应该处理空包名数组', async () => {
+    it('应该处理空包名数组', async () => {
       const result = await syncCnpm([])
 
       expect(result).toHaveLength(0)
@@ -314,15 +311,15 @@ describe('NPM 工具函数测试', () => {
       expect(logger.ready).not.toHaveBeenCalled()
     })
 
-    test('应该处理 resolveBin 失败的情况', () => {
+    it('应该处理 resolveBin 失败的情况', () => {
       ;(resolveBin.sync as jest.Mock).mockImplementation(() => {
         throw new Error('cnpm not found')
       })
 
-      expect(() => syncCnpm(['test-package'])).rejects.toThrow('cnpm not found')
+      expect(() => syncCnpm(['it-package'])).rejects.toThrow('cnpm not found')
     })
 
-    test('应该使用正确的 cnpm 命令路径', async () => {
+    it('应该使用正确的 cnpm 命令路径', async () => {
       const cnpmPath = '/custom/path/to/cnpm'
       ;(resolveBin.sync as jest.Mock).mockReturnValue(cnpmPath)
       ;(run as jest.Mock).mockResolvedValue({
@@ -331,14 +328,14 @@ describe('NPM 工具函数测试', () => {
         exitCode: 0,
       })
 
-      await syncCnpm(['test-package'])
+      await syncCnpm(['it-package'])
 
-      expect(run).toHaveBeenCalledWith(cnpmPath, ['sync', 'test-package'])
+      expect(run).toHaveBeenCalledWith(cnpmPath, ['sync', 'it-package'])
     })
   })
 
   describe('RemoteDistTag 类型验证', () => {
-    test('应该匹配 RemoteDistTag 接口', async () => {
+    it('应该匹配 RemoteDistTag 接口', async () => {
       const mockNpmMeta = {
         'dist-tags': {
           latest: '1.0.0',
@@ -350,7 +347,7 @@ describe('NPM 工具函数测试', () => {
 
       ;(getNpmPackage as jest.Mock).mockResolvedValue(mockNpmMeta)
 
-      const result: RemoteDistTag = await getRemoteDistTag(['test-package'])
+      const result: RemoteDistTag = await getRemoteDistTag(['it-package'])
 
       // 类型检查
       expect(typeof result.latest).toBe('string')

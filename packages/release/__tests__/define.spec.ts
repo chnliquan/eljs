@@ -8,9 +8,9 @@ import type { Config } from '../src/types'
 
 describe('配置定义函数测试', () => {
   describe('defineConfig 函数', () => {
-    test('应该原样返回传入的配置对象', () => {
+    it('应该原样返回传入的配置对象', () => {
       const config: Config = {
-        cwd: '/test/path',
+        cwd: '/it/path',
         git: {
           requireClean: false,
           commit: true,
@@ -26,7 +26,7 @@ describe('配置定义函数测试', () => {
       expect(result).toEqual(config) // 内容也应该相同
     })
 
-    test('应该接受空配置对象', () => {
+    it('应该接受空配置对象', () => {
       const config: Config = {}
       const result = defineConfig(config)
 
@@ -34,7 +34,7 @@ describe('配置定义函数测试', () => {
       expect(result).toEqual({})
     })
 
-    test('应该接受完整配置对象', () => {
+    it('应该接受完整配置对象', () => {
       const config: Config = {
         cwd: '/custom/working/directory',
         presets: ['@eljs/release-preset-custom'],
@@ -80,7 +80,7 @@ describe('配置定义函数测试', () => {
       expect(result.github?.release).toBe(true)
     })
 
-    test('应该支持禁用 changelog', () => {
+    it('应该支持禁用 changelog', () => {
       const config: Config = {
         git: {
           changelog: false,
@@ -93,7 +93,7 @@ describe('配置定义函数测试', () => {
       expect(result.git?.changelog).toBe(false)
     })
 
-    test('应该保持对象的不可变性（浅层）', () => {
+    it('应该保持对象的不可变性（浅层）', () => {
       const original: Config = {
         cwd: '/original/path',
         git: {
@@ -110,7 +110,7 @@ describe('配置定义函数测试', () => {
       expect(result).toBe(original)
     })
 
-    test('应该支持复杂的嵌套配置', () => {
+    it('应该支持复杂的嵌套配置', () => {
       const config: Config = {
         git: {
           changelog: {
@@ -137,7 +137,7 @@ describe('配置定义函数测试', () => {
       expect(Array.isArray(result.npm?.publishArgs)).toBe(true)
     })
 
-    test('应该保持类型安全', () => {
+    it('应该保持类型安全', () => {
       // 这个测试主要是为了确保 TypeScript 类型检查正确
       const config: Config = {
         npm: {
@@ -151,9 +151,9 @@ describe('配置定义函数测试', () => {
       // TypeScript 应该确保 prereleaseId 只能是 'alpha' | 'beta' | 'rc'
     })
 
-    test('应该处理带有扩展属性的配置', () => {
+    it('应该处理带有扩展属性的配置', () => {
       const config: Config & { custom?: string } = {
-        cwd: '/test',
+        cwd: '/it',
         custom: 'custom value', // 扩展属性
       }
 
@@ -165,7 +165,7 @@ describe('配置定义函数测试', () => {
       )
     })
 
-    test('应该支持函数的链式调用', () => {
+    it('应该支持函数的链式调用', () => {
       const config1: Config = { cwd: '/path1' }
       const config2: Config = { cwd: '/path2' }
 
@@ -179,9 +179,9 @@ describe('配置定义函数测试', () => {
   })
 
   describe('defineConfig 类型推断', () => {
-    test('应该正确推断返回类型', () => {
+    it('应该正确推断返回类型', () => {
       const config = {
-        cwd: '/test',
+        cwd: '/it',
         git: {
           requireClean: false,
         },
@@ -194,7 +194,7 @@ describe('配置定义函数测试', () => {
       expect(typeof result.git?.requireClean).toBe('boolean')
     })
 
-    test('应该支持部分配置的类型推断', () => {
+    it('应该支持部分配置的类型推断', () => {
       const partialConfig: Partial<Config> = {
         git: {
           commit: false,
@@ -210,7 +210,7 @@ describe('配置定义函数测试', () => {
   })
 
   describe('defineConfig 边界情况', () => {
-    test('应该处理具有 undefined 属性的配置', () => {
+    it('应该处理具有 undefined 属性的配置', () => {
       const config: Config = {
         cwd: undefined as string | undefined,
         git: {
@@ -225,7 +225,7 @@ describe('配置定义函数测试', () => {
       expect(result.git?.requireClean).toBeUndefined()
     })
 
-    test('应该处理具有 null 属性的配置', () => {
+    it('应该处理具有 null 属性的配置', () => {
       // 使用类型断言绕过严格的类型检查，用于测试边界情况
       const config = {
         git: {
@@ -239,7 +239,7 @@ describe('配置定义函数测试', () => {
       expect(result.git?.requireBranch).toBeNull()
     })
 
-    test('应该处理空字符串配置', () => {
+    it('应该处理空字符串配置', () => {
       const config: Config = {
         cwd: '',
         git: {

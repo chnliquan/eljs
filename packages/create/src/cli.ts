@@ -12,24 +12,25 @@ import updateNotifier from 'update-notifier'
 import { Create } from './core'
 import { AppError, onCancel } from './utils'
 
-const debug = createDebugger('create:cli')
+export function cli() {
+  main()
+    .then(() => process.exit(0))
+    .catch(error => {
+      if (error instanceof AppError) {
+        logger.error(error.message)
+      } else {
+        console.error(error)
+      }
+      process.exit(1)
+    })
 
-cli()
-  .then(() => process.exit(0))
-  .catch(error => {
-    if (error instanceof AppError) {
-      logger.error(error.message)
-    } else {
-      console.error(error)
-    }
-    process.exit(1)
+  process.on('SIGINT', () => {
+    onCancel()
   })
+}
 
-process.on('SIGINT', () => {
-  onCancel()
-})
-
-async function cli() {
+async function main() {
+  const debug = createDebugger('create:cli')
   const pkg = await readJson<Required<PackageJson>>(
     path.join(__dirname, '../package.json'),
   )

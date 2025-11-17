@@ -167,9 +167,9 @@ describe('字符串工具函数', () => {
 
     it('应该保持内容行的正确间距', () => {
       const input =
-        'function test() {\n\n  console.log("hello")\n\n  return true\n\n}'
+        'function it() {\n\n  console.log("hello")\n\n  return true\n\n}'
       const expected =
-        'function test() {\n  console.log("hello")\n  return true\n}'
+        'function it() {\n  console.log("hello")\n  return true\n}'
       expect(stripBlankLines(input)).toBe(expected)
     })
   })
