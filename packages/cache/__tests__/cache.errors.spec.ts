@@ -96,14 +96,18 @@ describe('Cache 错误处理和边界情况测试', () => {
 
   describe('序列化错误处理', () => {
     it('应该处理序列化失败', async () => {
-      const faultySerializer: CacheSerializer<any> = {
+      interface CircularObject {
+        self: CircularObject | null
+      }
+
+      const faultySerializer: CacheSerializer<CircularObject> = {
         serialize: () => {
           throw new Error('Serialization failed')
         },
         deserialize: data => data,
       }
 
-      const cache = new Cache<any>({
+      const cache = new Cache<CircularObject>({
         enabled: true,
         cacheDir: path.join(tempDir, '.cache'),
         serializer: faultySerializer,
@@ -111,7 +115,7 @@ describe('Cache 错误处理和边界情况测试', () => {
       })
 
       const testFile = createTempFile(tempDir, 'test.txt', 'content')
-      const circularObj = { self: null as any }
+      const circularObj: CircularObject = { self: null }
       circularObj.self = circularObj
 
       // 序列化失败不应该崩溃应用
@@ -167,8 +171,9 @@ describe('Cache 错误处理和边界情况测试', () => {
         await cache.setByData('test data')
         // 如果没有抛出错误，测试失败
         expect(false).toBe(true)
-      } catch (error: any) {
-        expect(error.message).toBe('Key generation failed')
+      } catch (error: unknown) {
+        expect(error).toBeInstanceOf(Error)
+        expect((error as Error).message).toBe('Key generation failed')
       }
     })
 
@@ -227,7 +232,7 @@ describe('Cache 错误处理和边界情况测试', () => {
     })
 
     it('应该处理null和undefined数据', async () => {
-      const cache = new Cache<any>({
+      const cache = new Cache<null | undefined>({
         enabled: true,
         cacheDir: path.join(tempDir, '.cache'),
         autoCleanup: false,
@@ -245,7 +250,15 @@ describe('Cache 错误处理和边界情况测试', () => {
     })
 
     it('应该处理非常大的对象', async () => {
-      const cache = new Cache<any>({
+      interface LargeObject {
+        data: string
+        array: string[]
+        nested: {
+          level1: { level2: { level3: string } }
+        }
+      }
+
+      const cache = new Cache<LargeObject>({
         enabled: true,
         cacheDir: path.join(tempDir, '.cache'),
         autoCleanup: false,

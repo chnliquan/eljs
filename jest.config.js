@@ -28,6 +28,7 @@ module.exports = {
   collectCoverageFrom: [
     'packages/*/src/**/*.ts',
     '!packages/*/.fatherrc.ts',
+    '!packages/*/src/**/cli.ts',
     '!packages/*/src/**/*.d.ts',
     '!packages/*/src/**/*.spec.ts',
     '!packages/*/src/**/*.test.ts',

@@ -9,17 +9,11 @@ import { onCancel } from './utils'
 
 const debug = createDebugger('release:cli')
 
-cli()
-  .then(() => process.exit(0))
-  .catch(() => {
-    process.exit(1)
-  })
-
 process.on('SIGINT', () => {
   onCancel()
 })
 
-async function cli() {
+export async function cli() {
   const pkg = await readJson<Required<PackageJson>>(
     path.join(__dirname, '../package.json'),
   )
@@ -166,7 +160,7 @@ function parseOptions<T extends NestedObject = NestedObject>(
     }
   }
 
-  const { git, npm } = result
+  const { git = {}, npm = {} } = result
 
   for (const key of Object.keys(git)) {
     if (

@@ -161,6 +161,10 @@ export function getMaxVersion(...versions: string[]) {
       return maxVersion
     }
 
+    if (!maxVersion) {
+      return version
+    }
+
     return semver.gt(maxVersion, version) ? maxVersion : version
   })
 }

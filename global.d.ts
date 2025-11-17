@@ -4,6 +4,6 @@ declare const __GLOBAL__: boolean
 
 declare namespace NodeJS {
   interface ProcessEnv {
-    NODE_ENV: 'development' | 'production'
+    NODE_ENV: 'development' | 'production' | 'test'
   }
 }
