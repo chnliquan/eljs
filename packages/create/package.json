@@ -1,7 +1,7 @@
 {
   "name": "@eljs/create",
   "version": "1.3.1",
-  "description": "Create a project from a remote template.",
+  "description": "Powerful and flexible project creation tool from templates with comprehensive automation support.",
   "keywords": [
     "eljs",
     "create",
@@ -25,9 +25,9 @@
     "create": "bin/create.js"
   },
   "files": [
+    "bin/*",
     "esm/*",
-    "lib/*",
-    "bin/*"
+    "lib/*"
   ],
   "scripts": {
     "build": "father build",
