@@ -1,6 +1,6 @@
 # @eljs/utils
 
-A comprehensive collection of Node.js utilities for modern development workflows
+A comprehensive collection of Node.js utilities for modern development workflows.
 
 [![NPM Version](https://img.shields.io/npm/v/@eljs/utils.svg)](https://www.npmjs.com/package/@eljs/utils)
 [![NPM Downloads](https://img.shields.io/npm/dm/@eljs/utils.svg)](https://www.npmjs.com/package/@eljs/utils)
@@ -102,7 +102,7 @@ await copyDirectory('./src', './dist', {}, { overwrite: true })
 // Template copying with data interpolation
 await copyTpl('./template.ejs', './output.html', {
   title: 'My App',
-  version: '1.0.0'
+  version: '1.0.0',
 })
 
 // Move and remove operations
@@ -174,17 +174,17 @@ logger.printErrorAndExit('Critical error occurred')
 class BuildService {
   async build() {
     const buildStep = logger.step('Build Process')
-    
+
     try {
       buildStep('Installing dependencies...')
       await utils.run('npm install')
-      
+
       buildStep('Compiling TypeScript...')
       await utils.run('tsc')
-      
+
       buildStep('Running tests...')
       await utils.run('npm test')
-      
+
       logger.ready('Build completed successfully!')
     } catch (error) {
       logger.error(`Build failed: ${error.message}`)
@@ -206,7 +206,7 @@ const npmList = await run('npm', ['list', '--depth=0'])
 // With options
 const output = await runCommand('ls -la', {
   cwd: './my-directory',
-  env: { NODE_ENV: 'production' }
+  env: { NODE_ENV: 'production' },
 })
 
 // Parse command strings
@@ -219,7 +219,10 @@ const args = parseCommand('npm run build --production')
 ```typescript
 // Find executable commands
 const gitPath = await getExecutableCommand('git')
-const nodePath = await getExecutableCommand('node', ['/usr/bin', '/usr/local/bin'])
+const nodePath = await getExecutableCommand('node', [
+  '/usr/bin',
+  '/usr/local/bin',
+])
 
 // Get process information
 const pid = await getPid('node server.js')
@@ -234,18 +237,18 @@ await sudo(['npm', 'install', '-g', 'typescript'])
 class DeploymentService {
   async deploy() {
     logger.info('Starting deployment...')
-    
+
     // Check if git is clean
     if (!(await utils.isGitClean())) {
       throw new Error('Git working tree is not clean')
     }
-    
+
     // Build the project
     await utils.run('npm run build')
-    
+
     // Deploy to server
     await utils.run('rsync -av dist/ user@server:/var/www/')
-    
+
     logger.ready('Deployment completed!')
   }
 }
@@ -281,7 +284,7 @@ await gitTag('v1.0.0')
 // Download repositories
 const tempPath = await downloadGitRepository(
   'https://github.com/user/repo.git',
-  { branch: 'main', depth: 1 }
+  { branch: 'main', depth: 1 },
 )
 ```
 
@@ -306,18 +309,18 @@ class ReleaseService {
     if (!(await utils.isGitClean())) {
       throw new Error('Working tree is not clean')
     }
-    
+
     // Update version and build
     await utils.run(`npm version ${version}`)
     await utils.run('npm run build')
-    
+
     // Commit and tag
     await utils.gitCommit(`chore: release v${version}`)
     await utils.gitTag(`v${version}`)
-    
+
     // Push to remote
     await utils.gitPush(['--follow-tags'])
-    
+
     logger.ready(`Release v${version} completed!`)
   }
 }
@@ -340,7 +343,7 @@ const specificVersion = await getNpmPackage('@eljs/utils', { version: '1.0.0' })
 // Download packages
 const tarballPath = await downloadNpmTarball(
   'https://registry.npmjs.org/@eljs/utils/-/utils-1.0.0.tgz',
-  './downloads'
+  './downloads',
 )
 ```
 
@@ -370,9 +373,9 @@ const parsed = pkgNameAnalysis('@scope/package-name')
 class DependencyService {
   async updateDependencies() {
     const packageManager = await utils.getPackageManager()
-    
+
     logger.info(`Using ${packageManager} to update dependencies...`)
-    
+
     switch (packageManager) {
       case 'pnpm':
         await utils.run('pnpm update')
@@ -383,7 +386,7 @@ class DependencyService {
       default:
         await utils.run('npm update')
     }
-    
+
     logger.ready('Dependencies updated successfully!')
   }
 }
@@ -397,7 +400,7 @@ class DependencyService {
 // Merge objects deeply
 const config = deepMerge(
   { server: { port: 3000 } },
-  { server: { host: 'localhost' }, database: { url: 'mongodb://...' } }
+  { server: { host: 'localhost' }, database: { url: 'mongodb://...' } },
 )
 // Result: { server: { port: 3000, host: 'localhost' }, database: { url: 'mongodb://...' } }
 
@@ -415,7 +418,7 @@ interface Config {
 
 const defaultConfig: Config = {
   server: { host: 'localhost', port: 3000 },
-  database: { url: 'mongodb://localhost', poolSize: 10 }
+  database: { url: 'mongodb://localhost', poolSize: 10 },
 }
 
 const userConfig = await utils.readJson<Partial<Config>>('./config.json')
@@ -448,7 +451,7 @@ const normalizedPath = winPath('C:\\Users\\Documents\\file.txt')
 const configPath = await tryPaths([
   './config.json',
   './config.js',
-  './config.yaml'
+  './config.yaml',
 ])
 
 // Extract call directory
@@ -475,16 +478,24 @@ const result = await deferred.promise
 
 ```typescript
 // Retry failed operations
-const data = await retry(async () => {
-  const response = await fetch('/api/data')
-  if (!response.ok) throw new Error('Request failed')
-  return response.json()
-}, 3, 1000) // 3 retries with 1000ms delay
+const data = await retry(
+  async () => {
+    const response = await fetch('/api/data')
+    if (!response.ok) throw new Error('Request failed')
+    return response.json()
+  },
+  3,
+  1000,
+) // 3 retries with 1000ms delay
 
 // Retry until non-null value
-const config = await retryWithValue(async () => {
-  return await loadConfig() // Returns null on failure
-}, 5, 500)
+const config = await retryWithValue(
+  async () => {
+    return await loadConfig() // Returns null on failure
+  },
+  5,
+  500,
+)
 ```
 
 #### Timing Utilities
@@ -497,7 +508,7 @@ await sleep(2000) // Wait 2 seconds
 const result = await timeout(
   slowOperation(),
   5000,
-  'Operation timed out after 5 seconds'
+  'Operation timed out after 5 seconds',
 )
 ```
 
@@ -507,9 +518,9 @@ const result = await timeout(
 
 ```typescript
 // Different case formats
-const camel = camelCase('hello-world-example')     // 'helloWorldExample'
-const pascal = pascalCase('hello-world-example')   // 'HelloWorldExample'
-const kebab = kebabCase('helloWorldExample')       // 'hello-world-example'
+const camel = camelCase('hello-world-example') // 'helloWorldExample'
+const pascal = pascalCase('hello-world-example') // 'HelloWorldExample'
+const kebab = kebabCase('helloWorldExample') // 'hello-world-example'
 
 // Text processing
 const cleanText = stripBlankLines(`
@@ -541,11 +552,11 @@ async function handleValue(value: unknown) {
   if (utils.isPromise(value)) {
     return await value
   }
-  
+
   if (utils.isAsyncFunction(value)) {
     return await value()
   }
-  
+
   return value
 }
 ```

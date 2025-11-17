@@ -90,7 +90,7 @@ function ensurePackageJson(
         directory: dirname,
       },
       license: 'MIT',
-      author: 'liquan',
+      author: 'chnliquan',
       main: `lib/index.js`,
       module: `esm/index.js`,
       types: `esm/index.d.ts`,

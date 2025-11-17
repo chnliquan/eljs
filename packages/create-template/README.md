@@ -1,6 +1,6 @@
 # @eljs/create-template
 
-Create a new project with predefined templates powered by @eljs/create
+Create a new project with standard templates powered by @eljs/create.
 
 [![NPM Version](https://img.shields.io/npm/v/@eljs/create-template.svg)](https://www.npmjs.com/package/@eljs/create-template)
 [![NPM Downloads](https://img.shields.io/npm/dm/@eljs/create-template.svg)](https://www.npmjs.com/package/@eljs/create-template)

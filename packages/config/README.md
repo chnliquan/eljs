@@ -1,6 +1,6 @@
 # @eljs/config
 
-Powerful configuration file loader with type-safe configuration management
+Powerful configuration file loader with type-safe configuration management.
 
 [![NPM Version](https://img.shields.io/npm/v/@eljs/config.svg)](https://www.npmjs.com/package/@eljs/config)
 [![NPM Downloads](https://img.shields.io/npm/dm/@eljs/config.svg)](https://www.npmjs.com/package/@eljs/config)

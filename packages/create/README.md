@@ -1,6 +1,6 @@
 # @eljs/create
 
-Powerful and flexible project creation tool from templates with comprehensive automation support
+Powerful and flexible project creation tool from templates with comprehensive automation support.
 
 [![NPM Version](https://img.shields.io/npm/v/@eljs/create.svg)](https://www.npmjs.com/package/@eljs/create)
 [![NPM Downloads](https://img.shields.io/npm/dm/@eljs/create.svg)](https://www.npmjs.com/package/@eljs/create)

@@ -17,7 +17,7 @@
     "directory": "packages/conventional-changelog-preset"
   },
   "license": "MIT",
-  "author": "liquan",
+  "author": "chnliquan",
   "type": "module",
   "main": "src/index.js",
   "types": "src/index.d.ts",

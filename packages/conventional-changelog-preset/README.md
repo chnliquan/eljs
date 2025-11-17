@@ -2,6 +2,10 @@
 
 Conventional changelog preset for @eljs/release.
 
+[![NPM Version](https://img.shields.io/npm/v/@eljs/changelog-preset.svg)](https://www.npmjs.com/package/@eljs/changelog-preset)
+[![NPM Downloads](https://img.shields.io/npm/dm/@eljs/changelog-preset.svg)](https://www.npmjs.com/package/@eljs/changelog-preset)
+[![License](https://img.shields.io/npm/l/@eljs/changelog-preset.svg)](https://github.com/chnliquan/eljs/blob/master/LICENSE)
+
 ## Angular Convention
 
 Angular's [commit message guidelines](https://github.com/angular/angular/blob/master/CONTRIBUTING.md#commit).

@@ -13,7 +13,11 @@ import { Create } from './core'
 import { AppError, onCancel } from './utils'
 
 export function cli() {
-  main()
+  process.on('SIGINT', () => {
+    onCancel()
+  })
+
+  return main()
     .then(() => process.exit(0))
     .catch(error => {
       if (error instanceof AppError) {
@@ -23,10 +27,6 @@ export function cli() {
       }
       process.exit(1)
     })
-
-  process.on('SIGINT', () => {
-    onCancel()
-  })
 }
 
 async function main() {

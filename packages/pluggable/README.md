@@ -1,6 +1,6 @@
 # @eljs/pluggable
 
-A powerful, type-safe plugin system with zero-configuration setup and flexible extensibility
+A powerful, type-safe plugin system with zero-configuration setup and flexible extensibility.
 
 [![NPM Version](https://img.shields.io/npm/v/@eljs/pluggable.svg)](https://www.npmjs.com/package/@eljs/pluggable)
 [![NPM Downloads](https://img.shields.io/npm/dm/@eljs/pluggable.svg)](https://www.npmjs.com/package/@eljs/pluggable)

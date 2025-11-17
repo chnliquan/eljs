@@ -6,20 +6,22 @@ import updateNotifier from 'update-notifier'
 import { CreateTemplate } from './create'
 import { onCancel } from './utils'
 
-const debug = createDebugger('create-template:cli')
-
-cli()
-  .then(() => process.exit(0))
-  .catch(error => {
-    console.error(error)
-    process.exit(1)
+export async function cli() {
+  process.on('SIGINT', () => {
+    onCancel()
   })
 
-process.on('SIGINT', () => {
-  onCancel()
-})
+  try {
+    await main()
+    process.exit(0)
+  } catch (error) {
+    console.error(error)
+    process.exit(1)
+  }
+}
 
-async function cli() {
+async function main() {
+  const debug = createDebugger('create-template:cli')
   const pkg = await readJson<Required<PackageJson>>(
     path.join(__dirname, '../package.json'),
   )

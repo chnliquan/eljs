@@ -1,6 +1,6 @@
 # @eljs/release
 
-Powerful and flexible npm package release tool with comprehensive automation support
+Powerful and flexible npm package release tool with comprehensive automation support.
 
 [![NPM Version](https://img.shields.io/npm/v/@eljs/release.svg)](https://www.npmjs.com/package/@eljs/release)
 [![NPM Downloads](https://img.shields.io/npm/dm/@eljs/release.svg)](https://www.npmjs.com/package/@eljs/release)
