@@ -74,12 +74,12 @@ await release('patch')
 await release('1.2.3', {
   git: {
     changelog: false,
-    push: false
+    push: false,
   },
   npm: {
     prerelease: true,
-    prereleaseId: 'beta'
-  }
+    prereleaseId: 'beta',
+  },
 })
 ```
 
@@ -93,29 +93,29 @@ release [options] [version]
 
 ### Arguments
 
-| Argument | Description |
-|----------|-------------|
+| Argument  | Description                                                                 |
+| --------- | --------------------------------------------------------------------------- |
 | `version` | Specify the bump version (patch/minor/major or specific version like 1.2.3) |
 
 ### Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `-v, --version` | Output the current version | - |
-| `--cwd <cwd>` | Specify the working directory | `process.cwd()` |
-| `--git.independent` | Generate git tag independent | `false` |
-| `--no-git.requireClean` | Skip git working tree clean check | `true` |
-| `--no-git.changelog` | Skip changelog generation | `true` |
-| `--no-git.commit` | Skip git commit | `true` |
-| `--no-git.push` | Skip git push | `true` |
-| `--git.requireBranch <branch>` | Require that the release is on a particular branch | - |
-| `--npm.prerelease` | Specify the release type as prerelease | `false` |
-| `--npm.canary` | Specify the release type as canary | `false` |
-| `--no-npm.requireOwner` | Skip npm owner check | `true` |
-| `--no-npm.confirm` | Skip confirm bump version | `true` |
-| `--npm.prereleaseId <id>` | Specify the prereleaseId (alpha/beta/rc) | - |
-| `--no-github.release` | Skip the github release step | `true` |
-| `-h, --help` | Display help for command | - |
+| Option                         | Description                                        | Default         |
+| ------------------------------ | -------------------------------------------------- | --------------- |
+| `-v, --version`                | Output the current version                         | -               |
+| `--cwd <cwd>`                  | Specify the working directory                      | `process.cwd()` |
+| `--git.independent`            | Generate git tag independent                       | `false`         |
+| `--no-git.requireClean`        | Skip git working tree clean check                  | `true`          |
+| `--no-git.changelog`           | Skip changelog generation                          | `true`          |
+| `--no-git.commit`              | Skip git commit                                    | `true`          |
+| `--no-git.push`                | Skip git push                                      | `true`          |
+| `--git.requireBranch <branch>` | Require that the release is on a particular branch | -               |
+| `--npm.prerelease`             | Specify the release type as prerelease             | `false`         |
+| `--npm.canary`                 | Specify the release type as canary                 | `false`         |
+| `--no-npm.requireOwner`        | Skip npm owner check                               | `true`          |
+| `--no-npm.confirm`             | Skip confirm bump version                          | `true`          |
+| `--npm.prereleaseId <id>`      | Specify the prereleaseId (alpha/beta/rc)           | -               |
+| `--no-github.release`          | Skip the github release step                       | `true`          |
+| `-h, --help`                   | Display help for command                           | -               |
 
 ### CLI Examples
 
@@ -143,10 +143,7 @@ release patch --git.requireBranch main --no-npm.confirm
 Main release function for programmatic usage.
 
 ```typescript
-async function release(
-  version?: string,
-  options?: Config
-): Promise<void>
+async function release(version?: string, options?: Config): Promise<void>
 ```
 
 **Parameters:**
@@ -171,12 +168,12 @@ await release('patch', {
     requireClean: false,
     changelog: {
       filename: 'HISTORY.md',
-      preset: 'angular'
-    }
+      preset: 'angular',
+    },
   },
   npm: {
-    canary: true
-  }
+    canary: true,
+  },
 })
 ```
 
@@ -213,7 +210,7 @@ export default defineConfig({
     changelog: {
       filename: 'CHANGELOG.md',
       placeholder: '**Note:** No changes, only version bump.',
-      preset: '@eljs/conventional-changelog-preset'
+      preset: '@eljs/conventional-changelog-preset',
     },
     /**
      * Whether to generate independent git tags
@@ -243,7 +240,7 @@ export default defineConfig({
      * Git push arguments
      * @default ['--follow-tags']
      */
-    pushArgs: ['--follow-tags', '--atomic']
+    pushArgs: ['--follow-tags', '--atomic'],
   },
   /**
    * NPM configuration
@@ -280,7 +277,7 @@ export default defineConfig({
      * Whether to sync cnpm registry
      * @default false
      */
-    syncCnpm: false
+    syncCnpm: false,
   },
   /**
    * GitHub configuration
@@ -290,7 +287,7 @@ export default defineConfig({
      * Whether to create a github release
      * @default true
      */
-    release: true
+    release: true,
   },
   /**
    * Custom presets
@@ -299,7 +296,7 @@ export default defineConfig({
   /**
    * Custom plugins
    */
-  plugins: []
+  plugins: [],
 })
 ```
 
@@ -316,25 +313,25 @@ export default defineConfig({
     {
       name: 'slack-notification',
       async apply(context) {
-        context.hooks.afterRelease.tap('slack', async (result) => {
+        context.hooks.afterRelease.tap('slack', async result => {
           await sendSlackNotification(`Released ${result.version}`)
         })
-      }
+      },
     },
     // Plugin with options
     {
       name: 'custom-validation',
       options: {
         checkTests: true,
-        checkLinting: true
+        checkLinting: true,
       },
       async apply(context) {
         context.hooks.beforeRelease.tap('validation', async () => {
           await runCustomValidation(this.options)
         })
-      }
-    }
-  ]
+      },
+    },
+  ],
 })
 ```
 
@@ -351,13 +348,41 @@ export default defineConfig({
     independent: true, // Independent versioning
     commitMessage: 'release(core): v${version}',
     changelog: {
-      filename: '../../CHANGELOG.md' // Root changelog
-    }
+      filename: '../../CHANGELOG.md', // Root changelog
+    },
   },
   npm: {
-    publishArgs: ['--access', 'public', '--tag', 'latest']
-  }
+    publishArgs: ['--access', 'public', '--tag', 'latest'],
+  },
 })
+```
+
+### Custom Prerelease Workflow
+
+```typescript
+import { Runner } from '@eljs/release'
+
+async function betaRelease() {
+  const runner = new Runner({
+    npm: {
+      prerelease: true,
+      prereleaseId: 'beta',
+      confirm: false,
+      publishArgs: ['--tag', 'beta'],
+    },
+    git: {
+      commitMessage: 'chore: beta release v${version}',
+      push: false, // Don't push beta releases
+    },
+    github: {
+      release: false, // No GitHub release for betas
+    },
+  })
+
+  await runner.run()
+}
+
+betaRelease()
 ```
 
 ### CI/CD Integration
@@ -398,82 +423,3 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
-
-### Custom Prerelease Workflow
-
-```typescript
-import { Runner } from '@eljs/release'
-
-async function betaRelease() {
-  const runner = new Runner({
-    npm: {
-      prerelease: true,
-      prereleaseId: 'beta',
-      confirm: false,
-      publishArgs: ['--tag', 'beta']
-    },
-    git: {
-      commitMessage: 'chore: beta release v${version}',
-      push: false // Don't push beta releases
-    },
-    github: {
-      release: false // No GitHub release for betas
-    }
-  })
-  
-  await runner.run()
-}
-
-betaRelease()
-```
-
-## 🔍 Troubleshooting
-
-### Common Issues
-
-**Git working directory not clean:**
-```bash
-# Skip clean check
-release patch --no-git.requireClean
-```
-
-**NPM authentication issues:**
-```bash
-# Check npm login
-npm whoami
-
-# Login if needed
-npm login
-```
-
-**Wrong branch for release:**
-```bash
-# Switch to correct branch
-git checkout main
-
-# Or specify branch requirement
-release patch --git.requireBranch main
-```
-
-**Version validation errors:**
-```bash
-# Use valid semantic version
-release 1.2.3
-
-# Or use release type
-release patch  # 1.2.3 -> 1.2.4
-release minor  # 1.2.3 -> 1.3.0
-release major  # 1.2.3 -> 2.0.0
-```
-
-### Debug Mode
-
-Enable debug logging:
-
-```bash
-DEBUG=release* npm run release
-```
-
-## 📄 License
-
-[MIT](https://github.com/chnliquan/eljs/blob/master/LICENSE)
