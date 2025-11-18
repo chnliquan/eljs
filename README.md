@@ -7,17 +7,17 @@ A comprehensive collection of modern Node.js development tools for building robu
 ```
 eljs/
 ├── packages/
-│   ├── config/                      # Configuration management utilities
-│   ├── conventional-changelog-preset/# Custom changelog preset for releases
-│   ├── create/                      # Powerful project creation tool
-│   ├── create-template/             # Template creation utilities
-│   ├── pluggable/                  # Plugin system and architecture
-│   ├── release/                    # Automated release management
-│   └── utils/                      # Comprehensive Node.js utilities
-├── scripts/                        # Build and release automation
-├── package.json                    # Root workspace configuration
-├── turbo.json                     # Turborepo build pipeline
-└── pnpm-workspace.yaml            # pnpm workspace settings
+│   ├── config/                          # Configuration management utilities
+│   ├── conventional-changelog-preset/  # Custom changelog preset for releases
+│   ├── create/                         # Powerful project creation tool
+│   ├── create-template/                # Template creation utilities
+│   ├── pluggable/                      # Plugin system and architecture
+│   ├── release/                        # Automated release management
+│   └── utils/                          # Comprehensive Node.js utilities
+├── scripts/                            # Build and release automation
+├── package.json                        # Root workspace configuration
+├── turbo.json                          # Turborepo build pipeline
+└── pnpm-workspace.yaml                 # pnpm workspace settings
 ```
 
 ## 📋 Available Packages
@@ -117,30 +117,32 @@ pnpm run test:w
 
 ## 🛠 Scripts Reference
 
-| Command                 | Description                   | Usage                       |
-| ----------------------- | ----------------------------- | --------------------------- |
-| **Development**         |                               |                             |
-| `pnpm dev`              | Build packages in watch mode  | `pnpm dev`                  |
-| `pnpm build`            | Build all packages            | `pnpm build`                |
-| `pnpm test`             | Run all tests                 | `pnpm test`                 |
-| `pnpm test:w`           | Run tests in watch mode       | `pnpm test:w`               |
-| **Code Quality**        |                               |                             |
-| `pnpm lint`             | Lint source code              | `pnpm lint`                 |
-| `pnpm format`           | Format code with Prettier     | `pnpm format`               |
-| `pnpm coverage`         | Generate test coverage        | `pnpm coverage`             |
-| **Release Management**  |                               |                             |
-| `pnpm release`          | Release all packages          | `pnpm release`              |
-| `pnpm release:patch`    | Patch version release         | `pnpm release:patch`        |
-| `pnpm release:minor`    | Minor version release         | `pnpm release:minor`        |
-| `pnpm release:major`    | Major version release         | `pnpm release:major`        |
-| `pnpm prerelease:alpha` | Prerelease with alpha version | `pnpm prerelease:alpha`     |
-| `pnpm prerelease:beta`  | Prerelease with beta version  | `pnpm prerelease:beta`      |
-| `pnpm prerelease:next`  | Prerelease with next version  | `pnpm prerelease:next`      |
-| **Utilities**           |                               |                             |
-| `pnpm gm`               | Interactive git commit        | `pnpm gm`                   |
-| `pnpm boot`             | Initialize new package        | `pnpm boot packages/shared` |
-| `pnpm add-owner`        | Add npm ownership             | `pnpm add-owner <users>`    |
-| `pnpm clean`            | Clean build artifacts         | `pnpm clean`                |
+### Monorepo Commands
+
+| Command                | Description                                     | Usage                                           |
+| ---------------------- | ----------------------------------------------- | ----------------------------------------------- |
+| **Development**        |                                                 |                                                 |
+| `dev`                  | Build all packages in watch mode                | `pnpm dev`                                      |
+| `build`                | Build all packages                              | `pnpm build`                                    |
+| `test`                 | Run tests for all packages                      | `pnpm test`                                     |
+| `test:w`               | Run tests in watch mode                         | `pnpm test:w`                                   |
+| **Code Quality**       |                                                 |                                                 |
+| `lint`                 | Lint all packages source code                   | `pnpm lint`                                     |
+| `format`               | Format all packages with prettier               | `pnpm format`                                   |
+| `coverage`             | Generate test coverage report                   | `pnpm coverage`                                 |
+| **Release Management** |                                                 |                                                 |
+| `release`              | Release all packages with unified versioning    | `pnpm release`                                  |
+| `release:patch`        | Patch version release for all packages          | `pnpm release:patch` (1.0.0 → 1.0.1)            |
+| `release:minor`        | Minor version release for all packages          | `pnpm release:minor` (1.0.0 → 1.1.0)            |
+| `release:major`        | Major version release for all packages          | `pnpm release:major` (1.0.0 → 2.0.0)            |
+| `prerelease:alpha`     | Alpha prerelease for all packages               | `pnpm prerelease:alpha` (1.0.0 → 1.0.1-alpha.1) |
+| `prerelease:beta`      | Beta prerelease for all packages                | `pnpm prerelease:beta` (1.0.0 → 1.0.1-beta.1)   |
+| `prerelease:next`      | Next prerelease for all packages                | `pnpm prerelease:next` (1.0.0 → 1.0.1-next.1)   |
+| **Utilities**          |                                                 |                                                 |
+| `gm`                   | Interactive git commit with conventional format | `pnpm gm` (select type and input scope)         |
+| `boot`                 | Initialize new package structure                | `pnpm boot <package-name>`                      |
+| `add-owner`            | Add npm ownership for all packages              | `pnpm add-owner <username1> <username2>`        |
+| `clean`                | Clean build artifacts from all packages         | `pnpm clean`                                    |
 
 ## 📦 Package Management
 
@@ -236,7 +238,7 @@ This project follows [Git Flow](https://nvie.com/posts/a-successful-git-branchin
 
 - **master**: Main branch, maintains stable releasable state
 - **develop**: Development branch, integration branch for features
-- **feature/\<package-name\\>-\<feature\>**: Feature branches, branched from develop, merged back to develop when complete (e.g., `feature/create-validation`, `feature/utils-logging`)
+- **feature/\<package-name\>-\<feature\>**: Feature branches, branched from develop, merged back to develop when complete (e.g., `feature/create-validation`, `feature/utils-logging`)
 - **release/\<version\>**: Release branches, branched from develop, used for release preparation
 - **hotfix/\<issue\>**: Hotfix branches, branched from master, used for emergency fixes
 
