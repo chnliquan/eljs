@@ -112,6 +112,45 @@ export default function myPlugin(api: PluginApi, options: MyPluginOptions) {
 }
 ```
 
+### Extending Plugin API (Advanced)
+
+If you are building a complex framework on top of `@eljs/pluggable`, you might want to inject
+custom properties or utilities directly into the PluginApi so that all plugins can access them
+seamlessly.
+
+You can safely achieve this by overriding the extendPluginApi hook in your runner class.
+
+```ts
+import { Pluggable, Plugin } from '@eljs/pluggable'
+
+export class CustomRunner extends Pluggable {
+  // Safe extension point: inject custom utilities into PluginApi
+  protected extendPluginApi(plugin: Plugin) {
+    return {
+      // Plugins can call: api.logger('msg')
+      logger: (msg: string) => {
+        console.log(`[Plugin: ${plugin.id}] ${msg}`)
+      },
+
+      // Plugins can access: api.frameworkVersion
+      frameworkVersion: '1.0.0',
+
+      // You can even override default API behaviors if needed
+      // describe: (options) => { ... }
+    }
+  }
+}
+
+// Inside a plugin:
+export default function plugin(
+  api: PluginApi & { logger: (msg: string) => void },
+) {
+  api.logger('Hello from custom API!')
+}
+```
+
+> 💡 Note: Any public method defined on your CustomRunner class will also be automatically proxied and accessible via the api object in plugins. However, using extendPluginApi provides a safer and cleaner isolated context specifically meant for plugins.
+
 ## 📖 API Reference
 
 ### Pluggable Constructor

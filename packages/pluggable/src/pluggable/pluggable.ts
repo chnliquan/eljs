@@ -135,24 +135,48 @@ export class Pluggable<T extends UserConfig = UserConfig> {
   }
 
   /**
+   * 暴露给子类的扩展钩子
+   * 子类可以重写此方法，返回一个对象，向 Plugin API 注入自定义属性或方法
+   * @param plugin 当前正在被初始化的插件实例
+   * @returns 需要注入到 API 上的扩展对象
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+  protected extendPluginApi(plugin: Plugin): Record<string, any> {
+    return {}
+  }
+
+  /**
    * 获取插件 Api
    * @param plugin 插件
    */
-  protected getPluginApi(plugin: Plugin): PluginApi {
+  private _getPluginApi(plugin: Plugin): PluginApi {
     const pluginApi = new PluginApi(this, plugin)
 
+    // 获取子类提供的扩展对象
+    const extensions = this.extendPluginApi(plugin)
+
     return new Proxy(pluginApi, {
-      get: (target, prop: string) => {
+      get: (target, prop: string, receiver) => {
+        // 1. 子类注入的自定义扩展属性/方法
+        if (prop in extensions) {
+          const value = extensions[prop]
+          // 如果是函数，绑定 this 到 extensions 对象自身，防止上下文丢失
+          return isFunction(value) ? value.bind(extensions) : value
+        }
+
+        // 2: 插件通过 api.registerMethod 动态注册的全局方法
         if (this.pluginMethods[prop]) {
           return this.pluginMethods[prop].fn
         }
 
+        // 3: 暴露当前 Pluggable（或其子类）实例上的公开属性/方法
         if (prop in this) {
           const value = this[prop as keyof typeof this]
           return isFunction(value) ? value.bind(this) : value
         }
 
-        return target[prop as keyof typeof target]
+        // 4: 兜底，访问 PluginApi 自身的原生方法 (如 register, describe)
+        return Reflect.get(target, prop, receiver)
       },
     })
   }
@@ -200,7 +224,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
 
     this.plugins[plugin.id] = plugin
 
-    const pluginApi = this.getPluginApi(plugin)
+    const pluginApi = this._getPluginApi(plugin)
 
     pluginApi.registerPresets = pluginApi.registerPresets.bind(
       pluginApi,
