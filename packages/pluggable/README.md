@@ -32,7 +32,7 @@ npm install @eljs/pluggable -S
 
 ### Basic Usage
 
-```typescript
+```ts
 import { Pluggable } from '@eljs/pluggable'
 
 // Create a pluggable runner
@@ -75,7 +75,7 @@ await runner.run()
 
 ### Type-Safe Plugin Development
 
-```typescript
+```ts
 // Define your plugin with TypeScript
 interface MyPluginOptions {
   outputDir: string
@@ -155,7 +155,7 @@ export default function plugin(
 
 ### Pluggable Constructor
 
-```typescript
+```ts
 new Pluggable<T>(options: PluggableOptions)
 
 interface PluggableOptions {
@@ -196,7 +196,7 @@ type PluginDeclaration<Options = Record<string, any>> =
 
 #### `load()` - Load Presets and Plugins
 
-```typescript
+```ts
 protected async load(): Promise<void>
 ```
 
@@ -211,7 +211,7 @@ Loads and initializes all presets and plugins based on configuration files and c
 
 #### `applyPlugins()` - Execute Plugin Hooks
 
-```typescript
+```ts
 async applyPlugins<T, U>(
   key: string,
   options?: ApplyPluginsOptions<T, U>
@@ -236,7 +236,7 @@ enum ApplyPluginTypeEnum {
 
 **Hook Types Explained:**
 
-```typescript
+```ts
 // Add Hook - Accumulate results into an array
 const items = await this.applyPlugins('addItems', {
   type: ApplyPluginTypeEnum.Add,
@@ -267,6 +267,15 @@ await this.applyPlugins('onComplete', {
 })
 // Result: void (all plugins executed)
 ```
+
+### `extendPluginApi()` - Inject Custom API
+
+```ts
+protected extendPluginApi(plugin: Plugin): Record<string, any>
+```
+
+A lifecycle hook that allows you to safely inject or override properties and methods on the
+`PluginApi` object exposed to plugins.
 
 ### Plugin API
 
