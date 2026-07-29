@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 /**
  * @file packages/release define 模块单元测试
  * @description 测试 define.ts 配置定义功能

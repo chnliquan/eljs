@@ -1,3 +1,4 @@
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 /* eslint-disable @typescript-eslint/naming-convention */
 /**
  * @file packages/release utils/npm 模块单元测试
@@ -14,24 +15,29 @@ import {
 } from '../../src/utils/npm'
 
 // 模拟依赖
-jest.mock('@eljs/utils', () => ({
+vi.mock('@eljs/utils', () => ({
   chalk: {
-    cyan: jest.fn((text: string) => `[cyan]${text}[/cyan]`),
+    cyan: vi.fn((text: string) => `[cyan]${text}[/cyan]`),
   },
-  getNpmPackage: jest.fn(),
+  getNpmPackage: vi.fn(),
   logger: {
-    ready: jest.fn(),
+    ready: vi.fn(),
   },
-  run: jest.fn(),
+  run: vi.fn(),
 }))
 
-jest.mock('resolve-bin', () => ({
-  sync: jest.fn(),
-}))
+vi.mock('resolve-bin', () => {
+  const sync = vi.fn()
+
+  return {
+    default: { sync },
+    sync,
+  }
+})
 
 describe('NPM 工具函数测试', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   describe('getRemoteDistTag 函数', () => {
@@ -45,7 +51,7 @@ describe('NPM 工具函数测试', () => {
         },
       }
 
-      ;(getNpmPackage as jest.Mock).mockResolvedValue(mockNpmMeta)
+      ;(getNpmPackage as Mock).mockResolvedValue(mockNpmMeta)
 
       const result = await getRemoteDistTag(['it-package'])
 
@@ -73,7 +79,7 @@ describe('NPM 工具函数测试', () => {
         registry: 'https://custom-registry.com',
       }
 
-      ;(getNpmPackage as jest.Mock).mockResolvedValue(mockNpmMeta)
+      ;(getNpmPackage as Mock).mockResolvedValue(mockNpmMeta)
 
       const result = await getRemoteDistTag(['it-package'], options)
 
@@ -96,7 +102,7 @@ describe('NPM 工具函数测试', () => {
         },
       }
 
-      ;(getNpmPackage as jest.Mock)
+      ;(getNpmPackage as Mock)
         .mockResolvedValueOnce(null) // 第一个包不存在
         .mockResolvedValueOnce(mockNpmMeta2) // 第二个包存在
 
@@ -131,7 +137,7 @@ describe('NPM 工具函数测试', () => {
         // 没有 dist-tags 字段
       }
 
-      ;(getNpmPackage as jest.Mock).mockResolvedValue(mockNpmMeta)
+      ;(getNpmPackage as Mock).mockResolvedValue(mockNpmMeta)
 
       const result = await getRemoteDistTag(['it-package'])
 
@@ -144,7 +150,7 @@ describe('NPM 工具函数测试', () => {
     })
 
     it('应该处理所有包都不存在的情况', async () => {
-      ;(getNpmPackage as jest.Mock).mockResolvedValue(null)
+      ;(getNpmPackage as Mock).mockResolvedValue(null)
 
       const result = await getRemoteDistTag([
         'non-existent-1',
@@ -179,7 +185,7 @@ describe('NPM 工具函数测试', () => {
         },
       }
 
-      ;(getNpmPackage as jest.Mock).mockResolvedValue(mockNpmMeta)
+      ;(getNpmPackage as Mock).mockResolvedValue(mockNpmMeta)
 
       const result = await getRemoteDistTag(['it-package'])
 
@@ -194,8 +200,8 @@ describe('NPM 工具函数测试', () => {
 
   describe('syncCnpm 函数', () => {
     it('应该正确同步单个包到 cnpm', async () => {
-      ;(resolveBin.sync as jest.Mock).mockReturnValue('/usr/bin/cnpm')
-      ;(run as jest.Mock).mockResolvedValue({
+      ;(resolveBin.sync as Mock).mockReturnValue('/usr/bin/cnpm')
+      ;(run as Mock).mockResolvedValue({
         stdout: '',
         stderr: '',
         exitCode: 0,
@@ -215,8 +221,8 @@ describe('NPM 工具函数测试', () => {
     it('应该正确同步多个包到 cnpm', async () => {
       const packages = ['package-1', 'package-2', 'package-3']
 
-      ;(resolveBin.sync as jest.Mock).mockReturnValue('/usr/local/bin/cnpm')
-      ;(run as jest.Mock).mockResolvedValue({
+      ;(resolveBin.sync as Mock).mockReturnValue('/usr/local/bin/cnpm')
+      ;(run as Mock).mockResolvedValue({
         stdout: '',
         stderr: '',
         exitCode: 0,
@@ -262,8 +268,8 @@ describe('NPM 工具函数测试', () => {
       const packages = ['package-1', 'package-2']
       let runCallCount = 0
 
-      ;(resolveBin.sync as jest.Mock).mockReturnValue('/usr/bin/cnpm')
-      ;(run as jest.Mock).mockImplementation(async () => {
+      ;(resolveBin.sync as Mock).mockReturnValue('/usr/bin/cnpm')
+      ;(run as Mock).mockImplementation(async () => {
         runCallCount++
         await new Promise(resolve => setTimeout(resolve, 10))
         return { stdout: '', stderr: '', exitCode: 0 }
@@ -281,8 +287,8 @@ describe('NPM 工具函数测试', () => {
     it('应该处理单个包同步失败的情况', async () => {
       const packages = ['success-package', 'fail-package']
 
-      ;(resolveBin.sync as jest.Mock).mockReturnValue('/usr/bin/cnpm')
-      ;(run as jest.Mock)
+      ;(resolveBin.sync as Mock).mockReturnValue('/usr/bin/cnpm')
+      ;(run as Mock)
         .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 })
         .mockRejectedValueOnce(new Error('同步失败'))
 
@@ -312,7 +318,7 @@ describe('NPM 工具函数测试', () => {
     })
 
     it('应该处理 resolveBin 失败的情况', () => {
-      ;(resolveBin.sync as jest.Mock).mockImplementation(() => {
+      ;(resolveBin.sync as Mock).mockImplementation(() => {
         throw new Error('cnpm not found')
       })
 
@@ -321,8 +327,8 @@ describe('NPM 工具函数测试', () => {
 
     it('应该使用正确的 cnpm 命令路径', async () => {
       const cnpmPath = '/custom/path/to/cnpm'
-      ;(resolveBin.sync as jest.Mock).mockReturnValue(cnpmPath)
-      ;(run as jest.Mock).mockResolvedValue({
+      ;(resolveBin.sync as Mock).mockReturnValue(cnpmPath)
+      ;(run as Mock).mockResolvedValue({
         stdout: '',
         stderr: '',
         exitCode: 0,
@@ -345,7 +351,7 @@ describe('NPM 工具函数测试', () => {
         },
       }
 
-      ;(getNpmPackage as jest.Mock).mockResolvedValue(mockNpmMeta)
+      ;(getNpmPackage as Mock).mockResolvedValue(mockNpmMeta)
 
       const result: RemoteDistTag = await getRemoteDistTag(['it-package'])
 

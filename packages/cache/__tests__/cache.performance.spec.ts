@@ -1,6 +1,7 @@
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { Cache } from '../src'
 
@@ -191,9 +192,12 @@ describe('Cache 性能和清理功能测试', () => {
       fs.mkdirSync(cacheDir, { recursive: true })
 
       // 创建无效的缓存文件
-      fs.writeFileSync(path.join(cacheDir, 'invalid1.json'), 'invalid json')
       fs.writeFileSync(
-        path.join(cacheDir, 'invalid2.json'),
+        path.join(cacheDir, `${'a'.repeat(64)}.json`),
+        'invalid json',
+      )
+      fs.writeFileSync(
+        path.join(cacheDir, `${'b'.repeat(64)}.json`),
         JSON.stringify({ incomplete: 'data' }),
       )
 

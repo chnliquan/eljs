@@ -18,6 +18,10 @@ export interface RemoteTemplate {
    * 仓库地址
    */
   registry?: string
+  /**
+   * 是否为内置信任模板
+   */
+  trusted?: boolean
 }
 
 /**
@@ -50,12 +54,14 @@ export const defaultConfig: TemplateConfig = {
         description: 'Web Common Template',
         value: '@eljs/create-plugin-npm-web',
         registry: 'https://registry.npmjs.org/',
+        trusted: true,
       },
       'template-npm-node': {
         type: 'npm',
         description: 'Node Common Template',
         value: '@eljs/create-plugin-npm-node',
         registry: 'https://registry.npmjs.org/',
+        trusted: true,
       },
     },
   },

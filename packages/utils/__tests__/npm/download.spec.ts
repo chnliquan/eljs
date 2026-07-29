@@ -1,23 +1,37 @@
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
+import * as importedModule0 from '../../src/file'
+import * as importedModule1 from '../../src/type'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import download, { type DownloadOptions } from 'download'
 
 import { downloadNpmTarball } from '../../src/npm/download'
 
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+const requiredModule1 = vi.mocked(importedModule1, { deep: true })
+
 // Mock 依赖项
-jest.mock('download')
-jest.mock('../../src/file')
-jest.mock('../../src/type')
+vi.mock('download')
+vi.mock('../../src/file')
+vi.mock('../../src/type')
 
 describe('NPM Download 工具', () => {
-  const mockDownload = download as jest.MockedFunction<typeof download>
-  const mockTmpdir = require('../../src/file').tmpdir as jest.MockedFunction<
+  const mockDownload = download as MockedFunction<typeof download>
+  const mockTmpdir = requiredModule0.tmpdir as unknown as MockedFunction<
     (random?: boolean) => Promise<string>
   >
-  const mockIsObject = require('../../src/type')
-    .isObject as jest.MockedFunction<(value: unknown) => boolean>
+  const mockIsObject = requiredModule1.isObject as MockedFunction<
+    (value: unknown) => boolean
+  >
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     mockDownload.mockResolvedValue(Buffer.from('downloaded'))
     mockTmpdir.mockResolvedValue('/tmp/random-dir')
     mockIsObject.mockReturnValue(false)
@@ -105,7 +119,7 @@ describe('NPM Download 工具', () => {
 
       try {
         await downloadNpmTarball('https://fail.com/package.tgz')
-        fail('应该抛出错误')
+        throw new Error('应该抛出错误')
       } catch (error) {
         expect((error as Error).message).toMatch(
           /Download https:\/\/fail\.com\/package\.tgz failed: Download failed: 404/,

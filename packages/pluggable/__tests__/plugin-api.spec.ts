@@ -1,3 +1,4 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 /* eslint-disable @typescript-eslint/naming-convention */
 import type { ResolvedPlugin } from '../src'
 import { PluggableStateEnum, Plugin, PluginApi } from '../src'
@@ -56,7 +57,7 @@ describe('插件API', () => {
   describe('注册钩子', () => {
     it('应该注册带有所有选项的钩子', () => {
       const key = 'testHook'
-      const fn = jest.fn()
+      const fn = vi.fn()
       const options = { stage: 10, before: 'anotherHook' }
 
       pluginApi.register(key, fn, options)
@@ -73,7 +74,7 @@ describe('插件API', () => {
 
     it('应该注册不带选项的钩子', () => {
       const key = 'testHook'
-      const fn = jest.fn()
+      const fn = vi.fn()
 
       pluginApi.register(key, fn)
 
@@ -89,7 +90,7 @@ describe('插件API', () => {
   describe('注册方法', () => {
     it('应该注册带有自定义函数的方法', () => {
       const methodName = 'customMethod'
-      const fn = jest.fn()
+      const fn = vi.fn()
 
       pluginApi.registerMethod(methodName, fn)
 
@@ -103,11 +104,11 @@ describe('插件API', () => {
       const methodName = 'customMethod'
       mockPluggable.pluginMethods[methodName] = {
         plugin: mockPlugin,
-        fn: jest.fn(),
+        fn: vi.fn(),
       }
 
       expect(() => {
-        pluginApi.registerMethod(methodName, jest.fn())
+        pluginApi.registerMethod(methodName, vi.fn())
       }).toThrow(
         'api.registerMethod() failed, method `customMethod` already exist.',
       )
@@ -157,7 +158,7 @@ describe('插件API', () => {
       mockRemainingPlugins = []
 
       // Mock Plugin.resolvePlugins
-      jest.spyOn(Plugin, 'resolvePlugins').mockReturnValue([])
+      vi.spyOn(Plugin, 'resolvePlugins').mockReturnValue([])
     })
 
     it('应该在初始化预设阶段注册预设', () => {

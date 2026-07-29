@@ -1,3 +1,4 @@
+import { afterEach, vi, type MockedFunction } from 'vitest'
 import type { PluggableOptions, Plugin } from '../src'
 import type { PluginTypeEnum } from '../src/plugin/types'
 
@@ -5,7 +6,7 @@ interface MockPluginOptions {
   key?: string
   type?: PluginTypeEnum
   enable?: () => boolean
-  apply?: jest.MockedFunction<() => void>
+  apply?: MockedFunction<() => void>
   [key: string]: unknown
 }
 
@@ -24,8 +25,8 @@ export const createMockPlugin = (
     type: options.type || 'plugin',
     time: { hooks: {}, register: 0 },
     enable: options.enable || (() => true),
-    apply: jest.fn(() => options.apply || jest.fn()),
-    merge: jest.fn(),
+    apply: vi.fn(() => options.apply || vi.fn()),
+    merge: vi.fn(),
     ...options,
   } as unknown as Plugin
   return mockPlugin
@@ -43,5 +44,5 @@ export const createMockConfig = (
 
 // Cleanup after tests
 afterEach(() => {
-  jest.clearAllMocks()
+  vi.clearAllMocks()
 })

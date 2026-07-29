@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 /**
  * @file packages/release types 模块单元测试
  * @description 测试 types 目录下的类型定义

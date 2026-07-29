@@ -59,15 +59,16 @@ create-template [options] <project-name>
 
 ### Options
 
-| Option                      | Description                              | Default         |
-| --------------------------- | ---------------------------------------- | --------------- |
-| `-v, --version`             | Output the current version               | -               |
-| `--cwd <cwd>`               | Specify the working directory            | `process.cwd()` |
-| `-s, --scene <scene>`       | Specify the application scene            | Interactive     |
-| `-t, --template <template>` | Specify the application template         | Interactive     |
-| `-f, --force`               | Overwrite target directory if it exists  | `false`         |
-| `-m, --merge`               | Merge with target directory if it exists | `false`         |
-| `-h, --help`                | Display help for command                 |
+| Option                      | Description                                      | Default         |
+| --------------------------- | ------------------------------------------------ | --------------- |
+| `-v, --version`             | Output the current version                       | -               |
+| `--cwd <cwd>`               | Specify the working directory                    | `process.cwd()` |
+| `-s, --scene <scene>`       | Specify the application scene                    | Interactive     |
+| `-t, --template <template>` | Specify the application template                 | Interactive     |
+| `-f, --force`               | Overwrite target directory if it exists          | `false`         |
+| `-m, --merge`               | Merge with target directory if it exists         | `false`         |
+| `--allow-template-scripts`  | Allow lifecycle scripts in template dependencies | `false`         |
+| `-h, --help`                | Display help for command                         | -               |
 
 ## 🎯 Available Scenes & Templates
 

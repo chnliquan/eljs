@@ -1,3 +1,14 @@
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedClass,
+  type MockedFunction,
+} from 'vitest'
 /**
  * @file packages/create-template cli 模块单元测试
  * @description 测试 cli.ts 命令行接口功能
@@ -9,8 +20,8 @@ const originalConsoleLog = console.log
 
 beforeAll(() => {
   // 在所有测试开始前静音控制台输出
-  console.error = jest.fn()
-  console.log = jest.fn()
+  console.error = vi.fn()
+  console.log = vi.fn()
 })
 
 afterAll(() => {
@@ -20,43 +31,55 @@ afterAll(() => {
 })
 
 // 首先进行所有模拟设置
-jest.mock('@eljs/utils', () => ({
+vi.mock('@eljs/utils', () => ({
   chalk: {
-    yellow: jest.fn((text: string) => `[yellow]${text}[/yellow]`),
-    red: jest.fn((text: string) => `[red]${text}[/red]`),
+    yellow: vi.fn((text: string) => `[yellow]${text}[/yellow]`),
+    red: vi.fn((text: string) => `[red]${text}[/red]`),
   },
-  createDebugger: jest.fn(() => jest.fn()),
-  readJson: jest.fn(),
+  createDebugger: vi.fn(() => vi.fn()),
+  readJson: vi.fn(),
 }))
 
-const mockProgram = {
-  name: jest.fn().mockReturnThis(),
-  description: jest.fn().mockReturnThis(),
-  version: jest.fn().mockReturnThis(),
-  argument: jest.fn().mockReturnThis(),
-  option: jest.fn().mockReturnThis(),
-  action: jest.fn().mockReturnThis(),
-  parseAsync: jest.fn().mockResolvedValue(undefined),
-  outputHelp: jest.fn(),
-}
+const { mockProgram } = vi.hoisted(() => ({
+  mockProgram: {
+    name: vi.fn().mockReturnThis(),
+    description: vi.fn().mockReturnThis(),
+    version: vi.fn().mockReturnThis(),
+    argument: vi.fn().mockReturnThis(),
+    option: vi.fn().mockReturnThis(),
+    action: vi.fn().mockReturnThis(),
+    parseAsync: vi.fn().mockResolvedValue(undefined),
+    outputHelp: vi.fn(),
+  },
+}))
 
-jest.mock('commander', () => ({
-  Command: jest.fn().mockImplementation(() => ({
-    outputHelp: jest.fn(),
-  })),
+vi.mock('commander', () => ({
+  Command: vi.fn().mockImplementation(function Command() {
+    return {
+      outputHelp: vi.fn(),
+    }
+  }),
   program: mockProgram,
 }))
 
-jest.mock('node:path', () => ({
-  join: jest.fn(),
-  dirname: jest.fn(),
-}))
+vi.mock('node:path', async importOriginal => {
+  const original = await importOriginal<typeof import('node:path')>()
+  const join = vi.fn()
+  const dirname = vi.fn()
 
-jest.mock('update-notifier')
-jest.mock('@eljs/create', () => ({}))
-jest.mock('../src/create')
-jest.mock('../src/utils', () => ({
-  onCancel: jest.fn(),
+  return {
+    ...original,
+    default: { ...original, dirname, join },
+    dirname,
+    join,
+  }
+})
+
+vi.mock('update-notifier')
+vi.mock('@eljs/create', () => ({}))
+vi.mock('../src/create')
+vi.mock('../src/utils', () => ({
+  onCancel: vi.fn(),
 }))
 
 // 导入模块
@@ -92,38 +115,35 @@ describe('CLI 命令行接口综合测试', () => {
   })
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // Mock process
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    process.exit = jest.fn() as any
-    process.on = jest.fn()
+    process.exit = vi.fn() as any
+    process.on = vi.fn()
     process.argv = ['node', 'cli.js']
 
     // Setup mocks
-    ;(readJson as jest.MockedFunction<typeof readJson>).mockResolvedValue(
+    ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue(
       mockPackageJson,
     )
-    ;(path.join as jest.MockedFunction<typeof path.join>).mockReturnValue(
+    ;(path.join as MockedFunction<typeof path.join>).mockReturnValue(
       '/mock/package.json',
     )
-    ;(
-      updateNotifier as jest.MockedFunction<typeof updateNotifier>
-    ).mockReturnValue({
-      notify: jest.fn(),
-      check: jest.fn(),
-      fetchInfo: jest.fn(),
+    ;(updateNotifier as MockedFunction<typeof updateNotifier>).mockReturnValue({
+      notify: vi.fn(),
+      check: vi.fn(),
+      fetchInfo: vi.fn(),
     } as unknown as ReturnType<typeof updateNotifier>)
 
     // Mock CreateTemplate class
-    ;(
-      CreateTemplate as jest.MockedClass<typeof CreateTemplate>
-    ).mockImplementation(
-      () =>
-        ({
-          run: jest.fn().mockResolvedValue(undefined),
+    ;(CreateTemplate as MockedClass<typeof CreateTemplate>).mockImplementation(
+      function CreateTemplate() {
+        return {
+          run: vi.fn().mockResolvedValue(undefined),
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        }) as any,
+        } as any
+      },
     )
   })
 
@@ -142,9 +162,7 @@ describe('CLI 命令行接口综合测试', () => {
 
     it('应该处理 main 函数中的错误', async () => {
       const error = new Error('Test error')
-      ;(readJson as jest.MockedFunction<typeof readJson>).mockRejectedValue(
-        error,
-      )
+      ;(readJson as MockedFunction<typeof readJson>).mockRejectedValue(error)
 
       await cli()
 
@@ -234,7 +252,7 @@ describe('CLI 命令行接口综合测试', () => {
       )
 
       const createInstance = (
-        CreateTemplate as jest.MockedClass<typeof CreateTemplate>
+        CreateTemplate as MockedClass<typeof CreateTemplate>
       ).mock.results[0].value
       expect(createInstance.run).toHaveBeenCalledWith('test-project')
     })
@@ -248,13 +266,13 @@ describe('CLI 命令行接口综合测试', () => {
       ]
 
       for (const projectName of testCases) {
-        jest.clearAllMocks()
+        vi.clearAllMocks()
         await actionHandler(projectName, {})
 
         expect(CreateTemplate).toHaveBeenCalledWith(expect.objectContaining({}))
 
         const createInstance = (
-          CreateTemplate as jest.MockedClass<typeof CreateTemplate>
+          CreateTemplate as MockedClass<typeof CreateTemplate>
         ).mock.results[0].value
         expect(createInstance.run).toHaveBeenCalledWith(projectName)
       }
@@ -279,13 +297,13 @@ describe('CLI 命令行接口综合测试', () => {
     })
 
     it('应该记录调试信息', async () => {
-      const mockDebug = jest.fn()
+      const mockDebug = vi.fn()
       ;(
-        createDebugger as jest.MockedFunction<typeof createDebugger>
+        createDebugger as MockedFunction<typeof createDebugger>
       ).mockReturnValue(mockDebug)
 
       // 重新执行 cli 以获得新的 debug 实例
-      jest.clearAllMocks()
+      vi.clearAllMocks()
       await cli()
       const actionCall = mockProgram.action.mock.calls[0]
       const newActionHandler = actionCall[0]
@@ -331,7 +349,7 @@ describe('CLI 命令行接口综合测试', () => {
 
       // 测试方法可以被正常调用（这里会实际执行增强的错误处理逻辑）
       const mockCommand = {
-        outputHelp: jest.fn(),
+        outputHelp: vi.fn(),
         _allowUnknownOption: false,
         registeredArguments: [{ name: 'project-name' }],
         _allowExcessArguments: false,
@@ -363,7 +381,7 @@ describe('CLI 命令行接口综合测试', () => {
 
       // 测试 unknownOption 允许未知选项的分支
       const allowUnknownCommand = {
-        outputHelp: jest.fn(),
+        outputHelp: vi.fn(),
         _allowUnknownOption: true,
       }
 
@@ -376,7 +394,7 @@ describe('CLI 命令行接口综合测试', () => {
 
       // 测试 _excessArguments 允许多余参数的分支
       const allowExcessCommand = {
-        outputHelp: jest.fn(),
+        outputHelp: vi.fn(),
         registeredArguments: [{ name: 'project-name' }],
         _allowExcessArguments: true,
       }
@@ -393,7 +411,7 @@ describe('CLI 命令行接口综合测试', () => {
       await cli()
 
       const mockCommand = {
-        outputHelp: jest.fn(),
+        outputHelp: vi.fn(),
         _allowUnknownOption: false,
         registeredArguments: [{ name: 'single-arg' }],
         _allowExcessArguments: false,
@@ -413,7 +431,7 @@ describe('CLI 命令行接口综合测试', () => {
       await cli()
 
       const mockCommand = {
-        outputHelp: jest.fn(),
+        outputHelp: vi.fn(),
       }
 
       // 测试带 flag 的选项错误
@@ -432,8 +450,8 @@ describe('CLI 命令行接口综合测试', () => {
 
   describe('信号处理验证', () => {
     it('应该处理 SIGINT 信号', () => {
-      const mockOnCancel = jest.fn()
-      ;(onCancel as jest.MockedFunction<typeof onCancel>).mockImplementation(
+      const mockOnCancel = vi.fn()
+      ;(onCancel as MockedFunction<typeof onCancel>).mockImplementation(
         mockOnCancel,
       )
 
@@ -444,7 +462,7 @@ describe('CLI 命令行接口综合测试', () => {
 
       // 获取注册的处理器并执行
       const signalHandler = (
-        process.on as jest.MockedFunction<typeof process.on>
+        process.on as MockedFunction<typeof process.on>
       ).mock.calls.find(call => call[0] === 'SIGINT')?.[1]
 
       if (typeof signalHandler === 'function') {
@@ -471,7 +489,7 @@ describe('CLI 命令行接口综合测试', () => {
       expect(updateNotifier).toHaveBeenCalledWith({ pkg: mockPackageJson })
 
       const notifierResult = (
-        updateNotifier as jest.MockedFunction<typeof updateNotifier>
+        updateNotifier as MockedFunction<typeof updateNotifier>
       ).mock.results[0]
       if (notifierResult && notifierResult.value) {
         expect(notifierResult.value.notify).toHaveBeenCalled()
@@ -484,7 +502,7 @@ describe('CLI 命令行接口综合测试', () => {
         version: '2.0.0',
         description: 'Custom create template tool',
       }
-      ;(readJson as jest.MockedFunction<typeof readJson>).mockResolvedValue(
+      ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue(
         customPkg,
       )
 
@@ -511,8 +529,8 @@ describe('CLI 命令行接口综合测试', () => {
       expect(mockProgram.version).toHaveBeenCalled()
       expect(mockProgram.argument).toHaveBeenCalled()
 
-      // 验证所有选项都被设置（5个选项）
-      expect(mockProgram.option.mock.calls.length).toBe(5)
+      // 验证所有选项都被设置（6个选项）
+      expect(mockProgram.option.mock.calls.length).toBe(6)
 
       expect(mockProgram.action).toHaveBeenCalled()
       expect(mockProgram.parseAsync).toHaveBeenCalled()
@@ -533,7 +551,7 @@ describe('CLI 命令行接口综合测试', () => {
       ]
 
       for (const projectName of projectNames) {
-        jest.clearAllMocks()
+        vi.clearAllMocks()
         await actionHandler(projectName, {})
         expect(CreateTemplate).toHaveBeenCalledTimes(1)
         expect(CreateTemplate).toHaveBeenCalledWith(expect.any(Object))
@@ -549,9 +567,9 @@ describe('CLI 命令行接口综合测试', () => {
     })
 
     it('应该能处理 debug 函数调用', async () => {
-      const mockDebug = jest.fn()
+      const mockDebug = vi.fn()
       ;(
-        createDebugger as jest.MockedFunction<typeof createDebugger>
+        createDebugger as MockedFunction<typeof createDebugger>
       ).mockReturnValue(mockDebug)
 
       await cli()
@@ -578,7 +596,7 @@ describe('CLI 命令行接口综合测试', () => {
       expect(CreateTemplate).toHaveBeenCalledWith({})
 
       const createInstance = (
-        CreateTemplate as jest.MockedClass<typeof CreateTemplate>
+        CreateTemplate as MockedClass<typeof CreateTemplate>
       ).mock.results[0].value
       expect(createInstance.run).toHaveBeenCalledWith('my-project')
     })
@@ -628,7 +646,7 @@ describe('CLI 命令行接口综合测试', () => {
 
     it('应该能够重复调用 cli 函数', async () => {
       await cli()
-      jest.clearAllMocks()
+      vi.clearAllMocks()
       await cli()
 
       // 应该再次调用所有设置步骤
@@ -641,9 +659,7 @@ describe('CLI 命令行接口综合测试', () => {
   describe('CLI 错误处理和边界情况', () => {
     it('应该处理 readJson 失败的情况', async () => {
       const error = new Error('Failed to read package.json')
-      ;(readJson as jest.MockedFunction<typeof readJson>).mockRejectedValue(
-        error,
-      )
+      ;(readJson as MockedFunction<typeof readJson>).mockRejectedValue(error)
 
       await cli()
 
@@ -652,7 +668,7 @@ describe('CLI 命令行接口综合测试', () => {
 
     it('应该处理 createDebugger 返回 undefined 的情况', async () => {
       ;(
-        createDebugger as jest.MockedFunction<typeof createDebugger>
+        createDebugger as MockedFunction<typeof createDebugger>
       ).mockReturnValue(undefined)
 
       await cli()
@@ -666,14 +682,13 @@ describe('CLI 命令行接口综合测试', () => {
     it('应该处理 CreateTemplate 运行失败的情况', async () => {
       const error = new Error('CreateTemplate failed')
       ;(
-        CreateTemplate as jest.MockedClass<typeof CreateTemplate>
-      ).mockImplementation(
-        () =>
-          ({
-            run: jest.fn().mockRejectedValue(error),
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          }) as any,
-      )
+        CreateTemplate as MockedClass<typeof CreateTemplate>
+      ).mockImplementation(function CreateTemplate() {
+        return {
+          run: vi.fn().mockRejectedValue(error),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any
+      })
 
       await cli()
       const actionCall = mockProgram.action.mock.calls[0]

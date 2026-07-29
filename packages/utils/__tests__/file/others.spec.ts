@@ -1,3 +1,15 @@
+import * as importedModule1 from 'ejs'
+import * as importedModule2 from 'mustache'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
+import * as importedModule0 from '../../src/file/is'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
@@ -15,21 +27,30 @@ import {
   type MustacheRenderTemplateOptions,
 } from '../../src/file'
 
+const requiredModule1 = vi.mocked(importedModule1, { deep: true })
+const requiredModule2 = vi.mocked(importedModule2, { deep: true })
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+
 // Mock 依赖项
-jest.mock('rimraf')
-jest.mock('../../src/file/is')
-jest.mock('ejs')
-jest.mock('mustache')
+vi.mock('rimraf')
+vi.mock('../../src/file/is')
+vi.mock('ejs')
+vi.mock('mustache')
 
 describe('文件移动、删除和渲染工具', () => {
-  const mockRimraf = rimraf as jest.MockedFunction<typeof rimraf>
-  const mockRimrafSync = rimrafSync as jest.MockedFunction<typeof rimrafSync>
-  const mockIsPathExists = require('../../src/file/is')
-    .isPathExists as jest.MockedFunction<(filePath: string) => Promise<boolean>>
-  const mockIsPathExistsSync = require('../../src/file/is')
-    .isPathExistsSync as jest.MockedFunction<(filePath: string) => boolean>
-  const mockEjs = require('ejs') as {
-    render: jest.MockedFunction<
+  const mockRimraf = rimraf as MockedFunction<typeof rimraf>
+  const mockRimrafSync = rimrafSync as MockedFunction<typeof rimrafSync>
+  const mockIsPathExists = requiredModule0.isPathExists as MockedFunction<
+    (filePath: string) => Promise<boolean>
+  >
+  const mockIsPathExistsSync =
+    requiredModule0.isPathExistsSync as MockedFunction<
+      (filePath: string) => boolean
+    >
+  const mockEjs = (
+    requiredModule1 as unknown as { default: typeof requiredModule1 }
+  ).default as {
+    render: MockedFunction<
       (
         template: string,
         data: Record<string, unknown>,
@@ -37,8 +58,10 @@ describe('文件移动、删除和渲染工具', () => {
       ) => string
     >
   }
-  const mockMustache = require('mustache') as {
-    render: jest.MockedFunction<
+  const mockMustache = (
+    requiredModule2 as unknown as { default: typeof requiredModule2 }
+  ).default as {
+    render: MockedFunction<
       (
         template: string,
         data: Record<string, unknown>,
@@ -53,7 +76,7 @@ describe('文件移动、删除和渲染工具', () => {
   let targetFile: string
 
   beforeEach(async () => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // 创建临时目录
     tempDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'move-test-'))
@@ -65,7 +88,7 @@ describe('文件移动、删除和渲染工具', () => {
   })
 
   afterEach(async () => {
-    jest.restoreAllMocks()
+    vi.restoreAllMocks()
     try {
       await fsp.rm(tempDir, { recursive: true, force: true })
     } catch {

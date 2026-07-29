@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 import * as npmModule from '../../src/npm'
 
 describe('NPM 工具函数', () => {

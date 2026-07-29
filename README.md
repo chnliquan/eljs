@@ -74,6 +74,11 @@ npm install @eljs/pluggable
 
 ## 🔧 Development Guide
 
+### Requirements
+
+- Node.js 24 LTS is recommended; Node.js 22.14 or newer is required.
+- pnpm 11.17.0 is pinned through Corepack.
+
 ### 1. Clone Repository
 
 ```bash
@@ -83,6 +88,8 @@ git clone https://github.com/chnliquan/eljs.git
 ### 2. Install Dependencies
 
 ```bash
+corepack enable
+corepack prepare pnpm@11.17.0 --activate
 pnpm install
 ```
 
@@ -119,30 +126,31 @@ pnpm run test:w
 
 ### Monorepo Commands
 
-| Command                | Description                                     | Usage                                           |
-| ---------------------- | ----------------------------------------------- | ----------------------------------------------- |
-| **Development**        |                                                 |                                                 |
-| `dev`                  | Build all packages in watch mode                | `pnpm dev`                                      |
-| `build`                | Build all packages                              | `pnpm build`                                    |
-| `test`                 | Run tests for all packages                      | `pnpm test`                                     |
-| `test:w`               | Run tests in watch mode                         | `pnpm test:w`                                   |
-| **Code Quality**       |                                                 |                                                 |
-| `lint`                 | Lint all packages source code                   | `pnpm lint`                                     |
-| `format`               | Format all packages with prettier               | `pnpm format`                                   |
-| `coverage`             | Generate test coverage report                   | `pnpm coverage`                                 |
-| **Release Management** |                                                 |                                                 |
-| `release`              | Release all packages with unified versioning    | `pnpm release`                                  |
-| `release:patch`        | Patch version release for all packages          | `pnpm release:patch` (1.0.0 → 1.0.1)            |
-| `release:minor`        | Minor version release for all packages          | `pnpm release:minor` (1.0.0 → 1.1.0)            |
-| `release:major`        | Major version release for all packages          | `pnpm release:major` (1.0.0 → 2.0.0)            |
-| `prerelease:alpha`     | Alpha prerelease for all packages               | `pnpm prerelease:alpha` (1.0.0 → 1.0.1-alpha.1) |
-| `prerelease:beta`      | Beta prerelease for all packages                | `pnpm prerelease:beta` (1.0.0 → 1.0.1-beta.1)   |
-| `prerelease:next`      | Next prerelease for all packages                | `pnpm prerelease:next` (1.0.0 → 1.0.1-next.1)   |
-| **Utilities**          |                                                 |                                                 |
-| `gm`                   | Interactive git commit with conventional format | `pnpm gm` (select type and input scope)         |
-| `boot`                 | Initialize new package structure                | `pnpm boot <package-name>`                      |
-| `add-owner`            | Add npm ownership for all packages              | `pnpm add-owner <username1> <username2>`        |
-| `clean`                | Clean build artifacts from all packages         | `pnpm clean`                                    |
+| Command                | Description                                   | Usage                                           |
+| ---------------------- | --------------------------------------------- | ----------------------------------------------- |
+| **Development**        |                                               |                                                 |
+| `dev`                  | Build all packages in watch mode              | `pnpm dev`                                      |
+| `build`                | Build all packages                            | `pnpm build`                                    |
+| `test`                 | Run tests for all packages                    | `pnpm test`                                     |
+| `test:w`               | Run tests in watch mode                       | `pnpm test:w`                                   |
+| `pack:check`           | Verify files included in npm package tarballs | `pnpm pack:check`                               |
+| **Code Quality**       |                                               |                                                 |
+| `lint`                 | Lint all packages source code                 | `pnpm lint`                                     |
+| `typecheck`            | Type-check all TypeScript packages            | `pnpm typecheck`                                |
+| `format`               | Format all packages with prettier             | `pnpm format`                                   |
+| `coverage`             | Generate test coverage report                 | `pnpm coverage`                                 |
+| **Release Management** |                                               |                                                 |
+| `release`              | Release all packages with unified versioning  | `pnpm release`                                  |
+| `release:patch`        | Patch version release for all packages        | `pnpm release:patch` (1.0.0 → 1.0.1)            |
+| `release:minor`        | Minor version release for all packages        | `pnpm release:minor` (1.0.0 → 1.1.0)            |
+| `release:major`        | Major version release for all packages        | `pnpm release:major` (1.0.0 → 2.0.0)            |
+| `prerelease:alpha`     | Alpha prerelease for all packages             | `pnpm prerelease:alpha` (1.0.0 → 1.0.1-alpha.1) |
+| `prerelease:beta`      | Beta prerelease for all packages              | `pnpm prerelease:beta` (1.0.0 → 1.0.1-beta.1)   |
+| `prerelease:next`      | Next prerelease for all packages              | `pnpm prerelease:next` (1.0.0 → 1.0.1-next.1)   |
+| **Utilities**          |                                               |                                                 |
+| `boot`                 | Initialize new package structure              | `pnpm boot <package-name>`                      |
+| `add-owner`            | Add npm ownership for all packages            | `pnpm add-owner <username1> <username2>`        |
+| `clean`                | Clean build artifacts from all packages       | `pnpm clean`                                    |
 
 ## 📦 Package Management
 
@@ -244,6 +252,9 @@ This project follows [Git Flow](https://nvie.com/posts/a-successful-git-branchin
 
 ## 🤝 Contributing
 
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for local setup, package boundaries,
+debugging, and the complete validation checklist.
+
 1. Fork the repository
 2. Create your feature branch: `git checkout -b feature/<package-name>-<feature-name>`
 3. Make your changes following the coding standards
@@ -259,4 +270,4 @@ This project follows [Git Flow](https://nvie.com/posts/a-successful-git-branchin
 
 ---
 
-For questions or suggestions, please submit an [Issue](https://github.chnliquan/eljs/issues) or [Pull Request](https:ub.com/chnliquan/eljs/pulls).
+For questions or suggestions, please submit an [Issue](https://github.com/chnliquan/eljs/issues) or [Pull Request](https://github.com/chnliquan/eljs/pulls).

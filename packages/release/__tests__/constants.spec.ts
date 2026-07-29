@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 /**
  * @file packages/release constants 模块单元测试
  * @description 测试 constants.ts 常量定义

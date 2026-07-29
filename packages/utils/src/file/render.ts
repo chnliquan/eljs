@@ -9,8 +9,7 @@ import Mustache, {
  * 模版渲染选项
  */
 export type RenderTemplateOptions =
-  | MustacheRenderTemplateOptions
-  | EjsRenderTemplateOptions
+  MustacheRenderTemplateOptions | EjsRenderTemplateOptions
 
 /**
  * mustache 模版渲染选项

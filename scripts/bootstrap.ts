@@ -92,13 +92,16 @@ function ensurePackageJson(
       license: 'MIT',
       author: 'chnliquan',
       main: `lib/index.js`,
-      module: `esm/index.js`,
       types: `esm/index.d.ts`,
       files: ['esm/*', 'lib/*'],
+      engines: {
+        node: '>=22.14.0',
+      },
       scripts: {
         build: 'father build',
         clean: 'rimraf lib && rimraf esm && rimraf node_modules/.cache/father',
         dev: 'father dev',
+        typecheck: 'tsc --noEmit && tsc --noEmit -p tsconfig.build.json',
       },
     }
 
@@ -111,6 +114,7 @@ function ensurePackageJson(
         'main',
         'types',
         'files',
+        'engines',
         'scripts',
         'dependencies',
         'devDependencies',
@@ -236,6 +240,7 @@ export default defineConfig({
 
 function ensureTsconfig(dirname: string): void {
   const ensureTsconfigPath = path.resolve(dirname, `tsconfig.json`)
+  const ensureBuildTsconfigPath = path.resolve(dirname, `tsconfig.build.json`)
 
   if (!isPathExistsSync(ensureTsconfigPath)) {
     step('Generate tsconfig.json')
@@ -245,10 +250,32 @@ function ensureTsconfig(dirname: string): void {
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true,
+    "noUnusedLocals": false,
+    "types": ["node"],
+    "verbatimModuleSyntax": false
+  },
+  "include": ["src", "__tests__", "../../global.d.ts"]
+}
+`.trim() + EOL,
+    )
+  }
+
+  if (!isPathExistsSync(ensureBuildTsconfigPath)) {
+    step('Generate tsconfig.build.json')
+    safeWriteFileSync(
+      ensureBuildTsconfigPath,
+      `
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
     "declarationDir": "esm",
+    "types": ["node"]
   },
   "include": ["src", "../../global.d.ts"]
-}         
+}
 `.trim() + EOL,
     )
   }

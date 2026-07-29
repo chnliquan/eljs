@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { PromptObject } from 'prompts'
 
 import { isDirectorySync, isPathExistsSync, mkdirSync } from '../file'
@@ -69,8 +70,10 @@ export class Generator extends BaseGenerator {
   /**
    * 模版渲染数据
    */
-  public data: // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Record<string, any> | ((prompts: Record<string, any>) => Record<string, any>)
+  public data:
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    | Record<string, any>
+    | ((prompts: Record<string, any>) => Record<string, any>)
   /**
    * 模版写入完成回调函数
    */

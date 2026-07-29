@@ -96,15 +96,16 @@ create [options] <template> <project-name>
 
 ### Options
 
-| Option          | Description                                 | Default         |
-| --------------- | ------------------------------------------- | --------------- |
-| `-v, --version` | Output the current version                  | -               |
-| `--cwd <cwd>`   | Specify the working directory               | `process.cwd()` |
-| `-f, --force`   | Overwrite target directory if it exists     | `false`         |
-| `-m, --merge`   | Merge with target directory if it exists    | `false`         |
-| `--no-install`  | Skip dependency installation after creation | `true`          |
-| `--no-git-init` | Skip git repository initialization          | `true`          |
-| `-h, --help`    | Display help for command                    | -               |
+| Option                     | Description                                         | Default         |
+| -------------------------- | --------------------------------------------------- | --------------- |
+| `-v, --version`            | Output the current version                          | -               |
+| `--cwd <cwd>`              | Specify the working directory                       | `process.cwd()` |
+| `-f, --force`              | Overwrite target directory if it exists             | `false`         |
+| `-m, --merge`              | Merge with target directory if it exists            | `false`         |
+| `--no-install`             | Skip dependency installation after creation         | `true`          |
+| `-y, --yes`                | Trust and execute the selected remote template      | `false`         |
+| `--allow-template-scripts` | Allow dependency lifecycle scripts while loading it | `false`         |
+| `-h, --help`               | Display help for command                            | -               |
 
 ### CLI Examples
 
@@ -128,7 +129,7 @@ create @company/enterprise-template my-enterprise-app
 create https://github.com/templates/fullstack.git#main my-fullstack-app
 
 # Local template with custom options
-create ./templates/custom-template my-custom-app --no-install --no-git-init
+create ./templates/custom-template my-custom-app --no-install
 ```
 
 ## 📖 API Reference
@@ -167,6 +168,16 @@ interface CreateOptions {
    * @default false
    */
   merge?: boolean
+  /**
+   * Skip the remote template execution confirmation
+   * @default false
+   */
+  yes?: boolean
+  /**
+   * Allow lifecycle scripts in remote template dependencies
+   * @default false
+   */
+  allowTemplateScripts?: boolean
 }
 ```
 
@@ -186,8 +197,25 @@ interface RemoteTemplate {
    * NPM registry URL (npm type only)
    */
   registry?: string
+  /**
+   * Skip execution confirmation for a source trusted by the caller
+   * @default false
+   */
+  trusted?: boolean
 }
 ```
+
+### Remote Template Security
+
+Remote templates are executable code and run with the current user's
+permissions. The CLI therefore asks for confirmation before downloading and
+executing an unknown npm or Git template. Use `--yes` only after verifying the
+source and version.
+
+Template dependency lifecycle scripts are disabled by default with
+`--ignore-scripts`. If a trusted template requires an install script, enable it
+explicitly with `--allow-template-scripts`. This option does not sandbox the
+template generator itself.
 
 ### API Examples
 

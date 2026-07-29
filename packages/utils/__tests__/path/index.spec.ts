@@ -1,3 +1,16 @@
+import * as importedModule0 from 'find-up'
+import * as importedModule1 from 'glob'
+import * as importedModule2 from 'js-yaml'
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
+import * as importedModule3 from '../../src/file'
+import * as importedModule4 from '../../src/npm'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import * as path from 'node:path'
 
@@ -14,39 +27,52 @@ import {
   winPath,
 } from '../../src/path'
 
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+const requiredModule1 = vi.mocked(importedModule1, { deep: true })
+const requiredModule2 = vi.mocked(importedModule2, { deep: true })
+const requiredModule3 = vi.mocked(importedModule3, { deep: true })
+const requiredModule4 = vi.mocked(importedModule4, { deep: true })
+
 // Mock 依赖项
-jest.mock('find-up')
-jest.mock('glob')
-jest.mock('js-yaml')
-jest.mock('../../src/file')
-jest.mock('../../src/npm')
+vi.mock('find-up')
+vi.mock('glob')
+vi.mock('js-yaml')
+vi.mock('../../src/file')
+vi.mock('../../src/npm')
 
 describe('路径工具函数', () => {
-  const mockFindUp = require('find-up') as jest.MockedFunction<
+  const mockFindUp = requiredModule0.default as unknown as MockedFunction<
     (
       patterns: string[],
       options: { cwd: string },
     ) => Promise<string | undefined>
   >
-  const mockGlob = require('glob') as {
-    sync: jest.MockedFunction<(pattern: string, options: unknown) => string[]>
+  const mockGlob = requiredModule1 as {
+    sync: MockedFunction<(pattern: string, options: unknown) => string[]>
   }
-  const mockYaml = require('js-yaml') as {
-    load: jest.MockedFunction<(content: string) => unknown>
+  const mockYaml = requiredModule2 as {
+    load: MockedFunction<(content: string) => unknown>
   }
-  const mockIsPathExists = require('../../src/file')
-    .isPathExists as jest.MockedFunction<(path: string) => Promise<boolean>>
-  const mockIsPathExistsSync = require('../../src/file')
-    .isPathExistsSync as jest.MockedFunction<(path: string) => boolean>
-  const mockReadFile = require('../../src/file')
-    .readFile as jest.MockedFunction<(path: string) => Promise<string>>
-  const mockReadJson = require('../../src/file')
-    .readJson as jest.MockedFunction<(path: string) => Promise<unknown>>
-  const mockGetPackageManager = require('../../src/npm')
-    .getPackageManager as jest.MockedFunction<(cwd: string) => Promise<string>>
+  const mockIsPathExists = requiredModule3.isPathExists as MockedFunction<
+    (path: string) => Promise<boolean>
+  >
+  const mockIsPathExistsSync =
+    requiredModule3.isPathExistsSync as MockedFunction<
+      (path: string) => boolean
+    >
+  const mockReadFile = requiredModule3.readFile as MockedFunction<
+    (path: string) => Promise<string>
+  >
+  const mockReadJson = requiredModule3.readJson as MockedFunction<
+    (path: string) => Promise<unknown>
+  >
+  const mockGetPackageManager =
+    requiredModule4.getPackageManager as MockedFunction<
+      (cwd: string) => Promise<string>
+    >
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   describe('winPath Windows 路径转换', () => {

@@ -1,4 +1,5 @@
 import type { PackageJson, PackageManager } from '@eljs/utils'
+import { describe, expect, it } from 'vitest'
 
 import type { AppData, Paths, Prompts } from '../../src/types/runner'
 import { RunnerStageEnum } from '../../src/types/runner'

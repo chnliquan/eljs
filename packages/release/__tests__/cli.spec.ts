@@ -1,3 +1,13 @@
+import {
+  afterAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
+import * as importedModule0 from '../src/cli'
 /**
  * @file packages/release cli 模块单元测试
  * @description 测试 cli.ts 命令行接口功能（重构版本）
@@ -11,40 +21,49 @@ type ActionHandlerFunction = (
 ) => Promise<void>
 
 // 首先进行所有模拟设置
-jest.mock('@eljs/utils', () => ({
+vi.mock('@eljs/utils', () => ({
   chalk: {
-    yellow: jest.fn((text: string) => `[yellow]${text}[/yellow]`),
-    cyan: jest.fn((text: string) => `[cyan]${text}[/cyan]`),
-    red: jest.fn((text: string) => `[red]${text}[/red]`),
+    yellow: vi.fn((text: string) => `[yellow]${text}[/yellow]`),
+    cyan: vi.fn((text: string) => `[cyan]${text}[/cyan]`),
+    red: vi.fn((text: string) => `[red]${text}[/red]`),
   },
-  createDebugger: jest.fn(() => jest.fn()),
-  readJson: jest.fn(),
+  createDebugger: vi.fn(() => vi.fn()),
+  readJson: vi.fn(),
 }))
 
-const mockProgram = {
-  name: jest.fn().mockReturnThis(),
-  description: jest.fn().mockReturnThis(),
-  version: jest.fn().mockReturnThis(),
-  argument: jest.fn().mockReturnThis(),
-  option: jest.fn().mockReturnThis(),
-  action: jest.fn().mockReturnThis(),
-  parseAsync: jest.fn().mockResolvedValue(undefined),
-  outputHelp: jest.fn(),
-}
+const { mockProgram } = vi.hoisted(() => ({
+  mockProgram: {
+    name: vi.fn().mockReturnThis(),
+    description: vi.fn().mockReturnThis(),
+    version: vi.fn().mockReturnThis(),
+    argument: vi.fn().mockReturnThis(),
+    option: vi.fn().mockReturnThis(),
+    action: vi.fn().mockReturnThis(),
+    parseAsync: vi.fn().mockResolvedValue(undefined),
+    outputHelp: vi.fn(),
+  },
+}))
 
-jest.mock('commander', () => ({
-  Command: jest.fn(),
-  InvalidArgumentError: jest.fn((message: string) => new Error(message)),
+vi.mock('commander', () => ({
+  Command: vi.fn(),
+  InvalidArgumentError: class InvalidArgumentError extends Error {},
   program: mockProgram,
 }))
 
-jest.mock('node:path', () => ({
-  join: jest.fn(),
-}))
+vi.mock('node:path', async importOriginal => {
+  const original = await importOriginal<typeof import('node:path')>()
+  const join = vi.fn()
 
-jest.mock('semver', () => ({
-  valid: jest.fn(),
-  RELEASE_TYPES: [
+  return {
+    ...original,
+    default: { ...original, join },
+    join,
+  }
+})
+
+vi.mock('semver', () => {
+  const valid = vi.fn()
+  const releaseTypes = [
     'major',
     'minor',
     'patch',
@@ -52,13 +71,19 @@ jest.mock('semver', () => ({
     'preminor',
     'prepatch',
     'prerelease',
-  ],
-}))
+  ]
 
-jest.mock('update-notifier')
-jest.mock('../src/release')
-jest.mock('../src/utils', () => ({
-  onCancel: jest.fn(),
+  return {
+    default: { valid },
+    valid,
+    RELEASE_TYPES: releaseTypes,
+  }
+})
+
+vi.mock('update-notifier')
+vi.mock('../src/release')
+vi.mock('../src/utils', () => ({
+  onCancel: vi.fn(),
 }))
 
 // 导入模块
@@ -70,8 +95,10 @@ import updateNotifier from 'update-notifier'
 import { cli } from '../src/cli'
 import { release } from '../src/release'
 
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+
 // 模拟 console.log
-const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {})
+const mockConsoleLog = vi.spyOn(console, 'log').mockImplementation(() => {})
 
 describe('CLI 命令行接口综合测试', () => {
   const mockPackageJson = {
@@ -81,24 +108,20 @@ describe('CLI 命令行接口综合测试', () => {
   }
 
   beforeEach(() => {
-    jest.clearAllMocks()
-    ;(readJson as jest.MockedFunction<typeof readJson>).mockResolvedValue(
+    vi.clearAllMocks()
+    ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue(
       mockPackageJson,
     )
-    ;(path.join as jest.MockedFunction<typeof path.join>).mockReturnValue(
+    ;(path.join as MockedFunction<typeof path.join>).mockReturnValue(
       '/mock/package.json',
     )
-    ;(
-      updateNotifier as jest.MockedFunction<typeof updateNotifier>
-    ).mockReturnValue({
-      notify: jest.fn(),
-      check: jest.fn(),
-      fetchInfo: jest.fn(),
+    ;(updateNotifier as MockedFunction<typeof updateNotifier>).mockReturnValue({
+      notify: vi.fn(),
+      check: vi.fn(),
+      fetchInfo: vi.fn(),
     } as unknown as ReturnType<typeof updateNotifier>)
-    ;(release as jest.MockedFunction<typeof release>).mockResolvedValue(
-      undefined,
-    )
-    ;(semver.valid as jest.MockedFunction<typeof semver.valid>)
+    ;(release as MockedFunction<typeof release>).mockResolvedValue(undefined)
+    ;(semver.valid as MockedFunction<typeof semver.valid>)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .mockImplementation((version: any) => {
         return typeof version === 'string' && /^\d+\.\d+\.\d+/.test(version)
@@ -197,16 +220,16 @@ describe('CLI 命令行接口综合测试', () => {
     })
 
     it('应该移除版本前的 v 前缀', () => {
-      ;(
-        semver.valid as jest.MockedFunction<typeof semver.valid>
-      ).mockReturnValue('1.0.0')
+      ;(semver.valid as MockedFunction<typeof semver.valid>).mockReturnValue(
+        '1.0.0',
+      )
       expect(checkVersion('v1.0.0')).toBe('1.0.0')
     })
 
     it('应该对无效版本抛出错误', () => {
-      ;(
-        semver.valid as jest.MockedFunction<typeof semver.valid>
-      ).mockReturnValue(null)
+      ;(semver.valid as MockedFunction<typeof semver.valid>).mockReturnValue(
+        null,
+      )
 
       expect(() => checkVersion('invalid-version')).toThrow()
       expect(() => checkVersion('1.0')).toThrow()
@@ -268,7 +291,7 @@ describe('CLI 命令行接口综合测试', () => {
       })
       /* eslint-enable @typescript-eslint/naming-convention */
 
-      const releaseCall = (release as jest.MockedFunction<typeof release>).mock
+      const releaseCall = (release as MockedFunction<typeof release>).mock
         .calls[0]
       const options = releaseCall[1]
 
@@ -295,11 +318,19 @@ describe('CLI 命令行接口综合测试', () => {
   })
 
   describe('信号处理验证', () => {
+    it('重复调用 CLI 不应该重复注册 SIGINT 处理器', async () => {
+      await cli()
+      const listenerCount = process.listenerCount('SIGINT')
+
+      await cli()
+
+      expect(process.listenerCount('SIGINT')).toBe(listenerCount)
+    })
+
     it('应该注册 SIGINT 信号处理器', () => {
       const originalListeners = process.listeners('SIGINT')
 
-      delete require.cache[require.resolve('../src/cli')]
-      require('../src/cli')
+      void requiredModule0
 
       const newListeners = process.listeners('SIGINT')
       expect(newListeners.length).toBeGreaterThanOrEqual(
@@ -325,7 +356,7 @@ describe('CLI 命令行接口综合测试', () => {
       expect(updateNotifier).toHaveBeenCalledWith({ pkg: mockPackageJson })
 
       const notifierResult = (
-        updateNotifier as jest.MockedFunction<typeof updateNotifier>
+        updateNotifier as MockedFunction<typeof updateNotifier>
       ).mock.results[0]
       if (notifierResult && notifierResult.value) {
         expect(notifierResult.value.notify).toHaveBeenCalled()
@@ -437,7 +468,7 @@ describe('CLI 命令行接口综合测试', () => {
       ]
 
       for (const version of versionInputs) {
-        jest.clearAllMocks()
+        vi.clearAllMocks()
         await actionHandler(version, {})
         expect(release).toHaveBeenCalledTimes(1)
       }
@@ -450,8 +481,7 @@ describe('CLI 命令行接口综合测试', () => {
       process.env.DISABLE_CLI_AUTO_RUN = 'true'
 
       expect(() => {
-        delete require.cache[require.resolve('../src/cli')]
-        require('../src/cli')
+        void requiredModule0
       }).not.toThrow()
 
       delete process.env.DISABLE_CLI_AUTO_RUN
@@ -462,8 +492,7 @@ describe('CLI 命令行接口综合测试', () => {
       process.env.NODE_ENV = 'test'
 
       expect(() => {
-        delete require.cache[require.resolve('../src/cli')]
-        require('../src/cli')
+        void requiredModule0
       }).not.toThrow()
       process.env.NODE_ENV = originalNodeEnv
     })
@@ -471,8 +500,7 @@ describe('CLI 命令行接口综合测试', () => {
     it('应该设置信号处理器', () => {
       const originalListeners = process.listeners('SIGINT')
 
-      delete require.cache[require.resolve('../src/cli')]
-      require('../src/cli')
+      void requiredModule0
 
       const newListeners = process.listeners('SIGINT')
       expect(newListeners.length).toBeGreaterThanOrEqual(
@@ -516,17 +544,17 @@ describe('CLI 命令行接口综合测试', () => {
       ]
 
       validVersions.forEach(version => {
-        ;(
-          semver.valid as jest.MockedFunction<typeof semver.valid>
-        ).mockReturnValue(version)
+        ;(semver.valid as MockedFunction<typeof semver.valid>).mockReturnValue(
+          version,
+        )
         expect(checkVersion(version)).toBe(version)
       })
     })
 
     it('应该正确处理 v 前缀移除', () => {
-      ;(
-        semver.valid as jest.MockedFunction<typeof semver.valid>
-      ).mockReturnValue('1.0.0')
+      ;(semver.valid as MockedFunction<typeof semver.valid>).mockReturnValue(
+        '1.0.0',
+      )
 
       expect(checkVersion('v1.0.0')).toBe('1.0.0')
       expect(checkVersion('v2.1.3')).toBe('2.1.3')
@@ -544,9 +572,9 @@ describe('CLI 命令行接口综合测试', () => {
     })
 
     it('应该对无效版本抛出 InvalidArgumentError', () => {
-      ;(
-        semver.valid as jest.MockedFunction<typeof semver.valid>
-      ).mockReturnValue(null)
+      ;(semver.valid as MockedFunction<typeof semver.valid>).mockReturnValue(
+        null,
+      )
 
       expect(() => checkVersion('invalid')).toThrow()
       expect(() => checkVersion('1.0')).toThrow()
@@ -610,7 +638,7 @@ describe('CLI 命令行接口综合测试', () => {
       })
       /* eslint-enable @typescript-eslint/naming-convention */
 
-      const releaseCall = (release as jest.MockedFunction<typeof release>).mock
+      const releaseCall = (release as MockedFunction<typeof release>).mock
         .calls[0]
       const options = releaseCall[1]
 
@@ -628,7 +656,7 @@ describe('CLI 命令行接口综合测试', () => {
 
     it('应该能够重复调用 cli 函数', async () => {
       await cli()
-      jest.clearAllMocks()
+      vi.clearAllMocks()
       await cli()
 
       // 应该再次调用所有设置步骤

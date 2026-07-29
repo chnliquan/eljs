@@ -1,4 +1,5 @@
 import type { MaybePromiseFunction } from '@eljs/utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Pluggable } from '../src/pluggable/pluggable'
 import type { PluggableOptions } from '../src/pluggable/types'
 import { ApplyPluginTypeEnum, PluggableStateEnum } from '../src/pluggable/types'
@@ -20,48 +21,57 @@ interface PluggableWithInternals {
 }
 
 // Mock the config manager
-jest.mock('@eljs/config', () => ({
-  ConfigManager: jest.fn().mockImplementation(() => ({
-    getConfig: jest.fn().mockResolvedValue({}),
-  })),
+vi.mock('@eljs/config', () => ({
+  ConfigManager: vi.fn().mockImplementation(function ConfigManager() {
+    return {
+      getConfig: vi.fn().mockResolvedValue({}),
+    }
+  }),
 }))
 
 // Mock utils with simple implementations
-jest.mock('@eljs/utils', () => ({
-  isPathExistsSync: jest.fn().mockReturnValue(true),
-  isFunction: jest.fn().mockReturnValue(true),
-  winPath: jest.fn().mockImplementation(path => path || 'mocked-path'),
-  camelCase: jest.fn().mockImplementation(str => str || 'mockedCase'),
-  readJsonSync: jest
+vi.mock('@eljs/utils', () => ({
+  isPathExistsSync: vi.fn().mockReturnValue(true),
+  isFunction: vi.fn().mockReturnValue(true),
+  winPath: vi.fn().mockImplementation(path => path || 'mocked-path'),
+  camelCase: vi.fn().mockImplementation(str => str || 'mockedCase'),
+  readJsonSync: vi
     .fn()
     .mockReturnValue({ main: 'index.js', name: 'test-package' }),
-  fileLoadersSync: jest.fn().mockReturnValue(() => ({})),
-  resolve: jest.fn().mockImplementation(str => str || 'resolved-path'),
+  fileLoadersSync: vi.fn().mockReturnValue(() => ({})),
+  resolve: vi.fn().mockImplementation(str => str || 'resolved-path'),
 }))
 
 // Mock hash-sum
-jest.mock('hash-sum', () => jest.fn().mockReturnValue('mocked-hash'))
-
-// Mock pkg-up
-jest.mock('pkg-up', () => ({
-  sync: jest.fn().mockReturnValue('/mock/package.json'),
+vi.mock('hash-sum', () => ({
+  default: vi.fn().mockReturnValue('mocked-hash'),
 }))
 
+// Mock pkg-up
+vi.mock('pkg-up', () => {
+  const sync = vi.fn().mockReturnValue('/mock/package.json')
+
+  return {
+    default: { sync },
+    sync,
+  }
+})
+
 // Mock path functions
-jest.mock('node:path', () => ({
-  basename: jest
+vi.mock('node:path', () => ({
+  basename: vi
     .fn()
     .mockImplementation(path => path?.split('/').pop() || 'mocked-basename'),
-  dirname: jest
+  dirname: vi
     .fn()
     .mockImplementation(
       path => path?.split('/').slice(0, -1).join('/') || 'mocked-dirname',
     ),
-  extname: jest.fn().mockReturnValue('.js'),
-  join: jest
+  extname: vi.fn().mockReturnValue('.js'),
+  join: vi
     .fn()
     .mockImplementation((...paths) => paths.join('/') || 'mocked-joined-path'),
-  relative: jest
+  relative: vi
     .fn()
     .mockImplementation((from, to) => to || 'mocked-relative-path'),
 }))
@@ -84,9 +94,9 @@ class TestablePluggable extends Pluggable {
     return this.load()
   }
 
-  // Expose protected getPluginApi method for testing
+  // Expose protected plugin API creation for testing
   public testGetPluginApi(plugin: Plugin): PluginApi {
-    return this.getPluginApi(plugin)
+    return this._getPluginApi(plugin)
   }
 }
 
@@ -126,12 +136,12 @@ function createTestHook(
     constructorOptions: {
       plugin,
       key: 'testHook',
-      fn: jest.fn() as MaybePromiseFunction,
+      fn: vi.fn() as MaybePromiseFunction,
       ...hookData,
     },
     plugin,
     key: 'testHook',
-    fn: jest.fn() as MaybePromiseFunction,
+    fn: vi.fn() as MaybePromiseFunction,
     ...hookData,
   } as Hook
 }
@@ -142,7 +152,7 @@ describe('可插拔系统', () => {
 
   beforeEach(() => {
     mockCwd = createTempDir()
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   describe('构造函数', () => {
@@ -291,7 +301,7 @@ describe('可插拔系统', () => {
     })
 
     it('应该处理函数启用条件', () => {
-      const enableFn = jest.fn().mockReturnValue(false)
+      const enableFn = vi.fn().mockReturnValue(false)
       const hook = createTestHook(mockCwd, {
         id: 'test-plugin',
         enable: enableFn as unknown as () => boolean,
@@ -311,7 +321,7 @@ describe('可插拔系统', () => {
     })
 
     it('应该正确执行添加钩子', async () => {
-      const mockFn = jest.fn().mockResolvedValue(['item1'])
+      const mockFn = vi.fn().mockResolvedValue(['item1'])
       const plugin = createTestPlugin(mockCwd, 'plugin1', {
         time: { hooks: {} as Record<string, number[]> },
       })
@@ -336,7 +346,7 @@ describe('可插拔系统', () => {
     })
 
     it('应该正确执行修改钩子', async () => {
-      const mockFn = jest.fn().mockResolvedValue({ modified: true })
+      const mockFn = vi.fn().mockResolvedValue({ modified: true })
       const plugin = createTestPlugin(mockCwd, 'plugin1', {
         time: { hooks: {} as Record<string, number[]> },
       })
@@ -361,8 +371,8 @@ describe('可插拔系统', () => {
     })
 
     it('应该在钩子执行中跳过禁用的插件', async () => {
-      const enabledFn = jest.fn().mockResolvedValue(['enabled'])
-      const disabledFn = jest.fn().mockResolvedValue(['disabled'])
+      const enabledFn = vi.fn().mockResolvedValue(['enabled'])
+      const disabledFn = vi.fn().mockResolvedValue(['disabled'])
 
       const enabledPlugin = createTestPlugin(mockCwd, 'enabled-plugin', {
         time: { hooks: {} as Record<string, number[]> },
@@ -410,7 +420,7 @@ describe('可插拔系统', () => {
     })
 
     it('应该跟踪钩子执行性能', async () => {
-      const mockFn = jest.fn().mockResolvedValue(['result'])
+      const mockFn = vi.fn().mockResolvedValue(['result'])
       const mockPlugin = createTestPlugin(mockCwd, 'test-plugin', {
         time: { hooks: {} as Record<string, number[]> },
       })
@@ -444,7 +454,7 @@ describe('可插拔系统', () => {
     beforeEach(() => {
       pluggable = new TestablePluggable({ cwd: mockCwd })
       // Mock Plugin.getPresetsAndPlugins to return empty results
-      jest.spyOn(Plugin, 'getPresetsAndPlugins').mockReturnValue({
+      vi.spyOn(Plugin, 'getPresetsAndPlugins').mockReturnValue({
         plugins: [],
         presets: [],
       })
@@ -518,7 +528,7 @@ describe('可插拔系统', () => {
     })
 
     it('应该正确执行获取钩子', async () => {
-      const mockFn = jest.fn().mockResolvedValue('result')
+      const mockFn = vi.fn().mockResolvedValue('result')
       const plugin = createTestPlugin(mockCwd, 'plugin1', {
         time: { hooks: {} as Record<string, number[]> },
       })
@@ -543,7 +553,7 @@ describe('可插拔系统', () => {
     })
 
     it('应该正确执行事件钩子', async () => {
-      const mockFn = jest.fn().mockResolvedValue(undefined)
+      const mockFn = vi.fn().mockResolvedValue(undefined)
       const plugin = createTestPlugin(mockCwd, 'plugin1', {
         time: { hooks: {} as Record<string, number[]> },
       })

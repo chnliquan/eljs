@@ -21,6 +21,7 @@ import type { ReleaseType } from 'semver'
 import { type AppData, type Config } from './types'
 
 import { defaultConfig } from './default'
+import { resolveInternalModule } from './internal'
 import { AppError, parseVersion } from './utils'
 
 const debug = createDebugger('release:config')
@@ -58,7 +59,7 @@ export class Runner extends Pluggable<Config> {
       ...options,
       cwd,
       defaultConfigFiles: ['release.config.ts', 'release.config.js'],
-      presets: [require.resolve('./internal'), ...presets],
+      presets: [resolveInternalModule('./index'), ...presets],
       plugins,
     })
 

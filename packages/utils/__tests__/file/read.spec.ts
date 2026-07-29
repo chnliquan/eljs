@@ -1,3 +1,12 @@
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
@@ -12,17 +21,17 @@ import {
 } from '../../src/file/read'
 
 // Mock 依赖项
-jest.mock('parse-json')
+vi.mock('parse-json')
 
 describe('文件读取工具', () => {
-  const mockParseJson = parseJson as jest.MockedFunction<typeof parseJson>
+  const mockParseJson = parseJson as MockedFunction<typeof parseJson>
 
   let tempDir: string
   let testFile: string
   let testJsonFile: string
 
   beforeEach(async () => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // 创建临时目录
     tempDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'read-test-'))
@@ -38,7 +47,7 @@ describe('文件读取工具', () => {
   })
 
   afterEach(async () => {
-    jest.restoreAllMocks()
+    vi.restoreAllMocks()
     try {
       await fsp.rm(tempDir, { recursive: true, force: true })
     } catch {
@@ -74,7 +83,7 @@ describe('文件读取工具', () => {
 
       try {
         await readFile(invalidPath)
-        fail('应该抛出错误')
+        throw new Error('应该抛出错误')
       } catch (error) {
         expect((error as Error).message).toContain(invalidPath)
         expect((error as Error).message).toContain('Read')

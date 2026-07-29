@@ -5,6 +5,12 @@ import type { TranspileOptions } from 'typescript'
 
 import { isESModule } from '../type'
 import { isPathExists, isPathExistsSync } from './is'
+import {
+  loadImportFresh,
+  loadParseJson,
+  loadTypeScript,
+  loadYaml as loadYamlDependency,
+} from './loader-dependencies'
 import { readFile, readFileSync } from './read'
 import { remove, removeSync } from './remove'
 import { writeFile, writeFileSync } from './write'
@@ -74,7 +80,7 @@ let importFresh: typeof import('import-fresh')
  */
 export function loadJsSync<T>(path: string): T {
   if (!importFresh) {
-    importFresh = require('import-fresh')
+    importFresh = loadImportFresh()
   }
 
   try {
@@ -95,7 +101,7 @@ let typescript: typeof import('typescript')
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function loadTs<T = any>(path: string): Promise<T> {
   if (!typescript) {
-    typescript = require('typescript')
+    typescript = loadTypeScript()
   }
   const compiledPath = `${path.slice(0, -2)}cjs`
 
@@ -135,7 +141,7 @@ export async function loadTs<T = any>(path: string): Promise<T> {
  */
 export function loadTsSync<T>(path: string): T {
   if (!typescript) {
-    typescript = require('typescript')
+    typescript = loadTypeScript()
   }
   const compiledPath = `${path.slice(0, -2)}cjs`
 
@@ -176,7 +182,7 @@ let parseJson: typeof import('parse-json')
  */
 export async function loadJson<T>(path: string): Promise<T> {
   if (!parseJson) {
-    parseJson = require('parse-json')
+    parseJson = loadParseJson()
   }
   const content = await readFile(path)
 
@@ -196,7 +202,7 @@ export async function loadJson<T>(path: string): Promise<T> {
  */
 export function loadJsonSync<T>(path: string): T {
   if (!parseJson) {
-    parseJson = require('parse-json')
+    parseJson = loadParseJson()
   }
   const content = readFileSync(path)
 
@@ -217,7 +223,7 @@ let yaml: typeof import('js-yaml')
  */
 export async function loadYaml<T>(path: string): Promise<T> {
   if (!yaml) {
-    yaml = require('js-yaml')
+    yaml = loadYamlDependency()
   }
   const content = await readFile(path)
 
@@ -237,7 +243,7 @@ export async function loadYaml<T>(path: string): Promise<T> {
  */
 export function loadYamlSync<T>(path: string): T {
   if (!yaml) {
-    yaml = require('js-yaml')
+    yaml = loadYamlDependency()
   }
   const content = readFileSync(path)
 

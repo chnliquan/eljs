@@ -99,54 +99,73 @@ export default (api: Api) => {
     await writeFile(changelogFile, changelog)
   })
 
-  api.onRelease(async ({ version }) => {
-    const { independent, commit, commitMessage, commitArgs, push, pushArgs } =
-      api.config.git
-    const { pkgNames, latestTag } = api.appData
+  api.onRelease(
+    async ({ version }) => {
+      const { independent, commit, commitMessage, commitArgs } = api.config.git
+      const { pkgNames, latestTag } = api.appData
 
-    if (!commit) {
-      return
-    }
+      if (!commit) {
+        return
+      }
 
-    api.step('Committing changes ...')
+      api.step('Committing changes ...')
 
-    const commitMsg = commitMessage.replace('${version}', version)
-    await gitCommit(commitMsg, [...normalizeArgs(commitArgs)].filter(Boolean), {
-      cwd: api.cwd,
-      verbose: true,
-    })
-
-    const tags = independent
-      ? pkgNames.map(pkgName => `${pkgName}@${version}`)
-      : [`v${version}`]
-
-    for await (const tagName of tags) {
-      try {
-        await gitTag(tagName, {
+      const commitMsg = commitMessage.replace('${version}', version)
+      await gitCommit(
+        commitMsg,
+        [...normalizeArgs(commitArgs)].filter(Boolean),
+        {
           cwd: api.cwd,
           verbose: true,
-        })
-      } catch (error) {
-        const err = error as Error
-        if (
-          (/tag '.+' already exists/.test(err.message) ||
-            /标签 '.+' 已存在/.test(err.message)) &&
-          latestTag === tagName
-        ) {
-          logger.warn(`Tag ${chalk.cyan(tagName)} already exists.`)
-        } else {
-          throw err
+        },
+      )
+
+      const tags = independent
+        ? pkgNames.map(pkgName => `${pkgName}@${version}`)
+        : [`v${version}`]
+
+      for await (const tagName of tags) {
+        try {
+          await gitTag(tagName, {
+            cwd: api.cwd,
+            verbose: true,
+          })
+        } catch (error) {
+          const err = error as Error
+          if (
+            (/tag '.+' already exists/.test(err.message) ||
+              /标签 '.+' 已存在/.test(err.message)) &&
+            latestTag === tagName
+          ) {
+            logger.warn(`Tag ${chalk.cyan(tagName)} already exists.`)
+          } else {
+            throw err
+          }
         }
       }
-    }
+    },
+    {
+      // Keep the release state local until every package has been published.
+      stage: -10,
+    },
+  )
 
-    if (!push) {
-      return
-    }
+  api.onRelease(
+    async () => {
+      const { commit, push, pushArgs } = api.config.git
 
-    await gitPush([...normalizeArgs(pushArgs)].filter(Boolean), {
-      cwd: api.cwd,
-      verbose: true,
-    })
-  })
+      if (!commit || !push) {
+        return
+      }
+
+      api.step('Pushing release commit and tags ...')
+      await gitPush([...normalizeArgs(pushArgs)].filter(Boolean), {
+        cwd: api.cwd,
+        verbose: true,
+      })
+    },
+    {
+      stage: 10,
+    },
+  )
 }

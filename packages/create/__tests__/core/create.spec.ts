@@ -1,5 +1,16 @@
 import * as eljsUtils from '@eljs/utils'
 import path from 'node:path'
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mocked,
+  type MockedClass,
+} from 'vitest'
 import { Create, type CreateOptions } from '../../src/core/create'
 import { Download } from '../../src/core/download'
 import { Runner } from '../../src/core/runner'
@@ -7,15 +18,15 @@ import type { RemoteTemplate } from '../../src/types'
 import { AppError } from '../../src/utils'
 
 // Mock all dependencies for functional tests
-jest.mock('@eljs/utils')
-jest.mock('../../src/core/download')
-jest.mock('../../src/core/runner')
-jest.mock('node:path')
+vi.mock('@eljs/utils')
+vi.mock('../../src/core/download')
+vi.mock('../../src/core/runner')
+vi.mock('node:path')
 
-const mockedEljs = eljsUtils as jest.Mocked<typeof eljsUtils>
-const MockedDownload = Download as jest.MockedClass<typeof Download>
-const MockedRunner = Runner as jest.MockedClass<typeof Runner>
-const mockedPath = path as jest.Mocked<typeof path>
+const mockedEljs = eljsUtils as Mocked<typeof eljsUtils>
+const MockedDownload = Download as MockedClass<typeof Download>
+const MockedRunner = Runner as MockedClass<typeof Runner>
+const mockedPath = path as Mocked<typeof path>
 
 describe('Create 类完整测试', () => {
   const mockCwd = '/test/cwd'
@@ -26,14 +37,14 @@ describe('Create 类完整测试', () => {
   })
 
   beforeEach(() => {
-    jest.clearAllMocks()
-    jest.resetAllMocks()
+    vi.clearAllMocks()
+    vi.resetAllMocks()
 
     // Mock process.cwd
-    process.cwd = jest.fn().mockReturnValue('/mock/cwd')
+    process.cwd = vi.fn().mockReturnValue('/mock/cwd')
 
     // Setup default mocks
-    mockedEljs.createDebugger.mockReturnValue(jest.fn())
+    mockedEljs.createDebugger.mockReturnValue(vi.fn())
     mockedEljs.isPathExists.mockResolvedValue(false)
     mockedEljs.isDirectory.mockResolvedValue(true)
     mockedEljs.mkdir.mockResolvedValue(undefined)
@@ -41,7 +52,7 @@ describe('Create 类完整测试', () => {
     mockedEljs.tryPaths.mockResolvedValue('/mock/config')
     mockedEljs.findUp.mockResolvedValue('/mock/template/root')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(mockedEljs.resolve as any).sync = jest
+    ;(mockedEljs.resolve as any).sync = vi
       .fn()
       .mockReturnValue('/mock/resolved/path')
     mockedEljs.isString.mockImplementation(
@@ -49,25 +60,48 @@ describe('Create 类完整测试', () => {
     )
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(mockedEljs as any).logger = {
-      clear: jest.fn(),
-      event: jest.fn(),
+      clear: vi.fn(),
+      event: vi.fn(),
+      warn: vi.fn(),
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(mockedEljs as any).chalk = {
-      cyan: jest.fn((text: string) => `cyan(${text})`),
+      cyan: vi.fn((text: string) => `cyan(${text})`),
     }
-    mockedEljs.prompts.mockResolvedValue({ action: 'overwrite' })
+    mockedEljs.prompts.mockResolvedValue({
+      action: 'overwrite',
+      confirmed: true,
+    })
 
-    mockedPath.resolve.mockImplementation((...paths) => paths.join('/'))
+    mockedPath.resolve.mockImplementation((...paths) => {
+      let lastAbsoluteIndex = 0
+      for (let index = paths.length - 1; index >= 0; index--) {
+        if (paths[index].startsWith('/')) {
+          lastAbsoluteIndex = index
+          break
+        }
+      }
+
+      return paths.slice(lastAbsoluteIndex).join('/').replace(/\/+/gu, '/')
+    })
     mockedPath.join.mockImplementation((...paths) => paths.join('/'))
+    mockedPath.relative.mockImplementation((from, to) => {
+      if (from === to) {
+        return ''
+      }
+
+      const prefix = `${from}/`
+      return to.startsWith(prefix) ? to.slice(prefix.length) : '../outside'
+    })
+    mockedPath.isAbsolute.mockImplementation(value => value.startsWith('/'))
 
     // Mock Download class
-    MockedDownload.prototype.download = jest
+    MockedDownload.prototype.download = vi
       .fn()
       .mockResolvedValue('/mock/downloaded/template')
 
     // Mock Runner class
-    MockedRunner.prototype.run = jest.fn().mockResolvedValue(undefined)
+    MockedRunner.prototype.run = vi.fn().mockResolvedValue(undefined)
   })
 
   afterAll(() => {
@@ -131,7 +165,7 @@ describe('Create 类完整测试', () => {
       const create = new Create({ template: 'test' })
 
       // Mock run方法以避免实际执行
-      create.run = jest.fn().mockImplementation(async (projectName: string) => {
+      create.run = vi.fn().mockImplementation(async (projectName: string) => {
         expect(typeof projectName).toBe('string')
         return Promise.resolve()
       })
@@ -156,7 +190,7 @@ describe('Create 类完整测试', () => {
         'project-émoji🎉',
       ]
 
-      create.run = jest.fn().mockResolvedValue(undefined)
+      create.run = vi.fn().mockResolvedValue(undefined)
 
       for (const projectName of projectNames) {
         await create.run(projectName)
@@ -187,6 +221,29 @@ describe('Create 类完整测试', () => {
       expect(mockedEljs.mkdir).toHaveBeenCalledWith('/mock/cwd/test-project')
     })
 
+    it('应该在用户拒绝信任远程模板时不下载或修改目标目录', async () => {
+      mockedEljs.prompts.mockResolvedValue({ confirmed: false })
+
+      const create = new Create({ template: 'test-template' })
+      await create.run('test-project')
+
+      expect(MockedDownload).not.toHaveBeenCalled()
+      expect(mockedEljs.remove).not.toHaveBeenCalled()
+      expect(mockedEljs.mkdir).not.toHaveBeenCalled()
+    })
+
+    it('应该允许通过 yes 选项显式信任远程模板', async () => {
+      const create = new Create({
+        template: 'test-template',
+        yes: true,
+      })
+
+      await create.run('test-project')
+
+      expect(mockedEljs.prompts).not.toHaveBeenCalled()
+      expect(MockedDownload).toHaveBeenCalled()
+    })
+
     it('应该在 force 模式下删除现有目录', async () => {
       mockedEljs.isPathExists.mockResolvedValue(true)
 
@@ -205,9 +262,43 @@ describe('Create 类完整测试', () => {
       )
     })
 
+    it.each(['', '.', '..', '../outside', '/outside'])(
+      '应该拒绝可能逃逸工作目录的项目名称 %p',
+      async projectName => {
+        mockedPath.resolve.mockImplementation((...paths) => {
+          const value = paths.at(-1)
+
+          if (!value || value === '.' || value === '..') {
+            return value === '..' ? '/outside' : '/mock/cwd'
+          }
+
+          if (value === '../outside' || value === '/outside') {
+            return '/outside'
+          }
+
+          return paths.join('/')
+        })
+
+        const create = new Create({
+          template: 'test-template',
+          force: true,
+        })
+
+        await expect(create.run(projectName)).rejects.toThrow(
+          'target directory must be inside',
+        )
+        expect(mockedEljs.remove).not.toHaveBeenCalled()
+        expect(mockedEljs.mkdir).not.toHaveBeenCalled()
+        expect(MockedDownload).not.toHaveBeenCalled()
+      },
+    )
+
     it('应该在用户选择 cancel 时提前返回', async () => {
       mockedEljs.isPathExists.mockResolvedValue(true)
-      mockedEljs.prompts.mockResolvedValue({ action: false })
+      mockedEljs.prompts.mockResolvedValue({
+        action: false,
+        confirmed: true,
+      })
 
       const create = new Create({ template: 'test-template' })
       await create.run('existing-project')
@@ -249,9 +340,24 @@ describe('Create 类完整测试', () => {
       const create = new Create({ template: './local-template' })
       await create.run('test-project')
 
-      expect(mockedPath.join).toHaveBeenCalledWith(
+      expect(mockedPath.resolve).toHaveBeenCalledWith(
         '/mock/cwd',
         './local-template',
+      )
+      expect(create['_isLocal']).toBe(true)
+    })
+
+    it('应该保留绝对本地模板路径', async () => {
+      const create = new Create({ template: '/absolute/local-template' })
+
+      await create.run('test-project')
+
+      expect(mockedPath.resolve).toHaveBeenCalledWith(
+        '/mock/cwd',
+        '/absolute/local-template',
+      )
+      expect(mockedEljs.isDirectory).toHaveBeenCalledWith(
+        '/absolute/local-template',
       )
       expect(create['_isLocal']).toBe(true)
     })

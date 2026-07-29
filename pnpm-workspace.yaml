@@ -1,2 +1,26 @@
 packages:
   - 'packages/*'
+verifyDepsBeforeRun: false
+autoInstallPeers: false
+allowBuilds:
+  '@parcel/watcher': true
+  '@prisma/engines': false
+  '@swc/core': true
+  better-sqlite3: false
+  bufferutil: false
+  canvas: false
+  core-js: false
+  core-js-pure: false
+  edgedriver: false
+  esbuild: true
+  fibers: false
+  geckodriver: false
+  kerberos: false
+  libpq: false
+  msgpackr-extract: false
+  msw: false
+  node-sass: false
+  prisma: false
+  sqlite3: false
+  unrs-resolver: true
+  utf-8-validate: false

@@ -1,4 +1,16 @@
+import * as mockedPath from 'node:path'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mocked,
+  type MockedFunction,
+} from 'vitest'
 import questionsPlugin from '../../../src/internal/plugins/questions'
+import * as mockedInternalUtils from '../../../src/internal/utils'
 import type { Api } from '../../../src/types'
 
 // Mock types
@@ -23,29 +35,36 @@ interface DescribeConfig {
 }
 
 interface MockPath {
-  basename: jest.MockedFunction<(path: string) => string | undefined>
+  basename: MockedFunction<(path: string) => string | undefined>
 }
 
 interface MockInternalUtils {
   author: string
   email: string
-  getGitUrl: jest.MockedFunction<(targetDir: string) => string>
+  getGitUrl: MockedFunction<(targetDir: string) => string>
 }
 
 // Mock node:path
-jest.mock('node:path', () => ({
-  basename: jest.fn((path: string) => path.split('/').pop()),
-}))
+vi.mock('node:path', async importOriginal => {
+  const original = await importOriginal<typeof import('node:path')>()
+  const basename = vi.fn((path: string) => path.split('/').pop())
+
+  return {
+    ...original,
+    default: { ...original, basename },
+    basename,
+  }
+})
 
 // Mock internal utils
-jest.mock('../../../src/internal/utils', () => ({
+vi.mock('../../../src/internal/utils', () => ({
   author: 'Test Author',
   email: 'test@example.com',
-  getGitUrl: jest.fn(() => 'https://github.com/test/repo.git'),
+  getGitUrl: vi.fn(() => 'https://github.com/test/repo.git'),
 }))
 
 describe('内部插件 questions', () => {
-  let mockApi: jest.Mocked<Api>
+  let mockApi: Mocked<Api>
   let describeCallback: DescribeConfig
   let addQuestionsCallbacks: Array<
     () => QuestionConfig[] | SelectQuestionConfig[]
@@ -55,16 +74,14 @@ describe('内部插件 questions', () => {
 
   beforeEach(() => {
     addQuestionsCallbacks = []
-    mockPath = jest.requireMock('node:path') as MockPath
-    mockInternalUtils = jest.requireMock(
-      '../../../src/internal/utils',
-    ) as MockInternalUtils
+    mockPath = mockedPath as unknown as MockPath
+    mockInternalUtils = mockedInternalUtils as unknown as MockInternalUtils
 
     mockApi = {
-      describe: jest.fn((config: DescribeConfig) => {
+      describe: vi.fn((config: DescribeConfig) => {
         describeCallback = config
       }),
-      addQuestions: jest.fn(
+      addQuestions: vi.fn(
         (callback: () => QuestionConfig[] | SelectQuestionConfig[]) => {
           addQuestionsCallbacks.push(callback)
         },
@@ -78,11 +95,11 @@ describe('内部插件 questions', () => {
       paths: {
         target: '/path/to/my-project',
       },
-    } as unknown as jest.Mocked<Api>
+    } as unknown as Mocked<Api>
   })
 
   afterEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   it('应该是一个异步函数', () => {

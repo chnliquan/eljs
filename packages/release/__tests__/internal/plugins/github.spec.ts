@@ -1,3 +1,11 @@
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
 /**
  * @file packages/release internal/plugins/github 模块单元测试
  * @description 测试 github.ts GitHub 发布插件功能
@@ -14,10 +22,10 @@ import type { Api, Config, PrereleaseId } from '../../../src/types'
 
 // 定义测试专用的 Mock API 类型，基于源代码类型
 interface GitHubTestApi {
-  describe: jest.MockedFunction<
+  describe: MockedFunction<
     (options: { enable: (args: { cwd: string }) => boolean }) => void
   >
-  onRelease: jest.MockedFunction<
+  onRelease: MockedFunction<
     (
       handler: (args: {
         version: string
@@ -40,22 +48,22 @@ type OnReleaseHandler = (args: {
 }) => Promise<void>
 
 // 模拟所有依赖
-jest.mock('@eljs/utils', () => ({
-  getGitUrl: jest.fn(),
-  getGitUrlSync: jest.fn(),
-  gitUrlAnalysis: jest.fn(),
+vi.mock('@eljs/utils', () => ({
+  getGitUrl: vi.fn(),
+  getGitUrlSync: vi.fn(),
+  gitUrlAnalysis: vi.fn(),
 }))
 
-jest.mock('new-github-release-url', () => jest.fn())
-jest.mock('open')
+vi.mock('new-github-release-url', () => ({ default: vi.fn() }))
+vi.mock('open')
 
 describe('GitHub 插件测试', () => {
   let mockApi: GitHubTestApi
 
   beforeEach(() => {
     mockApi = {
-      describe: jest.fn(),
-      onRelease: jest.fn(),
+      describe: vi.fn(),
+      onRelease: vi.fn(),
       config: {
         github: {
           release: true,
@@ -64,25 +72,23 @@ describe('GitHub 插件测试', () => {
       cwd: '/it/project',
     }
 
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // 设置默认模拟返回值
-    ;(
-      getGitUrlSync as jest.MockedFunction<typeof getGitUrlSync>
-    ).mockReturnValue('https://github.com/user/repo.git')
-    ;(getGitUrl as jest.MockedFunction<typeof getGitUrl>).mockResolvedValue(
+    ;(getGitUrlSync as MockedFunction<typeof getGitUrlSync>).mockReturnValue(
       'https://github.com/user/repo.git',
     )
-    ;(
-      gitUrlAnalysis as jest.MockedFunction<typeof gitUrlAnalysis>
-    ).mockReturnValue({
+    ;(getGitUrl as MockedFunction<typeof getGitUrl>).mockResolvedValue(
+      'https://github.com/user/repo.git',
+    )
+    ;(gitUrlAnalysis as MockedFunction<typeof gitUrlAnalysis>).mockReturnValue({
       href: 'https://github.com/user/repo',
     } as ReturnType<typeof gitUrlAnalysis>)
     ;(
-      newGithubReleaseUrl as jest.MockedFunction<typeof newGithubReleaseUrl>
+      newGithubReleaseUrl as MockedFunction<typeof newGithubReleaseUrl>
     ).mockReturnValue('https://github.com/user/repo/releases/new?tag=v1.1.0')
-    ;(open as jest.MockedFunction<typeof open>).mockResolvedValue(
-      {} as ReturnType<typeof open>,
+    ;(open as MockedFunction<typeof open>).mockResolvedValue(
+      {} as Awaited<ReturnType<typeof open>>,
     )
   })
 
@@ -93,15 +99,17 @@ describe('GitHub 插件测试', () => {
       expect(mockApi.describe).toHaveBeenCalledWith({
         enable: expect.any(Function),
       })
-      expect(mockApi.onRelease).toHaveBeenCalledWith(expect.any(Function))
+      expect(mockApi.onRelease).toHaveBeenCalledWith(expect.any(Function), {
+        stage: 20,
+      })
     })
   })
 
   describe('插件启用条件测试', () => {
     it('应该在 GitHub 仓库中启用', () => {
-      ;(
-        getGitUrlSync as jest.MockedFunction<typeof getGitUrlSync>
-      ).mockReturnValue('https://github.com/user/repo.git')
+      ;(getGitUrlSync as MockedFunction<typeof getGitUrlSync>).mockReturnValue(
+        'https://github.com/user/repo.git',
+      )
 
       githubPlugin(mockApi as unknown as Api)
       const describeCall = mockApi.describe.mock.calls[0][0]
@@ -111,9 +119,9 @@ describe('GitHub 插件测试', () => {
     })
 
     it('应该在非 GitHub 仓库中禁用', () => {
-      ;(
-        getGitUrlSync as jest.MockedFunction<typeof getGitUrlSync>
-      ).mockReturnValue('https://gitlab.com/user/repo.git')
+      ;(getGitUrlSync as MockedFunction<typeof getGitUrlSync>).mockReturnValue(
+        'https://gitlab.com/user/repo.git',
+      )
 
       githubPlugin(mockApi as unknown as Api)
       const describeCall = mockApi.describe.mock.calls[0][0]
@@ -203,9 +211,7 @@ describe('GitHub 插件测试', () => {
     })
 
     it('当无法获取 Git URL 时应该跳过', async () => {
-      ;(getGitUrl as jest.MockedFunction<typeof getGitUrl>).mockResolvedValue(
-        '',
-      )
+      ;(getGitUrl as MockedFunction<typeof getGitUrl>).mockResolvedValue('')
 
       const versionInfo = {
         version: '1.1.0',
@@ -222,7 +228,7 @@ describe('GitHub 插件测试', () => {
 
     it('当无法解析仓库 URL 时应该跳过', async () => {
       ;(
-        gitUrlAnalysis as jest.MockedFunction<typeof gitUrlAnalysis>
+        gitUrlAnalysis as MockedFunction<typeof gitUrlAnalysis>
       ).mockReturnValue(null)
 
       const versionInfo = {
@@ -248,7 +254,7 @@ describe('GitHub 插件测试', () => {
     })
 
     it('应该处理 getGitUrl 错误', async () => {
-      ;(getGitUrl as jest.MockedFunction<typeof getGitUrl>).mockRejectedValue(
+      ;(getGitUrl as MockedFunction<typeof getGitUrl>).mockRejectedValue(
         new Error('Git URL error'),
       )
 
@@ -266,7 +272,7 @@ describe('GitHub 插件测试', () => {
     })
 
     it('应该处理 open 错误', async () => {
-      ;(open as jest.MockedFunction<typeof open>).mockRejectedValue(
+      ;(open as MockedFunction<typeof open>).mockRejectedValue(
         new Error('Open failed'),
       )
 

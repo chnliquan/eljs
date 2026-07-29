@@ -1,3 +1,12 @@
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mocked,
+  type MockedClass,
+} from 'vitest'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import {
   generateFile,
@@ -6,21 +15,23 @@ import {
 } from '../../src/generator'
 
 // Mock 依赖项
-jest.mock('../../src/generator/generator')
+vi.mock('../../src/generator/generator')
 
 describe('generateFile 文件生成函数', () => {
-  const MockGenerator = Generator as jest.MockedClass<typeof Generator>
-  let mockGeneratorInstance: jest.Mocked<Generator>
+  const MockGenerator = Generator as MockedClass<typeof Generator>
+  let mockGeneratorInstance: Mocked<Generator>
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // 创建 mock 实例
     mockGeneratorInstance = {
-      run: jest.fn().mockResolvedValue(undefined),
-    } as unknown as jest.Mocked<Generator>
+      run: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Mocked<Generator>
 
-    MockGenerator.mockImplementation(() => mockGeneratorInstance)
+    MockGenerator.mockImplementation(function MockGeneratorClass() {
+      return mockGeneratorInstance
+    })
   })
 
   describe('基本功能', () => {
@@ -79,7 +90,7 @@ describe('generateFile 文件生成函数', () => {
           type: 'ejs',
           options: { delimiter: '%' },
         },
-        onGeneratorDone: jest.fn(),
+        onGeneratorDone: vi.fn(),
       }
 
       await generateFile(completeOptions)
@@ -147,7 +158,7 @@ describe('generateFile 文件生成函数', () => {
     })
 
     it('应该支持回调函数', async () => {
-      const onDone = jest.fn()
+      const onDone = vi.fn()
       const options: GeneratorOptions = {
         src: '/template',
         dest: '/output',

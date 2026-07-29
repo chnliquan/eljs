@@ -215,7 +215,16 @@ export class ConfigManager {
             continue
           }
 
-          const actualConfig = content.default ?? content
+          const actualConfig =
+            typeof content === 'object' &&
+            content !== null &&
+            'default' in content
+              ? content.default
+              : content
+
+          if (actualConfig == null) {
+            continue
+          }
 
           if (config) {
             config = deepMerge(config, actualConfig) as T

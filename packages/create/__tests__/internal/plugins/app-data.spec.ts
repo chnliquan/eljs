@@ -1,23 +1,32 @@
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mocked,
+} from 'vitest'
 import appDataPlugin from '../../../src/internal/plugins/app-data'
 import type { Api, AppData } from '../../../src/types'
 
 describe('内部插件 app-data', () => {
-  let mockApi: jest.Mocked<Api>
+  let mockApi: Mocked<Api>
   let modifyAppDataCallback: (memo: AppData) => AppData
 
   beforeEach(() => {
     mockApi = {
-      modifyAppData: jest.fn(callback => {
+      modifyAppData: vi.fn(callback => {
         modifyAppDataCallback = callback
       }),
       prompts: {
         packageManager: 'pnpm' as AppData['packageManager'],
       },
-    } as unknown as jest.Mocked<Api>
+    } as unknown as Mocked<Api>
   })
 
   afterEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   it('应该是一个函数', () => {
@@ -79,7 +88,7 @@ describe('内部插件 app-data', () => {
     const apiWithoutPrompts = {
       ...mockApi,
       prompts: undefined,
-    } as unknown as jest.Mocked<Api>
+    } as unknown as Mocked<Api>
 
     expect(() => appDataPlugin(apiWithoutPrompts)).not.toThrow()
   })

@@ -1,15 +1,25 @@
 import * as os from 'node:os'
+import stripAnsi from 'strip-ansi'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
 import { logger, prefixes } from '../../src/logger'
 
 // Mock 控制台方法
 const mockConsole = {
-  log: jest.fn() as jest.MockedFunction<typeof console.log>,
-  warn: jest.fn() as jest.MockedFunction<typeof console.warn>,
-  error: jest.fn() as jest.MockedFunction<typeof console.error>,
+  log: vi.fn() as MockedFunction<typeof console.log>,
+  warn: vi.fn() as MockedFunction<typeof console.warn>,
+  error: vi.fn() as MockedFunction<typeof console.error>,
 }
 
 // Mock process.exit
-const mockExit = jest.fn<never, [code?: number]>()
+const mockExit = vi.fn<(code?: string | number | null) => never>()
 
 describe('日志工具函数', () => {
   beforeEach(() => {
@@ -19,16 +29,16 @@ describe('日志工具函数', () => {
     mockExit.mockClear()
 
     // Mock 控制台方法
-    jest.spyOn(console, 'log').mockImplementation(mockConsole.log)
-    jest.spyOn(console, 'warn').mockImplementation(mockConsole.warn)
-    jest.spyOn(console, 'error').mockImplementation(mockConsole.error)
+    vi.spyOn(console, 'log').mockImplementation(mockConsole.log)
+    vi.spyOn(console, 'warn').mockImplementation(mockConsole.warn)
+    vi.spyOn(console, 'error').mockImplementation(mockConsole.error)
 
     // Mock process.exit
-    jest.spyOn(process, 'exit').mockImplementation(mockExit)
+    vi.spyOn(process, 'exit').mockImplementation(mockExit)
   })
 
   afterEach(() => {
-    jest.restoreAllMocks()
+    vi.restoreAllMocks()
   })
 
   describe('prefixes 前缀', () => {
@@ -42,11 +52,11 @@ describe('日志工具函数', () => {
       expect(prefixes).toHaveProperty('ready')
     })
 
-    it('应该有带连字符的彩色前缀', () => {
-      // 检查前缀包含颜色代码并以 ' -' 结尾
+    it('应该有稳定的带连字符前缀，且不依赖终端颜色能力', () => {
       Object.values(prefixes).forEach((prefix: string) => {
-        expect(prefix).toContain(' -')
-        expect(prefix.length).toBeGreaterThan(6) // 应该包含 ANSI 代码
+        expect(stripAnsi(prefix)).toMatch(
+          /^(event|info|warn|error|fatal|wait|ready) -$/u,
+        )
       })
     })
   })

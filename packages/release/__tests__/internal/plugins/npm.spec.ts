@@ -1,3 +1,11 @@
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
 /**
  * @file packages/release internal/plugins/npm 模块单元测试
  * @description 测试 npm.ts NPM 相关插件功能
@@ -12,12 +20,12 @@ import type { Api, Config, PrereleaseId } from '../../../src/types'
 
 // 定义测试专用的 Mock API 类型，基于源代码类型
 interface NpmTestApi {
-  onCheck: jest.MockedFunction<
+  onCheck: MockedFunction<
     (
       handler: (args: { releaseTypeOrVersion?: string }) => Promise<void>,
     ) => void
   >
-  onRelease: jest.MockedFunction<
+  onRelease: MockedFunction<
     (
       handler: (args: {
         version: string
@@ -27,7 +35,7 @@ interface NpmTestApi {
       }) => Promise<void>,
     ) => void
   >
-  step: jest.MockedFunction<(message: string) => void>
+  step: MockedFunction<(message: string) => void>
   config: Config
   appData: {
     validPkgNames: string[]
@@ -49,30 +57,31 @@ type OnReleaseHandler = (args: {
 }) => Promise<void>
 
 // 模拟所有依赖
-jest.mock('@eljs/utils', () => ({
+vi.mock('@eljs/utils', () => ({
   chalk: {
-    cyan: jest.fn((text: string) => `[cyan]${text}[/cyan]`),
+    cyan: vi.fn((text: string) => `[cyan]${text}[/cyan]`),
     bold: {
-      cyan: jest.fn((text: string) => `[bold-cyan]${text}[/bold-cyan]`),
+      cyan: vi.fn((text: string) => `[bold-cyan]${text}[/bold-cyan]`),
     },
   },
-  getNpmUser: jest.fn(),
+  getNpmUser: vi.fn(),
   logger: {
-    info: jest.fn(),
-    ready: jest.fn(),
-    error: jest.fn(),
+    info: vi.fn(),
+    ready: vi.fn(),
+    error: vi.fn(),
   },
-  normalizeArgs: jest.fn(),
-  run: jest.fn(),
+  normalizeArgs: vi.fn(),
+  run: vi.fn(),
 }))
 
-jest.mock('../../../src/utils', () => ({
-  AppError: jest.fn().mockImplementation((message: string) => {
-    const error = new Error(message)
-    error.name = 'AppError'
-    return error
-  }),
-  syncCnpm: jest.fn(),
+vi.mock('../../../src/utils', () => ({
+  AppError: class AppError extends Error {
+    public constructor(message: string) {
+      super(message)
+      this.name = 'AppError'
+    }
+  },
+  syncCnpm: vi.fn(),
 }))
 
 describe('NPM 插件测试', () => {
@@ -80,9 +89,9 @@ describe('NPM 插件测试', () => {
 
   beforeEach(() => {
     mockApi = {
-      onCheck: jest.fn(),
-      onRelease: jest.fn(),
-      step: jest.fn(),
+      onCheck: vi.fn(),
+      onRelease: vi.fn(),
+      step: vi.fn(),
       config: {
         npm: {
           requireOwner: true,
@@ -112,20 +121,18 @@ describe('NPM 插件测试', () => {
       cwd: '/test/project',
     }
 
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // 设置默认模拟返回值
-    ;(getNpmUser as jest.MockedFunction<typeof getNpmUser>).mockResolvedValue(
+    ;(getNpmUser as MockedFunction<typeof getNpmUser>).mockResolvedValue(
       'test-user',
     )
-    ;(run as jest.MockedFunction<typeof run>).mockResolvedValue({
+    ;(run as MockedFunction<typeof run>).mockResolvedValue({
       stdout: 'test-user <test@example.com>\nother-user <other@example.com>',
       stderr: '',
     } as Awaited<ReturnType<typeof run>>)
-    ;(
-      normalizeArgs as jest.MockedFunction<typeof normalizeArgs>
-    ).mockImplementation(args =>
-      typeof args === 'string' ? [args] : args || [],
+    ;(normalizeArgs as MockedFunction<typeof normalizeArgs>).mockImplementation(
+      args => (typeof args === 'string' ? [args] : args || []),
     )
   })
 
@@ -134,7 +141,9 @@ describe('NPM 插件测试', () => {
       npmPlugin(mockApi as unknown as Api)
 
       expect(mockApi.onCheck).toHaveBeenCalledWith(expect.any(Function))
-      expect(mockApi.onRelease).toHaveBeenCalledWith(expect.any(Function))
+      expect(mockApi.onRelease).toHaveBeenCalledWith(expect.any(Function), {
+        stage: 0,
+      })
     })
   })
 
@@ -159,10 +168,10 @@ describe('NPM 插件测试', () => {
     })
 
     it('当用户不是包所有者时应该抛出错误', async () => {
-      ;(getNpmUser as jest.MockedFunction<typeof getNpmUser>).mockResolvedValue(
+      ;(getNpmUser as MockedFunction<typeof getNpmUser>).mockResolvedValue(
         'unauthorized-user',
       )
-      ;(run as jest.MockedFunction<typeof run>).mockResolvedValue({
+      ;(run as MockedFunction<typeof run>).mockResolvedValue({
         stdout: 'authorized-user <auth@example.com>',
         stderr: '',
       } as Awaited<ReturnType<typeof run>>)
@@ -177,7 +186,7 @@ describe('NPM 插件测试', () => {
     it('应该处理包不存在的情况', async () => {
       const notFoundError = new Error('npm ERR! 404 Not Found')
       notFoundError.message = 'npm ERR! 404 Not Found - test-package not found'
-      ;(run as jest.MockedFunction<typeof run>).mockRejectedValue(notFoundError)
+      ;(run as MockedFunction<typeof run>).mockRejectedValue(notFoundError)
 
       // 对于不存在的包，应该跳过检查
       await expect(
@@ -290,7 +299,7 @@ describe('NPM 插件测试', () => {
 
     it('应该处理发布失败情况', async () => {
       // 模拟所有发布都失败
-      ;(run as jest.MockedFunction<typeof run>).mockRejectedValue(
+      ;(run as MockedFunction<typeof run>).mockRejectedValue(
         new Error('发布失败'),
       )
       const versionInfo = {
@@ -300,8 +309,9 @@ describe('NPM 插件测试', () => {
         changelog: 'test',
       }
 
-      // 由于 npm 插件使用 Promise.allSettled，不会直接抛出错误，而是记录错误
-      await onReleaseHandler(versionInfo)
+      await expect(onReleaseHandler(versionInfo)).rejects.toThrow(
+        'Failed to publish test-package@1.1.0. Git changes were not pushed.',
+      )
 
       expect(logger.error).toHaveBeenCalled()
     })
@@ -367,7 +377,7 @@ describe('NPM 插件测试', () => {
         expect.any(Object),
       )
 
-      jest.clearAllMocks()
+      vi.clearAllMocks()
 
       // 测试预发布
       await onReleaseHandler({
@@ -413,7 +423,7 @@ describe('NPM 插件测试', () => {
       npmPlugin(mockApi as unknown as Api)
       const onCheckHandler = mockApi.onCheck.mock.calls[0][0] as OnCheckHandler
 
-      ;(run as jest.MockedFunction<typeof run>).mockResolvedValue({
+      ;(run as MockedFunction<typeof run>).mockResolvedValue({
         stdout: `test-user <test@example.com>\nadmin <admin@example.com>\nmaintainer <maintainer@example.com>`,
         stderr: '',
       } as Awaited<ReturnType<typeof run>>)
@@ -430,7 +440,7 @@ describe('NPM 插件测试', () => {
       const notFoundError = new Error(
         'npm ERR! 404 Not Found - package not found',
       )
-      ;(run as jest.MockedFunction<typeof run>).mockRejectedValue(notFoundError)
+      ;(run as MockedFunction<typeof run>).mockRejectedValue(notFoundError)
 
       await expect(
         onCheckHandler({ releaseTypeOrVersion: 'minor' }),
@@ -441,7 +451,7 @@ describe('NPM 插件测试', () => {
       npmPlugin(mockApi as unknown as Api)
       const onCheckHandler = mockApi.onCheck.mock.calls[0][0] as OnCheckHandler
 
-      ;(getNpmUser as jest.MockedFunction<typeof getNpmUser>).mockRejectedValue(
+      ;(getNpmUser as MockedFunction<typeof getNpmUser>).mockRejectedValue(
         new Error('无法获取用户信息'),
       )
 

@@ -8,15 +8,23 @@ import { release } from './release'
 import { onCancel } from './utils'
 
 export function cli() {
-  process.on('SIGINT', () => {
-    onCancel()
-  })
+  registerSignalHandler()
 
   return main()
     .then(() => process.exit(0))
     .catch(() => {
       process.exit(1)
     })
+}
+
+function registerSignalHandler() {
+  if (!process.listeners('SIGINT').includes(handleSigint)) {
+    process.on('SIGINT', handleSigint)
+  }
+}
+
+function handleSigint() {
+  onCancel()
 }
 
 async function main() {

@@ -21,6 +21,11 @@ export interface DownloadOptions extends RemoteTemplate {
    * 当前工作目录
    */
   cwd?: string
+  /**
+   * Allow dependency lifecycle scripts while preparing the template.
+   * @default false
+   */
+  allowScripts?: boolean
 }
 
 export class Download {
@@ -125,7 +130,12 @@ export class Download {
 
       if (dependencies && Object.keys(dependencies).length > 0) {
         this._spinner.start(`Installing ${projectName}`)
-        await run('npm', ['install', '--production'], {
+        const installArgs = ['install', '--omit=dev']
+        if (!this.constructorOptions.allowScripts) {
+          installArgs.push('--ignore-scripts')
+        }
+
+        await run('npm', installArgs, {
           cwd,
         })
         this._spinner.succeed()

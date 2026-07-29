@@ -1,3 +1,13 @@
+import * as importedModule0 from 'semver'
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+  type MockedFunction,
+} from 'vitest'
 /**
  * @file packages/release internal/plugins/version 模块单元测试
  * @description 测试 version.ts 版本管理插件功能
@@ -19,51 +29,54 @@ import {
   updatePackageVersion,
 } from '../../../src/utils'
 
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+
 // 模拟所有依赖
-jest.mock('@eljs/utils', () => ({
+vi.mock('@eljs/utils', () => ({
   chalk: {
-    cyan: jest.fn((text: string) => `[cyan]${text}[/cyan]`),
-    green: jest.fn((text: string) => `[green]${text}[/green]`),
-    yellow: jest.fn((text: string) => `[yellow]${text}[/yellow]`),
-    grey: jest.fn((text: string) => `[grey]${text}[/grey]`),
+    cyan: vi.fn((text: string) => `[cyan]${text}[/cyan]`),
+    green: vi.fn((text: string) => `[green]${text}[/green]`),
+    yellow: vi.fn((text: string) => `[yellow]${text}[/yellow]`),
+    grey: vi.fn((text: string) => `[grey]${text}[/grey]`),
   },
-  confirm: jest.fn(),
-  createDebugger: jest.fn(() => jest.fn()),
+  confirm: vi.fn(),
+  createDebugger: vi.fn(() => vi.fn()),
   logger: {
-    info: jest.fn(),
+    info: vi.fn(),
   },
-  pascalCase: jest.fn(),
-  prompts: jest.fn(),
+  pascalCase: vi.fn(),
+  prompts: vi.fn(),
 }))
 
-jest.mock('semver', () => ({
+vi.mock('semver', () => ({
   default: {
-    valid: jest.fn(),
+    valid: vi.fn(),
   },
   RELEASE_TYPES: ['major', 'minor', 'patch'],
-  valid: jest.fn(),
+  valid: vi.fn(),
 }))
 
-jest.mock('../../../src/constants', () => ({
+vi.mock('../../../src/constants', () => ({
   prereleaseTypes: ['prerelease', 'prepatch', 'preminor', 'premajor'],
 }))
 
-jest.mock('../../../src/utils', () => ({
-  AppError: jest.fn().mockImplementation((message: string) => {
-    const error = new Error(message)
-    error.name = 'AppError'
-    return error
-  }),
-  getCanaryVersion: jest.fn(),
-  getMaxVersion: jest.fn(),
-  getReleaseVersion: jest.fn(),
-  getRemoteDistTag: jest.fn(),
-  isCanaryVersion: jest.fn(),
-  isVersionExist: jest.fn(),
-  isVersionValid: jest.fn(),
-  onCancel: jest.fn(),
-  updatePackageLock: jest.fn(),
-  updatePackageVersion: jest.fn(),
+vi.mock('../../../src/utils', () => ({
+  AppError: class AppError extends Error {
+    public constructor(message: string) {
+      super(message)
+      this.name = 'AppError'
+    }
+  },
+  getCanaryVersion: vi.fn(),
+  getMaxVersion: vi.fn(),
+  getReleaseVersion: vi.fn(),
+  getRemoteDistTag: vi.fn(),
+  isCanaryVersion: vi.fn(),
+  isVersionExist: vi.fn(),
+  isVersionValid: vi.fn(),
+  onCancel: vi.fn(),
+  updatePackageLock: vi.fn(),
+  updatePackageVersion: vi.fn(),
 }))
 
 describe('版本插件测试', () => {
@@ -73,12 +86,12 @@ describe('版本插件测试', () => {
 
   beforeEach(() => {
     mockApi = {
-      onCheck: jest.fn(),
-      getIncrementVersion: jest.fn(),
-      onBeforeBumpVersion: jest.fn(),
-      onAfterBumpVersion: jest.fn(),
-      onBumpVersion: jest.fn(),
-      step: jest.fn(),
+      onCheck: vi.fn(),
+      getIncrementVersion: vi.fn(),
+      onBeforeBumpVersion: vi.fn(),
+      onAfterBumpVersion: vi.fn(),
+      onBumpVersion: vi.fn(),
+      step: vi.fn(),
       config: {
         npm: {
           confirm: true,
@@ -106,51 +119,51 @@ describe('版本插件测试', () => {
       cwd: '/test/project',
     }
 
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // 设置默认模拟返回值
+    ;(isVersionValid as MockedFunction<typeof isVersionValid>).mockReturnValue(
+      true,
+    )
     ;(
-      isVersionValid as jest.MockedFunction<typeof isVersionValid>
-    ).mockReturnValue(true)
-    ;(
-      getRemoteDistTag as jest.MockedFunction<typeof getRemoteDistTag>
+      getRemoteDistTag as MockedFunction<typeof getRemoteDistTag>
     ).mockResolvedValue({
       latest: '1.0.0',
       alpha: '',
       beta: '',
       rc: '',
     })
+    ;(getMaxVersion as MockedFunction<typeof getMaxVersion>).mockReturnValue(
+      '1.0.0',
+    )
     ;(
-      getMaxVersion as jest.MockedFunction<typeof getMaxVersion>
-    ).mockReturnValue('1.0.0')
-    ;(
-      getReleaseVersion as jest.MockedFunction<typeof getReleaseVersion>
+      getReleaseVersion as MockedFunction<typeof getReleaseVersion>
     ).mockReturnValue('1.1.0')
     ;(
-      getCanaryVersion as jest.MockedFunction<typeof getCanaryVersion>
+      getCanaryVersion as MockedFunction<typeof getCanaryVersion>
     ).mockResolvedValue('1.1.0-canary.20231113-abc123')
     ;(
-      isVersionExist as jest.MockedFunction<typeof isVersionExist>
+      isVersionExist as MockedFunction<typeof isVersionExist>
     ).mockResolvedValue(false)
     ;(
-      isCanaryVersion as jest.MockedFunction<typeof isCanaryVersion>
+      isCanaryVersion as MockedFunction<typeof isCanaryVersion>
     ).mockReturnValue(false)
-    ;(confirm as jest.MockedFunction<typeof confirm>).mockResolvedValue(true)
-    ;(prompts as jest.MockedFunction<typeof prompts>).mockResolvedValue({
+    ;(confirm as MockedFunction<typeof confirm>).mockResolvedValue(true)
+    ;(prompts as MockedFunction<typeof prompts>).mockResolvedValue({
       value: '1.1.0',
     })
     ;(
-      updatePackageVersion as jest.MockedFunction<typeof updatePackageVersion>
+      updatePackageVersion as MockedFunction<typeof updatePackageVersion>
     ).mockResolvedValue(undefined)
     ;(
-      updatePackageLock as jest.MockedFunction<typeof updatePackageLock>
+      updatePackageLock as MockedFunction<typeof updatePackageLock>
     ).mockResolvedValue(undefined)
 
     // 模拟 semver.valid
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const semverModule = require('semver') as {
-      valid: jest.Mock
-      default: { valid: jest.Mock }
+    const semverModule = requiredModule0 as unknown as {
+      valid: Mock
+      default: { valid: Mock }
     }
     semverModule.valid.mockReturnValue('1.1.0')
     semverModule.default.valid = semverModule.valid
@@ -189,7 +202,7 @@ describe('版本插件测试', () => {
 
     it('应该验证有效的版本', async () => {
       ;(
-        isVersionValid as jest.MockedFunction<typeof isVersionValid>
+        isVersionValid as MockedFunction<typeof isVersionValid>
       ).mockReturnValue(true)
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
@@ -200,7 +213,7 @@ describe('版本插件测试', () => {
 
     it('应该对无效版本抛出错误', async () => {
       ;(
-        isVersionValid as jest.MockedFunction<typeof isVersionValid>
+        isVersionValid as MockedFunction<typeof isVersionValid>
       ).mockReturnValue(false)
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
@@ -220,7 +233,7 @@ describe('版本插件测试', () => {
 
     it('应该验证发布类型', async () => {
       ;(
-        isVersionValid as jest.MockedFunction<typeof isVersionValid>
+        isVersionValid as MockedFunction<typeof isVersionValid>
       ).mockReturnValue(true)
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
@@ -262,7 +275,7 @@ describe('版本插件测试', () => {
       mockApi.config.npm.canary = true
       mockApi.config.npm.confirm = false
       ;(
-        getCanaryVersion as jest.MockedFunction<typeof getCanaryVersion>
+        getCanaryVersion as MockedFunction<typeof getCanaryVersion>
       ).mockResolvedValue('1.1.0-canary.20231113-abc123')
 
       // 当没有提供 releaseTypeOrVersion 且配置为 canary 模式时，会调用 getCanaryVersion
@@ -293,7 +306,7 @@ describe('版本插件测试', () => {
 
     it('应该在确认模式下请求用户确认', async () => {
       mockApi.config.npm.confirm = true
-      ;(confirm as jest.MockedFunction<typeof confirm>).mockResolvedValue(true)
+      ;(confirm as MockedFunction<typeof confirm>).mockResolvedValue(true)
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
       const result = await getIncrementVersionHandler({
@@ -308,10 +321,10 @@ describe('版本插件测试', () => {
 
     it('当用户拒绝确认时应该递归调用', async () => {
       mockApi.config.npm.confirm = true
-      ;(confirm as jest.MockedFunction<typeof confirm>)
+      ;(confirm as MockedFunction<typeof confirm>)
         .mockResolvedValueOnce(false) // 第一次拒绝
         .mockResolvedValueOnce(true) // 第二次确认
-      ;(prompts as jest.MockedFunction<typeof prompts>).mockResolvedValue({
+      ;(prompts as MockedFunction<typeof prompts>).mockResolvedValue({
         value: '1.0.1',
       })
 
@@ -334,7 +347,7 @@ describe('版本插件测试', () => {
       const onBeforeBumpVersionHandler =
         mockApi.onBeforeBumpVersion.mock.calls[0][0]
       ;(
-        isVersionExist as jest.MockedFunction<typeof isVersionExist>
+        isVersionExist as MockedFunction<typeof isVersionExist>
       ).mockResolvedValue(true)
 
       const versionInfo = {
@@ -350,7 +363,7 @@ describe('版本插件测试', () => {
 
     it('应该处理用户选择版本类型', async () => {
       mockApi.config.npm.confirm = false
-      ;(prompts as jest.MockedFunction<typeof prompts>).mockResolvedValue({
+      ;(prompts as MockedFunction<typeof prompts>).mockResolvedValue({
         value: '1.0.1',
       })
 
@@ -373,11 +386,11 @@ describe('版本插件测试', () => {
 
     it('应该处理金丝雀选择', async () => {
       mockApi.config.npm.confirm = false
-      ;(prompts as jest.MockedFunction<typeof prompts>).mockResolvedValue({
+      ;(prompts as MockedFunction<typeof prompts>).mockResolvedValue({
         value: 'canary',
       })
       ;(
-        getCanaryVersion as jest.MockedFunction<typeof getCanaryVersion>
+        getCanaryVersion as MockedFunction<typeof getCanaryVersion>
       ).mockResolvedValue('1.1.0-canary.123')
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
@@ -391,7 +404,7 @@ describe('版本插件测试', () => {
 
     it('应该处理自定义版本输入', async () => {
       mockApi.config.npm.confirm = false
-      ;(prompts as jest.MockedFunction<typeof prompts>)
+      ;(prompts as MockedFunction<typeof prompts>)
         .mockResolvedValueOnce({ value: 'custom' }) // 第一次选择 custom
         .mockResolvedValueOnce({ value: '2.0.0' }) // 第二次输入自定义版本
 
@@ -406,7 +419,7 @@ describe('版本插件测试', () => {
 
     it('应该处理预发布类型选择', async () => {
       mockApi.config.npm.confirm = false
-      ;(prompts as jest.MockedFunction<typeof prompts>)
+      ;(prompts as MockedFunction<typeof prompts>)
         .mockResolvedValueOnce({ value: 'alpha' }) // 第一次选择 alpha
         .mockResolvedValueOnce({ value: '1.1.0-alpha.1' }) // 第二次选择具体的预发布版本
 
@@ -422,7 +435,7 @@ describe('版本插件测试', () => {
     it('应该处理预配置的预发布ID', async () => {
       mockApi.config.npm.prereleaseId = 'beta'
       mockApi.config.npm.confirm = false
-      ;(prompts as jest.MockedFunction<typeof prompts>).mockResolvedValue({
+      ;(prompts as MockedFunction<typeof prompts>).mockResolvedValue({
         value: '1.1.0-beta.1',
       })
 
@@ -552,7 +565,7 @@ describe('版本插件测试', () => {
 
     it('应该处理版本更新失败', async () => {
       ;(
-        updatePackageVersion as jest.MockedFunction<typeof updatePackageVersion>
+        updatePackageVersion as MockedFunction<typeof updatePackageVersion>
       ).mockRejectedValue(new Error('版本更新失败'))
 
       const versionInfo = {
@@ -643,7 +656,7 @@ describe('版本插件测试', () => {
 
     it('当版本已存在时应该抛出错误', async () => {
       ;(
-        isVersionExist as jest.MockedFunction<typeof isVersionExist>
+        isVersionExist as MockedFunction<typeof isVersionExist>
       ).mockResolvedValue(true)
 
       const versionInfo = {
@@ -661,9 +674,9 @@ describe('版本插件测试', () => {
     it('当版本无效时应该抛出错误', async () => {
       // 模拟 semver.valid 返回 null (无效版本)
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const semverModule = require('semver') as {
-        valid: jest.Mock
-        default: { valid: jest.Mock }
+      const semverModule = requiredModule0 as unknown as {
+        valid: Mock
+        default: { valid: Mock }
       }
       semverModule.valid.mockReturnValue(null)
 
@@ -727,7 +740,7 @@ describe('版本插件测试', () => {
 
     it('应该跳过金丝雀版本的锁文件更新', async () => {
       ;(
-        isCanaryVersion as jest.MockedFunction<typeof isCanaryVersion>
+        isCanaryVersion as MockedFunction<typeof isCanaryVersion>
       ).mockReturnValue(true)
 
       const versionInfo = {
@@ -745,7 +758,7 @@ describe('版本插件测试', () => {
 
     it('应该处理锁文件更新失败', async () => {
       ;(
-        updatePackageLock as jest.MockedFunction<typeof updatePackageLock>
+        updatePackageLock as MockedFunction<typeof updatePackageLock>
       ).mockRejectedValue(new Error('锁文件更新失败'))
 
       const versionInfo = {
@@ -774,11 +787,11 @@ describe('版本插件测试', () => {
 
     it('应该在没有指定版本时提示用户选择', async () => {
       mockApi.config.npm.confirm = false
-      ;(prompts as jest.MockedFunction<typeof prompts>).mockResolvedValue({
+      ;(prompts as MockedFunction<typeof prompts>).mockResolvedValue({
         value: '1.0.1',
       })
       ;(
-        getReleaseVersion as jest.MockedFunction<typeof getReleaseVersion>
+        getReleaseVersion as MockedFunction<typeof getReleaseVersion>
       ).mockReturnValue('1.0.1')
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
@@ -803,9 +816,9 @@ describe('版本插件测试', () => {
     it('应该在确认模式下请求用户确认版本', async () => {
       mockApi.config.npm.confirm = true
       ;(
-        getReleaseVersion as jest.MockedFunction<typeof getReleaseVersion>
+        getReleaseVersion as MockedFunction<typeof getReleaseVersion>
       ).mockReturnValue('1.1.0')
-      ;(confirm as jest.MockedFunction<typeof confirm>).mockResolvedValue(true)
+      ;(confirm as MockedFunction<typeof confirm>).mockResolvedValue(true)
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
       const result = await getIncrementVersionHandler({
@@ -821,7 +834,7 @@ describe('版本插件测试', () => {
     it('当禁用确认时应该直接返回版本', async () => {
       mockApi.config.npm.confirm = false
       ;(
-        getReleaseVersion as jest.MockedFunction<typeof getReleaseVersion>
+        getReleaseVersion as MockedFunction<typeof getReleaseVersion>
       ).mockReturnValue('1.1.0')
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
@@ -850,7 +863,7 @@ describe('版本插件测试', () => {
       mockApi.config.npm.prereleaseId = 'alpha'
       mockApi.config.npm.confirm = false
       ;(
-        getReleaseVersion as jest.MockedFunction<typeof getReleaseVersion>
+        getReleaseVersion as MockedFunction<typeof getReleaseVersion>
       ).mockReturnValue('1.1.0-alpha.1')
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
@@ -886,7 +899,7 @@ describe('版本插件测试', () => {
       mockApi.config.npm.canary = true
       mockApi.config.npm.confirm = false
       ;(
-        isCanaryVersion as jest.MockedFunction<typeof isCanaryVersion>
+        isCanaryVersion as MockedFunction<typeof isCanaryVersion>
       ).mockReturnValue(true)
       mockApi.appData.pkgs[0].version = '1.0.0-canary.20231112-old123'
 
@@ -912,16 +925,16 @@ describe('版本插件测试', () => {
     it('应该获取和使用远程版本信息', async () => {
       mockApi.config.npm.confirm = false
       ;(
-        getRemoteDistTag as jest.MockedFunction<typeof getRemoteDistTag>
+        getRemoteDistTag as MockedFunction<typeof getRemoteDistTag>
       ).mockResolvedValue({
         latest: '1.5.0',
         alpha: '1.6.0-alpha.1',
         beta: '1.6.0-beta.1',
         rc: '1.6.0-rc.1',
       })
-      ;(
-        getMaxVersion as jest.MockedFunction<typeof getMaxVersion>
-      ).mockReturnValue('1.5.0')
+      ;(getMaxVersion as MockedFunction<typeof getMaxVersion>).mockReturnValue(
+        '1.5.0',
+      )
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await getIncrementVersionHandler({ releaseTypeOrVersion: 'minor' })
@@ -936,7 +949,7 @@ describe('版本插件测试', () => {
     it('应该处理获取远程版本失败', async () => {
       mockApi.config.npm.confirm = false
       ;(
-        getRemoteDistTag as jest.MockedFunction<typeof getRemoteDistTag>
+        getRemoteDistTag as MockedFunction<typeof getRemoteDistTag>
       ).mockRejectedValue(new Error('网络错误'))
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
@@ -982,7 +995,7 @@ describe('版本插件测试', () => {
           getIncrementVersionHandler({ releaseTypeOrVersion: 'minor' }),
         ).resolves.toBeDefined()
 
-        jest.clearAllMocks()
+        vi.clearAllMocks()
       }
     })
   })
@@ -1056,7 +1069,7 @@ describe('版本插件测试', () => {
 
       // 测试无效版本错误
       ;(
-        isVersionValid as jest.MockedFunction<typeof isVersionValid>
+        isVersionValid as MockedFunction<typeof isVersionValid>
       ).mockReturnValue(false)
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       const onCheckHandler = mockApi.onCheck.mock.calls[0][0]
@@ -1068,7 +1081,7 @@ describe('版本插件测试', () => {
 
       // 测试版本更新错误
       ;(
-        updatePackageVersion as jest.MockedFunction<typeof updatePackageVersion>
+        updatePackageVersion as MockedFunction<typeof updatePackageVersion>
       ).mockRejectedValue(new Error('更新失败'))
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       const onBumpVersionHandler = mockApi.onBumpVersion.mock.calls[0][0]
@@ -1099,14 +1112,14 @@ describe('版本插件测试', () => {
       mockApi.config.npm.canary = false
       mockApi.config.npm.confirm = false
       ;(
-        getRemoteDistTag as jest.MockedFunction<typeof getRemoteDistTag>
+        getRemoteDistTag as MockedFunction<typeof getRemoteDistTag>
       ).mockResolvedValue({
         latest: '1.0.5',
         alpha: '1.1.0-alpha.1',
         beta: '1.1.0-beta.1',
         rc: '1.1.0-rc.1',
       })
-      ;(prompts as jest.MockedFunction<typeof prompts>).mockResolvedValue({
+      ;(prompts as MockedFunction<typeof prompts>).mockResolvedValue({
         value: '1.0.6',
       })
 
@@ -1135,14 +1148,14 @@ describe('版本插件测试', () => {
       mockApi.config.npm.prereleaseId = 'alpha'
       mockApi.config.npm.confirm = false
       ;(
-        getRemoteDistTag as jest.MockedFunction<typeof getRemoteDistTag>
+        getRemoteDistTag as MockedFunction<typeof getRemoteDistTag>
       ).mockResolvedValue({
         latest: '1.0.5',
         alpha: '1.1.0-alpha.1',
         beta: '1.1.0-beta.1',
         rc: '1.1.0-rc.1',
       })
-      ;(prompts as jest.MockedFunction<typeof prompts>).mockResolvedValue({
+      ;(prompts as MockedFunction<typeof prompts>).mockResolvedValue({
         value: '1.1.0-alpha.2',
       })
 

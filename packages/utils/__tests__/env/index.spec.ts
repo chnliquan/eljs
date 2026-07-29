@@ -1,3 +1,4 @@
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import type { ExecaReturnValue } from 'execa'
 import execa from 'execa'
@@ -6,13 +7,13 @@ import * as envModule from '../../src/env'
 import { hasGlobalInstallation } from '../../src/env'
 
 // Mock 依赖项
-jest.mock('execa')
+vi.mock('execa')
 
 describe('环境工具函数', () => {
-  const mockExeca = execa as jest.MockedFunction<typeof execa>
+  const mockExeca = execa as unknown as Mock
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   describe('模块导出', () => {

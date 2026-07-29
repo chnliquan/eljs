@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 import { deepMerge } from '../../src/object'
 
 describe('对象工具函数', () => {

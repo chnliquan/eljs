@@ -1,14 +1,25 @@
+import * as mockedUtils from '@eljs/utils'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mocked,
+  type MockedFunction,
+} from 'vitest'
 import gitInitPlugin from '../../../src/internal/plugins/git-init'
 import type { Api } from '../../../src/types'
 
 // Mock types
 interface MockUtils {
-  hasGit: jest.MockedFunction<() => Promise<boolean>>
-  hasProjectGit: jest.MockedFunction<(path: string) => Promise<boolean>>
+  hasGit: MockedFunction<() => Promise<boolean>>
+  hasProjectGit: MockedFunction<(path: string) => Promise<boolean>>
   logger: {
-    info: jest.MockedFunction<(message: string) => void>
+    info: MockedFunction<(message: string) => void>
   }
-  run: jest.MockedFunction<
+  run: MockedFunction<
     (
       command: string,
       args: string[],
@@ -22,29 +33,29 @@ interface DescribeConfig {
 }
 
 // Mock @eljs/utils
-jest.mock('@eljs/utils', () => ({
-  hasGit: jest.fn(),
-  hasProjectGit: jest.fn(),
+vi.mock('@eljs/utils', () => ({
+  hasGit: vi.fn(),
+  hasProjectGit: vi.fn(),
   logger: {
-    info: jest.fn(),
+    info: vi.fn(),
   },
-  run: jest.fn(),
+  run: vi.fn(),
 }))
 
 describe('内部插件 git-init', () => {
-  let mockApi: jest.Mocked<Api>
+  let mockApi: Mocked<Api>
   let describeCallback: DescribeConfig
   let onGenerateDoneCallback: () => Promise<void>
   let mockUtils: MockUtils
 
   beforeEach(() => {
-    mockUtils = jest.requireMock('@eljs/utils') as MockUtils
+    mockUtils = mockedUtils as unknown as MockUtils
 
     mockApi = {
-      describe: jest.fn((config: DescribeConfig) => {
+      describe: vi.fn((config: DescribeConfig) => {
         describeCallback = config
       }),
-      onGenerateDone: jest.fn((callback: () => Promise<void>) => {
+      onGenerateDone: vi.fn((callback: () => Promise<void>) => {
         onGenerateDoneCallback = callback
       }),
       config: {
@@ -56,11 +67,11 @@ describe('内部插件 git-init', () => {
       prompts: {
         git: true,
       },
-    } as unknown as jest.Mocked<Api>
+    } as unknown as Mocked<Api>
   })
 
   afterEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   it('应该是一个异步函数', () => {

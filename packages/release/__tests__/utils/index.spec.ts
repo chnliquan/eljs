@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 /**
  * @file packages/release utils/index 模块单元测试
  * @description 测试 utils/index.ts 导出功能

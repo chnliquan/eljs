@@ -1,14 +1,35 @@
+export function resolveInternalModule(request: string): string {
+  const candidates = [
+    `${request}.js`,
+    `${request}.ts`,
+    `${request}/index.js`,
+    `${request}/index.ts`,
+  ]
+
+  for (const candidate of candidates) {
+    try {
+      return require.resolve(candidate)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'MODULE_NOT_FOUND') {
+        throw error
+      }
+    }
+  }
+
+  return require.resolve(request)
+}
+
 export default () => {
   return {
     plugins: [
-      require.resolve('./register'),
-      require.resolve('./plugins/app-data'),
-      require.resolve('./plugins/built-in'),
-      require.resolve('./plugins/generator'),
-      require.resolve('./plugins/git-init'),
-      require.resolve('./plugins/prompts'),
-      require.resolve('./plugins/questions'),
-      require.resolve('./plugins/render'),
+      resolveInternalModule('./register'),
+      resolveInternalModule('./plugins/app-data'),
+      resolveInternalModule('./plugins/built-in'),
+      resolveInternalModule('./plugins/generator'),
+      resolveInternalModule('./plugins/git-init'),
+      resolveInternalModule('./plugins/prompts'),
+      resolveInternalModule('./plugins/questions'),
+      resolveInternalModule('./plugins/render'),
     ],
   }
 }

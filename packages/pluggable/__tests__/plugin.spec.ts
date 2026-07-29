@@ -1,28 +1,39 @@
+import * as importedModule0 from '@eljs/utils'
+import * as importedModule1 from 'pkg-up'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 /* eslint-disable @typescript-eslint/no-var-requires */
 /* eslint-disable @typescript-eslint/naming-convention */
 import type { PluginOptions } from '../src'
 import { Plugin, PluginTypeEnum } from '../src'
 import { createTempDir } from './setup'
 
-// Mock dependencies
-jest.mock('pkg-up', () => ({
-  sync: jest.fn().mockReturnValue('/mock/package.json'),
-}))
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+const requiredModule1 = vi.mocked(importedModule1, { deep: true })
 
-jest.mock('@eljs/utils', () => ({
-  isPathExistsSync: jest.fn().mockReturnValue(true),
-  readJsonSync: jest
+// Mock dependencies
+vi.mock('pkg-up', () => {
+  const sync = vi.fn().mockReturnValue('/mock/package.json')
+
+  return {
+    default: { sync },
+    sync,
+  }
+})
+
+vi.mock('@eljs/utils', () => ({
+  isPathExistsSync: vi.fn().mockReturnValue(true),
+  readJsonSync: vi
     .fn()
     .mockReturnValue({ name: 'test-plugin', main: 'index.js' }),
   resolve: {
-    sync: jest.fn().mockReturnValue('/resolved/path/plugin.js'),
+    sync: vi.fn().mockReturnValue('/resolved/path/plugin.js'),
   },
-  winPath: jest.fn((path: string) => path),
+  winPath: vi.fn((path: string) => path),
   fileLoadersSync: {
-    '.js': jest.fn().mockReturnValue({ default: jest.fn() }),
-    '.ts': jest.fn().mockReturnValue({ default: jest.fn() }),
+    '.js': vi.fn().mockReturnValue({ default: vi.fn() }),
+    '.ts': vi.fn().mockReturnValue({ default: vi.fn() }),
   },
-  camelCase: jest
+  camelCase: vi
     .fn()
     .mockImplementation((str: string) =>
       str.replace(/-([a-z])/g, g => g[1].toUpperCase()),
@@ -30,7 +41,7 @@ jest.mock('@eljs/utils', () => ({
 }))
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { isPathExistsSync, fileLoadersSync } = require('@eljs/utils')
+const { isPathExistsSync, fileLoadersSync } = requiredModule0
 
 describe('插件', () => {
   let mockCwd: string
@@ -46,8 +57,8 @@ describe('插件', () => {
 
     // Reset mocks
     isPathExistsSync.mockReturnValue(true)
-    fileLoadersSync['.js'].mockReturnValue({ default: jest.fn() })
-    jest.clearAllMocks()
+    fileLoadersSync['.js'].mockReturnValue({ default: vi.fn() })
+    vi.clearAllMocks()
   })
 
   describe('constructor', () => {
@@ -91,7 +102,7 @@ describe('插件', () => {
 
   describe('apply method', () => {
     it('should return function from loaded module', () => {
-      const mockApplyFn = jest.fn()
+      const mockApplyFn = vi.fn()
       fileLoadersSync['.js'].mockReturnValue({ default: mockApplyFn })
 
       const plugin = new Plugin(validOptions)
@@ -101,7 +112,7 @@ describe('插件', () => {
     })
 
     it('should handle module without default export', () => {
-      const mockApplyFn = jest.fn()
+      const mockApplyFn = vi.fn()
       fileLoadersSync['.js'].mockReturnValue(mockApplyFn)
 
       const plugin = new Plugin(validOptions)
@@ -192,7 +203,7 @@ describe('插件', () => {
 
     describe('resolvePlugins', () => {
       beforeEach(() => {
-        const { resolve } = require('@eljs/utils')
+        const { resolve } = requiredModule0
         resolve.sync.mockReturnValue('/resolved/plugin/path.js')
       })
 
@@ -233,7 +244,7 @@ describe('插件', () => {
       })
 
       it('应该对无法解析的插件抛出错误', () => {
-        const { resolve } = require('@eljs/utils')
+        const { resolve } = requiredModule0
         resolve.sync.mockImplementation(() => {
           throw new Error('Cannot resolve module')
         })
@@ -250,9 +261,9 @@ describe('插件', () => {
 
     describe('getPresetsAndPlugins 完整场景', () => {
       beforeEach(() => {
-        jest
-          .spyOn(Plugin, 'resolvePlugins')
-          .mockReturnValue([[new Plugin(validOptions), {}]])
+        vi.spyOn(Plugin, 'resolvePlugins').mockReturnValue([
+          [new Plugin(validOptions), {}],
+        ])
       })
 
       it('应该返回解析后的预设和插件', () => {
@@ -289,7 +300,7 @@ describe('插件', () => {
 
     describe('constructor 边界情况', () => {
       it('应该处理没有package.json的情况', () => {
-        const pkgUp = require('pkg-up')
+        const pkgUp = requiredModule1
         pkgUp.sync.mockReturnValue(null)
 
         const plugin = new Plugin(validOptions)
@@ -305,9 +316,9 @@ describe('插件', () => {
           path: '/mock/plugin/index.ts',
         }
 
-        fileLoadersSync['.ts'] = jest
-          .fn()
-          .mockReturnValue({ default: jest.fn() })
+        Object.assign(fileLoadersSync, {
+          '.ts': vi.fn().mockReturnValue({ default: vi.fn() }),
+        })
 
         const plugin = new Plugin(tsOptions)
         const applyResult = plugin.apply()

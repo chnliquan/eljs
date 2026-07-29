@@ -1,28 +1,35 @@
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
 /**
  * @fileoverview utils.ts 模块的单元测试
  * @description 测试工具函数相关功能
  */
 
-import { jest } from '@jest/globals'
-
 // 模拟外部依赖
-jest.mock('@eljs/utils', () => ({
+vi.mock('@eljs/utils', () => ({
   logger: {
-    event: jest.fn(),
+    event: vi.fn(),
   },
 }))
 
 describe('utils 模块测试', () => {
   let mockProcess: {
-    exit: jest.MockedFunction<(code?: number) => never>
+    exit: MockedFunction<(code?: number) => never>
   }
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // 模拟 process 对象
     mockProcess = {
-      exit: jest.fn() as never,
+      exit: vi.fn() as never,
     }
 
     Object.defineProperty(global, 'process', {
@@ -32,7 +39,7 @@ describe('utils 模块测试', () => {
   })
 
   afterEach(() => {
-    jest.restoreAllMocks()
+    vi.restoreAllMocks()
   })
 
   describe('objectToArray 函数', () => {
@@ -181,11 +188,11 @@ describe('utils 模块测试', () => {
       const { onCancel } = await import('../src/utils')
 
       // 模拟 logger.event 抛出异常
-      ;(
-        logger.event as jest.MockedFunction<typeof logger.event>
-      ).mockImplementation(() => {
-        throw new Error('Logger error')
-      })
+      ;(logger.event as MockedFunction<typeof logger.event>).mockImplementation(
+        () => {
+          throw new Error('Logger error')
+        },
+      )
 
       // onCancel 仍然应该正常执行
       expect(() => onCancel()).toThrow('Logger error')

@@ -1,3 +1,14 @@
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
+import * as importedModule0 from '../../src/file/is'
+import * as importedModule1 from '../../src/type'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { mkdirp, mkdirpSync } from 'mkdirp'
 import * as fsp from 'node:fs/promises'
@@ -6,26 +17,33 @@ import * as path from 'node:path'
 
 import { mkdir, mkdirSync, tmpdir, tmpdirSync } from '../../src/file/dir'
 
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+const requiredModule1 = vi.mocked(importedModule1, { deep: true })
+
 // Mock 依赖项
-jest.mock('mkdirp')
-jest.mock('../../src/file/is')
-jest.mock('../../src/type')
+vi.mock('mkdirp')
+vi.mock('../../src/file/is')
+vi.mock('../../src/type')
 
 describe('目录操作工具', () => {
-  const mockMkdirp = mkdirp as jest.MockedFunction<typeof mkdirp>
-  const mockMkdirpSync = mkdirpSync as jest.MockedFunction<typeof mkdirpSync>
-  const mockIsPathExists = require('../../src/file/is')
-    .isPathExists as jest.MockedFunction<(filePath: string) => Promise<boolean>>
-  const mockIsPathExistsSync = require('../../src/file/is')
-    .isPathExistsSync as jest.MockedFunction<(filePath: string) => boolean>
-  const mockIsBoolean = require('../../src/type')
-    .isBoolean as jest.MockedFunction<(value: unknown) => value is boolean>
+  const mockMkdirp = mkdirp as MockedFunction<typeof mkdirp>
+  const mockMkdirpSync = mkdirpSync as MockedFunction<typeof mkdirpSync>
+  const mockIsPathExists = requiredModule0.isPathExists as MockedFunction<
+    (filePath: string) => Promise<boolean>
+  >
+  const mockIsPathExistsSync =
+    requiredModule0.isPathExistsSync as MockedFunction<
+      (filePath: string) => boolean
+    >
+  const mockIsBoolean = requiredModule1.isBoolean as MockedFunction<
+    (value: unknown) => value is boolean
+  >
 
   let tempDir: string
   let testDir: string
 
   beforeEach(async () => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // 创建临时目录
     tempDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'dir-test-'))
@@ -33,7 +51,7 @@ describe('目录操作工具', () => {
   })
 
   afterEach(async () => {
-    jest.restoreAllMocks()
+    vi.restoreAllMocks()
     try {
       await fsp.rm(tempDir, { recursive: true, force: true })
     } catch {
@@ -160,8 +178,8 @@ describe('目录操作工具', () => {
       mockMkdirp.mockResolvedValue(undefined)
 
       // Mock Math.random and Date.now for predictable results
-      const mockRandom = jest.spyOn(Math, 'random').mockReturnValue(0.5)
-      const mockDateNow = jest.spyOn(Date, 'now').mockReturnValue(1234567890)
+      const mockRandom = vi.spyOn(Math, 'random').mockReturnValue(0.5)
+      const mockDateNow = vi.spyOn(Date, 'now').mockReturnValue(1234567890)
 
       const result = await tmpdir(true)
 
@@ -189,8 +207,8 @@ describe('目录操作工具', () => {
       mockIsBoolean.mockReturnValue(true)
       mockMkdirp.mockResolvedValue(undefined)
 
-      const mockRandom = jest.spyOn(Math, 'random').mockReturnValue(0.123)
-      const mockDateNow = jest.spyOn(Date, 'now').mockReturnValue(9876543210)
+      const mockRandom = vi.spyOn(Math, 'random').mockReturnValue(0.123)
+      const mockDateNow = vi.spyOn(Date, 'now').mockReturnValue(9876543210)
 
       await tmpdir(true)
 
@@ -228,8 +246,8 @@ describe('目录操作工具', () => {
       mockIsBoolean.mockReturnValue(true)
       mockMkdirpSync.mockReturnValue(undefined)
 
-      const mockRandom = jest.spyOn(Math, 'random').mockReturnValue(0.789)
-      const mockDateNow = jest.spyOn(Date, 'now').mockReturnValue(5555555555)
+      const mockRandom = vi.spyOn(Math, 'random').mockReturnValue(0.789)
+      const mockDateNow = vi.spyOn(Date, 'now').mockReturnValue(5555555555)
 
       const result = await tmpdirSync(true)
 

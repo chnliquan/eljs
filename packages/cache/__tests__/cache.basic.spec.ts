@@ -1,6 +1,7 @@
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { Cache, CacheOptions } from '../src'
 
@@ -252,6 +253,23 @@ describe('Cache 基础功能测试', () => {
       await cache.clear()
 
       expect(cache.memoryCache.size).toBe(0)
+    })
+
+    it('清空缓存时应该保留不属于缓存管理的文件', async () => {
+      const testFile = createTempFile(tempDir, 'test.txt', 'content')
+      await cache.set(testFile, 'data')
+
+      const unrelatedFile = path.join(cache.cacheDir, 'unrelated.json')
+      fs.writeFileSync(unrelatedFile, '{"owned":false}')
+
+      await cache.clear()
+
+      expect(fs.existsSync(unrelatedFile)).toBe(true)
+      expect(
+        fs
+          .readdirSync(cache.cacheDir)
+          .filter(file => /^[a-f0-9]{64}\.json$/u.test(file)),
+      ).toHaveLength(0)
     })
 
     it('应该进行清理操作并返回结果', async () => {

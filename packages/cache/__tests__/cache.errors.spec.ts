@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as fs from 'node:fs'
 import * as os from 'node:os'
@@ -197,6 +198,24 @@ describe('Cache 错误处理和边界情况测试', () => {
 
       // 内存中应该只有一个条目
       expect(cache.memoryCache.size).toBe(1)
+    })
+
+    it('应该将包含路径穿越字符的键安全地映射到缓存目录内', async () => {
+      const cacheDir = path.join(tempDir, '.cache')
+      const cache = new Cache<string>({
+        enabled: true,
+        cacheDir,
+        keyGenerator: () => '../escaped',
+        autoCleanup: false,
+      })
+
+      await cache.setByData('safe data')
+
+      expect(await cache.getByKey('../escaped')).toBe('safe data')
+      expect(fs.existsSync(path.join(tempDir, 'escaped.json'))).toBe(false)
+      expect(fs.readdirSync(cacheDir)).toEqual([
+        expect.stringMatching(/^[a-f0-9]{64}\.json$/u),
+      ])
     })
   })
 

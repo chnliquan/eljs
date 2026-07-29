@@ -1,63 +1,71 @@
 import type { PackageJson } from '@eljs/utils'
+import * as mockedUtils from '@eljs/utils'
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mocked,
+  type MockedFunction,
+} from 'vitest'
 
 import builtInPlugin from '../../../src/internal/plugins/built-in'
 import type { Api } from '../../../src/types'
 
 // Mock @eljs/utils
-jest.mock('@eljs/utils', () => ({
+vi.mock('@eljs/utils', () => ({
   chalk: {
     cyan: { bold: (str: string) => `CYAN_BOLD(${str})` },
   },
-  deepMerge: jest.fn((target: PackageJson, source: PackageJson) => ({
+  deepMerge: vi.fn((target: PackageJson, source: PackageJson) => ({
     ...target,
     ...source,
   })),
-  install: jest.fn(),
-  isObject: jest.fn(
+  install: vi.fn(),
+  isObject: vi.fn(
     (obj: unknown): obj is object =>
       obj !== null && typeof obj === 'object' && !Array.isArray(obj),
   ),
-  isPathExists: jest.fn(),
+  isPathExists: vi.fn(),
   logger: {
-    info: jest.fn(),
-    ready: jest.fn(),
+    info: vi.fn(),
+    ready: vi.fn(),
   },
-  readJson: jest.fn(),
-  writeJson: jest.fn(),
+  readJson: vi.fn(),
+  writeJson: vi.fn(),
 }))
 
 // Mock node:path
-jest.mock('node:path', () => ({
-  join: jest.fn((...args: string[]) => args.join('/')),
+vi.mock('node:path', () => ({
+  join: vi.fn((...args: string[]) => args.join('/')),
 }))
 
 // Mock dynamic import for sort-package-json
-const mockSortPackageJson = jest.fn((pkg: PackageJson) => pkg)
-jest.mock('sort-package-json', () => mockSortPackageJson)
+const mockSortPackageJson = vi.fn((pkg: PackageJson) => pkg)
+vi.mock('sort-package-json', () => ({ default: mockSortPackageJson }))
 
 // Mock types
 interface MockUtils {
   chalk: {
     cyan: { bold: (str: string) => string }
   }
-  deepMerge: jest.MockedFunction<
+  deepMerge: MockedFunction<
     (target: PackageJson, source: PackageJson) => PackageJson
   >
-  install: jest.MockedFunction<(...args: unknown[]) => Promise<void>>
-  isObject: jest.MockedFunction<(obj: unknown) => boolean>
-  isPathExists: jest.MockedFunction<(path: string) => Promise<boolean>>
+  install: MockedFunction<(...args: unknown[]) => Promise<void>>
+  isObject: MockedFunction<(obj: unknown) => boolean>
+  isPathExists: MockedFunction<(path: string) => Promise<boolean>>
   logger: {
-    info: jest.MockedFunction<(message: string) => void>
-    ready: jest.MockedFunction<(message: string) => void>
+    info: MockedFunction<(message: string) => void>
+    ready: MockedFunction<(message: string) => void>
   }
-  readJson: jest.MockedFunction<(path: string) => Promise<PackageJson>>
-  writeJson: jest.MockedFunction<
-    (path: string, data: PackageJson) => Promise<void>
-  >
+  readJson: MockedFunction<(path: string) => Promise<PackageJson>>
+  writeJson: MockedFunction<(path: string, data: PackageJson) => Promise<void>>
 }
 
 describe('内部插件 built-in', () => {
-  let mockApi: jest.Mocked<Api>
+  let mockApi: Mocked<Api>
   let extendPackageCallback: (pkg: unknown) => unknown
   let installCallback: (...args: unknown[]) => Promise<void>
   let onGenerateDoneCallbacks: Array<() => Promise<void>>
@@ -65,17 +73,17 @@ describe('内部插件 built-in', () => {
 
   beforeEach(() => {
     onGenerateDoneCallbacks = []
-    mockUtils = jest.requireMock('@eljs/utils') as MockUtils
+    mockUtils = mockedUtils as unknown as MockUtils
 
     mockApi = {
-      registerMethod: jest.fn((name: string, fn: unknown) => {
+      registerMethod: vi.fn((name: string, fn: unknown) => {
         if (name === 'extendPackage') {
           extendPackageCallback = fn as (pkg: unknown) => unknown
         } else if (name === 'install') {
           installCallback = fn as (...args: unknown[]) => Promise<void>
         }
       }),
-      onGenerateDone: jest.fn((callback: () => Promise<void>) => {
+      onGenerateDone: vi.fn((callback: () => Promise<void>) => {
         onGenerateDoneCallbacks.push(callback)
       }),
       appData: {
@@ -90,10 +98,10 @@ describe('内部插件 built-in', () => {
       config: {
         install: true,
       },
-      install: jest.fn(),
-    } as unknown as jest.Mocked<Api>
+      install: vi.fn(),
+    } as unknown as Mocked<Api>
 
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // 确保每次测试都有新的 pkg 对象
     mockApi.appData.pkg = { name: 'test-package', version: '1.0.0' }
@@ -161,7 +169,7 @@ describe('内部插件 built-in', () => {
       builtInPlugin(mockApi)
 
       const originalPkg = { ...mockApi.appData.pkg }
-      const fn = jest.fn((pkg: PackageJson) => ({
+      const fn = vi.fn((pkg: PackageJson) => ({
         ...pkg,
         scripts: { test: 'jest' },
       }))
@@ -175,7 +183,7 @@ describe('内部插件 built-in', () => {
     it('应该处理函数返回 null/undefined 的情况', () => {
       builtInPlugin(mockApi)
 
-      const fn = jest.fn(() => null)
+      const fn = vi.fn(() => null)
       extendPackageCallback(fn)
 
       expect(mockUtils.deepMerge).toHaveBeenCalledWith(mockApi.appData.pkg, {})
@@ -247,7 +255,7 @@ describe('内部插件 built-in', () => {
     beforeEach(() => {
       // Mock dynamic import - 简化类型处理
       Object.defineProperty(global, 'import', {
-        value: jest.fn(() => Promise.resolve({ default: mockSortPackageJson })),
+        value: vi.fn(() => Promise.resolve({ default: mockSortPackageJson })),
         writable: true,
       })
     })

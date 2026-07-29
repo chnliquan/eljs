@@ -1,3 +1,17 @@
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+  type Mocked,
+  type MockedFunction,
+} from 'vitest'
+import * as importedModule1 from '../../src/cp'
+import * as importedModule0 from '../../src/env'
+import * as importedModule2 from '../../src/file'
+import * as importedModule3 from '../../src/type'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import type { ExecaReturnValue } from 'execa'
 import execa from 'execa'
@@ -22,42 +36,48 @@ import {
   type GitRemoteRepository,
 } from '../../src/git'
 
+const requiredModule1 = vi.mocked(importedModule1, { deep: true })
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+const requiredModule2 = vi.mocked(importedModule2, { deep: true })
+const requiredModule3 = vi.mocked(importedModule3, { deep: true })
+
 // Mock 依赖项
-jest.mock('execa')
-jest.mock('ini')
-jest.mock('../../src/env')
-jest.mock('../../src/cp')
-jest.mock('../../src/file')
-jest.mock('../../src/type')
+vi.mock('execa')
+vi.mock('ini')
+vi.mock('../../src/env')
+vi.mock('../../src/cp')
+vi.mock('../../src/file')
+vi.mock('../../src/type')
 
 describe('Git 工具函数', () => {
-  const mockExeca = execa as jest.MockedFunction<typeof execa>
-  const mockIni = ini as jest.Mocked<typeof ini>
-  const mockHasGlobalInstallation = require('../../src/env')
-    .hasGlobalInstallation as jest.Mock<Promise<boolean>, [string]>
-  const mockRun = require('../../src/cp').run as jest.Mock<
-    Promise<ExecaReturnValue>,
-    [string, string[]?, object?]
+  const mockExeca = execa as MockedFunction<typeof execa>
+  const mockIni = ini as Mocked<typeof ini>
+  const mockHasGlobalInstallation =
+    requiredModule0.hasGlobalInstallation as Mock<
+      (name: string) => Promise<boolean>
+    >
+  const mockRun = requiredModule1.run as Mock<
+    (
+      command: string,
+      args?: string[],
+      options?: object,
+    ) => Promise<ExecaReturnValue>
   >
-  const mockIsPathExists = require('../../src/file').isPathExists as jest.Mock<
-    Promise<boolean>,
-    [string]
+  const mockIsPathExists = requiredModule2.isPathExists as Mock<
+    (path: string) => Promise<boolean>
   >
-  const mockReadFile = require('../../src/file').readFile as jest.Mock<
-    Promise<string>,
-    [string]
+  const mockReadFile = requiredModule2.readFile as Mock<
+    (path: string) => Promise<string>
   >
-  const mockTmpdir = require('../../src/file').tmpdir as jest.Mock<
-    Promise<string>,
-    []
+  const mockTmpdir = requiredModule2.tmpdir as unknown as Mock<
+    () => Promise<string>
   >
-  const mockIsObject = require('../../src/type').isObject as jest.Mock<
-    boolean,
-    [unknown]
+  const mockIsObject = requiredModule3.isObject as Mock<
+    (value: unknown) => boolean
   >
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     mockIsObject.mockImplementation(
       value =>
         value !== null && typeof value === 'object' && !Array.isArray(value),

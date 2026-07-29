@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 /**
  * @file packages/release utils/error 模块单元测试
  * @description 测试 AppError 错误类功能

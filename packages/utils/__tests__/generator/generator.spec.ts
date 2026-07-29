@@ -1,3 +1,14 @@
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
+import * as importedModule0 from '../../src/file'
+import * as importedModule1 from '../../src/type'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
@@ -6,23 +17,29 @@ import prompts from 'prompts'
 
 import { Generator, type GeneratorOptions } from '../../src/generator'
 
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+const requiredModule1 = vi.mocked(importedModule1, { deep: true })
+
 // Mock 依赖项
-jest.mock('prompts')
-jest.mock('../../src/cli')
-jest.mock('../../src/file')
-jest.mock('../../src/logger')
-jest.mock('../../src/type')
+vi.mock('prompts')
+vi.mock('../../src/cli')
+vi.mock('../../src/file')
+vi.mock('../../src/logger')
+vi.mock('../../src/type')
 
 describe('Generator 生成器', () => {
-  const mockPrompts = prompts as jest.MockedFunction<typeof prompts>
-  const mockIsPathExistsSync = require('../../src/file')
-    .isPathExistsSync as jest.MockedFunction<(filePath: string) => boolean>
-  const mockMkdirSync = require('../../src/file')
-    .mkdirSync as jest.MockedFunction<(dirPath: string) => void>
-  const mockIsDirectorySync = require('../../src/file')
-    .isDirectorySync as jest.MockedFunction<(filePath: string) => boolean>
-  const mockCopyFile = require('../../src/file')
-    .copyFile as jest.MockedFunction<
+  const mockPrompts = prompts as MockedFunction<typeof prompts>
+  const mockIsPathExistsSync =
+    requiredModule0.isPathExistsSync as MockedFunction<
+      (filePath: string) => boolean
+    >
+  const mockMkdirSync = requiredModule0.mkdirSync as MockedFunction<
+    (dirPath: string) => void
+  >
+  const mockIsDirectorySync = requiredModule0.isDirectorySync as MockedFunction<
+    (filePath: string) => boolean
+  >
+  const mockCopyFile = requiredModule0.copyFile as unknown as MockedFunction<
     (
       from: string,
       to: string,
@@ -30,7 +47,7 @@ describe('Generator 生成器', () => {
       options?: unknown,
     ) => Promise<void>
   >
-  const mockCopyTpl = require('../../src/file').copyTpl as jest.MockedFunction<
+  const mockCopyTpl = requiredModule0.copyTpl as unknown as MockedFunction<
     (
       from: string,
       to: string,
@@ -38,8 +55,7 @@ describe('Generator 生成器', () => {
       options?: unknown,
     ) => Promise<void>
   >
-  const mockCopyDirectory = require('../../src/file')
-    .copyDirectory as jest.MockedFunction<
+  const mockCopyDirectory = requiredModule0.copyDirectory as MockedFunction<
     (
       from: string,
       to: string,
@@ -47,13 +63,14 @@ describe('Generator 生成器', () => {
       options?: unknown,
     ) => Promise<void>
   >
-  const mockIsFunction = require('../../src/type')
-    .isFunction as jest.MockedFunction<(value: unknown) => boolean>
+  const mockIsFunction = requiredModule1.isFunction as MockedFunction<
+    (value: unknown) => boolean
+  >
 
   let tempDir: string
 
   beforeEach(async () => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     tempDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'generator-test-'))
 
@@ -109,7 +126,7 @@ describe('Generator 生成器', () => {
 
   describe('run 方法', () => {
     it('应该执行完整的生成流程', async () => {
-      const onDone = jest.fn()
+      const onDone = vi.fn()
       const options: GeneratorOptions = {
         src: '/template',
         dest: '/output',
@@ -147,7 +164,7 @@ describe('Generator 生成器', () => {
     })
 
     it('应该处理函数 dest', async () => {
-      const destFn = jest.fn().mockReturnValue('/computed/output')
+      const destFn = vi.fn().mockReturnValue('/computed/output')
       mockIsFunction.mockReturnValueOnce(true) // dest is function
 
       const options: GeneratorOptions = {
@@ -183,7 +200,7 @@ describe('Generator 生成器', () => {
       )
 
       // 重置并测试模板文件
-      jest.clearAllMocks()
+      vi.clearAllMocks()
       mockIsDirectorySync.mockReturnValue(false)
 
       const tplOptions: GeneratorOptions = {
@@ -213,7 +230,7 @@ describe('Generator 生成器', () => {
       generator.prompts = { dynamic: 'prompt' }
 
       // Mock 继承的方法
-      generator.copyFile = jest.fn().mockResolvedValue(undefined)
+      generator.copyFile = vi.fn().mockResolvedValue(undefined)
 
       await generator.writing()
 

@@ -1,3 +1,18 @@
+import * as importedModule1 from 'node:fs'
+import * as importedModule0 from 'node:fs/promises'
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
+import * as importedModule2 from '../../src/file/dir'
+import * as importedModule3 from '../../src/file/is'
+import * as importedModule4 from '../../src/file/read'
+import * as importedModule5 from '../../src/file/render'
+import * as importedModule6 from '../../src/file/write'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { glob, globSync } from 'glob'
 
@@ -11,61 +26,71 @@ import {
   type CopyFileOptions,
 } from '../../src/file/copy'
 
+const requiredModule1 = vi.mocked(importedModule1, { deep: true })
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+const requiredModule2 = vi.mocked(importedModule2, { deep: true })
+const requiredModule3 = vi.mocked(importedModule3, { deep: true })
+const requiredModule4 = vi.mocked(importedModule4, { deep: true })
+const requiredModule5 = vi.mocked(importedModule5, { deep: true })
+const requiredModule6 = vi.mocked(importedModule6, { deep: true })
+
 // Mock 所有依赖项
-jest.mock('glob')
-jest.mock('node:fs')
-jest.mock('node:fs/promises')
-jest.mock('../../src/file/dir')
-jest.mock('../../src/file/is')
-jest.mock('../../src/file/read')
-jest.mock('../../src/file/render')
-jest.mock('../../src/file/write')
+vi.mock('glob')
+vi.mock('node:fs')
+vi.mock('node:fs/promises')
+vi.mock('../../src/file/dir')
+vi.mock('../../src/file/is')
+vi.mock('../../src/file/read')
+vi.mock('../../src/file/render')
+vi.mock('../../src/file/write')
 
 describe('文件复制工具 - Mock 测试', () => {
-  const mockGlob = glob as jest.MockedFunction<typeof glob>
-  const mockGlobSync = globSync as jest.MockedFunction<typeof globSync>
-  const mockFsp = require('node:fs/promises') as {
-    copyFile: jest.MockedFunction<
+  const mockGlob = glob as MockedFunction<typeof glob>
+  const mockGlobSync = globSync as MockedFunction<typeof globSync>
+  const mockFsp = requiredModule0 as {
+    copyFile: MockedFunction<
       (src: string, dest: string, mode?: number) => Promise<void>
     >
   }
-  const mockFs = require('node:fs') as {
-    copyFileSync: jest.MockedFunction<
+  const mockFs = requiredModule1 as {
+    copyFileSync: MockedFunction<
       (src: string, dest: string, mode?: number) => void
     >
   }
-  const mockMkdir = require('../../src/file/dir').mkdir as jest.MockedFunction<
+  const mockMkdir = requiredModule2.mkdir as MockedFunction<
     (dirPath: string) => Promise<void>
   >
-  const mockMkdirSync = require('../../src/file/dir')
-    .mkdirSync as jest.MockedFunction<(dirPath: string) => void>
-  const mockIsDirectory = require('../../src/file/is')
-    .isDirectory as jest.MockedFunction<(filePath: string) => Promise<boolean>>
-  const mockIsDirectorySync = require('../../src/file/is')
-    .isDirectorySync as jest.MockedFunction<(filePath: string) => boolean>
-  const mockReadFile = require('../../src/file/read')
-    .readFile as jest.MockedFunction<(filePath: string) => Promise<string>>
-  const mockReadFileSync = require('../../src/file/read')
-    .readFileSync as jest.MockedFunction<(filePath: string) => string>
-  const mockRenderTemplate = require('../../src/file/render')
-    .renderTemplate as jest.MockedFunction<
+  const mockMkdirSync = requiredModule2.mkdirSync as MockedFunction<
+    (dirPath: string) => void
+  >
+  const mockIsDirectory = requiredModule3.isDirectory as MockedFunction<
+    (filePath: string) => Promise<boolean>
+  >
+  const mockIsDirectorySync = requiredModule3.isDirectorySync as MockedFunction<
+    (filePath: string) => boolean
+  >
+  const mockReadFile = requiredModule4.readFile as MockedFunction<
+    (filePath: string) => Promise<string>
+  >
+  const mockReadFileSync = requiredModule4.readFileSync as MockedFunction<
+    (filePath: string) => string
+  >
+  const mockRenderTemplate = requiredModule5.renderTemplate as MockedFunction<
     (
       template: string,
       data: Record<string, unknown>,
       options?: unknown,
     ) => string
   >
-  const mockWriteFile = require('../../src/file/write')
-    .writeFile as jest.MockedFunction<
+  const mockWriteFile = requiredModule6.writeFile as MockedFunction<
     (filePath: string, content: string) => Promise<void>
   >
-  const mockWriteFileSync = require('../../src/file/write')
-    .writeFileSync as jest.MockedFunction<
+  const mockWriteFileSync = requiredModule6.writeFileSync as MockedFunction<
     (filePath: string, content: string) => void
   >
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // 设置基本的 mock 行为
     mockMkdir.mockResolvedValue(undefined)
@@ -85,7 +110,7 @@ describe('文件复制工具 - Mock 测试', () => {
     mockWriteFileSync.mockImplementation(() => undefined)
 
     // Mock 控制台
-    jest.spyOn(console, 'log').mockImplementation()
+    vi.spyOn(console, 'log').mockImplementation(() => undefined)
   })
 
   describe('copyFile 异步文件复制', () => {
@@ -113,7 +138,7 @@ describe('文件复制工具 - Mock 测试', () => {
     })
 
     it('应该在有 basedir 时打印相对路径', async () => {
-      const mockConsoleLog = jest.spyOn(console, 'log')
+      const mockConsoleLog = vi.spyOn(console, 'log')
       const options: CopyFileOptions = { basedir: '/base' }
 
       await copyFile('/source.txt', '/base/sub/target.txt', options)
@@ -232,7 +257,7 @@ describe('文件复制工具 - Mock 测试', () => {
     })
 
     it('应该在有 basedir 时打印写入日志', async () => {
-      const mockConsoleLog = jest.spyOn(console, 'log')
+      const mockConsoleLog = vi.spyOn(console, 'log')
       const options: CopyFileOptions = { basedir: '/project' }
 
       await copyTpl('/template.tpl', '/project/output.txt', {}, options)

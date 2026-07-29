@@ -1,3 +1,11 @@
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
 /* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 /**
@@ -21,35 +29,33 @@ import {
 } from '../../src/utils/pkg'
 
 // 模拟依赖
-jest.mock('@eljs/utils', () => ({
+vi.mock('@eljs/utils', () => ({
   logger: {
-    info: jest.fn(),
+    info: vi.fn(),
   },
-  runCommand: jest.fn(),
-  writeJson: jest.fn(),
+  runCommand: vi.fn(),
+  writeJson: vi.fn(),
 }))
 
 // 简化的子进程模拟
 interface MockChildProcess {
   stdout?: {
-    on: jest.MockedFunction<
+    on: MockedFunction<
       (event: string, callback: (data: Buffer) => void) => void
     >
   }
   stderr?: {
-    on: jest.MockedFunction<
+    on: MockedFunction<
       (event: string, callback: (data: Buffer) => void) => void
     >
   }
-  on: jest.MockedFunction<
-    (event: string, callback: (code: number) => void) => void
-  >
-  kill: jest.MockedFunction<() => void>
+  on: MockedFunction<(event: string, callback: (code: number) => void) => void>
+  kill: MockedFunction<() => void>
 }
 
 describe('包管理工具函数测试', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   describe('updatePackageLock 函数', () => {
@@ -58,15 +64,15 @@ describe('包管理工具函数测试', () => {
     beforeEach(() => {
       mockChild = {
         stdout: {
-          on: jest.fn(),
+          on: vi.fn(),
         },
         stderr: {
-          on: jest.fn(),
+          on: vi.fn(),
         },
-        on: jest.fn(),
-        kill: jest.fn(),
+        on: vi.fn(),
+        kill: vi.fn(),
       }
-      ;(runCommand as jest.MockedFunction<typeof runCommand>).mockReturnValue(
+      ;(runCommand as MockedFunction<typeof runCommand>).mockReturnValue(
         mockChild as unknown as RunCommandChildProcess,
       )
     })
@@ -218,11 +224,11 @@ describe('包管理工具函数测试', () => {
     })
 
     it('应该捕获异常并终止进程', async () => {
-      ;(
-        runCommand as jest.MockedFunction<typeof runCommand>
-      ).mockImplementation(() => {
-        throw new Error('命令执行失败')
-      })
+      ;(runCommand as MockedFunction<typeof runCommand>).mockImplementation(
+        () => {
+          throw new Error('命令执行失败')
+        },
+      )
 
       // 应该不抛出错误
       await expect(updatePackageLock('pnpm')).resolves.toBeUndefined()

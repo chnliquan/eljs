@@ -1,3 +1,13 @@
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
+import * as importedModule0 from '../../src/file/is'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
@@ -16,21 +26,26 @@ import {
   writeJsonSync,
 } from '../../src/file/write'
 
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+
 // Mock 依赖项
-jest.mock('../../src/file/is')
+vi.mock('../../src/file/is')
 
 describe('文件写入工具', () => {
-  const mockIsPathExists = require('../../src/file/is')
-    .isPathExists as jest.MockedFunction<(filePath: string) => Promise<boolean>>
-  const mockIsPathExistsSync = require('../../src/file/is')
-    .isPathExistsSync as jest.MockedFunction<(filePath: string) => boolean>
+  const mockIsPathExists = requiredModule0.isPathExists as MockedFunction<
+    (filePath: string) => Promise<boolean>
+  >
+  const mockIsPathExistsSync =
+    requiredModule0.isPathExistsSync as MockedFunction<
+      (filePath: string) => boolean
+    >
 
   let tempDir: string
   let testFile: string
   let testJsonFile: string
 
   beforeEach(async () => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // 创建临时目录
     tempDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'write-test-'))
@@ -39,7 +54,7 @@ describe('文件写入工具', () => {
   })
 
   afterEach(async () => {
-    jest.restoreAllMocks()
+    vi.restoreAllMocks()
 
     try {
       await fsp.rm(tempDir, { recursive: true, force: true })
@@ -80,7 +95,7 @@ describe('文件写入工具', () => {
 
       try {
         await writeFile(invalidPath, 'content')
-        fail('应该抛出错误')
+        throw new Error('应该抛出错误')
       } catch (error) {
         expect((error as Error).message).toContain(invalidPath)
         expect((error as Error).message).toContain('Write')

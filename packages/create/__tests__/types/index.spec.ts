@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 // 测试 index.ts 文件中导出所有类型
 describe('类型索引导出', () => {
   it('应该从 api 模块导出所有类型', async () => {

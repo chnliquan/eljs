@@ -16,7 +16,7 @@ import path, { join } from 'node:path'
 
 import type { Config, RemoteTemplate } from '../types'
 import { AppError } from '../utils'
-import { Download } from './download'
+import { Download, type DownloadOptions } from './download'
 import { Runner } from './runner'
 
 const debug = createDebugger('create:class')
@@ -70,10 +70,15 @@ export class Create {
    */
   public async run(projectName: string) {
     try {
-      const targetDir = path.resolve(this.cwd, projectName)
+      const targetDir = this._resolveTargetDir(projectName)
 
       debug?.(`targetDir:`, targetDir)
       debug?.(`projectName:`, projectName)
+
+      const shouldContinue = await this._resolveTemplate()
+      if (!shouldContinue) {
+        return
+      }
 
       if ((await isPathExists(targetDir)) && !this.constructorOptions.merge) {
         if (this.constructorOptions.force) {
@@ -103,7 +108,6 @@ export class Create {
       }
 
       await mkdir(targetDir)
-      await this._resolveTemplate()
       debug?.(`templateRootPath`, this._templateRootPath)
 
       const configFile = await tryPaths([
@@ -129,20 +133,48 @@ export class Create {
 
       await runner.run(targetDir, projectName)
     } finally {
-      if (!this._isLocal && (await isPathExists(this._templateRootPath))) {
+      if (
+        !this._isLocal &&
+        this._templateRootPath &&
+        (await isPathExists(this._templateRootPath))
+      ) {
         await remove(this._templateRootPath)
       }
     }
   }
 
   /**
+   * Resolve the project target and ensure destructive operations cannot escape
+   * the configured working directory.
+   */
+  private _resolveTargetDir(projectName: string): string {
+    const cwd = path.resolve(this.cwd)
+    const targetDir = path.resolve(cwd, projectName)
+    const relativeTarget = path.relative(cwd, targetDir)
+
+    if (
+      !projectName.trim() ||
+      !relativeTarget ||
+      relativeTarget === '..' ||
+      relativeTarget.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(relativeTarget)
+    ) {
+      throw new AppError(
+        `Invalid project name ${chalk.cyan(projectName)}: target directory must be inside ${chalk.cyan(cwd)}.`,
+      )
+    }
+
+    return targetDir
+  }
+
+  /**
    * 解析模版
    */
-  private async _resolveTemplate() {
+  private async _resolveTemplate(): Promise<boolean> {
     if (isString(this.template)) {
       // 处理本地模版
-      if (this.template.startsWith('.') || this.template.startsWith('/')) {
-        const templateRootPath = join(this.cwd, this.template)
+      if (this.template.startsWith('.') || path.isAbsolute(this.template)) {
+        const templateRootPath = path.resolve(this.cwd, this.template)
 
         if (!(await isDirectory(templateRootPath))) {
           throw new AppError(
@@ -152,7 +184,7 @@ export class Create {
 
         this._templateRootPath = templateRootPath
         this._isLocal = true
-        return
+        return true
       }
 
       // 处理 node_modules
@@ -175,7 +207,7 @@ export class Create {
           { cwd, type: 'directory' },
         )) as string
         this._isLocal = true
-        return
+        return true
       } catch (_) {
         this.template = {
           type: 'npm',
@@ -184,7 +216,30 @@ export class Create {
       }
     }
 
-    const download = new Download(this.template)
+    if (!this.template.trusted && !this.constructorOptions.yes) {
+      logger.warn(
+        `Remote template ${chalk.cyan(this.template.value)} can execute code with your user permissions.`,
+      )
+      const { confirmed } = await prompts({
+        name: 'confirmed',
+        type: 'confirm',
+        message: 'Download and execute this template?',
+        initial: false,
+      })
+
+      if (confirmed !== true) {
+        return false
+      }
+    }
+
+    const downloadOptions: DownloadOptions = { ...this.template }
+    if (this.constructorOptions.allowTemplateScripts !== undefined) {
+      downloadOptions.allowScripts =
+        this.constructorOptions.allowTemplateScripts
+    }
+
+    const download = new Download(downloadOptions)
     this._templateRootPath = await download.download()
+    return true
   }
 }

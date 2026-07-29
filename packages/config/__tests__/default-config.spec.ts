@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { ConfigManager } from '../src/config'
 import { cleanupDir, createConfigFile, createTempDir } from './test-utils'

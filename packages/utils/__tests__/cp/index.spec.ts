@@ -1,3 +1,14 @@
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+  type MockedFunction,
+} from 'vitest'
+import * as importedModule0 from '../../src/file'
+import * as importedModule1 from '../../src/type'
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable @typescript-eslint/no-var-requires */
 import execa from 'execa'
@@ -17,51 +28,56 @@ import {
   SudoOptions,
 } from '../../src/cp'
 
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+const requiredModule1 = vi.mocked(importedModule1, { deep: true })
+
 // Mock 依赖项
-jest.mock('execa')
-jest.mock('node:child_process')
-jest.mock('read')
-jest.mock('../../src/file')
-jest.mock('../../src/type')
-jest.mock('../../src/cp/command', () => ({
-  ...jest.requireActual('../../src/cp/command'),
-  getExecutableCommand: jest.fn(),
+vi.mock('execa')
+vi.mock('node:child_process')
+vi.mock('read')
+vi.mock('../../src/file')
+vi.mock('../../src/type')
+vi.mock('../../src/cp/command', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../src/cp/command')>()),
+  getExecutableCommand: vi.fn(),
 }))
 
 // 定义类型
 interface MockChildProcess {
   stdout: {
-    on: jest.MockedFunction<
+    on: MockedFunction<
       (event: string, callback: (chunk: Buffer) => void) => void
     >
   }
   stderr: {
-    on: jest.MockedFunction<
+    on: MockedFunction<
       (event: string, callback: (chunk: Buffer) => void) => void
     >
   }
   stdin: {
-    write: jest.MockedFunction<(data: string) => void>
+    write: MockedFunction<(data: string) => void>
   }
 }
 
 describe('命令处理工具函数', () => {
-  const mockExeca = execa as jest.MockedFunction<typeof execa>
-  const mockSpawn = cp.spawn as jest.MockedFunction<typeof cp.spawn>
-  const mockRead = read as jest.MockedFunction<typeof read>
-  const mockIsPathExists = require('../../src/file')
-    .isPathExists as jest.MockedFunction<(path: string) => Promise<boolean>>
-  const mockIsObject = require('../../src/type')
-    .isObject as jest.MockedFunction<(value: unknown) => boolean>
-  const mockIsArray = require('../../src/type').isArray as jest.MockedFunction<
+  const mockExeca = execa as unknown as Mock
+  const mockSpawn = cp.spawn as MockedFunction<typeof cp.spawn>
+  const mockRead = read as MockedFunction<typeof read>
+  const mockIsPathExists = requiredModule0.isPathExists as MockedFunction<
+    (path: string) => Promise<boolean>
+  >
+  const mockIsObject = requiredModule1.isObject as MockedFunction<
     (value: unknown) => boolean
   >
-  const mockGetExecutableCommand = getExecutableCommand as jest.MockedFunction<
+  const mockIsArray = requiredModule1.isArray as MockedFunction<
+    (value: unknown) => boolean
+  >
+  const mockGetExecutableCommand = getExecutableCommand as MockedFunction<
     typeof getExecutableCommand
   >
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     mockIsObject.mockImplementation(
       (value: unknown): value is Record<string, unknown> =>
         value !== null && typeof value === 'object' && !Array.isArray(value),
@@ -159,7 +175,9 @@ describe('命令处理工具函数', () => {
     })
 
     it('应该在 verbose 为 true 时打印命令', () => {
-      const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation()
+      const mockConsoleLog = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined)
       const mockProcess = { stdout: 'success' } as unknown as ReturnType<
         typeof execa
       >
@@ -364,9 +382,9 @@ describe('命令处理工具函数', () => {
 
     beforeEach(() => {
       mockChildProcess = {
-        stdout: { on: jest.fn() },
-        stderr: { on: jest.fn() },
-        stdin: { write: jest.fn() },
+        stdout: { on: vi.fn() },
+        stderr: { on: vi.fn() },
+        stdin: { write: vi.fn() },
       }
       mockSpawn.mockReturnValue(mockChildProcess as unknown as ChildProcess)
 
@@ -400,7 +418,9 @@ describe('命令处理工具函数', () => {
     })
 
     it('应该处理 stdout 数据', async () => {
-      const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation()
+      const mockConsoleLog = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined)
       mockIsObject.mockReturnValue(false)
 
       await sudo(['echo', 'test'])
@@ -472,7 +492,7 @@ describe('命令处理工具函数', () => {
       expect(mockRead).toHaveBeenCalledTimes(1)
 
       // 重置 mock 以进行第二次调用
-      jest.clearAllMocks()
+      vi.clearAllMocks()
       mockSpawn.mockReturnValue(mockChildProcess as unknown as ChildProcess)
 
       // 第二次调用应该使用缓存的密码
@@ -489,7 +509,9 @@ describe('命令处理工具函数', () => {
     })
 
     it('应该记录非密码提示的 stderr 消息', async () => {
-      const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation()
+      const mockConsoleLog = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined)
       mockIsObject.mockReturnValue(false)
 
       await sudo(['ls'])

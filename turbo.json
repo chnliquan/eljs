@@ -12,13 +12,17 @@
       "cache": false
     },
     "test": {
-      "outputs": [".jest-cache/**"]
+      "outputs": [".vitest-cache/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
+      "outputs": []
     }
   },
   "globalDependencies": [
     "tsconfig.base.json",
     "tsconfig.json",
-    "jest.config.js",
+    "vitest.config.ts",
     ".fatherrc.base.ts"
   ]
 }

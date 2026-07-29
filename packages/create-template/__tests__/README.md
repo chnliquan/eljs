@@ -59,7 +59,7 @@
 
 ### 依赖 Mock 策略
 - Mock 了所有外部依赖：`@eljs/create`、`@eljs/utils`、`node:assert`、`../src/utils`
-- 使用 Jest 的 mock 功能进行依赖隔离
+- 使用 Vitest 的 mock 功能进行依赖隔离
 - 每个测试用例前清理 mock 状态
 
 ### 中文注释和测试描述

@@ -1,23 +1,35 @@
 import type { CopyFileOptions } from '@eljs/utils'
+import * as mockedUtils from '@eljs/utils'
+import * as mockedPath from 'node:path'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mocked,
+  type MockedFunction,
+} from 'vitest'
 
 import generatorPlugin from '../../../src/internal/plugins/generator'
 import type { Api } from '../../../src/types'
 
 // Mock @eljs/utils
-jest.mock('@eljs/utils', () => ({
-  copyDirectory: jest.fn(),
-  copyFile: jest.fn(),
-  copyTpl: jest.fn(),
+vi.mock('@eljs/utils', () => ({
+  copyDirectory: vi.fn(),
+  copyFile: vi.fn(),
+  copyTpl: vi.fn(),
 }))
 
 // Mock node:path
-jest.mock('node:path', () => ({
-  resolve: jest.fn((...args: string[]) => args.join('/')),
+vi.mock('node:path', () => ({
+  resolve: vi.fn((...args: string[]) => args.join('/')),
 }))
 
 // Mock types
 interface MockUtils {
-  copyDirectory: jest.MockedFunction<
+  copyDirectory: MockedFunction<
     (
       from: string,
       to: string,
@@ -25,10 +37,10 @@ interface MockUtils {
       options: CopyFileOptions,
     ) => Promise<void>
   >
-  copyFile: jest.MockedFunction<
+  copyFile: MockedFunction<
     (from: string, to: string, options: CopyFileOptions) => Promise<void>
   >
-  copyTpl: jest.MockedFunction<
+  copyTpl: MockedFunction<
     (
       from: string,
       to: string,
@@ -39,11 +51,11 @@ interface MockUtils {
 }
 
 interface MockPath {
-  resolve: jest.MockedFunction<(...args: string[]) => string>
+  resolve: MockedFunction<(...args: string[]) => string>
 }
 
 describe('内部插件 generator', () => {
-  let mockApi: jest.Mocked<Api>
+  let mockApi: Mocked<Api>
   let resolveCallback: (...paths: string[]) => string
   let copyFileCallback: (
     from: string,
@@ -66,11 +78,11 @@ describe('内部插件 generator', () => {
   let mockPath: MockPath
 
   beforeEach(() => {
-    mockUtils = jest.requireMock('@eljs/utils') as MockUtils
-    mockPath = jest.requireMock('node:path') as MockPath
+    mockUtils = mockedUtils as unknown as MockUtils
+    mockPath = mockedPath as unknown as MockPath
 
     mockApi = {
-      registerMethod: jest.fn((name: string, fn: unknown) => {
+      registerMethod: vi.fn((name: string, fn: unknown) => {
         if (name === 'resolve') {
           resolveCallback = fn as (...paths: string[]) => string
         } else if (name === 'copyFile') {
@@ -98,11 +110,11 @@ describe('内部插件 generator', () => {
       paths: {
         target: '/test/project',
       },
-    } as unknown as jest.Mocked<Api>
+    } as unknown as Mocked<Api>
   })
 
   afterEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   it('应该是一个函数', () => {

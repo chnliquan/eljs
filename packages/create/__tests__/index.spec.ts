@@ -1,15 +1,16 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 /**
  * @file packages/create/src/index.ts 的单元测试
  * @description 测试主入口文件的导出功能和模块副作用
  */
 
 // Mock require-hook 模块以避免副作用
-jest.mock('../src/require-hook', () => ({
+vi.mock('../src/require-hook', () => ({
   hookPropertyMap: new Map(),
 }))
 
 // Mock 其他依赖模块
-jest.mock('../src/core', () => ({
+vi.mock('../src/core', () => ({
   Create: class MockCreate {
     public options: unknown
     public constructor(options: unknown) {
@@ -18,7 +19,7 @@ jest.mock('../src/core', () => ({
   },
 }))
 
-jest.mock('../src/default', () => ({
+vi.mock('../src/default', () => ({
   defaultConfig: {
     cwd: process.cwd(),
     force: false,
@@ -28,18 +29,18 @@ jest.mock('../src/default', () => ({
   },
 }))
 
-jest.mock('../src/define', () => ({
-  defineConfig: jest.fn((config: unknown) => config),
+vi.mock('../src/define', () => ({
+  defineConfig: vi.fn((config: unknown) => config),
 }))
 
-jest.mock('../src/types', () => ({
+vi.mock('../src/types', () => ({
   // Mock types exports - types are compile-time only
 }))
 
 describe('入口文件', () => {
   // 清除所有 mock 在每个测试之间
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   describe('模块导入和副作用', () => {
@@ -51,7 +52,7 @@ describe('入口文件', () => {
       expect(indexModule).toBeDefined()
 
       // 验证 require-hook 模块的 mock 被调用
-      expect(jest.isMockFunction).toBeDefined()
+      expect(vi.isMockFunction).toBeDefined()
     })
 
     it('require-hook 模块应该在其他导出之前被导入', async () => {
@@ -104,9 +105,8 @@ describe('入口文件', () => {
 
     it('defaultConfig 应该来自 default 模块', async () => {
       const { defaultConfig } = await import('../src/index')
-      const { defaultConfig: DefaultConfigFromSource } = await import(
-        '../src/default'
-      )
+      const { defaultConfig: DefaultConfigFromSource } =
+        await import('../src/default')
 
       expect(defaultConfig).toBe(DefaultConfigFromSource)
     })
@@ -132,9 +132,8 @@ describe('入口文件', () => {
 
     it('defineConfig 应该来自 define 模块', async () => {
       const { defineConfig } = await import('../src/index')
-      const { defineConfig: DefineConfigFromSource } = await import(
-        '../src/define'
-      )
+      const { defineConfig: DefineConfigFromSource } =
+        await import('../src/define')
 
       expect(defineConfig).toBe(DefineConfigFromSource)
     })
@@ -217,9 +216,9 @@ describe('入口文件', () => {
       }
 
       // Mock 控制台方法来检测意外输出
-      const mockLog = jest.fn()
-      const mockWarn = jest.fn()
-      const mockError = jest.fn()
+      const mockLog = vi.fn()
+      const mockWarn = vi.fn()
+      const mockError = vi.fn()
 
       console.log = mockLog
       console.warn = mockWarn
@@ -267,9 +266,8 @@ describe('入口文件', () => {
   describe('ESM/CommonJS 兼容性', () => {
     it('模块应该支持 ESM 导入方式', async () => {
       // 测试具名导入
-      const { Create, defaultConfig, defineConfig } = await import(
-        '../src/index'
-      )
+      const { Create, defaultConfig, defineConfig } =
+        await import('../src/index')
 
       expect(Create).toBeDefined()
       expect(defaultConfig).toBeDefined()
@@ -382,9 +380,8 @@ describe('入口文件', () => {
   describe('TypeScript 集成', () => {
     it('应该提供正确的 TypeScript 类型', async () => {
       // 这个测试主要验证编译时类型，运行时我们检查结构
-      const { Create, defaultConfig, defineConfig } = await import(
-        '../src/index'
-      )
+      const { Create, defaultConfig, defineConfig } =
+        await import('../src/index')
 
       // 验证 Create 类的基本结构
       expect(typeof Create).toBe('function')
@@ -409,9 +406,8 @@ describe('入口文件', () => {
 
   describe('实际使用场景', () => {
     it('应该支持基本的使用模式', async () => {
-      const { Create, defaultConfig, defineConfig } = await import(
-        '../src/index'
-      )
+      const { Create, defaultConfig, defineConfig } =
+        await import('../src/index')
 
       // 测试 defineConfig 的使用
       const config = defineConfig({
@@ -459,9 +455,8 @@ describe('入口文件', () => {
     })
 
     it('应该支持链式使用模式', async () => {
-      const { Create, defineConfig, defaultConfig } = await import(
-        '../src/index'
-      )
+      const { Create, defineConfig, defaultConfig } =
+        await import('../src/index')
 
       // 模拟链式使用
       const config = defineConfig({

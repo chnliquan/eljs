@@ -1,5 +1,18 @@
+import * as mockedUtils from '@eljs/utils'
+import * as mockedChildProcess from 'node:child_process'
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mocked,
+  type MockedFunction,
+} from 'vitest'
 import promptsPlugin from '../../../src/internal/plugins/prompts'
+import * as mockedInternalUtils from '../../../src/internal/utils'
 import type { Api } from '../../../src/types'
+import * as mockedSrcUtils from '../../../src/utils'
 
 // Mock types
 interface Question {
@@ -26,7 +39,7 @@ interface PromptMemo {
 }
 
 interface MockUtils {
-  prompts: jest.MockedFunction<
+  prompts: MockedFunction<
     (
       questions: Question[],
       options: { onCancel: () => void },
@@ -35,28 +48,28 @@ interface MockUtils {
 }
 
 interface MockChildProcess {
-  execSync: jest.MockedFunction<(command: string) => string>
+  execSync: MockedFunction<(command: string) => string>
 }
 
 interface MockSrcUtils {
-  onCancel: jest.MockedFunction<() => void>
+  onCancel: MockedFunction<() => void>
 }
 
 interface MockInternalUtils {
   author: string
   email: string
-  getGitHref: jest.MockedFunction<(gitUrl: string) => string>
+  getGitHref: MockedFunction<(gitUrl: string) => string>
 }
 
 // Mock @eljs/utils
-jest.mock('@eljs/utils', () => ({
-  prompts: jest.fn(),
+vi.mock('@eljs/utils', () => ({
+  prompts: vi.fn(),
 }))
 
 // Mock dayjs
-jest.mock('dayjs', () => {
+vi.mock('dayjs', () => {
   const mockDayjs = () => ({
-    format: jest.fn((format: string) => {
+    format: vi.fn((format: string) => {
       switch (format) {
         case 'YYYY':
           return '2023'
@@ -69,27 +82,27 @@ jest.mock('dayjs', () => {
       }
     }),
   })
-  return mockDayjs
+  return { default: mockDayjs }
 })
 
 // Mock node:child_process
-jest.mock('node:child_process', () => ({
-  execSync: jest.fn(() => 'https://custom-registry.com\n'),
+vi.mock('node:child_process', () => ({
+  execSync: vi.fn(() => 'https://custom-registry.com\n'),
 }))
 
 // Mock utils and internal utils
-jest.mock('../../../src/utils', () => ({
-  onCancel: jest.fn(),
+vi.mock('../../../src/utils', () => ({
+  onCancel: vi.fn(),
 }))
 
-jest.mock('../../../src/internal/utils', () => ({
+vi.mock('../../../src/internal/utils', () => ({
   author: 'Test Author',
   email: 'test@example.com',
-  getGitHref: jest.fn(() => 'https://github.com/test/repo'),
+  getGitHref: vi.fn(() => 'https://github.com/test/repo'),
 }))
 
 describe('内部插件 prompts', () => {
-  let mockApi: jest.Mocked<Api>
+  let mockApi: Mocked<Api>
   let firstModifyPromptsCallback: (
     memo: PromptMemo,
     context?: PromptContext,
@@ -102,17 +115,13 @@ describe('内部插件 prompts', () => {
 
   beforeEach(() => {
     let callbackIndex = 0
-    mockUtils = jest.requireMock('@eljs/utils') as MockUtils
-    mockChildProcess = jest.requireMock(
-      'node:child_process',
-    ) as MockChildProcess
-    mockSrcUtils = jest.requireMock('../../../src/utils') as MockSrcUtils
-    mockInternalUtils = jest.requireMock(
-      '../../../src/internal/utils',
-    ) as MockInternalUtils
+    mockUtils = mockedUtils as unknown as MockUtils
+    mockChildProcess = mockedChildProcess as unknown as MockChildProcess
+    mockSrcUtils = mockedSrcUtils as unknown as MockSrcUtils
+    mockInternalUtils = mockedInternalUtils as unknown as MockInternalUtils
 
     mockApi = {
-      modifyPrompts: jest.fn((callback: unknown) => {
+      modifyPrompts: vi.fn((callback: unknown) => {
         if (callbackIndex === 0) {
           firstModifyPromptsCallback = callback as (
             memo: PromptMemo,
@@ -125,9 +134,9 @@ describe('内部插件 prompts', () => {
         }
         callbackIndex++
       }),
-    } as unknown as jest.Mocked<Api>
+    } as unknown as Mocked<Api>
 
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   it('应该是一个函数', () => {

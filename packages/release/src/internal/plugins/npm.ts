@@ -44,78 +44,85 @@ export default (api: Api) => {
     }
   })
 
-  api.onRelease(async ({ version, prereleaseId }) => {
-    const {
-      registry,
-      branch,
-      validPkgNames,
-      validPkgRootPaths,
-      packageManager,
-    } = api.appData
+  api.onRelease(
+    async ({ version, prereleaseId }) => {
+      const {
+        registry,
+        branch,
+        validPkgNames,
+        validPkgRootPaths,
+        packageManager,
+      } = api.appData
 
-    api.step('Publishing package ...')
+      api.step('Publishing package ...')
 
-    const promiseArr = []
-    const errors: string[] = []
-
-    for (let i = 0; i < validPkgRootPaths.length; i++) {
-      const pkgRootPath = validPkgRootPaths[i]
-      const pkgName = validPkgNames[i]
-
-      try {
-        promiseArr.push(publishPackage(pkgRootPath, pkgName, version))
-      } catch (error) {
-        errors.push(pkgName)
-      }
-    }
-
-    const settledResults = await Promise.allSettled(promiseArr)
-
-    for (let i = 0; i < settledResults.length; i++) {
-      const settledResult = settledResults[i]
-      if (settledResult.status === 'rejected') {
-        console.log()
-        logger.error(
-          `Published ${chalk.cyan(`${validPkgNames[i]}@${version}`)} failed.`,
-        )
-
-        const errorMessage =
-          settledResult.reason?.message ?? settledResult.reason
-        console.log(`Error: ${errorMessage}`)
-      }
-    }
-
-    async function publishPackage(
-      pkgRootPath: string,
-      pkgName: string,
-      version: string,
-    ) {
-      const tagArg = prereleaseId ? ['--tag', prereleaseId] : ''
-      const registryArg = registry ? ['--registry', registry] : ''
-      const { requireBranch } = api.config.git
-      const gitCheckArg = requireBranch
-        ? ['--publish-branch', requireBranch]
-        : ['master', 'main'].includes(branch)
-          ? []
-          : ['--no-git-checks']
-
-      const cliArgs = [
-        'publish',
-        ...tagArg,
-        ...registryArg,
-        ...gitCheckArg,
-        ...normalizeArgs(api.config.npm.publishArgs),
-      ].filter(Boolean)
-
-      await run(packageManager, cliArgs, {
-        cwd: pkgRootPath,
-        verbose: true,
-        stdin: 'inherit',
-      })
-
-      logger.ready(
-        `Published ${chalk.bold.cyan(`${pkgName}@${version}`)} successfully.`,
+      const publishTasks = validPkgRootPaths.map((pkgRootPath, index) =>
+        publishPackage(pkgRootPath, validPkgNames[index], version),
       )
-    }
-  })
+      const settledResults = await Promise.allSettled(publishTasks)
+      const failedPackages: string[] = []
+
+      for (let i = 0; i < settledResults.length; i++) {
+        const settledResult = settledResults[i]
+        if (settledResult.status === 'rejected') {
+          const pkgName = validPkgNames[i]
+          failedPackages.push(pkgName)
+
+          console.log()
+          logger.error(
+            `Published ${chalk.cyan(`${pkgName}@${version}`)} failed.`,
+          )
+
+          const errorMessage =
+            settledResult.reason?.message ?? settledResult.reason
+          console.log(`Error: ${errorMessage}`)
+        }
+      }
+
+      if (failedPackages.length > 0) {
+        throw new AppError(
+          `Failed to publish ${failedPackages
+            .map(pkgName => `${pkgName}@${version}`)
+            .join(', ')}. Git changes were not pushed.`,
+        )
+      }
+
+      async function publishPackage(
+        pkgRootPath: string,
+        pkgName: string,
+        version: string,
+      ) {
+        const tagArg = prereleaseId ? ['--tag', prereleaseId] : []
+        const registryArg = registry ? ['--registry', registry] : []
+        const { requireBranch } = api.config.git
+        const gitCheckArg = requireBranch
+          ? ['--publish-branch', requireBranch]
+          : ['master', 'main'].includes(branch)
+            ? []
+            : ['--no-git-checks']
+
+        const cliArgs = [
+          'publish',
+          ...tagArg,
+          ...registryArg,
+          ...gitCheckArg,
+          ...normalizeArgs(api.config.npm.publishArgs),
+        ].filter(Boolean)
+
+        await run(packageManager, cliArgs, {
+          cwd: pkgRootPath,
+          verbose: true,
+          stdin: 'inherit',
+        })
+
+        logger.ready(
+          `Published ${chalk.bold.cyan(`${pkgName}@${version}`)} successfully.`,
+        )
+      }
+    },
+    {
+      // Publish after the local release commit/tag, but before any remote push.
+      stage: 0,
+    },
+  )
 }

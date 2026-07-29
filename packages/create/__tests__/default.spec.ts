@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 import { defaultConfig } from '../src/default'
 import type { Config } from '../src/types/config'
 
@@ -138,11 +139,13 @@ describe('defaultConfig', () => {
     it('应该在不同环境下保持一致的配置结构', () => {
       const configKeys = Object.keys(defaultConfig).sort()
       const expectedKeys = [
+        'allowTemplateScripts',
         'cwd',
         'force',
         'defaultQuestions',
         'gitInit',
         'install',
+        'yes',
       ].sort()
 
       expect(configKeys).toEqual(expectedKeys)
@@ -194,11 +197,13 @@ describe('defaultConfig', () => {
 
     it('不应该包含额外的未定义属性', () => {
       const allowedKeys = [
+        'allowTemplateScripts',
         'cwd',
         'force',
         'defaultQuestions',
         'gitInit',
         'install',
+        'yes',
       ]
       const actualKeys = Object.keys(defaultConfig)
 

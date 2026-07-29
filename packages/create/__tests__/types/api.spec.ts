@@ -4,6 +4,7 @@ import type {
   RenderTemplateOptions,
   RunCommandOptions,
 } from '@eljs/utils'
+import { describe, expect, it, vi } from 'vitest'
 
 import type { Api } from '../../src/types/api'
 
@@ -11,13 +12,13 @@ describe('Api 类型', () => {
   it('应该具有正确的 Api 类型结构', () => {
     // Test that Api type extends the expected base types
     const mockApi: Partial<Api> = {
-      copyFile: jest.fn(),
-      copyTpl: jest.fn(),
-      copyDirectory: jest.fn(),
-      render: jest.fn(),
-      extendPackage: jest.fn(),
-      resolve: jest.fn(),
-      install: jest.fn(),
+      copyFile: vi.fn(),
+      copyTpl: vi.fn(),
+      copyDirectory: vi.fn(),
+      render: vi.fn(),
+      extendPackage: vi.fn(),
+      resolve: vi.fn(),
+      install: vi.fn(),
     }
 
     expect(typeof mockApi.copyFile).toBe('function')
@@ -30,7 +31,7 @@ describe('Api 类型', () => {
   })
 
   it('应该正确定义 copyFile 方法签名', () => {
-    const mockCopyFile = jest.fn() as Api['copyFile']
+    const mockCopyFile = vi.fn() as Api['copyFile']
     const mockOptions: CopyFileOptions = {}
 
     expect(() => {
@@ -45,7 +46,7 @@ describe('Api 类型', () => {
   })
 
   it('应该正确定义 copyTpl 方法签名', () => {
-    const mockCopyTpl = jest.fn() as Api['copyTpl']
+    const mockCopyTpl = vi.fn() as Api['copyTpl']
     const mockData = { name: 'test' }
     const mockOptions: CopyFileOptions = {}
 
@@ -62,7 +63,7 @@ describe('Api 类型', () => {
   })
 
   it('应该正确定义 copyDirectory 方法签名', () => {
-    const mockCopyDirectory = jest.fn() as Api['copyDirectory']
+    const mockCopyDirectory = vi.fn() as Api['copyDirectory']
     const mockData = { name: 'test' }
     const mockOptions: CopyFileOptions = {}
 
@@ -79,7 +80,7 @@ describe('Api 类型', () => {
   })
 
   it('应该正确定义 render 方法签名', () => {
-    const mockRender = jest.fn() as Api['render']
+    const mockRender = vi.fn() as Api['render']
     const mockData = { name: 'test' }
     const mockOptions: RenderTemplateOptions = {}
 
@@ -95,8 +96,8 @@ describe('Api 类型', () => {
   })
 
   it('应该支持 extendPackage 方法的两种签名', () => {
-    const mockExtendPackagePartial = jest.fn() as Api['extendPackage']
-    const mockExtendPackageFn = jest.fn() as Api['extendPackage']
+    const mockExtendPackagePartial = vi.fn() as Api['extendPackage']
+    const mockExtendPackageFn = vi.fn() as Api['extendPackage']
     const mockPartial: PackageJson = { name: 'test' }
     const mockFn = (memo: PackageJson) => ({ ...memo, version: '1.0.0' })
 
@@ -112,7 +113,7 @@ describe('Api 类型', () => {
   })
 
   it('应该正确定义 resolve 方法签名', () => {
-    const mockResolve = jest
+    const mockResolve = vi
       .fn()
       .mockReturnValue('/resolved/path') as Api['resolve']
 
@@ -124,7 +125,7 @@ describe('Api 类型', () => {
   })
 
   it('应该支持 install 方法的两种签名', () => {
-    const mockInstall = jest.fn() as Api['install']
+    const mockInstall = vi.fn() as Api['install']
     const mockOptions: RunCommandOptions = {}
     const mockArgs = ['--save-dev']
 
@@ -158,13 +159,13 @@ describe('Api 类型', () => {
     // 测试 Api 包含来自 PluggablePluginApi 和 RunnerPluginApi 的属性
     // 这更像是类型级别的测试，以确保交叉类型正常工作
     const mockApi: Partial<Api> = {
-      copyFile: jest.fn(),
-      copyTpl: jest.fn(),
-      copyDirectory: jest.fn(),
-      render: jest.fn(),
-      extendPackage: jest.fn(),
-      resolve: jest.fn(),
-      install: jest.fn(),
+      copyFile: vi.fn(),
+      copyTpl: vi.fn(),
+      copyDirectory: vi.fn(),
+      render: vi.fn(),
+      extendPackage: vi.fn(),
+      resolve: vi.fn(),
+      install: vi.fn(),
     }
 
     // 验证 Api 类型包含预期的方法

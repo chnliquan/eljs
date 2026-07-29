@@ -29,6 +29,10 @@ export interface CreateTemplateOptions {
    * 是否合并已存在文件夹
    */
   merge?: boolean
+  /**
+   * 是否允许模板依赖安装脚本
+   */
+  allowTemplateScripts?: boolean
 }
 
 export class CreateTemplate {

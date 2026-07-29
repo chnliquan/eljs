@@ -1,23 +1,33 @@
 import * as eljsUtils from '@eljs/utils'
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mocked,
+} from 'vitest'
 import { AppError, onCancel } from '../src/utils'
 
 // Mock @eljs/utils
-jest.mock('@eljs/utils', () => ({
+vi.mock('@eljs/utils', () => ({
   logger: {
-    event: jest.fn(),
+    event: vi.fn(),
   },
 }))
 
-const mockedEljs = eljsUtils as jest.Mocked<typeof eljsUtils>
+const mockedEljs = eljsUtils as Mocked<typeof eljsUtils>
 
 // Mock process.exit
-const mockProcessExit = jest.spyOn(process, 'exit').mockImplementation(() => {
+const mockProcessExit = vi.spyOn(process, 'exit').mockImplementation(() => {
   throw new Error('process.exit called')
 })
 
 describe('工具函数模块', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   afterEach(() => {

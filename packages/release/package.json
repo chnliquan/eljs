@@ -19,7 +19,6 @@
   "license": "MIT",
   "author": "chnliquan",
   "main": "lib/index.js",
-  "module": "esm/index.js",
   "types": "esm/index.d.ts",
   "bin": {
     "release": "bin/release.js"
@@ -32,7 +31,8 @@
   "scripts": {
     "build": "father build",
     "clean": "rimraf lib && rimraf esm && rimraf node_modules/.cache/father",
-    "dev": "father dev"
+    "dev": "father dev",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json"
   },
   "dependencies": {
     "@eljs/conventional-changelog-preset": "workspace:*",
@@ -63,7 +63,7 @@
     }
   },
   "engines": {
-    "node": ">=16.20.0"
+    "node": ">=22.14.0"
   },
   "publishConfig": {
     "access": "public",

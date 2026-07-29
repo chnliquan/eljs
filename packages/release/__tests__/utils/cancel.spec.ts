@@ -1,3 +1,11 @@
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
 /**
  * @file packages/release utils/cancel 模块单元测试
  * @description 测试 cancel.ts 取消功能
@@ -7,24 +15,24 @@ import { logger } from '@eljs/utils'
 import { onCancel } from '../../src/utils/cancel'
 
 // 模拟 @eljs/utils 的 logger
-jest.mock('@eljs/utils', () => ({
+vi.mock('@eljs/utils', () => ({
   logger: {
-    event: jest.fn(),
+    event: vi.fn(),
   },
 }))
 
 describe('用户取消功能测试', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   describe('onCancel 函数基本功能', () => {
     it('应该记录取消发布事件', () => {
-      const mockLoggerEvent = logger.event as jest.MockedFunction<
+      const mockLoggerEvent = logger.event as MockedFunction<
         typeof logger.event
       >
 
-      // 现在 process.exit 已经在 jest.setup.js 中被全局模拟了
+      // 现在 process.exit 已经在 vi.setup.js 中被全局模拟了
       onCancel()
 
       expect(mockLoggerEvent).toHaveBeenCalledWith('Cancel release')
@@ -59,7 +67,7 @@ describe('用户取消功能测试', () => {
     })
 
     it('应该记录正确的事件消息', () => {
-      const mockLoggerEvent = logger.event as jest.MockedFunction<
+      const mockLoggerEvent = logger.event as MockedFunction<
         typeof logger.event
       >
 
@@ -84,7 +92,7 @@ describe('用户取消功能测试', () => {
     })
 
     it('应该能够多次调用而不出现副作用', () => {
-      const mockLoggerEvent = logger.event as jest.MockedFunction<
+      const mockLoggerEvent = logger.event as MockedFunction<
         typeof logger.event
       >
 
@@ -94,7 +102,7 @@ describe('用户取消功能测试', () => {
       expect(process.exit).toHaveBeenCalledTimes(1)
 
       // 清除模拟调用记录
-      jest.clearAllMocks()
+      vi.clearAllMocks()
 
       // 第二次调用
       onCancel()
@@ -105,7 +113,7 @@ describe('用户取消功能测试', () => {
 
   describe('onCancel 函数错误处理', () => {
     it('当 logger.event 抛出错误时函数应该抛出错误', () => {
-      const mockLoggerEvent = logger.event as jest.MockedFunction<
+      const mockLoggerEvent = logger.event as MockedFunction<
         typeof logger.event
       >
       mockLoggerEvent.mockImplementation(() => {

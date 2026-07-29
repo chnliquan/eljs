@@ -1,30 +1,47 @@
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
+import * as importedModule0 from '../../src/cp'
+import * as importedModule2 from '../../src/git/meta'
+import * as importedModule1 from '../../src/type'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { gitCommit, gitPush, gitTag } from '../../src/git/operate'
 
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+const requiredModule2 = vi.mocked(importedModule2, { deep: true })
+const requiredModule1 = vi.mocked(importedModule1, { deep: true })
+
 // Mock 依赖项
-jest.mock('../../src/cp')
-jest.mock('../../src/type')
-jest.mock('../../src/git/meta')
+vi.mock('../../src/cp')
+vi.mock('../../src/type')
+vi.mock('../../src/git/meta')
 
 describe('Git 操作工具', () => {
-  const mockRun = require('../../src/cp').run as jest.MockedFunction<
+  const mockRun = requiredModule0.run as MockedFunction<
     (
       command: string,
       args: string[],
       options?: unknown,
     ) => Promise<{ stdout: string }>
   >
-  const mockIsObject = require('../../src/type')
-    .isObject as jest.MockedFunction<(value: unknown) => boolean>
-  const mockGetGitBranch = require('../../src/git/meta')
-    .getGitBranch as jest.MockedFunction<(options?: unknown) => Promise<string>>
-  const mockGetGitUpstreamBranch = require('../../src/git/meta')
-    .getGitUpstreamBranch as jest.MockedFunction<
-    (options?: unknown) => Promise<string | null>
+  const mockIsObject = requiredModule1.isObject as MockedFunction<
+    (value: unknown) => boolean
   >
+  const mockGetGitBranch = requiredModule2.getGitBranch as MockedFunction<
+    (options?: unknown) => Promise<string>
+  >
+  const mockGetGitUpstreamBranch =
+    requiredModule2.getGitUpstreamBranch as MockedFunction<
+      (options?: unknown) => Promise<string | null>
+    >
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // Default mocks
     mockIsObject.mockReturnValue(false)

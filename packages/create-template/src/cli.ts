@@ -7,9 +7,7 @@ import { CreateTemplate } from './create'
 import { onCancel } from './utils'
 
 export async function cli() {
-  process.on('SIGINT', () => {
-    onCancel()
-  })
+  registerSignalHandler()
 
   try {
     await main()
@@ -18,6 +16,16 @@ export async function cli() {
     console.error(error)
     process.exit(1)
   }
+}
+
+function registerSignalHandler() {
+  if (!process.listeners('SIGINT').includes(handleSigint)) {
+    process.on('SIGINT', handleSigint)
+  }
+}
+
+function handleSigint() {
+  onCancel()
 }
 
 async function main() {
@@ -38,6 +46,10 @@ async function main() {
     .option('-t, --template <template>', 'Specify a application template')
     .option('-f, --force', 'Overwrite target directory if it exists')
     .option('-m, --merge', 'Merge target directory if it exists')
+    .option(
+      '--allow-template-scripts',
+      'Allow lifecycle scripts while installing template dependencies',
+    )
     .action(async (projectName, options) => {
       debug?.(`projectName:`, projectName)
       debug?.(`options:%O`, options)

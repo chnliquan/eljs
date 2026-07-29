@@ -1,3 +1,17 @@
+import * as importedModule3 from 'execa'
+import * as importedModule4 from 'ini'
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mocked,
+  type MockedFunction,
+} from 'vitest'
+import * as importedModule0 from '../../src/cp'
+import * as importedModule2 from '../../src/file'
+import * as importedModule1 from '../../src/type'
 /* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable @typescript-eslint/no-var-requires */
 import os from 'node:os'
@@ -18,46 +32,58 @@ import {
   gitUrlAnalysis,
 } from '../../src/git/meta'
 
+const requiredModule3 = vi.mocked(importedModule3, { deep: true })
+const requiredModule4 = vi.mocked(importedModule4, { deep: true })
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+const requiredModule2 = vi.mocked(importedModule2, { deep: true })
+const requiredModule1 = vi.mocked(importedModule1, { deep: true })
+
 // Mock 依赖项
-jest.mock('../../src/cp')
-jest.mock('../../src/type')
-jest.mock('../../src/file')
-jest.mock('execa')
-jest.mock('ini')
-jest.mock('node:os')
+vi.mock('../../src/cp')
+vi.mock('../../src/type')
+vi.mock('../../src/file')
+vi.mock('execa')
+vi.mock('ini')
+vi.mock('node:os')
 
 describe('Git Meta 工具', () => {
-  const mockRun = require('../../src/cp').run as jest.MockedFunction<
+  const mockRun = requiredModule0.run as MockedFunction<
     (
       command: string,
       args: string[],
       options?: unknown,
     ) => Promise<{ stdout: string }>
   >
-  const mockIsObject = require('../../src/type')
-    .isObject as jest.MockedFunction<(value: unknown) => boolean>
-  const mockIsPathExists = require('../../src/file')
-    .isPathExists as jest.MockedFunction<(path: string) => Promise<boolean>>
-  const mockIsPathExistsSync = require('../../src/file')
-    .isPathExistsSync as jest.MockedFunction<(path: string) => boolean>
-  const mockReadFile = require('../../src/file')
-    .readFile as jest.MockedFunction<(path: string) => Promise<string>>
-  const mockReadFileSync = require('../../src/file')
-    .readFileSync as jest.MockedFunction<(path: string) => string>
-  const mockExeca = require('execa') as jest.MockedFunction<
+  const mockIsObject = requiredModule1.isObject as MockedFunction<
+    (value: unknown) => boolean
+  >
+  const mockIsPathExists = requiredModule2.isPathExists as MockedFunction<
+    (path: string) => Promise<boolean>
+  >
+  const mockIsPathExistsSync =
+    requiredModule2.isPathExistsSync as MockedFunction<
+      (path: string) => boolean
+    >
+  const mockReadFile = requiredModule2.readFile as MockedFunction<
+    (path: string) => Promise<string>
+  >
+  const mockReadFileSync = requiredModule2.readFileSync as MockedFunction<
+    (path: string) => string
+  >
+  const mockExeca = requiredModule3.default as unknown as MockedFunction<
     (command: string, args: string[]) => Promise<{ stdout: string }>
   > & {
-    sync: jest.MockedFunction<
+    sync: MockedFunction<
       (command: string, args: string[]) => { stdout: string }
     >
   }
-  const mockIni = require('ini') as {
-    parse: jest.MockedFunction<(content: string) => unknown>
+  const mockIni = requiredModule4 as {
+    parse: MockedFunction<(content: string) => unknown>
   }
-  const mockOs = os as jest.Mocked<typeof os>
+  const mockOs = os as Mocked<typeof os>
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     mockIsObject.mockReturnValue(false)
     mockOs.homedir.mockReturnValue('/home/user')
   })

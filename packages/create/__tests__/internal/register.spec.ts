@@ -1,17 +1,26 @@
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mocked,
+} from 'vitest'
 import register from '../../src/internal/register'
 import type { Api } from '../../src/types'
 
 describe('内部注册', () => {
-  let mockApi: jest.Mocked<Api>
+  let mockApi: Mocked<Api>
 
   beforeEach(() => {
     mockApi = {
-      registerMethod: jest.fn(),
-    } as unknown as jest.Mocked<Api>
+      registerMethod: vi.fn(),
+    } as unknown as Mocked<Api>
   })
 
   afterEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   it('应该是一个函数', () => {

@@ -1,3 +1,16 @@
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
+import * as importedModule7 from '../../src/file/is'
+import * as importedModule4 from '../../src/file/read'
+import * as importedModule6 from '../../src/file/remove'
+import * as importedModule5 from '../../src/file/write'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
@@ -16,37 +29,53 @@ import {
   resolveTsConfig,
 } from '../../src/file/loader'
 
-// Mock 依赖项
-jest.mock('parse-json')
-jest.mock('js-yaml')
-jest.mock('typescript', () => ({
-  ModuleKind: { NodeNext: 199 },
-  ModuleResolutionKind: { NodeNext: 3 },
-  ScriptTarget: { ES2022: 9 },
-  transpileModule: jest.fn(),
-  findConfigFile: jest.fn(),
-  readConfigFile: jest.fn(),
-  sys: {
-    fileExists: jest.fn(),
-    readFile: jest.fn(),
+const requiredModule7 = vi.mocked(importedModule7, { deep: true })
+const requiredModule4 = vi.mocked(importedModule4, { deep: true })
+const requiredModule6 = vi.mocked(importedModule6, { deep: true })
+const requiredModule5 = vi.mocked(importedModule5, { deep: true })
+
+const loaderDependencies = vi.hoisted(() => ({
+  importFresh: vi.fn(),
+  parseJson: vi.fn(),
+  typescript: {
+    ModuleKind: { NodeNext: 199 },
+    ModuleResolutionKind: { NodeNext: 3 },
+    ScriptTarget: { ES2022: 9 },
+    transpileModule: vi.fn(),
+    findConfigFile: vi.fn(),
+    readConfigFile: vi.fn(),
+    sys: {
+      fileExists: vi.fn(),
+      readFile: vi.fn(),
+    },
+  },
+  yaml: {
+    load: vi.fn(),
   },
 }))
-jest.mock('import-fresh')
-jest.mock('../../src/file/read')
-jest.mock('../../src/file/write')
-jest.mock('../../src/file/remove')
-jest.mock('../../src/file/is')
+
+// Mock 依赖项
+vi.mock('../../src/file/loader-dependencies', () => ({
+  loadImportFresh: () => loaderDependencies.importFresh,
+  loadParseJson: () => loaderDependencies.parseJson,
+  loadTypeScript: () => loaderDependencies.typescript,
+  loadYaml: () => loaderDependencies.yaml,
+}))
+vi.mock('../../src/file/read')
+vi.mock('../../src/file/write')
+vi.mock('../../src/file/remove')
+vi.mock('../../src/file/is')
 
 describe('文件加载器工具 - 完整测试', () => {
-  const mockParseJson = require('parse-json') as jest.MockedFunction<
+  const mockParseJson = loaderDependencies.parseJson as MockedFunction<
     (
       input: string | null,
       reviver?: (key: string, value: unknown) => unknown,
       filepath?: string,
     ) => unknown
   >
-  const mockYaml = require('js-yaml') as {
-    load: jest.MockedFunction<(text: string) => unknown>
+  const mockYaml = loaderDependencies.yaml as {
+    load: MockedFunction<(text: string) => unknown>
   }
 
   // TypeScript 模块的类型定义
@@ -54,19 +83,19 @@ describe('文件加载器工具 - 完整测试', () => {
     ModuleKind: { NodeNext: number }
     ModuleResolutionKind: { NodeNext: number }
     ScriptTarget: { ES2022: number }
-    transpileModule: jest.MockedFunction<
+    transpileModule: MockedFunction<
       (
         input: string,
         transpileOptions: unknown,
       ) => { outputText: string; diagnostics?: unknown[] }
     >
-    findConfigFile: jest.MockedFunction<
+    findConfigFile: MockedFunction<
       (
         searchPath: string,
         fileExists: (fileName: string) => boolean,
       ) => string | undefined
     >
-    readConfigFile: jest.MockedFunction<
+    readConfigFile: MockedFunction<
       (
         fileName: string,
         readFile: (path: string) => string | undefined,
@@ -76,37 +105,41 @@ describe('文件加载器工具 - 完整测试', () => {
       }
     >
     sys: {
-      fileExists: jest.MockedFunction<(fileName: string) => boolean>
-      readFile: jest.MockedFunction<(path: string) => string | undefined>
+      fileExists: MockedFunction<(fileName: string) => boolean>
+      readFile: MockedFunction<(path: string) => string | undefined>
     }
   }
 
-  const mockTypeScript = require('typescript') as MockTypeScriptModule
-  const mockImportFresh = require('import-fresh') as jest.MockedFunction<
+  const mockTypeScript = loaderDependencies.typescript as MockTypeScriptModule
+  const mockImportFresh = loaderDependencies.importFresh as MockedFunction<
     (filePath: string) => unknown
   >
-  const mockReadFile = require('../../src/file/read')
-    .readFile as jest.MockedFunction<(filePath: string) => Promise<string>>
-  const mockReadFileSync = require('../../src/file/read')
-    .readFileSync as jest.MockedFunction<(filePath: string) => string>
-  const mockWriteFileSync = require('../../src/file/write')
-    .writeFileSync as jest.MockedFunction<
+  const mockReadFile = requiredModule4.readFile as MockedFunction<
+    (filePath: string) => Promise<string>
+  >
+  const mockReadFileSync = requiredModule4.readFileSync as MockedFunction<
+    (filePath: string) => string
+  >
+  const mockWriteFileSync = requiredModule5.writeFileSync as MockedFunction<
     (filePath: string, content: string) => void
   >
-  const mockRemoveSync = require('../../src/file/remove')
-    .removeSync as jest.MockedFunction<(filePath: string) => void>
-  const mockIsPathExistsSync = require('../../src/file/is')
-    .isPathExistsSync as jest.MockedFunction<(filePath: string) => boolean>
+  const mockRemoveSync = requiredModule6.removeSync as MockedFunction<
+    (filePath: string) => boolean
+  >
+  const mockIsPathExistsSync =
+    requiredModule7.isPathExistsSync as MockedFunction<
+      (filePath: string) => boolean
+    >
 
   let tempDir: string
 
   beforeEach(async () => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     tempDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loader-test-'))
   })
 
   afterEach(async () => {
-    jest.restoreAllMocks()
+    vi.restoreAllMocks()
     try {
       await fsp.rm(tempDir, { recursive: true, force: true })
     } catch {
@@ -458,7 +491,7 @@ describe('文件加载器工具 - 完整测试', () => {
       }
 
       // 重置所有 mocks，准备真正的测试
-      jest.clearAllMocks()
+      vi.clearAllMocks()
     })
 
     describe('resolveTsConfig', () => {
@@ -510,7 +543,7 @@ describe('文件加载器工具 - 完整测试', () => {
       })
 
       it('应该正确使用文件系统检查函数', () => {
-        const mockFileExists = jest.fn().mockReturnValue(true)
+        const mockFileExists = vi.fn().mockReturnValue(true)
         mockTypeScript.sys.fileExists = mockFileExists
         mockTypeScript.findConfigFile.mockImplementation(
           (dir: string, fileExists: (fileName: string) => boolean) => {

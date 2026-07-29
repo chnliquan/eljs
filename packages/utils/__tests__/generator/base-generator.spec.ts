@@ -1,3 +1,17 @@
+import * as importedModule4 from 'node:fs'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
+import * as importedModule0 from '../../src/cli'
+import * as importedModule1 from '../../src/file'
+import * as importedModule2 from '../../src/logger'
+import * as importedModule3 from '../../src/type'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
@@ -7,28 +21,32 @@ import prompts, { type PromptObject } from 'prompts'
 import type { CopyFileOptions, RenderTemplateOptions } from '../../src/file'
 import { BaseGenerator } from '../../src/generator'
 
+const requiredModule4 = vi.mocked(importedModule4, { deep: true })
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+const requiredModule1 = vi.mocked(importedModule1, { deep: true })
+const requiredModule2 = vi.mocked(importedModule2, { deep: true })
+const requiredModule3 = vi.mocked(importedModule3, { deep: true })
+
 // Mock 依赖项
-jest.mock('prompts')
-jest.mock('../../src/cli')
-jest.mock('../../src/file')
-jest.mock('../../src/logger')
-jest.mock('../../src/type')
-jest.mock('node:fs')
+vi.mock('prompts')
+vi.mock('../../src/cli')
+vi.mock('../../src/file')
+vi.mock('../../src/logger')
+vi.mock('../../src/type')
+vi.mock('node:fs')
 
 describe('BaseGenerator 基础生成器', () => {
-  const mockPrompts = prompts as jest.MockedFunction<typeof prompts>
-  const mockConfirm = require('../../src/cli').confirm as jest.MockedFunction<
+  const mockPrompts = prompts as MockedFunction<typeof prompts>
+  const mockConfirm = requiredModule0.confirm as MockedFunction<
     (message: string, preferNo?: boolean) => Promise<boolean>
   >
-  const mockCopyFile = require('../../src/file')
-    .copyFile as jest.MockedFunction<
+  const mockCopyFile = requiredModule1.copyFile as MockedFunction<
     (from: string, to: string, options?: CopyFileOptions) => Promise<void>
   >
-  const mockCopyFileSync = require('../../src/file')
-    .copyFileSync as jest.MockedFunction<
+  const mockCopyFileSync = requiredModule1.copyFileSync as MockedFunction<
     (from: string, to: string, options?: CopyFileOptions) => void
   >
-  const mockCopyTpl = require('../../src/file').copyTpl as jest.MockedFunction<
+  const mockCopyTpl = requiredModule1.copyTpl as MockedFunction<
     (
       from: string,
       to: string,
@@ -36,8 +54,7 @@ describe('BaseGenerator 基础生成器', () => {
       options?: CopyFileOptions,
     ) => Promise<void>
   >
-  const mockCopyTplSync = require('../../src/file')
-    .copyTplSync as jest.MockedFunction<
+  const mockCopyTplSync = requiredModule1.copyTplSync as MockedFunction<
     (
       from: string,
       to: string,
@@ -45,8 +62,7 @@ describe('BaseGenerator 基础生成器', () => {
       options?: CopyFileOptions,
     ) => void
   >
-  const mockCopyDirectory = require('../../src/file')
-    .copyDirectory as jest.MockedFunction<
+  const mockCopyDirectory = requiredModule1.copyDirectory as MockedFunction<
     (
       from: string,
       to: string,
@@ -54,29 +70,31 @@ describe('BaseGenerator 基础生成器', () => {
       options?: CopyFileOptions,
     ) => Promise<void>
   >
-  const mockCopyDirectorySync = require('../../src/file')
-    .copyDirectorySync as jest.MockedFunction<
-    (
-      from: string,
-      to: string,
-      data: Record<string, unknown>,
-      options?: CopyFileOptions,
-    ) => void
-  >
-  const mockLogger = require('../../src/logger').logger as {
-    warn: jest.MockedFunction<(message: string) => void>
+  const mockCopyDirectorySync =
+    requiredModule1.copyDirectorySync as MockedFunction<
+      (
+        from: string,
+        to: string,
+        data: Record<string, unknown>,
+        options?: CopyFileOptions,
+      ) => void
+    >
+  const mockLogger = requiredModule2.logger as {
+    warn: MockedFunction<(message: string) => void>
   }
-  const mockIsFunction = require('../../src/type')
-    .isFunction as jest.MockedFunction<(value: unknown) => boolean>
-  const mockReaddirSync = require('node:fs').readdirSync as jest.MockedFunction<
-    (path: string) => string[]
+  const mockIsFunction = requiredModule3.isFunction as MockedFunction<
+    (value: unknown) => boolean
   >
+  const mockReaddirSync =
+    requiredModule4.readdirSync as unknown as MockedFunction<
+      (path: string) => string[]
+    >
 
   let tempDir: string
   let generator: BaseGenerator
 
   beforeEach(async () => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // 创建临时目录
     tempDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'base-generator-test-'))
@@ -97,11 +115,11 @@ describe('BaseGenerator 基础生成器', () => {
     mockReaddirSync.mockReturnValue([])
 
     // Mock console
-    jest.spyOn(console, 'log').mockImplementation()
+    vi.spyOn(console, 'log').mockImplementation(() => undefined)
   })
 
   afterEach(async () => {
-    jest.restoreAllMocks()
+    vi.restoreAllMocks()
     try {
       await fsp.rm(tempDir, { recursive: true, force: true })
     } catch {
@@ -122,7 +140,7 @@ describe('BaseGenerator 基础生成器', () => {
     })
 
     it('应该处理函数形式的 basedir', () => {
-      const basedirFn = jest.fn().mockReturnValue('/dynamic/basedir')
+      const basedirFn = vi.fn().mockReturnValue('/dynamic/basedir')
 
       const gen = new BaseGenerator(basedirFn)
 
@@ -144,8 +162,8 @@ describe('BaseGenerator 基础生成器', () => {
       const answers = { projectName: 'test-project' }
 
       // Mock prompting 方法
-      generator.prompting = jest.fn().mockReturnValue(questions)
-      generator.writing = jest.fn().mockResolvedValue(undefined)
+      generator.prompting = vi.fn().mockReturnValue(questions)
+      generator.writing = vi.fn().mockResolvedValue(undefined)
       mockPrompts.mockResolvedValue(answers)
 
       await generator.run()
@@ -156,12 +174,12 @@ describe('BaseGenerator 基础生成器', () => {
     })
 
     it('应该处理动态 basedir', async () => {
-      const basedirFn = jest.fn().mockReturnValue('/dynamic/path')
+      const basedirFn = vi.fn().mockReturnValue('/dynamic/path')
       mockIsFunction.mockReturnValue(true)
 
       const gen = new BaseGenerator(basedirFn)
       gen.prompts = { name: 'test' }
-      gen.writing = jest.fn().mockResolvedValue(undefined)
+      gen.writing = vi.fn().mockResolvedValue(undefined)
 
       // 在 run 中会设置 prompts，然后调用 basedirFn
       mockPrompts.mockResolvedValue({ name: 'test' })
@@ -314,7 +332,7 @@ describe('BaseGenerator 基础生成器', () => {
         'README.md',
       ])
       mockConfirm.mockResolvedValue(true)
-      const mockConsoleLog = jest.spyOn(console, 'log')
+      const mockConsoleLog = vi.spyOn(console, 'log')
 
       const result = await generator.checkDir('/existing-project')
 

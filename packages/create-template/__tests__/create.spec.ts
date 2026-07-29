@@ -1,3 +1,12 @@
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedClass,
+  type MockedFunction,
+} from 'vitest'
 import { defaultConfig } from '../src/config'
 import { CreateTemplate, type CreateTemplateOptions } from '../src/create'
 
@@ -9,28 +18,28 @@ import assert from 'node:assert'
 import { objectToArray, onCancel } from '../src/utils'
 
 // Mock 依赖模块
-jest.mock('@eljs/create')
-jest.mock('@eljs/utils')
-jest.mock('node:assert')
-jest.mock('../src/utils')
+vi.mock('@eljs/create')
+vi.mock('@eljs/utils')
+vi.mock('node:assert')
+vi.mock('../src/utils')
 
 describe('CreateTemplate 类功能测试', () => {
-  const mockedCreate = Create as jest.MockedClass<typeof Create>
-  const mockedPrompts = prompts as jest.MockedFunction<typeof prompts>
-  const mockedObjectToArray = objectToArray as jest.MockedFunction<
+  const mockedCreate = Create as MockedClass<typeof Create>
+  const mockedPrompts = prompts as MockedFunction<typeof prompts>
+  const mockedObjectToArray = objectToArray as MockedFunction<
     typeof objectToArray
   >
-  const mockedOnCancel = onCancel as jest.MockedFunction<typeof onCancel>
-  const mockedAssert = assert as jest.MockedFunction<typeof assert>
+  const mockedOnCancel = onCancel as MockedFunction<typeof onCancel>
+  const mockedAssert = assert as MockedFunction<typeof assert>
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // 设置默认的mock实现
     mockedCreate.mockImplementation(
       () =>
         ({
-          run: jest.fn().mockResolvedValue(undefined),
+          run: vi.fn().mockResolvedValue(undefined),
         }) as never,
     )
 
@@ -109,9 +118,11 @@ describe('CreateTemplate 类功能测试', () => {
 
     it('应该成功运行项目创建流程', async () => {
       const mockCreateInstance = {
-        run: jest.fn().mockResolvedValue(undefined),
+        run: vi.fn().mockResolvedValue(undefined),
       }
-      mockedCreate.mockImplementation(() => mockCreateInstance as never)
+      mockedCreate.mockImplementation(function MockCreate() {
+        return mockCreateInstance as never
+      })
 
       await createTemplate.run(projectName)
 
@@ -135,9 +146,11 @@ describe('CreateTemplate 类功能测试', () => {
       mockedObjectToArray.mockReturnValue([{ title: 'NPM', value: 'npm' }])
 
       const mockCreateInstance = {
-        run: jest.fn().mockResolvedValue(undefined),
+        run: vi.fn().mockResolvedValue(undefined),
       }
-      mockedCreate.mockImplementation(() => mockCreateInstance as never)
+      mockedCreate.mockImplementation(function MockCreate() {
+        return mockCreateInstance as never
+      })
 
       await createTemplate.run(projectName)
 
@@ -156,9 +169,11 @@ describe('CreateTemplate 类功能测试', () => {
 
         // 通过 run 方法间接测试 _getTemplate
         const mockCreateInstance = {
-          run: jest.fn().mockResolvedValue(undefined),
+          run: vi.fn().mockResolvedValue(undefined),
         }
-        mockedCreate.mockImplementation(() => mockCreateInstance as never)
+        mockedCreate.mockImplementation(function MockCreate() {
+          return mockCreateInstance as never
+        })
 
         await createTemplate.run('test-project')
 
@@ -176,9 +191,11 @@ describe('CreateTemplate 类功能测试', () => {
         ])
 
         const mockCreateInstance = {
-          run: jest.fn().mockResolvedValue(undefined),
+          run: vi.fn().mockResolvedValue(undefined),
         }
-        mockedCreate.mockImplementation(() => mockCreateInstance as never)
+        mockedCreate.mockImplementation(function MockCreate() {
+          return mockCreateInstance as never
+        })
 
         await createTemplate.run('test-project')
 
@@ -205,9 +222,11 @@ describe('CreateTemplate 类功能测试', () => {
         ])
 
         const mockCreateInstance = {
-          run: jest.fn().mockResolvedValue(undefined),
+          run: vi.fn().mockResolvedValue(undefined),
         }
-        mockedCreate.mockImplementation(() => mockCreateInstance as never)
+        mockedCreate.mockImplementation(function MockCreate() {
+          return mockCreateInstance as never
+        })
 
         await createTemplate.run('test-project')
 
@@ -231,9 +250,11 @@ describe('CreateTemplate 类功能测试', () => {
         })
 
         const mockCreateInstance = {
-          run: jest.fn().mockResolvedValue(undefined),
+          run: vi.fn().mockResolvedValue(undefined),
         }
-        mockedCreate.mockImplementation(() => mockCreateInstance as never)
+        mockedCreate.mockImplementation(function MockCreate() {
+          return mockCreateInstance as never
+        })
 
         await createTemplate.run('test-project')
 
@@ -249,9 +270,11 @@ describe('CreateTemplate 类功能测试', () => {
         mockedPrompts.mockResolvedValueOnce({ template: 'template-npm-web' })
 
         const mockCreateInstance = {
-          run: jest.fn().mockResolvedValue(undefined),
+          run: vi.fn().mockResolvedValue(undefined),
         }
-        mockedCreate.mockImplementation(() => mockCreateInstance as never)
+        mockedCreate.mockImplementation(function MockCreate() {
+          return mockCreateInstance as never
+        })
 
         await createTemplate.run('test-project')
 
@@ -278,9 +301,11 @@ describe('CreateTemplate 类功能测试', () => {
         mockedPrompts.mockResolvedValueOnce({ template: 'template-npm-web' })
 
         const mockCreateInstance = {
-          run: jest.fn().mockResolvedValue(undefined),
+          run: vi.fn().mockResolvedValue(undefined),
         }
-        mockedCreate.mockImplementation(() => mockCreateInstance as never)
+        mockedCreate.mockImplementation(function MockCreate() {
+          return mockCreateInstance as never
+        })
 
         await createTemplate.run('test-project')
 
@@ -428,9 +453,11 @@ describe('CreateTemplate 类功能测试', () => {
       mockedObjectToArray.mockReturnValueOnce([{ title: 'NPM', value: 'npm' }])
 
       const mockCreateInstance = {
-        run: jest.fn().mockResolvedValue(undefined),
+        run: vi.fn().mockResolvedValue(undefined),
       }
-      mockedCreate.mockImplementation(() => mockCreateInstance as never)
+      mockedCreate.mockImplementation(function MockCreate() {
+        return mockCreateInstance as never
+      })
 
       await createTemplate.run('my-project')
 
@@ -463,9 +490,11 @@ describe('CreateTemplate 类功能测试', () => {
       })
 
       const mockCreateInstance = {
-        run: jest.fn().mockResolvedValue(undefined),
+        run: vi.fn().mockResolvedValue(undefined),
       }
-      mockedCreate.mockImplementation(() => mockCreateInstance as never)
+      mockedCreate.mockImplementation(function MockCreate() {
+        return mockCreateInstance as never
+      })
 
       await createTemplate.run('')
 
@@ -479,9 +508,11 @@ describe('CreateTemplate 类功能测试', () => {
       })
 
       const mockCreateInstance = {
-        run: jest.fn().mockResolvedValue(undefined),
+        run: vi.fn().mockResolvedValue(undefined),
       }
-      mockedCreate.mockImplementation(() => mockCreateInstance as never)
+      mockedCreate.mockImplementation(function MockCreate() {
+        return mockCreateInstance as never
+      })
 
       const specialProjectName = 'my-project@1.0.0-beta.1'
       await createTemplate.run(specialProjectName)
@@ -501,9 +532,11 @@ describe('CreateTemplate 类功能测试', () => {
       const createTemplate = new CreateTemplate(options)
 
       const mockCreateInstance = {
-        run: jest.fn().mockResolvedValue(undefined),
+        run: vi.fn().mockResolvedValue(undefined),
       }
-      mockedCreate.mockImplementation(() => mockCreateInstance as never)
+      mockedCreate.mockImplementation(function MockCreate() {
+        return mockCreateInstance as never
+      })
 
       await createTemplate.run('test-project')
 

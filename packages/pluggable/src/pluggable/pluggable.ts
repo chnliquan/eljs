@@ -149,7 +149,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
    * 获取插件 Api
    * @param plugin 插件
    */
-  private _getPluginApi(plugin: Plugin): PluginApi {
+  protected _getPluginApi(plugin: Plugin): PluginApi {
     const pluginApi = new PluginApi(this, plugin)
 
     // 获取子类提供的扩展对象

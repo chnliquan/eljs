@@ -1,3 +1,4 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { HookOptions } from '../src'
 import { Hook } from '../src'
 import type { Plugin } from '../src/plugin'
@@ -12,7 +13,7 @@ describe('钩子', () => {
     validOptions = {
       plugin: mockPlugin,
       key: 'testHook',
-      fn: jest.fn(),
+      fn: vi.fn(),
       stage: 0,
       before: undefined,
     }
@@ -67,7 +68,7 @@ describe('钩子', () => {
       const options = {
         plugin: mockPlugin,
         key: 'testHook',
-        fn: jest.fn(),
+        fn: vi.fn(),
         stage: undefined,
         before: undefined,
       }
@@ -91,7 +92,7 @@ describe('钩子', () => {
     })
 
     it('应该保持对原始函数的引用', () => {
-      const mockFn = jest.fn()
+      const mockFn = vi.fn()
       const options = { ...validOptions, fn: mockFn }
       const hook = new Hook(options)
 

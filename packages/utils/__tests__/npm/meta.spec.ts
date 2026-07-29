@@ -1,3 +1,15 @@
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mocked,
+  type MockedFunction,
+} from 'vitest'
+import * as importedModule0 from '../../src/cp'
+import * as importedModule1 from '../../src/type'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import urllib from 'urllib'
 import which from 'which'
@@ -10,34 +22,38 @@ import {
   pkgNameAnalysis,
 } from '../../src/npm/meta'
 
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+const requiredModule1 = vi.mocked(importedModule1, { deep: true })
+
 // Mock 依赖项
-jest.mock('urllib')
-jest.mock('which')
-jest.mock('../../src/cp')
-jest.mock('../../src/type')
+vi.mock('urllib')
+vi.mock('which')
+vi.mock('../../src/cp')
+vi.mock('../../src/type')
 
 describe('NPM Meta 工具', () => {
-  const mockUrllib = urllib as jest.Mocked<typeof urllib>
-  const mockWhich = which as jest.MockedFunction<typeof which>
-  const mockRun = require('../../src/cp').run as jest.MockedFunction<
+  const mockUrllib = urllib as Mocked<typeof urllib>
+  const mockWhich = which as MockedFunction<typeof which>
+  const mockRun = requiredModule0.run as MockedFunction<
     (
       command: string,
       args: string[],
       options?: unknown,
     ) => Promise<{ stdout: string }>
   >
-  const mockIsString = require('../../src/type')
-    .isString as jest.MockedFunction<(value: unknown) => boolean>
+  const mockIsString = requiredModule1.isString as MockedFunction<
+    (value: unknown) => boolean
+  >
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     delete process.env.GLOBAL_PREFIX
     mockIsString.mockReturnValue(false)
     mockRun.mockResolvedValue({ stdout: 'https://registry.npmjs.org/' })
   })
 
   afterEach(() => {
-    jest.restoreAllMocks()
+    vi.restoreAllMocks()
   })
 
   describe('getNpmRegistry', () => {
@@ -125,7 +141,7 @@ describe('NPM Meta 工具', () => {
       mockRun.mockResolvedValue({ stdout: 'https://registry.npmjs.org/' })
       mockUrllib.request.mockResolvedValue({
         data: mockPackageData,
-      } as unknown as ReturnType<typeof urllib.request>)
+      } as unknown as Awaited<ReturnType<typeof urllib.request>>)
     })
 
     it('应该获取包信息', async () => {
@@ -185,7 +201,7 @@ describe('NPM Meta 工具', () => {
     it('应该在包不存在时返回 null', async () => {
       mockUrllib.request.mockResolvedValue({
         data: { error: 'Not found' },
-      } as unknown as ReturnType<typeof urllib.request>)
+      } as unknown as Awaited<ReturnType<typeof urllib.request>>)
 
       const result = await getNpmPackage('nonexistent-package')
 
@@ -195,7 +211,7 @@ describe('NPM Meta 工具', () => {
     it('应该在数据为字符串时返回 null', async () => {
       mockUrllib.request.mockResolvedValue({
         data: 'Not Found',
-      } as unknown as ReturnType<typeof urllib.request>)
+      } as unknown as Awaited<ReturnType<typeof urllib.request>>)
       mockIsString.mockReturnValue(true)
 
       const result = await getNpmPackage('string-response')

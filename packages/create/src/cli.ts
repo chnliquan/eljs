@@ -13,9 +13,7 @@ import { Create } from './core'
 import { AppError, onCancel } from './utils'
 
 export function cli() {
-  process.on('SIGINT', () => {
-    onCancel()
-  })
+  registerSignalHandler()
 
   return main()
     .then(() => process.exit(0))
@@ -27,6 +25,16 @@ export function cli() {
       }
       process.exit(1)
     })
+}
+
+function registerSignalHandler() {
+  if (!process.listeners('SIGINT').includes(handleSigint)) {
+    process.on('SIGINT', handleSigint)
+  }
+}
+
+function handleSigint() {
+  onCancel()
 }
 
 async function main() {
@@ -46,6 +54,11 @@ async function main() {
     .option('-f, --force', 'Overwrite target directory if it exists')
     .option('-m, --merge', 'Merge target directory if it exists')
     .option('--no-install', 'Skip install dependencies after create done')
+    .option('-y, --yes', 'Trust and execute the selected remote template')
+    .option(
+      '--allow-template-scripts',
+      'Allow lifecycle scripts while installing remote template dependencies',
+    )
     .action(async (template, projectName, options) => {
       debug?.(`template:`, template)
       debug?.(`projectName:`, projectName)

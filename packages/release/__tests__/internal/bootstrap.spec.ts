@@ -1,3 +1,11 @@
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
 /**
  * @file packages/release internal/plugins/bootstrap 模块单元测试
  * @description 测试 bootstrap.ts 引导插件功能
@@ -17,58 +25,59 @@ import bootstrapPlugin from '../../src/internal/plugins/bootstrap'
 import type { Api, AppData } from '../../src/types'
 
 // 模拟依赖
-jest.mock('@eljs/utils', () => ({
+vi.mock('@eljs/utils', () => ({
   chalk: {
-    cyan: jest.fn((text: string) => `[cyan]${text}[/cyan]`),
+    cyan: vi.fn((text: string) => `[cyan]${text}[/cyan]`),
   },
-  getGitBranch: jest.fn(),
-  getGitLatestTag: jest.fn(),
-  getWorkspaces: jest.fn(),
-  isPathExists: jest.fn(),
+  getGitBranch: vi.fn(),
+  getGitLatestTag: vi.fn(),
+  getWorkspaces: vi.fn(),
+  isPathExists: vi.fn(),
   logger: {
-    warn: jest.fn(),
+    warn: vi.fn(),
   },
-  readJson: jest.fn(),
+  readJson: vi.fn(),
 }))
 
-jest.mock('node:path')
-jest.mock('../../src/utils', () => ({
-  AppError: jest.fn().mockImplementation((message: string) => {
-    const error = new Error(message)
-    error.name = 'AppError'
-    return error
-  }),
+vi.mock('node:path')
+vi.mock('../../src/utils', () => ({
+  AppError: class AppError extends Error {
+    public constructor(message: string) {
+      super(message)
+      this.name = 'AppError'
+    }
+  },
 }))
 
 describe('Bootstrap 插件测试', () => {
   let mockApi: Partial<Api> & {
-    modifyAppData: jest.MockedFunction<Api['modifyAppData']>
+    modifyAppData: MockedFunction<Api['modifyAppData']>
   }
   const mockCwd = '/test/project'
 
   beforeEach(() => {
     mockApi = {
-      modifyAppData: jest.fn(),
+      modifyAppData: vi.fn(),
     }
 
     // 重置所有模拟
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // 设置默认模拟
-    ;(
-      getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
-    ).mockResolvedValue([])
-    ;(
-      isPathExists as jest.MockedFunction<typeof isPathExists>
-    ).mockResolvedValue(true)
-    ;(path.join as jest.MockedFunction<typeof path.join>).mockImplementation(
+    ;(getWorkspaces as MockedFunction<typeof getWorkspaces>).mockResolvedValue(
+      [],
+    )
+    ;(isPathExists as MockedFunction<typeof isPathExists>).mockResolvedValue(
+      true,
+    )
+    ;(path.join as MockedFunction<typeof path.join>).mockImplementation(
       (...args) => args.join('/'),
     )
+    ;(getGitBranch as MockedFunction<typeof getGitBranch>).mockResolvedValue(
+      'main',
+    )
     ;(
-      getGitBranch as jest.MockedFunction<typeof getGitBranch>
-    ).mockResolvedValue('main')
-    ;(
-      getGitLatestTag as jest.MockedFunction<typeof getGitLatestTag>
+      getGitLatestTag as MockedFunction<typeof getGitLatestTag>
     ).mockResolvedValue('v1.0.0')
   })
 
@@ -90,9 +99,9 @@ describe('Bootstrap 插件测试', () => {
       }
 
       ;(
-        getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
+        getWorkspaces as MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue([mockCwd])
-      ;(readJson as jest.MockedFunction<typeof readJson>).mockResolvedValue(
+      ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue(
         mockPackageJson,
       )
 
@@ -140,9 +149,9 @@ describe('Bootstrap 插件测试', () => {
       ]
 
       ;(
-        getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
+        getWorkspaces as MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue(workspaces)
-      ;(readJson as jest.MockedFunction<typeof readJson>)
+      ;(readJson as MockedFunction<typeof readJson>)
         .mockResolvedValueOnce(mockPackages[0])
         .mockResolvedValueOnce(mockPackages[1])
         .mockResolvedValueOnce(mockPackages[2])
@@ -172,12 +181,12 @@ describe('Bootstrap 插件测试', () => {
       ]
 
       ;(
-        getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
+        getWorkspaces as MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue(workspaces)
-      ;(isPathExists as jest.MockedFunction<typeof isPathExists>)
+      ;(isPathExists as MockedFunction<typeof isPathExists>)
         .mockResolvedValueOnce(true) // pkg1 存在
         .mockResolvedValueOnce(false) // pkg2 不存在
-      ;(readJson as jest.MockedFunction<typeof readJson>).mockResolvedValue({
+      ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue({
         name: 'pkg1',
         version: '1.0.0',
         private: false,
@@ -210,9 +219,9 @@ describe('Bootstrap 插件测试', () => {
       }
 
       ;(
-        getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
+        getWorkspaces as MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue([mockCwd, '/test/valid-package'])
-      ;(readJson as jest.MockedFunction<typeof readJson>)
+      ;(readJson as MockedFunction<typeof readJson>)
         .mockResolvedValueOnce(mockPackageWithoutName)
         .mockResolvedValueOnce(validPackage)
 
@@ -239,9 +248,9 @@ describe('Bootstrap 插件测试', () => {
       ]
 
       ;(
-        getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
+        getWorkspaces as MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue(workspaces)
-      ;(readJson as jest.MockedFunction<typeof readJson>)
+      ;(readJson as MockedFunction<typeof readJson>)
         .mockResolvedValueOnce({
           name: 'public-pkg',
           version: '1.0.0',
@@ -270,18 +279,18 @@ describe('Bootstrap 插件测试', () => {
 
     it('应该获取 Git 相关信息', async () => {
       ;(
-        getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
+        getWorkspaces as MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue([mockCwd])
-      ;(readJson as jest.MockedFunction<typeof readJson>).mockResolvedValue({
+      ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue({
         name: 'test-pkg',
         version: '1.0.0',
         private: false,
       })
+      ;(getGitBranch as MockedFunction<typeof getGitBranch>).mockResolvedValue(
+        'develop',
+      )
       ;(
-        getGitBranch as jest.MockedFunction<typeof getGitBranch>
-      ).mockResolvedValue('develop')
-      ;(
-        getGitLatestTag as jest.MockedFunction<typeof getGitLatestTag>
+        getGitLatestTag as MockedFunction<typeof getGitLatestTag>
       ).mockResolvedValue('v1.2.0')
 
       bootstrapPlugin(mockApi as unknown as Api)
@@ -300,9 +309,9 @@ describe('Bootstrap 插件测试', () => {
 
     it('应该从项目配置中获取 registry', async () => {
       ;(
-        getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
+        getWorkspaces as MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue([mockCwd])
-      ;(readJson as jest.MockedFunction<typeof readJson>).mockResolvedValue({
+      ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue({
         name: 'test-pkg',
         version: '1.0.0',
         private: false,
@@ -328,9 +337,9 @@ describe('Bootstrap 插件测试', () => {
 
     it('当没有有效包时应该抛出 AppError', async () => {
       ;(
-        getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
+        getWorkspaces as MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue([mockCwd])
-      ;(readJson as jest.MockedFunction<typeof readJson>).mockResolvedValue({
+      ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue({
         name: 'private-pkg',
         version: '1.0.0',
         private: true, // 只有私有包
@@ -350,7 +359,7 @@ describe('Bootstrap 插件测试', () => {
 
     it('应该处理空的工作空间列表', async () => {
       ;(
-        getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
+        getWorkspaces as MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue([])
 
       bootstrapPlugin(mockApi as unknown as Api)
@@ -365,9 +374,9 @@ describe('Bootstrap 插件测试', () => {
 
     it('应该保持原有的 memo 属性', async () => {
       ;(
-        getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
+        getWorkspaces as MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue([mockCwd])
-      ;(readJson as jest.MockedFunction<typeof readJson>).mockResolvedValue({
+      ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue({
         name: 'test-pkg',
         version: '1.0.0',
         private: false,
@@ -395,7 +404,7 @@ describe('Bootstrap 插件测试', () => {
   describe('错误处理', () => {
     it('应该处理 getWorkspaces 抛出的错误', async () => {
       ;(
-        getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
+        getWorkspaces as MockedFunction<typeof getWorkspaces>
       ).mockRejectedValue(new Error('获取工作空间失败'))
 
       bootstrapPlugin(mockApi as unknown as Api)
@@ -410,9 +419,9 @@ describe('Bootstrap 插件测试', () => {
 
     it('应该处理 readJson 抛出的错误', async () => {
       ;(
-        getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
+        getWorkspaces as MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue([mockCwd])
-      ;(readJson as jest.MockedFunction<typeof readJson>).mockRejectedValue(
+      ;(readJson as MockedFunction<typeof readJson>).mockRejectedValue(
         new Error('读取 package.json 失败'),
       )
 
@@ -428,16 +437,16 @@ describe('Bootstrap 插件测试', () => {
 
     it('应该处理 getGitBranch 抛出的错误', async () => {
       ;(
-        getWorkspaces as jest.MockedFunction<typeof getWorkspaces>
+        getWorkspaces as MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue([mockCwd])
-      ;(readJson as jest.MockedFunction<typeof readJson>).mockResolvedValue({
+      ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue({
         name: 'test-pkg',
         version: '1.0.0',
         private: false,
       })
-      ;(
-        getGitBranch as jest.MockedFunction<typeof getGitBranch>
-      ).mockRejectedValue(new Error('获取分支失败'))
+      ;(getGitBranch as MockedFunction<typeof getGitBranch>).mockRejectedValue(
+        new Error('获取分支失败'),
+      )
 
       bootstrapPlugin(mockApi as unknown as Api)
       const modifyAppDataFn = mockApi.modifyAppData.mock.calls[0][0]

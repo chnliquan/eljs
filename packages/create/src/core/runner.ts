@@ -9,6 +9,7 @@ import {
 import { deepMerge, prompts, type RequiredRecursive } from '@eljs/utils'
 
 import { defaultConfig } from '../default'
+import { resolveInternalModule } from '../internal'
 import {
   RunnerStageEnum,
   type AppData,
@@ -58,7 +59,7 @@ export class Runner extends Pluggable<Config> {
     super({
       ...options,
       defaultConfigFiles: ['create.config.ts', 'create.config.js'],
-      presets: [require.resolve('../internal'), ...(options.presets || [])],
+      presets: [resolveInternalModule('./index'), ...(options.presets || [])],
       plugins: options.plugins,
     })
   }
@@ -232,8 +233,10 @@ export interface RunnerPluginApi extends PluggablePluginApi {
   /**
    * 生成文件事件
    */
-  onGenerateFiles: ApplyEvent<// eslint-disable-next-line @typescript-eslint/no-explicit-any
-  { prompts: Record<string, any>; paths: Paths }>
+  onGenerateFiles: ApplyEvent<
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    { prompts: Record<string, any>; paths: Paths }
+  >
   /**
    * 生成文件完成事件
    */

@@ -3,7 +3,8 @@
 .idea/
 
 # Cache
-.jest-cache/
+.vitest-cache/
+.pnpm-store/
 .turbo/
 *.cache
 .eslintcache

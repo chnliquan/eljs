@@ -16,6 +16,12 @@ export interface RemoteTemplate {
    * Npm registry
    */
   registry?: string
+  /**
+   * Whether this template is maintained by a source already trusted by the
+   * caller. Trusted templates skip the interactive execution warning.
+   * @default false
+   */
+  trusted?: boolean
 }
 
 /**
@@ -56,4 +62,14 @@ export interface Config extends UserConfig {
    * @default true
    */
   install?: boolean
+  /**
+   * Skip the interactive warning before executing a remote template.
+   * @default false
+   */
+  yes?: boolean
+  /**
+   * Allow lifecycle scripts while installing remote template dependencies.
+   * @default false
+   */
+  allowTemplateScripts?: boolean
 }

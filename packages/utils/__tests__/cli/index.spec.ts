@@ -1,3 +1,14 @@
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mocked,
+  type MockedFunction,
+} from 'vitest'
+import * as importedModule0 from '../../src/type'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import * as readline from 'node:readline'
 import type { Answers, PromptObject } from 'prompts'
@@ -6,30 +17,32 @@ import prompts from 'prompts'
 import * as cliModule from '../../src/cli'
 import { confirm, loopPrompt, pause, prompt, select } from '../../src/cli'
 
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+
 // Mock 依赖项
-jest.mock('node:readline')
-jest.mock('prompts')
-jest.mock('../../src/type')
+vi.mock('node:readline')
+vi.mock('prompts')
+vi.mock('../../src/type')
 
 // 定义类型
 interface MockReadlineInterface {
-  question: jest.MockedFunction<(query: string, callback: () => void) => void>
-  close: jest.MockedFunction<() => void>
+  question: MockedFunction<(query: string, callback: () => void) => void>
+  close: MockedFunction<() => void>
 }
 
 interface MockConsole {
-  log: jest.MockedFunction<(...args: unknown[]) => void>
+  log: MockedFunction<(...args: unknown[]) => void>
 }
 
 describe('命令行工具函数', () => {
-  const mockReadline = readline as jest.Mocked<typeof readline>
-  const mockPrompts = prompts as jest.MockedFunction<typeof prompts>
-  const mockIsNull = require('../../src/type').isNull as jest.MockedFunction<
+  const mockReadline = readline as Mocked<typeof readline>
+  const mockPrompts = prompts as MockedFunction<typeof prompts>
+  const mockIsNull = requiredModule0.isNull as MockedFunction<
     (value: unknown) => boolean
   >
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     mockIsNull.mockReturnValue(false)
   })
 
@@ -63,8 +76,8 @@ describe('命令行工具函数', () => {
 
     beforeEach(() => {
       mockRl = {
-        question: jest.fn(),
-        close: jest.fn(),
+        question: vi.fn(),
+        close: vi.fn(),
       }
       mockReadline.createInterface.mockReturnValue(
         mockRl as unknown as readline.Interface,
@@ -191,13 +204,13 @@ describe('命令行工具函数', () => {
 
     beforeEach(() => {
       mockConsole = {
-        log: jest.fn(),
+        log: vi.fn(),
       }
-      jest.spyOn(console, 'log').mockImplementation(mockConsole.log)
+      vi.spyOn(console, 'log').mockImplementation(mockConsole.log)
     })
 
     afterEach(() => {
-      jest.restoreAllMocks()
+      vi.restoreAllMocks()
     })
 
     it('应该在用户确认时返回答案', async () => {

@@ -1,4 +1,13 @@
 import path from 'path'
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest'
 import { hookPropertyMap } from '../src/require-hook'
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -58,10 +67,10 @@ describe('require-hook', () => {
   })
 
   describe('模块解析 hook', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       // 重新导入 require-hook 以确保 hook 生效
-      jest.resetModules()
-      require('../src/require-hook')
+      vi.resetModules()
+      await import('../src/require-hook')
     })
 
     it('应该覆盖 module._resolveFilename', () => {
@@ -120,8 +129,9 @@ describe('require-hook', () => {
   })
 
   describe('边界情况和错误处理', () => {
-    beforeEach(() => {
-      require('../src/require-hook')
+    beforeEach(async () => {
+      vi.resetModules()
+      await import('../src/require-hook')
     })
 
     it('空字符串请求应该处理正确', () => {
@@ -176,8 +186,9 @@ describe('require-hook', () => {
   })
 
   describe('功能验证', () => {
-    beforeEach(() => {
-      require('../src/require-hook')
+    beforeEach(async () => {
+      vi.resetModules()
+      await import('../src/require-hook')
     })
 
     it('hook 应该保持原始方法的签名', () => {
@@ -206,8 +217,9 @@ describe('require-hook', () => {
   })
 
   describe('性能和稳定性', () => {
-    beforeEach(() => {
-      require('../src/require-hook')
+    beforeEach(async () => {
+      vi.resetModules()
+      await import('../src/require-hook')
     })
 
     it('多次调用应该保持高效', () => {
@@ -232,8 +244,9 @@ describe('require-hook', () => {
   })
 
   describe('实际使用场景验证', () => {
-    beforeEach(() => {
-      require('../src/require-hook')
+    beforeEach(async () => {
+      vi.resetModules()
+      await import('../src/require-hook')
     })
 
     it('映射的模块应该可以正确解析', () => {
@@ -271,8 +284,9 @@ describe('require-hook', () => {
   })
 
   describe('路径解析正确性', () => {
-    beforeEach(() => {
-      require('../src/require-hook')
+    beforeEach(async () => {
+      vi.resetModules()
+      await import('../src/require-hook')
     })
 
     it('解析的路径应该指向有效的文件系统位置', () => {

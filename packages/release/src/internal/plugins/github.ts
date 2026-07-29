@@ -11,29 +11,35 @@ export default (api: Api) => {
     },
   })
 
-  api.onRelease(async ({ version, isPrerelease, changelog }) => {
-    if (!api.config.github.release || !changelog) {
-      return
-    }
+  api.onRelease(
+    async ({ version, isPrerelease, changelog }) => {
+      if (!api.config.github.release || !changelog) {
+        return
+      }
 
-    const gitUrl = await getGitUrl(api.cwd, true)
+      const gitUrl = await getGitUrl(api.cwd, true)
 
-    if (!gitUrl) {
-      return
-    }
-    const repoUrl = gitUrlAnalysis(gitUrl)?.href
+      if (!gitUrl) {
+        return
+      }
+      const repoUrl = gitUrlAnalysis(gitUrl)?.href
 
-    if (!repoUrl) {
-      return
-    }
+      if (!repoUrl) {
+        return
+      }
 
-    const url = await newGithubReleaseUrl({
-      repoUrl,
-      tag: `v${version}`,
-      body: changelog,
-      isPrerelease,
-    })
+      const url = await newGithubReleaseUrl({
+        repoUrl,
+        tag: `v${version}`,
+        body: changelog,
+        isPrerelease,
+      })
 
-    await open(url)
-  })
+      await open(url)
+    },
+    {
+      // A GitHub release must never be prepared before publish and push finish.
+      stage: 20,
+    },
+  )
 }

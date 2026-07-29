@@ -1,3 +1,15 @@
+import * as importedModule1 from '@eljs/pluggable'
+import * as importedModule0 from '@eljs/utils'
+import {
+  afterAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+} from 'vitest'
+import * as importedModule2 from '../../src/default'
 /* eslint-disable @typescript-eslint/no-var-requires */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
@@ -13,13 +25,17 @@ import {
   type Prompts,
 } from '../../src/types'
 
+const requiredModule1 = vi.mocked(importedModule1, { deep: true })
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+const requiredModule2 = vi.mocked(importedModule2, { deep: true })
+
 // 模拟所有依赖
-jest.mock('@eljs/pluggable')
-jest.mock('@eljs/utils')
-jest.mock('../../src/default')
+vi.mock('@eljs/pluggable')
+vi.mock('@eljs/utils')
+vi.mock('../../src/default')
 
 // 模拟 console.log
-const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {})
+const mockConsoleLog = vi.spyOn(console, 'log').mockImplementation(() => {})
 
 describe('Runner 类完整测试', () => {
   const mockCwd = process.cwd() // 使用真实路径避免验证错误
@@ -29,10 +45,10 @@ describe('Runner 类完整测试', () => {
   })
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // 重新设置基本的模拟
-    const { deepMerge, prompts } = require('@eljs/utils')
+    const { deepMerge, prompts } = requiredModule0
     deepMerge.mockImplementation((target: any, ...sources: any[]) => ({
       ...target,
       ...sources.reduce((acc, source) => ({ ...acc, ...source }), {}),
@@ -40,13 +56,15 @@ describe('Runner 类完整测试', () => {
     prompts.mockResolvedValue({})
 
     // 模拟 Pluggable 基类
-    const { Pluggable } = require('@eljs/pluggable')
+    const { Pluggable } = requiredModule1
     Pluggable.mockImplementation(function (this: any, options: any) {
-      this.cwd = options.cwd || process.cwd()
       this.userConfig = null
-      this.constructorOptions = options
-      this.load = jest.fn().mockResolvedValue(undefined)
-      this.applyPlugins = jest
+      this.constructorOptions = {
+        ...options,
+        cwd: options.cwd || process.cwd(),
+      }
+      this.load = vi.fn().mockResolvedValue(undefined)
+      this.applyPlugins = vi
         .fn()
         .mockImplementation((name: string, options?: any) => {
           if (name === 'modifyPaths') {
@@ -75,14 +93,13 @@ describe('Runner 类完整测试', () => {
     })
 
     // 模拟默认配置
-    const defaultConfig = require('../../src/default')
-    defaultConfig.defaultConfig = {
+    Object.assign(requiredModule2.defaultConfig, {
       cwd: process.cwd(),
       force: false,
       defaultQuestions: true,
       gitInit: true,
       install: true,
-    }
+    })
   })
 
   describe('基础功能和方法测试', () => {
@@ -153,7 +170,7 @@ describe('Runner 类完整测试', () => {
     })
 
     it('应该正确传递配置到 Pluggable 基类', () => {
-      const { Pluggable } = require('@eljs/pluggable')
+      const { Pluggable } = requiredModule1
       const config = {
         cwd: '/test/path',
         presets: ['preset1'],
@@ -171,7 +188,7 @@ describe('Runner 类完整测试', () => {
     })
 
     it('应该正确处理默认配置', () => {
-      const { Pluggable } = require('@eljs/pluggable')
+      const { Pluggable } = requiredModule1
 
       new Runner({ cwd: '/test' })
 
@@ -184,7 +201,7 @@ describe('Runner 类完整测试', () => {
     })
 
     it('应该设置正确的默认配置文件', () => {
-      const { Pluggable } = require('@eljs/pluggable')
+      const { Pluggable } = requiredModule1
 
       new Runner({ cwd: '/test' })
 
@@ -196,7 +213,7 @@ describe('Runner 类完整测试', () => {
     })
 
     it('应该将内置 preset 添加到 presets 数组的开头', () => {
-      const { Pluggable } = require('@eljs/pluggable')
+      const { Pluggable } = requiredModule1
 
       new Runner({ cwd: '/test', presets: ['custom-preset'] })
 
@@ -225,7 +242,7 @@ describe('Runner 类完整测试', () => {
       expect((runner as any).load).toHaveBeenCalledTimes(1)
 
       // 验证 applyPlugins 被按正确顺序调用
-      const applyPluginsCalls = ((runner as any).applyPlugins as jest.Mock).mock
+      const applyPluginsCalls = ((runner as any).applyPlugins as Mock).mock
         .calls
 
       expect(applyPluginsCalls[0][0]).toBe('modifyPaths')
@@ -248,10 +265,10 @@ describe('Runner 类完整测试', () => {
       await runner.run(target, projectName)
 
       const modifyPathsCall = (
-        (runner as any).applyPlugins as jest.Mock
+        (runner as any).applyPlugins as Mock
       ).mock.calls.find((call: any) => call[0] === 'modifyPaths')
 
-      expect(modifyPathsCall[1]).toEqual({
+      expect(modifyPathsCall?.[1]).toEqual({
         initialValue: {
           cwd: (runner as any).cwd,
           target,
@@ -269,10 +286,10 @@ describe('Runner 类完整测试', () => {
       await runner.run(target, projectName)
 
       const modifyAppDataCall = (
-        (runner as any).applyPlugins as jest.Mock
+        (runner as any).applyPlugins as Mock
       ).mock.calls.find((call: any) => call[0] === 'modifyAppData')
 
-      expect(modifyAppDataCall[1]).toEqual({
+      expect(modifyAppDataCall?.[1]).toEqual({
         initialValue: {
           scene: 'web',
           cliVersion: '1.3.1',
@@ -339,7 +356,7 @@ describe('Runner 类完整测试', () => {
         customPath: '/custom',
       }
 
-      ;((runner as any).applyPlugins as jest.Mock).mockImplementation(
+      ;((runner as any).applyPlugins as Mock).mockImplementation(
         (name: string, options?: any) => {
           if (name === 'modifyPaths') {
             return Promise.resolve(expectedPaths)
@@ -365,7 +382,7 @@ describe('Runner 类完整测试', () => {
         customField: 'value',
       }
 
-      ;((runner as any).applyPlugins as jest.Mock).mockImplementation(
+      ;((runner as any).applyPlugins as Mock).mockImplementation(
         (name: string, options?: any) => {
           if (name === 'modifyAppData') {
             return Promise.resolve(expectedAppData)
@@ -388,7 +405,7 @@ describe('Runner 类完整测试', () => {
       ]
       const expectedPrompts = { author: 'John', email: 'john@example.com' }
 
-      ;((runner as any).applyPlugins as jest.Mock).mockImplementation(
+      ;((runner as any).applyPlugins as Mock).mockImplementation(
         (name: string, options?: any) => {
           if (name === 'addQuestions') {
             return Promise.resolve(questions)
@@ -413,7 +430,7 @@ describe('Runner 类完整测试', () => {
       const jestConfig = { testEnvironment: 'node' }
       const prettierConfig = { semi: false }
 
-      ;((runner as any).applyPlugins as jest.Mock).mockImplementation(
+      ;((runner as any).applyPlugins as Mock).mockImplementation(
         (name: string, options?: any) => {
           if (name === 'modifyTsConfig') {
             return Promise.resolve(tsConfig)
@@ -441,7 +458,7 @@ describe('Runner 类完整测试', () => {
       const mockPaths = { cwd: (runner as any).cwd, target }
       const mockPrompts = { author: 'Test Author' }
 
-      ;((runner as any).applyPlugins as jest.Mock).mockImplementation(
+      ;((runner as any).applyPlugins as Mock).mockImplementation(
         (name: string, options?: any) => {
           if (name === 'modifyPaths') {
             return Promise.resolve(mockPaths)
@@ -456,20 +473,20 @@ describe('Runner 类完整测试', () => {
       await runner.run(target, projectName)
 
       const onBeforeGenerateFilesCall = (
-        (runner as any).applyPlugins as jest.Mock
+        (runner as any).applyPlugins as Mock
       ).mock.calls.find((call: any) => call[0] === 'onBeforeGenerateFiles')
       const onGenerateFilesCall = (
-        (runner as any).applyPlugins as jest.Mock
+        (runner as any).applyPlugins as Mock
       ).mock.calls.find((call: any) => call[0] === 'onGenerateFiles')
 
-      expect(onBeforeGenerateFilesCall[1]).toEqual({
+      expect(onBeforeGenerateFilesCall?.[1]).toEqual({
         args: {
           prompts: mockPrompts,
           paths: mockPaths,
         },
       })
 
-      expect(onGenerateFilesCall[1]).toEqual({
+      expect(onGenerateFilesCall?.[1]).toEqual({
         args: {
           prompts: mockPrompts,
           paths: mockPaths,
@@ -482,7 +499,7 @@ describe('Runner 类完整测试', () => {
       const projectName = 'test-project'
       const error = new Error('Plugin error')
 
-      ;((runner as any).applyPlugins as jest.Mock).mockImplementation(
+      ;((runner as any).applyPlugins as Mock).mockImplementation(
         (name: string) => {
           if (name === 'modifyAppData') {
             return Promise.reject(error)
@@ -501,7 +518,7 @@ describe('Runner 类完整测试', () => {
       const projectName = 'test-project'
       const error = new Error('Load error')
 
-      ;((runner as any).load as jest.Mock).mockRejectedValue(error)
+      ;((runner as any).load as Mock).mockRejectedValue(error)
 
       await expect(runner.run(target, projectName)).rejects.toThrow(
         'Load error',
@@ -511,8 +528,8 @@ describe('Runner 类完整测试', () => {
 
   describe('Runner _resolveConfig 私有方法测试', () => {
     it('应该正确合并配置', async () => {
-      const { deepMerge } = require('@eljs/utils')
-      const { defaultConfig } = require('../../src/default')
+      const { deepMerge } = requiredModule0
+      const { defaultConfig } = requiredModule2
 
       const userConfig = { force: true, customOption: 'value' }
       const constructorOptions = { cwd: '/test', install: false }
@@ -535,8 +552,8 @@ describe('Runner 类完整测试', () => {
     })
 
     it('应该处理空的用户配置', async () => {
-      const { deepMerge } = require('@eljs/utils')
-      const { defaultConfig } = require('../../src/default')
+      const { deepMerge } = requiredModule0
+      const { defaultConfig } = requiredModule2
 
       const constructorOptions = { cwd: '/test' }
       const runner = new Runner(constructorOptions)
@@ -555,7 +572,7 @@ describe('Runner 类完整测试', () => {
     })
 
     it('应该将合并结果分配给 config 属性', async () => {
-      const { deepMerge } = require('@eljs/utils')
+      const { deepMerge } = requiredModule0
       const mergedConfig = {
         cwd: '/test',
         force: true,
@@ -610,7 +627,7 @@ describe('Runner 类完整测试', () => {
     })
 
     it('应该正确处理 presets 数组', () => {
-      const { Pluggable } = require('@eljs/pluggable')
+      const { Pluggable } = requiredModule1
 
       // 空数组
       new Runner({ cwd: '/test', presets: [] })
@@ -643,7 +660,7 @@ describe('Runner 类完整测试', () => {
     })
 
     it('应该正确处理 plugins 数组', () => {
-      const { Pluggable } = require('@eljs/pluggable')
+      const { Pluggable } = requiredModule1
 
       // undefined plugins
       new Runner({ cwd: '/test' })
@@ -871,7 +888,7 @@ describe('Runner 类完整测试', () => {
     it('应该处理插件返回 null 或 undefined', async () => {
       const runner = new Runner({ cwd: '/test' })
 
-      ;((runner as any).applyPlugins as jest.Mock).mockImplementation(
+      ;((runner as any).applyPlugins as Mock).mockImplementation(
         (name: string, options?: any) => {
           if (name === 'modifyTsConfig') {
             return Promise.resolve(null)
@@ -1113,7 +1130,7 @@ describe('Runner 类完整测试', () => {
         include: ['src'],
       }
 
-      ;((runner as any).applyPlugins as jest.Mock).mockImplementation(
+      ;((runner as any).applyPlugins as Mock).mockImplementation(
         (name: string, options?: any) => {
           switch (name) {
             case 'modifyPaths':

@@ -1,8 +1,9 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { pkgNameAnalysis, type ResolvedPkgName } from '../../src/npm'
 
 // 重要：清除模块缓存以避免缓存问题
 beforeEach(() => {
-  jest.resetModules()
+  vi.resetModules()
 })
 
 describe('NPM 工具函数 - 包名解析', () => {

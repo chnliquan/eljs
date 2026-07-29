@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 import type { PluggableOptions, PluginDeclaration } from '../src'
 import { ApplyPluginTypeEnum, PluggableStateEnum } from '../src'
 

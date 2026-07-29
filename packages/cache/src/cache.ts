@@ -311,7 +311,7 @@ export class Cache<T = any> {
 
     try {
       const files = await fs.promises.readdir(this.cacheDir)
-      const cacheFiles = files.filter(file => file.endsWith('.json'))
+      const cacheFiles = files.filter(file => this._isManagedCacheFile(file))
 
       const now = Date.now()
       const ttlMs = this.options.ttlDays * 24 * 60 * 60 * 1000
@@ -338,6 +338,7 @@ export class Cache<T = any> {
       // 删除过期文件
       for (const { file, filePath, mtime, size } of validFiles) {
         let shouldRemove = false
+        let cacheKey: string | undefined
 
         // 检查TTL
         if (now - mtime > ttlMs) {
@@ -358,6 +359,8 @@ export class Cache<T = any> {
             const cacheData = await this._readCacheFile(filePath)
             if (!cacheData) {
               shouldRemove = true
+            } else {
+              cacheKey = cacheData.metadata.key
             }
           } catch {
             shouldRemove = true
@@ -366,13 +369,19 @@ export class Cache<T = any> {
 
         if (shouldRemove) {
           try {
+            if (!cacheKey) {
+              const cacheData = await this._readCacheFile(filePath)
+              cacheKey = cacheData?.metadata.key
+            }
+
             await fs.promises.unlink(filePath)
             result.removed++
             result.totalSize += size
 
             // 同时从内存缓存中删除
-            const cacheKey = path.basename(file, '.json')
-            this.memoryCache.delete(cacheKey)
+            if (cacheKey) {
+              this.memoryCache.delete(cacheKey)
+            }
           } catch (error) {
             result.errors.push(`Failed to remove ${file}: ${error}`)
           }
@@ -443,9 +452,11 @@ export class Cache<T = any> {
     try {
       const files = await fs.promises.readdir(this.cacheDir)
       await Promise.all(
-        files.map(file =>
-          fs.promises.unlink(path.join(this.cacheDir, file)).catch(() => {}),
-        ),
+        files
+          .filter(file => this._isManagedCacheFile(file))
+          .map(file =>
+            fs.promises.unlink(path.join(this.cacheDir, file)).catch(() => {}),
+          ),
       )
     } catch {
       // 忽略错误
@@ -521,6 +532,23 @@ export class Cache<T = any> {
    */
   private _getCacheKey(filePath: string): string {
     return crypto.createHash('md5').update(filePath).digest('hex')
+  }
+
+  /**
+   * Convert an arbitrary logical cache key to a fixed, path-safe filename.
+   */
+  private _getCacheFilePath(cacheKey: string): string {
+    const fileName = crypto.createHash('sha256').update(cacheKey).digest('hex')
+
+    return path.join(this.cacheDir, `${fileName}.json`)
+  }
+
+  /**
+   * Cache cleanup only owns files produced by the current hashed format or the
+   * legacy MD5 file-key format.
+   */
+  private _isManagedCacheFile(fileName: string): boolean {
+    return /^(?:[a-f0-9]{32}|[a-f0-9]{64})\.json$/u.test(fileName)
   }
 
   /**
@@ -604,20 +632,33 @@ export class Cache<T = any> {
     try {
       const files = await fs.promises.readdir(this.cacheDir)
       const cacheFiles = files
-        .filter(file => file.endsWith('.json'))
+        .filter(file => this._isManagedCacheFile(file))
         .slice(0, 50)
 
       await Promise.all(
         cacheFiles.map(async file => {
           try {
-            const cacheKey = path.basename(file, '.json')
-            const cacheEntry = await this._loadFromDisk(cacheKey)
+            const filePath = path.join(this.cacheDir, file)
+            const cacheData = await this._readCacheFile(filePath)
+
+            if (!cacheData) {
+              return
+            }
+
+            const cacheEntry: CacheEntry<T> = {
+              data: this._serializer.deserialize(cacheData.data),
+              timestamp: cacheData.metadata.timestamp,
+              mtime: cacheData.metadata.mtime,
+              size: cacheData.metadata.size,
+              hash: cacheData.metadata.hash,
+              key: cacheData.metadata.key,
+            }
 
             if (cacheEntry && this._isTimeValid(cacheEntry)) {
-              this.memoryCache.set(cacheKey, cacheEntry)
+              this.memoryCache.set(cacheEntry.key, cacheEntry)
             } else if (cacheEntry) {
               // 过期的缓存，删除磁盘文件
-              await this._removeFromDisk(cacheKey)
+              await fs.promises.unlink(filePath)
             }
           } catch {
             // 忽略单个文件加载错误
@@ -656,7 +697,7 @@ export class Cache<T = any> {
    * @returns 缓存条目或 null
    */
   private async _loadFromDisk(cacheKey: string): Promise<CacheEntry<T> | null> {
-    const filePath = path.join(this.cacheDir, `${cacheKey}.json`)
+    const filePath = this._getCacheFilePath(cacheKey)
     const cacheData = await this._readCacheFile(filePath)
 
     if (!cacheData) {
@@ -691,7 +732,7 @@ export class Cache<T = any> {
     cacheKey: string,
     cacheEntry: CacheEntry<T>,
   ): Promise<void> {
-    const filePath = path.join(this.cacheDir, `${cacheKey}.json`)
+    const filePath = this._getCacheFilePath(cacheKey)
 
     const cacheFile: CacheFile<T> = {
       version: '2.0',
@@ -718,7 +759,7 @@ export class Cache<T = any> {
    * @param cacheKey 缓存键
    */
   private async _removeFromDisk(cacheKey: string): Promise<void> {
-    const filePath = path.join(this.cacheDir, `${cacheKey}.json`)
+    const filePath = this._getCacheFilePath(cacheKey)
 
     try {
       if (await isPathExists(filePath)) {

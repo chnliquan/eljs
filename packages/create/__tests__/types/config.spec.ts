@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 import type { Config, RemoteTemplate } from '../../src/types/config'
 
 describe('Config 类型', () => {

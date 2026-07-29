@@ -1,3 +1,11 @@
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
 /**
  * @file packages/release utils/version 模块单元测试
  * @description 测试 version.ts 版本处理功能
@@ -22,14 +30,14 @@ import {
 } from '../../src/utils/version'
 
 // 模拟依赖
-jest.mock('@eljs/utils', () => ({
-  getGitCommitSha: jest.fn(),
-  run: jest.fn(),
+vi.mock('@eljs/utils', () => ({
+  getGitCommitSha: vi.fn(),
+  run: vi.fn(),
 }))
 
 describe('版本处理工具函数测试', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   describe('预发布版本检测函数', () => {
@@ -195,7 +203,7 @@ describe('版本处理工具函数测试', () => {
   describe('版本存在性检查', () => {
     describe('isVersionExist', () => {
       it('应该在版本存在时返回 true', async () => {
-        const mockRun = run as jest.MockedFunction<typeof run>
+        const mockRun = run as MockedFunction<typeof run>
         mockRun.mockResolvedValue({ stdout: '@it/package@1.0.0' } as Awaited<
           ReturnType<typeof run>
         >)
@@ -209,7 +217,7 @@ describe('版本处理工具函数测试', () => {
       })
 
       it('应该在版本不存在时返回 false', async () => {
-        const mockRun = run as jest.MockedFunction<typeof run>
+        const mockRun = run as MockedFunction<typeof run>
         mockRun.mockResolvedValue({ stdout: '' } as Awaited<
           ReturnType<typeof run>
         >)
@@ -219,7 +227,7 @@ describe('版本处理工具函数测试', () => {
       })
 
       it('应该在命令执行失败时返回 false', async () => {
-        const mockRun = run as jest.MockedFunction<typeof run>
+        const mockRun = run as MockedFunction<typeof run>
         mockRun.mockRejectedValue(new Error('命令执行失败'))
 
         const result = await isVersionExist('it-package', '1.0.0')
@@ -227,7 +235,7 @@ describe('版本处理工具函数测试', () => {
       })
 
       it('应该使用指定的 registry', async () => {
-        const mockRun = run as jest.MockedFunction<typeof run>
+        const mockRun = run as MockedFunction<typeof run>
         mockRun.mockResolvedValue({ stdout: '@it/package@1.0.0' } as Awaited<
           ReturnType<typeof run>
         >)
@@ -330,46 +338,51 @@ describe('版本处理工具函数测试', () => {
   describe('Canary 版本生成', () => {
     describe('getCanaryVersion', () => {
       it('应该生成正确的 canary 版本', async () => {
-        const mockGetGitCommitSha = getGitCommitSha as jest.MockedFunction<
+        const mockGetGitCommitSha = getGitCommitSha as MockedFunction<
           typeof getGitCommitSha
         >
         mockGetGitCommitSha.mockResolvedValue('abc123')
 
         // 模拟当前日期
         const mockDate = new Date('2023-11-13T10:00:00Z')
-        jest.spyOn(global, 'Date').mockImplementation(() => mockDate)
+        vi.useFakeTimers()
+        vi.setSystemTime(mockDate)
 
         const result = await getCanaryVersion('1.0.0')
         expect(result).toBe('1.0.1-canary.20231113-abc123')
 
         mockGetGitCommitSha.mockRestore()
-        jest.restoreAllMocks()
+        vi.useRealTimers()
+        vi.restoreAllMocks()
       })
 
       it('应该为预发布版本生成 canary 版本', async () => {
-        const mockGetGitCommitSha = getGitCommitSha as jest.MockedFunction<
+        const mockGetGitCommitSha = getGitCommitSha as MockedFunction<
           typeof getGitCommitSha
         >
         mockGetGitCommitSha.mockResolvedValue('def456')
 
         const mockDate = new Date('2023-12-01T15:30:00Z')
-        jest.spyOn(global, 'Date').mockImplementation(() => mockDate)
+        vi.useFakeTimers()
+        vi.setSystemTime(mockDate)
 
         const result = await getCanaryVersion('1.1.0-beta.1')
         expect(result).toBe('1.1.0-canary.20231201-def456')
 
         mockGetGitCommitSha.mockRestore()
-        jest.restoreAllMocks()
+        vi.useRealTimers()
+        vi.restoreAllMocks()
       })
 
       it('应该使用指定的工作目录', async () => {
-        const mockGetGitCommitSha = getGitCommitSha as jest.MockedFunction<
+        const mockGetGitCommitSha = getGitCommitSha as MockedFunction<
           typeof getGitCommitSha
         >
         mockGetGitCommitSha.mockResolvedValue('xyz789')
 
         const mockDate = new Date('2023-11-13T10:00:00Z')
-        jest.spyOn(global, 'Date').mockImplementation(() => mockDate)
+        vi.useFakeTimers()
+        vi.setSystemTime(mockDate)
 
         const cwd = '/custom/path'
         await getCanaryVersion('2.0.0', cwd)
@@ -377,23 +390,26 @@ describe('版本处理工具函数测试', () => {
         expect(mockGetGitCommitSha).toHaveBeenCalledWith(true, { cwd })
 
         mockGetGitCommitSha.mockRestore()
-        jest.restoreAllMocks()
+        vi.useRealTimers()
+        vi.restoreAllMocks()
       })
 
       it('应该正确处理已经是 canary 版本的情况', async () => {
-        const mockGetGitCommitSha = getGitCommitSha as jest.MockedFunction<
+        const mockGetGitCommitSha = getGitCommitSha as MockedFunction<
           typeof getGitCommitSha
         >
         mockGetGitCommitSha.mockResolvedValue('abc123')
 
         const mockDate = new Date('2023-11-13T10:00:00Z')
-        jest.spyOn(global, 'Date').mockImplementation(() => mockDate)
+        vi.useFakeTimers()
+        vi.setSystemTime(mockDate)
 
         const result = await getCanaryVersion('1.0.0-canary.20231112-old123')
         expect(result).toBe('1.0.0-canary.20231113-abc123')
 
         mockGetGitCommitSha.mockRestore()
-        jest.restoreAllMocks()
+        vi.useRealTimers()
+        vi.restoreAllMocks()
       })
     })
   })

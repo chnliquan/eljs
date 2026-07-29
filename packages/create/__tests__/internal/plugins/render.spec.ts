@@ -1,41 +1,53 @@
 import type { RenderTemplateOptions } from '@eljs/utils'
+import * as mockedUtils from '@eljs/utils'
+import * as mockedPath from 'node:path'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mocked,
+  type MockedFunction,
+} from 'vitest'
 
 import renderPlugin from '../../../src/internal/plugins/render'
 import type { Api } from '../../../src/types'
 
 // Mock types
 interface MockUtils {
-  extractCallDir: jest.MockedFunction<(depth: number) => string>
-  isDirectory: jest.MockedFunction<(path: string) => Promise<boolean>>
+  extractCallDir: MockedFunction<(depth: number) => string>
+  isDirectory: MockedFunction<(path: string) => Promise<boolean>>
 }
 
 interface MockPath {
-  basename: jest.MockedFunction<(path: string) => string>
-  join: jest.MockedFunction<(...args: string[]) => string>
-  resolve: jest.MockedFunction<(...args: string[]) => string>
+  basename: MockedFunction<(path: string) => string>
+  join: MockedFunction<(...args: string[]) => string>
+  resolve: MockedFunction<(...args: string[]) => string>
 }
 
 // Mock @eljs/utils
-jest.mock('@eljs/utils', () => ({
-  extractCallDir: jest.fn(() => '/base/dir'),
-  isDirectory: jest.fn(),
+vi.mock('@eljs/utils', () => ({
+  extractCallDir: vi.fn(() => '/base/dir'),
+  isDirectory: vi.fn(),
 }))
 
 // Mock node:path
-jest.mock('node:path', () => ({
-  basename: jest.fn(
+vi.mock('node:path', () => ({
+  basename: vi.fn(
     (path: string) =>
       path
         .split('/')
         .pop()
         ?.replace(/\.tpl$/, '') || '',
   ),
-  join: jest.fn((...args: string[]) => args.join('/')),
-  resolve: jest.fn((...args: string[]) => args.join('/')),
+  join: vi.fn((...args: string[]) => args.join('/')),
+  resolve: vi.fn((...args: string[]) => args.join('/')),
 }))
 
 describe('内部插件 render', () => {
-  let mockApi: jest.Mocked<Api>
+  let mockApi: Mocked<Api>
   let renderCallback: (
     path: string,
     data?: Record<string, unknown>,
@@ -45,11 +57,11 @@ describe('内部插件 render', () => {
   let mockPath: MockPath
 
   beforeEach(() => {
-    mockUtils = jest.requireMock('@eljs/utils') as MockUtils
-    mockPath = jest.requireMock('node:path') as MockPath
+    mockUtils = mockedUtils as unknown as MockUtils
+    mockPath = mockedPath as unknown as MockPath
 
     mockApi = {
-      registerMethod: jest.fn((name: string, fn: unknown) => {
+      registerMethod: vi.fn((name: string, fn: unknown) => {
         if (name === 'render') {
           renderCallback = fn as (
             path: string,
@@ -58,17 +70,17 @@ describe('内部插件 render', () => {
           ) => Promise<void>
         }
       }),
-      copyDirectory: jest.fn(),
-      copyTpl: jest.fn(),
-      copyFile: jest.fn(),
+      copyDirectory: vi.fn(),
+      copyTpl: vi.fn(),
+      copyFile: vi.fn(),
       paths: {
         target: '/test/project',
       },
-    } as unknown as jest.Mocked<Api>
+    } as unknown as Mocked<Api>
   })
 
   afterEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   it('应该是一个函数', () => {
@@ -88,7 +100,7 @@ describe('内部插件 render', () => {
   describe('render 方法', () => {
     beforeEach(() => {
       renderPlugin(mockApi)
-      jest.clearAllMocks()
+      vi.clearAllMocks()
     })
 
     it('应该处理目录渲染', async () => {
@@ -249,7 +261,7 @@ describe('内部插件 render', () => {
       expect(mockApi.copyTpl).toHaveBeenCalled()
       expect(mockApi.copyFile).not.toHaveBeenCalled()
 
-      jest.clearAllMocks()
+      vi.clearAllMocks()
 
       // 测试常规文件
       await renderCallback('config.json', {})

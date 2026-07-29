@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 /* eslint-disable @typescript-eslint/no-var-requires */
 /**
  * @fileoverview index.ts 模块的单元测试
@@ -11,9 +12,9 @@ describe('index 模块测试', () => {
       await expect(import('../src/index')).resolves.toBeDefined()
     })
 
-    it('应该是一个有效的 ES 模块', () => {
+    it('应该是一个有效的 ES 模块', async () => {
       // 导入模块并验证其结构
-      const module = require('../src/index')
+      const module = await import('../src/index')
       expect(typeof module).toBe('object')
     })
 
@@ -50,11 +51,8 @@ describe('index 模块测试', () => {
   })
 
   describe('模块兼容性', () => {
-    it('应该兼容 CommonJS 导入方式', () => {
-      // 测试 CommonJS 方式的导入
-      expect(() => {
-        require('../src/index')
-      }).not.toThrow()
+    it('应该能够被 Node.js 模块系统导入', async () => {
+      await expect(import('../src/index')).resolves.toBeDefined()
     })
 
     it('应该兼容 ES Module 导入方式', async () => {

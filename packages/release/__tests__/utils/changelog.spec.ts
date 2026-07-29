@@ -1,3 +1,5 @@
+import * as importedModule0 from 'conventional-changelog'
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 /* eslint-disable @typescript-eslint/no-var-requires */
 /* eslint-disable @typescript-eslint/naming-convention */
 /**
@@ -12,6 +14,8 @@ import {
   type GenerateChangelogOptions,
 } from '../../src/utils/changelog'
 
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+
 // 定义 finalizeContext 函数的类型
 type FinalizeContextFunction = (
   context: Record<string, unknown>,
@@ -22,12 +26,12 @@ type FinalizeContextFunction = (
 ) => Record<string, unknown>
 
 // 模拟依赖
-jest.mock('concat-stream')
-jest.mock('conventional-changelog', () => ({
+vi.mock('concat-stream')
+vi.mock('conventional-changelog', () => ({
   __esModule: true,
-  default: jest.fn(),
+  default: vi.fn(),
 }))
-jest.mock('@eljs/conventional-changelog-preset', () => ({
+vi.mock('@eljs/conventional-changelog-preset', () => ({
   __esModule: true,
   default: {
     name: 'eljs-preset',
@@ -36,21 +40,21 @@ jest.mock('@eljs/conventional-changelog-preset', () => ({
 
 describe('更新日志生成工具函数测试', () => {
   let mockStream: {
-    pipe: jest.Mock
-    on: jest.Mock
+    pipe: Mock
+    on: Mock
   }
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     mockStream = {
-      pipe: jest.fn(),
-      on: jest.fn(),
+      pipe: vi.fn(),
+      on: vi.fn(),
     }
 
-    const conventionalChangelog = require('conventional-changelog').default
+    const conventionalChangelog = requiredModule0.default as unknown as Mock
     conventionalChangelog.mockReturnValue(mockStream)
-    ;(concat as jest.Mock).mockImplementation(callback => {
+    ;(concat as Mock).mockImplementation(callback => {
       return {
         callback,
       }
@@ -76,7 +80,7 @@ describe('更新日志生成工具函数测试', () => {
 
       expect(result).toBe(expectedChangelog)
 
-      const conventionalChangelog = require('conventional-changelog').default
+      const conventionalChangelog = requiredModule0.default as unknown as Mock
       expect(conventionalChangelog).toHaveBeenCalledWith(
         {
           cwd: process.cwd(),
@@ -106,7 +110,7 @@ describe('更新日志生成工具函数测试', () => {
 
       await getChangelog(options)
 
-      const conventionalChangelog = require('conventional-changelog').default
+      const conventionalChangelog = requiredModule0.default as unknown as Mock
       expect(conventionalChangelog).toHaveBeenCalledWith(
         expect.objectContaining({
           cwd: '/custom/path',
@@ -132,7 +136,7 @@ describe('更新日志生成工具函数测试', () => {
 
       await getChangelog(options)
 
-      const conventionalChangelog = require('conventional-changelog').default
+      const conventionalChangelog = requiredModule0.default as unknown as Mock
       expect(conventionalChangelog).toHaveBeenCalledWith(
         expect.objectContaining({
           tagPrefix: /^.+@/,
@@ -159,7 +163,7 @@ describe('更新日志生成工具函数测试', () => {
 
       await getChangelog(options)
 
-      const conventionalChangelog = require('conventional-changelog').default
+      const conventionalChangelog = requiredModule0.default as unknown as Mock
       expect(conventionalChangelog).toHaveBeenCalledWith({
         cwd: '/it/path',
         preset: 'angular',
@@ -224,7 +228,7 @@ describe('更新日志生成工具函数测试', () => {
 
       await getChangelog(options)
 
-      const conventionalChangelog = require('conventional-changelog').default
+      const conventionalChangelog = requiredModule0.default as unknown as Mock
       const writerOpts = conventionalChangelog.mock.calls[0][4]
       finalizeContext = writerOpts.finalizeContext
     })
@@ -352,7 +356,7 @@ describe('更新日志生成工具函数测试', () => {
       await getChangelog(options)
 
       // 验证独立模式的 tagPrefix 配置正确
-      const conventionalChangelog = require('conventional-changelog').default
+      const conventionalChangelog = requiredModule0.default as unknown as Mock
       expect(conventionalChangelog).toHaveBeenCalledWith(
         expect.objectContaining({
           tagPrefix: /^.+@/,
@@ -376,7 +380,7 @@ describe('更新日志生成工具函数测试', () => {
 
       await getChangelog(options)
 
-      const conventionalChangelog = require('conventional-changelog').default
+      const conventionalChangelog = requiredModule0.default as unknown as Mock
       const writerOpts = conventionalChangelog.mock.calls[0][4]
       const finalizeContext = writerOpts.finalizeContext
 

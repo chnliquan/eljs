@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 import { defineConfig } from '../src/define'
 import type { Config } from '../src/types'
 

@@ -1,26 +1,35 @@
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import debug from 'debug'
 
 import { createDebugger } from '../../src/logger/debug'
 
 // Mock 依赖项
-jest.mock('debug')
+vi.mock('debug')
 
 describe('Debug 调试工具', () => {
-  const mockDebug = debug as jest.MockedFunction<typeof debug>
+  const mockDebug = debug as MockedFunction<typeof debug>
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     delete process.env.DEBUG
   })
 
   afterEach(() => {
-    jest.restoreAllMocks()
+    vi.restoreAllMocks()
   })
 
   describe('基本功能验证', () => {
     it('应该在enabled时创建调试函数', () => {
-      const mockLogFn = jest.fn()
+      const mockLogFn = vi.fn()
       const mockDebugInstance = Object.assign(mockLogFn, {
         enabled: true,
         namespace: 'test:enabled',
@@ -43,7 +52,7 @@ describe('Debug 调试工具', () => {
     })
 
     it('应该在disabled时返回undefined', () => {
-      const mockLogFn = jest.fn()
+      const mockLogFn = vi.fn()
       const mockDebugInstance = Object.assign(mockLogFn, {
         enabled: false,
         namespace: 'test:disabled',
@@ -57,7 +66,7 @@ describe('Debug 调试工具', () => {
     })
 
     it('应该支持各种参数类型', () => {
-      const mockLogFn = jest.fn()
+      const mockLogFn = vi.fn()
       const mockDebugInstance = Object.assign(mockLogFn, {
         enabled: true,
         namespace: 'test:types',
@@ -81,7 +90,7 @@ describe('Debug 调试工具', () => {
 
   describe('depth 选项处理', () => {
     it('应该处理depth选项', () => {
-      const mockLogFn = jest.fn()
+      const mockLogFn = vi.fn()
       const mockDebugInstance = Object.assign(mockLogFn, {
         enabled: true,
         namespace: 'test:depth',
@@ -96,7 +105,7 @@ describe('Debug 调试工具', () => {
     })
 
     it('应该在没有inspectOpts时安全处理', () => {
-      const mockLogFn = jest.fn()
+      const mockLogFn = vi.fn()
       const mockDebugInstance = Object.assign(mockLogFn, {
         enabled: true,
         namespace: 'test:no-inspect',
@@ -113,7 +122,7 @@ describe('Debug 调试工具', () => {
       const depthCases = [0, 1, 5, -1, 999]
 
       depthCases.forEach(depthValue => {
-        const mockLogFn = jest.fn()
+        const mockLogFn = vi.fn()
         const mockDebugInstance = Object.assign(mockLogFn, {
           enabled: true,
           namespace: `test:depth${depthValue}`,
@@ -136,7 +145,7 @@ describe('Debug 调试工具', () => {
     it('应该在DEBUG包含namespace时启用', () => {
       process.env.DEBUG = 'test:focus'
 
-      const mockLogFn = jest.fn()
+      const mockLogFn = vi.fn()
       const mockDebugInstance = Object.assign(mockLogFn, {
         enabled: true,
         namespace: 'test:focus',
@@ -152,7 +161,7 @@ describe('Debug 调试工具', () => {
     it('应该在DEBUG不包含namespace时禁用', () => {
       process.env.DEBUG = 'other:pattern'
 
-      const mockLogFn = jest.fn()
+      const mockLogFn = vi.fn()
       const mockDebugInstance = Object.assign(mockLogFn, {
         enabled: true,
         namespace: 'test:focus',
@@ -168,7 +177,7 @@ describe('Debug 调试工具', () => {
     it('应该使用自定义focus字符串', () => {
       process.env.DEBUG = 'custom:target'
 
-      const mockLogFn = jest.fn()
+      const mockLogFn = vi.fn()
       const mockDebugInstance = Object.assign(mockLogFn, {
         enabled: true,
         namespace: 'any:name',
@@ -186,7 +195,7 @@ describe('Debug 调试工具', () => {
     it('应该在没有DEBUG时禁用focused模式', () => {
       delete process.env.DEBUG
 
-      const mockLogFn = jest.fn()
+      const mockLogFn = vi.fn()
       const mockDebugInstance = Object.assign(mockLogFn, {
         enabled: true,
         namespace: 'test:focus',
@@ -202,7 +211,7 @@ describe('Debug 调试工具', () => {
 
   describe('边界情况', () => {
     it('应该处理空namespace', () => {
-      const mockLogFn = jest.fn()
+      const mockLogFn = vi.fn()
       const mockDebugInstance = Object.assign(mockLogFn, {
         enabled: true,
         namespace: '',
@@ -216,7 +225,7 @@ describe('Debug 调试工具', () => {
     })
 
     it('应该处理特殊字符', () => {
-      const mockLogFn = jest.fn()
+      const mockLogFn = vi.fn()
       const mockDebugInstance = Object.assign(mockLogFn, {
         enabled: true,
         namespace: 'special',
@@ -235,7 +244,7 @@ describe('Debug 调试工具', () => {
     it('应该处理组合选项', () => {
       process.env.DEBUG = 'combined:test'
 
-      const mockLogFn = jest.fn()
+      const mockLogFn = vi.fn()
       const mockDebugInstance = Object.assign(mockLogFn, {
         enabled: true,
         namespace: 'combined:test',
@@ -265,7 +274,7 @@ describe('Debug 调试工具', () => {
 
   describe('类型安全验证', () => {
     it('应该返回正确的函数类型', () => {
-      const mockLogFn = jest.fn()
+      const mockLogFn = vi.fn()
       const mockDebugInstance = Object.assign(mockLogFn, {
         enabled: true,
         namespace: 'test:types',
@@ -285,7 +294,7 @@ describe('Debug 调试工具', () => {
     })
 
     it('应该处理返回值类型', () => {
-      const mockLogFn = jest.fn()
+      const mockLogFn = vi.fn()
 
       // 测试enabled情况
       const enabledInstance = Object.assign(mockLogFn, {
@@ -298,7 +307,7 @@ describe('Debug 调试工具', () => {
       expect(typeof enabledResult).toBe('function')
 
       // 测试disabled情况
-      const disabledInstance = Object.assign(jest.fn(), {
+      const disabledInstance = Object.assign(vi.fn(), {
         enabled: false,
         namespace: 'test:disabled',
       })

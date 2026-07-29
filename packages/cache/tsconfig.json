@@ -1,7 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src", "../../global.d.ts"],
+  "include": ["src", "__tests__", "../../global.d.ts"],
   "compilerOptions": {
-    "declarationDir": "esm"
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true,
+    "noUnusedLocals": false,
+    "types": ["node"],
+    "verbatimModuleSyntax": false
   }
 }

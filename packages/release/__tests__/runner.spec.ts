@@ -1,3 +1,6 @@
+import * as importedModule1 from '@eljs/pluggable'
+import * as importedModule0 from '@eljs/utils'
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 /* eslint-disable @typescript-eslint/no-var-requires */
 /**
  * @file packages/release runner 模块单元测试
@@ -7,14 +10,29 @@
 import { Runner } from '../src/runner'
 import type { Config } from '../src/types'
 
+const requiredModule1 = vi.mocked(importedModule1, { deep: true })
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+
 // 模拟所有依赖
-jest.mock('@eljs/pluggable')
-jest.mock('@eljs/utils')
-jest.mock('../src/default')
-jest.mock('../src/utils')
+vi.mock('@eljs/pluggable')
+vi.mock('@eljs/utils', () => ({
+  chalk: {
+    cyan: vi.fn((text: string) => text),
+  },
+  createDebugger: vi.fn(() => vi.fn()),
+  deepMerge: vi.fn(),
+  isPathExistsSync: vi.fn(),
+  logger: {
+    error: vi.fn(),
+    step: vi.fn(),
+  },
+  readJsonSync: vi.fn(),
+}))
+vi.mock('../src/default')
+vi.mock('../src/utils')
 
 // 模拟 console.log
-const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {})
+const mockConsoleLog = vi.spyOn(console, 'log').mockImplementation(() => {})
 
 describe('Runner 类测试', () => {
   afterAll(() => {
@@ -22,14 +40,14 @@ describe('Runner 类测试', () => {
   })
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // 重新设置基本的模拟
-    const { isPathExistsSync, readJsonSync, logger } = require('@eljs/utils')
+    const { isPathExistsSync, readJsonSync, logger } = requiredModule0
     isPathExistsSync.mockReturnValue(true)
     readJsonSync.mockReturnValue({ name: 'it-package', version: '1.0.0' })
-    logger.error = jest.fn()
-    logger.step = jest.fn()
+    logger.error.mockClear()
+    logger.step.mockClear()
   })
 
   describe('Runner 构造函数', () => {
@@ -48,7 +66,7 @@ describe('Runner 类测试', () => {
     })
 
     it('应该正确验证 package.json 路径', () => {
-      const { isPathExistsSync } = require('@eljs/utils')
+      const { isPathExistsSync } = requiredModule0
       const itPath = '/it/project'
 
       new Runner({ cwd: itPath })
@@ -57,14 +75,14 @@ describe('Runner 类测试', () => {
     })
 
     it('当 package.json 不存在时应该抛出 AppError', () => {
-      const { isPathExistsSync } = require('@eljs/utils')
+      const { isPathExistsSync } = requiredModule0
       isPathExistsSync.mockReturnValue(false)
 
       expect(() => new Runner()).toThrow()
     })
 
     it('当 package.json 没有 version 字段时应该抛出 AppError', () => {
-      const { readJsonSync } = require('@eljs/utils')
+      const { readJsonSync } = requiredModule0
       readJsonSync.mockReturnValue({ name: 'it' })
 
       expect(() => new Runner()).toThrow()
@@ -72,7 +90,7 @@ describe('Runner 类测试', () => {
 
     it('应该正确设置 appData', () => {
       const mockPkg = { name: 'it-package', version: '2.0.0' }
-      const { readJsonSync } = require('@eljs/utils')
+      const { readJsonSync } = requiredModule0
       readJsonSync.mockReturnValue(mockPkg)
 
       const runner = new Runner({ cwd: '/it/path' })
@@ -82,7 +100,7 @@ describe('Runner 类测试', () => {
     })
 
     it('应该正确传递配置到 Pluggable', () => {
-      const { Pluggable } = require('@eljs/pluggable')
+      const { Pluggable } = requiredModule1
       const config: Config = {
         cwd: '/it',
         presets: ['preset1'],
@@ -102,7 +120,7 @@ describe('Runner 类测试', () => {
     })
 
     it('应该正确处理默认值', () => {
-      const { Pluggable } = require('@eljs/pluggable')
+      const { Pluggable } = requiredModule1
 
       new Runner()
 
@@ -116,7 +134,7 @@ describe('Runner 类测试', () => {
     })
 
     it('应该验证 version 字段的有效性', () => {
-      const { readJsonSync } = require('@eljs/utils')
+      const { readJsonSync } = requiredModule0
       const validVersions = ['1.0.0', '0.1.0', '10.20.30', '1.0.0-alpha.1']
 
       validVersions.forEach(version => {
@@ -126,7 +144,7 @@ describe('Runner 类测试', () => {
     })
 
     it('应该拒绝无效的 version 字段', () => {
-      const { readJsonSync } = require('@eljs/utils')
+      const { readJsonSync } = requiredModule0
       const invalidVersions = [null, undefined, '', false, 0]
 
       invalidVersions.forEach(version => {
@@ -138,7 +156,7 @@ describe('Runner 类测试', () => {
 
   describe('Runner step 方法', () => {
     it('应该调用 logger.step 方法', () => {
-      const { logger } = require('@eljs/utils')
+      const { logger } = requiredModule0
       const runner = new Runner()
       const message = '测试步骤'
 
@@ -148,7 +166,7 @@ describe('Runner 类测试', () => {
     })
 
     it('应该正确格式化不同类型的消息', () => {
-      const { logger } = require('@eljs/utils')
+      const { logger } = requiredModule0
       const runner = new Runner()
 
       runner.step('开始发布')
@@ -166,7 +184,7 @@ describe('Runner 类测试', () => {
     })
 
     it('应该处理空消息', () => {
-      const { logger } = require('@eljs/utils')
+      const { logger } = requiredModule0
       const runner = new Runner()
 
       runner.step('')
@@ -175,7 +193,7 @@ describe('Runner 类测试', () => {
     })
 
     it('应该处理特殊字符', () => {
-      const { logger } = require('@eljs/utils')
+      const { logger } = requiredModule0
       const runner = new Runner()
       const message = '发布 v1.0.0 🚀'
 
@@ -185,7 +203,7 @@ describe('Runner 类测试', () => {
     })
 
     it('应该正确添加换行符', () => {
-      const { logger } = require('@eljs/utils')
+      const { logger } = requiredModule0
       const runner = new Runner()
 
       runner.step('it')
@@ -197,7 +215,7 @@ describe('Runner 类测试', () => {
     })
 
     it('应该处理长消息', () => {
-      const { logger } = require('@eljs/utils')
+      const { logger } = requiredModule0
       const runner = new Runner()
       const longMessage = 'x'.repeat(1000)
 
@@ -234,7 +252,7 @@ describe('Runner 类测试', () => {
 
   describe('Runner 错误处理', () => {
     it('应该处理文件系统访问错误', () => {
-      const { isPathExistsSync } = require('@eljs/utils')
+      const { isPathExistsSync } = requiredModule0
       isPathExistsSync.mockImplementation(() => {
         throw new Error('Permission denied')
       })
@@ -243,7 +261,7 @@ describe('Runner 类测试', () => {
     })
 
     it('应该处理 JSON 解析错误', () => {
-      const { readJsonSync } = require('@eljs/utils')
+      const { readJsonSync } = requiredModule0
       readJsonSync.mockImplementation(() => {
         throw new SyntaxError('Malformed JSON')
       })
@@ -252,7 +270,7 @@ describe('Runner 类测试', () => {
     })
 
     it('应该正确使用 chalk 来格式化错误消息', () => {
-      const { isPathExistsSync, chalk } = require('@eljs/utils')
+      const { isPathExistsSync, chalk } = requiredModule0
       isPathExistsSync.mockReturnValue(false)
       chalk.cyan.mockReturnValue('[styled-path]')
 
@@ -279,7 +297,7 @@ describe('Runner 类测试', () => {
     })
 
     it('应该正确处理 presets 数组', () => {
-      const { Pluggable } = require('@eljs/pluggable')
+      const { Pluggable } = requiredModule1
 
       // 空数组
       new Runner({ presets: [] })
@@ -312,7 +330,7 @@ describe('Runner 类测试', () => {
     })
 
     it('应该正确处理 plugins 数组', () => {
-      const { Pluggable } = require('@eljs/pluggable')
+      const { Pluggable } = requiredModule1
 
       // 空数组
       new Runner({ plugins: [] })
@@ -379,7 +397,7 @@ describe('Runner 类测试', () => {
     })
 
     it('应该处理特殊的 package.json 内容', () => {
-      const { readJsonSync } = require('@eljs/utils')
+      const { readJsonSync } = requiredModule0
       const specialPackages = [
         { name: 'normal-package', version: '1.0.0' },
         { name: '@scoped/package', version: '2.1.3' },

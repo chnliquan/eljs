@@ -1,30 +1,43 @@
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
+import * as importedModule0 from '../../src/env'
+import * as importedModule1 from '../../src/path'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { cache, getPackageManager } from '../../src/npm/package-manager'
 
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+const requiredModule1 = vi.mocked(importedModule1, { deep: true })
+
 // Mock 依赖项
-jest.mock('../../src/env')
-jest.mock('../../src/path')
+vi.mock('../../src/env')
+vi.mock('../../src/path')
 
 describe('Package Manager 工具', () => {
-  const mockHasGlobalInstallation = require('../../src/env')
-    .hasGlobalInstallation as jest.MockedFunction<
-    (bin: string) => Promise<boolean>
-  >
-  const mockGetPnpmWorkspaceRoot = require('../../src/path')
-    .getPnpmWorkspaceRoot as jest.MockedFunction<
-    (cwd: string) => Promise<string | null>
-  >
-  const mockGetYarnWorkspaceRoot = require('../../src/path')
-    .getYarnWorkspaceRoot as jest.MockedFunction<
-    (cwd: string) => Promise<string | null>
-  >
-  const mockGetNpmWorkspaceRoot = require('../../src/path')
-    .getNpmWorkspaceRoot as jest.MockedFunction<
-    (cwd: string) => Promise<string | null>
-  >
+  const mockHasGlobalInstallation =
+    requiredModule0.hasGlobalInstallation as MockedFunction<
+      (bin: string) => Promise<boolean>
+    >
+  const mockGetPnpmWorkspaceRoot =
+    requiredModule1.getPnpmWorkspaceRoot as MockedFunction<
+      (cwd: string) => Promise<string | null>
+    >
+  const mockGetYarnWorkspaceRoot =
+    requiredModule1.getYarnWorkspaceRoot as MockedFunction<
+      (cwd: string) => Promise<string | null>
+    >
+  const mockGetNpmWorkspaceRoot =
+    requiredModule1.getNpmWorkspaceRoot as MockedFunction<
+      (cwd: string) => Promise<string | null>
+    >
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // 清除模块内部缓存
     cache.clear()

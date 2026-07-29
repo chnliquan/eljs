@@ -19,7 +19,6 @@
   "license": "MIT",
   "author": "chnliquan",
   "main": "lib/index.js",
-  "module": "esm/index.js",
   "types": "esm/index.d.ts",
   "files": [
     "esm/*",
@@ -29,9 +28,10 @@
     "build": "father build",
     "clean": "rimraf lib && rimraf esm && rimraf node_modules/.cache/father",
     "dev": "father dev",
-    "test": "jest --config jest.config.js",
-    "test:coverage": "jest --config jest.config.js --coverage",
-    "test:watch": "jest --config jest.config.js --watch"
+    "test": "vitest run --config ../../vitest.config.ts packages/config",
+    "test:coverage": "vitest run --config ../../vitest.config.ts packages/config --coverage",
+    "test:watch": "vitest --config ../../vitest.config.ts packages/config",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json"
   },
   "dependencies": {
     "@eljs/utils": "workspace:*"
@@ -45,7 +45,7 @@
     }
   },
   "engines": {
-    "node": ">=16.20.0"
+    "node": ">=22.14.0"
   },
   "publishConfig": {
     "access": "public",

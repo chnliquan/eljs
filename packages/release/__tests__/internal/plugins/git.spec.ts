@@ -1,3 +1,11 @@
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
 /**
  * @file packages/release internal/plugins/git 模块单元测试
  * @description 测试 git.ts Git 相关插件功能
@@ -22,12 +30,12 @@ import { getChangelog } from '../../../src/utils'
 
 // 定义测试专用的 Mock API 类型，基于源代码类型但适应测试环境
 interface GitTestApi {
-  onCheck: jest.MockedFunction<
+  onCheck: MockedFunction<
     (
       handler: (args: { releaseTypeOrVersion?: string }) => Promise<void>,
     ) => void
   >
-  getChangelog: jest.MockedFunction<
+  getChangelog: MockedFunction<
     (
       handler: (args: {
         version: string
@@ -37,7 +45,7 @@ interface GitTestApi {
       options?: { stage?: number },
     ) => void
   >
-  onBeforeRelease: jest.MockedFunction<
+  onBeforeRelease: MockedFunction<
     (
       handler: (args: {
         version: string
@@ -47,7 +55,7 @@ interface GitTestApi {
       }) => Promise<void>,
     ) => void
   >
-  onRelease: jest.MockedFunction<
+  onRelease: MockedFunction<
     (
       handler: (args: {
         version: string
@@ -57,7 +65,7 @@ interface GitTestApi {
       }) => Promise<void>,
     ) => void
   >
-  step: jest.MockedFunction<(message: string) => void>
+  step: MockedFunction<(message: string) => void>
   config: Config
   appData: {
     cliVersion: string
@@ -97,44 +105,57 @@ type OnReleaseHandler = (args: {
 }) => Promise<void>
 
 // 模拟所有依赖
-jest.mock('@eljs/utils', () => ({
+vi.mock('@eljs/utils', () => ({
   chalk: {
-    cyan: jest.fn((text: string) => `[cyan]${text}[/cyan]`),
+    cyan: vi.fn((text: string) => `[cyan]${text}[/cyan]`),
   },
-  gitCommit: jest.fn(),
-  gitPush: jest.fn(),
-  gitTag: jest.fn(),
-  isGitBehindRemote: jest.fn(),
-  isGitClean: jest.fn(),
-  isPathExists: jest.fn(),
+  gitCommit: vi.fn(),
+  gitPush: vi.fn(),
+  gitTag: vi.fn(),
+  isGitBehindRemote: vi.fn(),
+  isGitClean: vi.fn(),
+  isPathExists: vi.fn(),
   logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
   },
-  normalizeArgs: jest.fn(),
-  readFile: jest.fn(),
-  writeFile: jest.fn(),
+  normalizeArgs: vi.fn(),
+  readFile: vi.fn(),
+  writeFile: vi.fn(),
 }))
 
-jest.mock('../../../src/utils', () => ({
-  AppError: jest.fn().mockImplementation((message: string) => {
-    const error = new Error(message)
-    error.name = 'AppError'
-    return error
-  }),
-  getChangelog: jest.fn(),
+vi.mock('../../../src/utils', () => ({
+  AppError: class AppError extends Error {
+    public constructor(message: string) {
+      super(message)
+      this.name = 'AppError'
+    }
+  },
+  getChangelog: vi.fn(),
 }))
 
 describe('Git 插件测试', () => {
   let mockApi: GitTestApi
 
+  const getOnReleaseHandler = (): OnReleaseHandler => {
+    const handlers = mockApi.onRelease.mock.calls
+      .slice(-2)
+      .map(call => call[0] as OnReleaseHandler)
+
+    return async args => {
+      for (const handler of handlers) {
+        await handler(args)
+      }
+    }
+  }
+
   beforeEach(() => {
     mockApi = {
-      onCheck: jest.fn(),
-      getChangelog: jest.fn(),
-      onBeforeRelease: jest.fn(),
-      onRelease: jest.fn(),
-      step: jest.fn(),
+      onCheck: vi.fn(),
+      getChangelog: vi.fn(),
+      onBeforeRelease: vi.fn(),
+      onRelease: vi.fn(),
+      step: vi.fn(),
       config: {
         git: {
           requireClean: true,
@@ -179,40 +200,36 @@ describe('Git 插件测试', () => {
       cwd: '/it/project',
     }
 
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // 设置默认的模拟返回值
-    ;(isGitClean as jest.MockedFunction<typeof isGitClean>).mockResolvedValue(
+    ;(isGitClean as MockedFunction<typeof isGitClean>).mockResolvedValue(true)
+    ;(
+      isGitBehindRemote as MockedFunction<typeof isGitBehindRemote>
+    ).mockResolvedValue(false)
+    ;(getChangelog as MockedFunction<typeof getChangelog>).mockResolvedValue(
+      '## Changelog\n\n- Feature: Added new functionality',
+    )
+    ;(isPathExists as MockedFunction<typeof isPathExists>).mockResolvedValue(
       true,
     )
-    ;(
-      isGitBehindRemote as jest.MockedFunction<typeof isGitBehindRemote>
-    ).mockResolvedValue(false)
-    ;(
-      getChangelog as jest.MockedFunction<typeof getChangelog>
-    ).mockResolvedValue('## Changelog\n\n- Feature: Added new functionality')
-    ;(
-      isPathExists as jest.MockedFunction<typeof isPathExists>
-    ).mockResolvedValue(true)
-    ;(readFile as jest.MockedFunction<typeof readFile>).mockResolvedValue(
+    ;(readFile as MockedFunction<typeof readFile>).mockResolvedValue(
       '# Existing changelog',
     )
-    ;(writeFile as jest.MockedFunction<typeof writeFile>).mockResolvedValue(
+    ;(writeFile as MockedFunction<typeof writeFile>).mockResolvedValue(
       undefined,
     )
-    ;(gitCommit as jest.MockedFunction<typeof gitCommit>).mockResolvedValue(
+    ;(gitCommit as MockedFunction<typeof gitCommit>).mockResolvedValue(
       undefined,
     )
-    ;(gitTag as jest.MockedFunction<typeof gitTag>).mockResolvedValue(undefined)
-    ;(gitPush as jest.MockedFunction<typeof gitPush>).mockResolvedValue(
-      undefined,
+    ;(gitTag as MockedFunction<typeof gitTag>).mockResolvedValue(undefined)
+    ;(gitPush as MockedFunction<typeof gitPush>).mockResolvedValue(undefined)
+    ;(normalizeArgs as MockedFunction<typeof normalizeArgs>).mockImplementation(
+      args => {
+        if (args === undefined) return []
+        return Array.isArray(args) ? args : [args]
+      },
     )
-    ;(
-      normalizeArgs as jest.MockedFunction<typeof normalizeArgs>
-    ).mockImplementation(args => {
-      if (args === undefined) return []
-      return Array.isArray(args) ? args : [args]
-    })
   })
 
   describe('插件注册', () => {
@@ -224,7 +241,20 @@ describe('Git 插件测试', () => {
         stage: 10,
       })
       expect(mockApi.onBeforeRelease).toHaveBeenCalledWith(expect.any(Function))
-      expect(mockApi.onRelease).toHaveBeenCalledWith(expect.any(Function))
+      expect(mockApi.onRelease).toHaveBeenNthCalledWith(
+        1,
+        expect.any(Function),
+        {
+          stage: -10,
+        },
+      )
+      expect(mockApi.onRelease).toHaveBeenNthCalledWith(
+        2,
+        expect.any(Function),
+        {
+          stage: 10,
+        },
+      )
     })
   })
 
@@ -249,7 +279,7 @@ describe('Git 插件测试', () => {
     })
 
     it('当树不干净时应该抛出错误', async () => {
-      ;(isGitClean as jest.MockedFunction<typeof isGitClean>).mockResolvedValue(
+      ;(isGitClean as MockedFunction<typeof isGitClean>).mockResolvedValue(
         false,
       )
 
@@ -260,7 +290,7 @@ describe('Git 插件测试', () => {
 
     it('当 Git 落后于远程时应该抛出错误', async () => {
       ;(
-        isGitBehindRemote as jest.MockedFunction<typeof isGitBehindRemote>
+        isGitBehindRemote as MockedFunction<typeof isGitBehindRemote>
       ).mockResolvedValue(true)
 
       await expect(
@@ -413,9 +443,9 @@ describe('Git 插件测试', () => {
     })
 
     it('应该处理变更日志文件不存在的情况', async () => {
-      ;(
-        isPathExists as jest.MockedFunction<typeof isPathExists>
-      ).mockResolvedValue(false)
+      ;(isPathExists as MockedFunction<typeof isPathExists>).mockResolvedValue(
+        false,
+      )
 
       const releaseInfo = {
         version: '1.1.0',
@@ -459,7 +489,7 @@ describe('Git 插件测试', () => {
 
     beforeEach(() => {
       gitPlugin(mockApi as unknown as Api)
-      onReleaseHandler = mockApi.onRelease?.mock.calls[0][0] as OnReleaseHandler
+      onReleaseHandler = getOnReleaseHandler()
     })
 
     it('应该提交更改', async () => {
@@ -561,9 +591,7 @@ describe('Git 插件测试', () => {
     it('应该处理标签已存在的情况', async () => {
       mockApi.appData.latestTag = 'v1.1.0' // 设置 latestTag 以匹配条件
       const tagError = new Error("tag 'v1.1.0' already exists")
-      ;(gitTag as jest.MockedFunction<typeof gitTag>).mockRejectedValue(
-        tagError,
-      )
+      ;(gitTag as MockedFunction<typeof gitTag>).mockRejectedValue(tagError)
 
       const releaseInfo = {
         version: '1.1.0',
@@ -578,9 +606,7 @@ describe('Git 插件测试', () => {
 
     it('应该传播非标签存在的错误', async () => {
       const otherError = new Error('network error')
-      ;(gitTag as jest.MockedFunction<typeof gitTag>).mockRejectedValue(
-        otherError,
-      )
+      ;(gitTag as MockedFunction<typeof gitTag>).mockRejectedValue(otherError)
 
       const releaseInfo = {
         version: '1.1.0',
@@ -601,7 +627,7 @@ describe('Git 插件测试', () => {
 
     beforeEach(() => {
       gitPlugin(mockApi as unknown as Api)
-      onReleaseHandler = mockApi.onRelease?.mock.calls[0][0] as OnReleaseHandler
+      onReleaseHandler = getOnReleaseHandler()
     })
 
     it('应该使用自定义提交参数', async () => {
@@ -671,11 +697,11 @@ describe('Git 插件测试', () => {
 
     beforeEach(() => {
       gitPlugin(mockApi as unknown as Api)
-      onReleaseHandler = mockApi.onRelease?.mock.calls[0][0] as OnReleaseHandler
+      onReleaseHandler = getOnReleaseHandler()
     })
 
     it('应该处理 Git 提交失败', async () => {
-      ;(gitCommit as jest.MockedFunction<typeof gitCommit>).mockRejectedValue(
+      ;(gitCommit as MockedFunction<typeof gitCommit>).mockRejectedValue(
         new Error('commit failed'),
       )
 
@@ -692,7 +718,7 @@ describe('Git 插件测试', () => {
     })
 
     it('应该处理 Git 推送失败', async () => {
-      ;(gitPush as jest.MockedFunction<typeof gitPush>).mockRejectedValue(
+      ;(gitPush as MockedFunction<typeof gitPush>).mockRejectedValue(
         new Error('push failed'),
       )
 
@@ -718,7 +744,7 @@ describe('Git 插件测试', () => {
     })
 
     it('应该处理文件写入失败', async () => {
-      ;(writeFile as jest.MockedFunction<typeof writeFile>).mockRejectedValue(
+      ;(writeFile as MockedFunction<typeof writeFile>).mockRejectedValue(
         new Error('write failed'),
       )
 
@@ -784,8 +810,7 @@ describe('Git 插件测试', () => {
       expect(writeFile).toHaveBeenCalled()
 
       // 4. 提交和推送
-      const onReleaseHandler = mockApi.onRelease?.mock
-        .calls[0][0] as OnReleaseHandler
+      const onReleaseHandler = getOnReleaseHandler()
       await onReleaseHandler({
         version: '1.1.0',
         isPrerelease: false,
@@ -803,8 +828,7 @@ describe('Git 插件测试', () => {
       mockApi.config.git!.commitMessage = 'release: v${version}'
 
       gitPlugin(mockApi as unknown as Api)
-      const onReleaseHandler = mockApi.onRelease?.mock
-        .calls[0][0] as OnReleaseHandler
+      const onReleaseHandler = getOnReleaseHandler()
 
       await onReleaseHandler({
         version: '2.0.0',
@@ -824,8 +848,7 @@ describe('Git 插件测试', () => {
       mockApi.config.git!.pushArgs = '--force'
 
       gitPlugin(mockApi as unknown as Api)
-      const onReleaseHandler = mockApi.onRelease?.mock
-        .calls[0][0] as OnReleaseHandler
+      const onReleaseHandler = getOnReleaseHandler()
 
       await onReleaseHandler({
         version: '1.1.0',
@@ -857,8 +880,7 @@ describe('Git 插件测试', () => {
         mockApi.config.git = { ...mockApi.config.git, ...config }
 
         gitPlugin(mockApi as unknown as Api)
-        const onReleaseHandler = mockApi.onRelease?.mock
-          .calls[0][0] as OnReleaseHandler
+        const onReleaseHandler = getOnReleaseHandler()
 
         await expect(
           onReleaseHandler({
@@ -869,7 +891,7 @@ describe('Git 插件测试', () => {
           }),
         ).resolves.toBeUndefined()
 
-        jest.clearAllMocks()
+        vi.clearAllMocks()
       }
     })
   })

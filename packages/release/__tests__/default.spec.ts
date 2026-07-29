@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 /**
  * @file packages/release default 模块单元测试
  * @description 测试 default.ts 默认配置

@@ -1,3 +1,14 @@
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+  type MockedFunction,
+} from 'vitest'
+import * as importedModule1 from '../../src/npm/package-manager'
+import * as importedModule0 from '../../src/type'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import execa from 'execa'
 
@@ -7,23 +18,29 @@ import {
   type InstallDepsOptions,
 } from '../../src/npm/install'
 
+const requiredModule1 = vi.mocked(importedModule1, { deep: true })
+const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+
 // Mock 依赖项
-jest.mock('execa')
-jest.mock('../../src/type')
-jest.mock('../../src/npm/package-manager')
+vi.mock('execa')
+vi.mock('../../src/type')
+vi.mock('../../src/npm/package-manager')
 
 describe('NPM 安装工具', () => {
-  const mockExeca = execa as jest.MockedFunction<typeof execa>
-  const mockIsObject = require('../../src/type')
-    .isObject as jest.MockedFunction<(value: unknown) => boolean>
-  const mockIsArray = require('../../src/type').isArray as jest.MockedFunction<
+  const mockExeca = execa as unknown as Mock
+  const mockIsObject = requiredModule0.isObject as MockedFunction<
     (value: unknown) => boolean
   >
-  const mockGetPackageManager = require('../../src/npm/package-manager')
-    .getPackageManager as jest.MockedFunction<(cwd?: string) => Promise<string>>
+  const mockIsArray = requiredModule0.isArray as MockedFunction<
+    (value: unknown) => boolean
+  >
+  const mockGetPackageManager =
+    requiredModule1.getPackageManager as MockedFunction<
+      (cwd?: string) => Promise<string>
+    >
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     mockIsObject.mockReturnValue(false)
     mockIsArray.mockReturnValue(false)
     mockGetPackageManager.mockResolvedValue('npm')

@@ -24,11 +24,14 @@
   "files": [
     "src"
   ],
+  "scripts": {
+    "typecheck": "node --check src/index.js && node --check src/parser.js && node --check src/what-bump.js && node --check src/writer.js"
+  },
   "dependencies": {
     "compare-func": "^2.0.0"
   },
   "engines": {
-    "node": ">=16.20.0"
+    "node": ">=22.14.0"
   },
   "publishConfig": {
     "access": "public",

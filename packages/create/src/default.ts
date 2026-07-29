@@ -21,4 +21,12 @@ export const defaultConfig: Config = {
    * Whether install dependencies when create done
    */
   install: true,
+  /**
+   * Whether skip remote template execution confirmation
+   */
+  yes: false,
+  /**
+   * Whether allow lifecycle scripts in remote template dependencies
+   */
+  allowTemplateScripts: false,
 }

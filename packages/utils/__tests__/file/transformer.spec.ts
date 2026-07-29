@@ -1,3 +1,12 @@
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { addHook } from 'pirates'
 
@@ -7,10 +16,10 @@ import {
 } from '../../src/file/transformer'
 
 // Mock 依赖项
-jest.mock('pirates')
+vi.mock('pirates')
 
 describe('文件转换器工具', () => {
-  const mockAddHook = addHook as jest.MockedFunction<typeof addHook>
+  const mockAddHook = addHook as MockedFunction<typeof addHook>
 
   // 定义测试用的转换函数类型
   interface MockTransformOptions {
@@ -27,16 +36,16 @@ describe('文件转换器工具', () => {
     options: MockTransformOptions,
   ) => { code: string }
 
-  let mockRevertFunction: jest.MockedFunction<() => void>
-  let mockTransformFunction: jest.MockedFunction<MockTransformFunction>
+  let mockRevertFunction: MockedFunction<() => void>
+  let mockTransformFunction: MockedFunction<MockTransformFunction>
   let transformer: Transformer<MockTransformFunction>
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // 创建 mock 函数
-    mockRevertFunction = jest.fn()
-    mockTransformFunction = jest
+    mockRevertFunction = vi.fn()
+    mockTransformFunction = vi
       .fn()
       .mockReturnValue({ code: 'transformed code' })
 
@@ -51,7 +60,7 @@ describe('文件转换器工具', () => {
   })
 
   afterEach(() => {
-    jest.restoreAllMocks()
+    vi.restoreAllMocks()
   })
 
   describe('Transformer 构造函数', () => {
@@ -284,7 +293,7 @@ describe('文件转换器工具', () => {
       expect(mockRevertFunction).toHaveBeenCalledTimes(1)
 
       // 第二次应用
-      mockAddHook.mockReturnValue(jest.fn()) // 新的 revert 函数
+      mockAddHook.mockReturnValue(vi.fn()) // 新的 revert 函数
       transformer.apply({ target: 'es2021' })
       expect(mockAddHook).toHaveBeenCalledTimes(2)
 
@@ -306,7 +315,7 @@ describe('文件转换器工具', () => {
         options: SpecificTransformOptions,
       ) => { code: string; map?: string }
 
-      const specificTransform: SpecificTransformFunction = jest
+      const specificTransform: SpecificTransformFunction = vi
         .fn()
         .mockReturnValue({
           code: 'specific code',
@@ -342,7 +351,7 @@ describe('文件转换器工具', () => {
         options: ComplexOptions,
       ) => { code: string }
 
-      const complexTransform: ComplexTransformFunction = jest
+      const complexTransform: ComplexTransformFunction = vi
         .fn()
         .mockReturnValue({ code: 'complex result' })
 
@@ -466,7 +475,7 @@ describe('文件转换器工具', () => {
     })
 
     it('应该处理 pirates 返回的恢复函数', () => {
-      const customRevert = jest.fn()
+      const customRevert = vi.fn()
       mockAddHook.mockReturnValue(customRevert)
 
       transformer.apply()
@@ -476,8 +485,8 @@ describe('文件转换器工具', () => {
     })
 
     it('应该确保每次 apply 都创建新的 hook', () => {
-      const firstRevert = jest.fn()
-      const secondRevert = jest.fn()
+      const firstRevert = vi.fn()
+      const secondRevert = vi.fn()
 
       mockAddHook
         .mockReturnValueOnce(firstRevert)
@@ -500,7 +509,7 @@ describe('文件转换器工具', () => {
 
   describe('实际转换场景模拟', () => {
     it('应该模拟 TypeScript 到 JavaScript 转换', () => {
-      const typescriptTransform = jest.fn().mockReturnValue({
+      const typescriptTransform = vi.fn().mockReturnValue({
         code: 'var message = "Hello, World!";',
       })
 
@@ -531,7 +540,7 @@ describe('文件转换器工具', () => {
     })
 
     it('应该模拟 JSX 转换', () => {
-      const jsxTransform = jest.fn().mockReturnValue({
+      const jsxTransform = vi.fn().mockReturnValue({
         code: 'React.createElement("div", null, "Hello")',
       })
 

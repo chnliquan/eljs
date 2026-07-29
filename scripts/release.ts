@@ -1,4 +1,4 @@
-import { release, resolveBin } from '@eljs/release'
+import { release } from '@eljs/release'
 import { isGitBehindRemote, isGitClean, logger } from '@eljs/utils'
 import { EOL } from 'node:os'
 import { $, argv } from 'zx'
@@ -30,8 +30,7 @@ async function main(): Promise<void> {
   // run tests before release
   logger.step('Release', 'Running tests ...')
   if (!skipTests) {
-    await $`${resolveBin.sync('jest')} --clearCache`
-    await $`pnpm run test --bail --passWithNoTests`
+    await $`pnpm run test --bail=1 --passWithNoTests`
   } else {
     console.log(`(skipped)`)
   }

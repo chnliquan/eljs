@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 import { PLATFORM } from '../../src/constants'
 
 describe('常量定义', () => {

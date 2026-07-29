@@ -1,32 +1,38 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 /* eslint-disable @typescript-eslint/no-var-requires */
 // Mock @eljs/utils
-const mockUtils = {
-  getGitUserSync: jest.fn(() => ({
-    name: 'Test Author',
-    email: 'test@example.com',
-  })),
-  gitUrlAnalysis: jest.fn(),
-  getGitUrlSync: jest.fn(() => 'https://github.com/test/repo.git'),
-}
+const { mockUtils } = vi.hoisted(() => ({
+  mockUtils: {
+    getGitUserSync: vi.fn(() => ({
+      name: 'Test Author',
+      email: 'test@example.com',
+    })),
+    gitUrlAnalysis: vi.fn(),
+    getGitUrlSync: vi.fn(() => 'https://github.com/test/repo.git'),
+  },
+}))
 
-jest.mock('@eljs/utils', () => mockUtils)
+vi.mock('@eljs/utils', () => mockUtils)
 
 describe('内部工具', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
+  let internalUtils: typeof import('../../src/internal/utils')
+
+  beforeEach(async () => {
+    vi.clearAllMocks()
     // 清除缓存的模块以测试缓存行为
-    jest.resetModules()
+    vi.resetModules()
+    internalUtils = await import('../../src/internal/utils')
   })
 
   describe('作者和邮箱', () => {
     it('应该从 git 用户导出作者信息', () => {
-      const { author } = require('../../src/internal/utils')
+      const { author } = internalUtils
       expect(typeof author).toBe('string')
       expect(author).toBe('Test Author')
     })
 
     it('应该从 git 用户导出邮箱信息', () => {
-      const { email } = require('../../src/internal/utils')
+      const { email } = internalUtils
       expect(typeof email).toBe('string')
       expect(email).toBe('test@example.com')
     })
@@ -34,12 +40,12 @@ describe('内部工具', () => {
 
   describe('getGitUrl', () => {
     it('应该是一个函数', () => {
-      const { getGitUrl } = require('../../src/internal/utils')
+      const { getGitUrl } = internalUtils
       expect(typeof getGitUrl).toBe('function')
     })
 
     it('应该返回目标目录的 git url', () => {
-      const { getGitUrl } = require('../../src/internal/utils')
+      const { getGitUrl } = internalUtils
       const targetDir = '/path/to/project'
       const result = getGitUrl(targetDir)
 
@@ -48,7 +54,7 @@ describe('内部工具', () => {
 
     it('应该缓存 git url 并在后续调用中返回相同值', () => {
       // 导入新模块
-      const { getGitUrl } = require('../../src/internal/utils')
+      const { getGitUrl } = internalUtils
 
       const targetDir1 = '/path/to/project1'
       const targetDir2 = '/path/to/project2'
@@ -64,7 +70,7 @@ describe('内部工具', () => {
 
   describe('getGitHref', () => {
     it('应该是一个函数', () => {
-      const { getGitHref } = require('../../src/internal/utils')
+      const { getGitHref } = internalUtils
       expect(typeof getGitHref).toBe('function')
     })
 
@@ -73,7 +79,7 @@ describe('内部工具', () => {
         href: 'https://github.com/test/repo',
       })
 
-      const { getGitHref } = require('../../src/internal/utils')
+      const { getGitHref } = internalUtils
       const gitUrl = 'https://github.com/test/repo.git'
       const result = getGitHref(gitUrl)
 
@@ -84,7 +90,7 @@ describe('内部工具', () => {
     it('当 git url 分析返回 null 时应该返回占位符', () => {
       mockUtils.gitUrlAnalysis.mockReturnValue(null)
 
-      const { getGitHref } = require('../../src/internal/utils')
+      const { getGitHref } = internalUtils
       const gitUrl = 'invalid-url'
       const result = getGitHref(gitUrl)
 
@@ -94,7 +100,7 @@ describe('内部工具', () => {
     it('当 git url 分析返回未定义的 href 时应该返回占位符', () => {
       mockUtils.gitUrlAnalysis.mockReturnValue({ href: undefined })
 
-      const { getGitHref } = require('../../src/internal/utils')
+      const { getGitHref } = internalUtils
       const gitUrl = 'https://github.com/test/repo.git'
       const result = getGitHref(gitUrl)
 
@@ -107,7 +113,7 @@ describe('内部工具', () => {
       })
 
       // 导入新模块以测试缓存
-      const { getGitHref } = require('../../src/internal/utils')
+      const { getGitHref } = internalUtils
 
       const gitUrl1 = 'https://github.com/test/repo1.git'
       const gitUrl2 = 'https://github.com/test/repo2.git'

@@ -1,5 +1,6 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { ConfigManager } from '../src/config'
 import {
@@ -115,8 +116,7 @@ describe('ConfigManager 文件加载测试', () => {
 
       const result = await ConfigManager.getConfig([nullConfigFile])
 
-      // 当内容为 null 时，会得到 { default: null } 或直接的 null 值，然后被处理为 null
-      expect(result).toEqual({ default: null })
+      expect(result).toBeNull()
     })
 
     it('应该在文件加载失败时抛出带有正确错误信息的错误', async () => {

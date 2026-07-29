@@ -1,3 +1,4 @@
+import { beforeEach, describe, expect, it } from 'vitest'
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 /**
  * @fileoverview config.ts 模块的单元测试

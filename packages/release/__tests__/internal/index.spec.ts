@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 /**
  * @file packages/release internal 模块单元测试
  * @description 测试 internal 目录下的插件系统

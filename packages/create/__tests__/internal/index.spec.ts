@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 import internal from '../../src/internal/index'
 
 describe('内部索引', () => {

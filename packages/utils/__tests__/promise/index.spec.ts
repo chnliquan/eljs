@@ -1,3 +1,4 @@
+import { describe, expect, it, vi } from 'vitest'
 import {
   Deferred,
   retry,
@@ -9,13 +10,23 @@ import {
 describe('Promise 工具函数', () => {
   describe('sleep 睡眠函数', () => {
     it('应该在指定毫秒数后解决', async () => {
-      const start = Date.now()
-      await sleep(100)
-      const duration = Date.now() - start
+      vi.useFakeTimers()
 
-      // 允许一些时间偏差 (±50ms)
-      expect(duration).toBeGreaterThanOrEqual(100)
-      expect(duration).toBeLessThan(200)
+      try {
+        let resolved = false
+        const sleeping = sleep(100).then(() => {
+          resolved = true
+        })
+
+        await vi.advanceTimersByTimeAsync(99)
+        expect(resolved).toBe(false)
+
+        await vi.advanceTimersByTimeAsync(1)
+        await sleeping
+        expect(resolved).toBe(true)
+      } finally {
+        vi.useRealTimers()
+      }
     })
 
     it('应该处理零延迟', async () => {
@@ -136,7 +147,7 @@ describe('Promise 工具函数', () => {
   describe('retry 重试函数', () => {
     it('应该在第一次尝试时成功', async () => {
       let callCount = 0
-      const fn = jest.fn().mockImplementation(() => {
+      const fn = vi.fn().mockImplementation(() => {
         callCount++
         return 'success'
       })
@@ -150,7 +161,7 @@ describe('Promise 工具函数', () => {
 
     it('应该在失败后重试并最终成功', async () => {
       let callCount = 0
-      const fn = jest.fn().mockImplementation(() => {
+      const fn = vi.fn().mockImplementation(() => {
         callCount++
         if (callCount < 3) {
           throw new Error(`第 ${callCount} 次尝试失败`)
@@ -167,7 +178,7 @@ describe('Promise 工具函数', () => {
 
     it('应该在耗尽所有重试后失败', async () => {
       let callCount = 0
-      const fn = jest.fn().mockImplementation(() => {
+      const fn = vi.fn().mockImplementation(() => {
         callCount++
         throw new Error(`第 ${callCount} 次尝试失败`)
       })
@@ -179,7 +190,7 @@ describe('Promise 工具函数', () => {
 
     it('应该与异步函数一起工作', async () => {
       let callCount = 0
-      const fn = jest.fn().mockImplementation(async () => {
+      const fn = vi.fn().mockImplementation(async () => {
         callCount++
         await sleep(5)
         if (callCount < 2) {
@@ -199,7 +210,7 @@ describe('Promise 工具函数', () => {
       let lastCallTime = Date.now()
       const delays: number[] = []
 
-      const fn = jest.fn().mockImplementation(() => {
+      const fn = vi.fn().mockImplementation(() => {
         callCount++
         if (callCount > 1) {
           const now = Date.now()
@@ -222,7 +233,7 @@ describe('Promise 工具函数', () => {
 
     it('应该使用默认参数', async () => {
       let callCount = 0
-      const fn = jest.fn().mockImplementation(() => {
+      const fn = vi.fn().mockImplementation(() => {
         callCount++
         throw new Error(`第 ${callCount} 次尝试失败`)
       })
@@ -234,7 +245,7 @@ describe('Promise 工具函数', () => {
 
   describe('retryWithValue 值重试函数', () => {
     it('应该在第一次尝试时返回值', async () => {
-      const fn = jest.fn().mockReturnValue('success')
+      const fn = vi.fn().mockReturnValue('success')
 
       const result = await retryWithValue(fn, 3, 10)
 
@@ -244,7 +255,7 @@ describe('Promise 工具函数', () => {
 
     it('应该重试直到获得非 null/undefined 值', async () => {
       let callCount = 0
-      const fn = jest.fn().mockImplementation(() => {
+      const fn = vi.fn().mockImplementation(() => {
         callCount++
         if (callCount < 3) {
           return null
@@ -259,7 +270,7 @@ describe('Promise 工具函数', () => {
     })
 
     it('应该在耗尽重试后返回 undefined', async () => {
-      const fn = jest.fn().mockReturnValue(null)
+      const fn = vi.fn().mockReturnValue(null)
 
       const result = await retryWithValue(fn, 3, 10)
 
@@ -269,7 +280,7 @@ describe('Promise 工具函数', () => {
 
     it('应该区分 null 和 undefined', async () => {
       let callCount = 0
-      const fn = jest.fn().mockImplementation(() => {
+      const fn = vi.fn().mockImplementation(() => {
         callCount++
         if (callCount === 1) return undefined
         if (callCount === 2) return null
@@ -284,7 +295,7 @@ describe('Promise 工具函数', () => {
 
     it('应该与异步函数一起工作', async () => {
       let callCount = 0
-      const fn = jest.fn().mockImplementation(async () => {
+      const fn = vi.fn().mockImplementation(async () => {
         callCount++
         await sleep(5)
         if (callCount < 2) {
@@ -302,7 +313,7 @@ describe('Promise 工具函数', () => {
     it('应该返回非 null/undefined 的假值', async () => {
       let callCount = 0
       const values = [undefined, null, 0, false, '']
-      const fn = jest.fn().mockImplementation(() => {
+      const fn = vi.fn().mockImplementation(() => {
         return values[callCount++]
       })
 

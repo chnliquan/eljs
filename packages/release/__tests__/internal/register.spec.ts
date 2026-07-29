@@ -1,3 +1,12 @@
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from 'vitest'
 /**
  * @file packages/release internal/register 模块单元测试
  * @description 测试 register.ts 方法注册功能
@@ -8,7 +17,7 @@ import type { Api } from '../../src/types'
 
 // 为测试创建具有必要属性的 API mock
 interface TestApi extends Partial<Api> {
-  registerMethod: jest.MockedFunction<(name: string) => void>
+  registerMethod: MockedFunction<(name: string) => void>
 }
 
 describe('方法注册插件测试', () => {
@@ -16,12 +25,12 @@ describe('方法注册插件测试', () => {
 
   beforeEach(() => {
     mockApi = {
-      registerMethod: jest.fn(),
+      registerMethod: vi.fn(),
     }
   })
 
   afterEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   describe('registerPlugin 函数', () => {
@@ -92,7 +101,7 @@ describe('方法注册插件测试', () => {
         ) {
           const methodMock = mockApi[
             method as keyof TestApi
-          ] as unknown as jest.MockedFunction<() => void>
+          ] as unknown as MockedFunction<() => void>
           expect(methodMock).not.toHaveBeenCalled()
         }
       })
@@ -102,7 +111,7 @@ describe('方法注册插件测试', () => {
       registerPlugin(mockApi as unknown as Api)
       const firstCallCount = mockApi.registerMethod.mock.calls.length
 
-      jest.clearAllMocks()
+      vi.clearAllMocks()
 
       registerPlugin(mockApi as unknown as Api)
       const secondCallCount = mockApi.registerMethod.mock.calls.length

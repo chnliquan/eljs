@@ -9,37 +9,57 @@ import {
 } from '@eljs/utils'
 import path from 'node:path'
 import ora from 'ora'
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+  type MockedFunction,
+} from 'vitest'
 
 import { Download, type DownloadOptions } from '../../src/core/download'
 import type { RemoteTemplate } from '../../src/types'
 
 // Mock external dependencies
-jest.mock('@eljs/utils')
-jest.mock('ora')
-jest.mock('node:path')
+vi.mock('@eljs/utils', () => ({
+  chalk: {
+    cyan: vi.fn((text: string) => text),
+  },
+  downloadGitRepository: vi.fn(),
+  downloadNpmTarball: vi.fn(),
+  getNpmPackage: vi.fn(),
+  pkgNameAnalysis: vi.fn(),
+  readJson: vi.fn(),
+  run: vi.fn(),
+}))
+vi.mock('ora')
+vi.mock('node:path')
 
 describe('Download 类测试', () => {
   // Mock implementations
-  const mockGetNpmPackage = getNpmPackage as jest.MockedFunction<
+  const mockGetNpmPackage = getNpmPackage as MockedFunction<
     typeof getNpmPackage
   >
-  const mockPkgNameAnalysis = pkgNameAnalysis as jest.MockedFunction<
+  const mockPkgNameAnalysis = pkgNameAnalysis as MockedFunction<
     typeof pkgNameAnalysis
   >
-  const mockDownloadNpmTarball = downloadNpmTarball as jest.MockedFunction<
+  const mockDownloadNpmTarball = downloadNpmTarball as MockedFunction<
     typeof downloadNpmTarball
   >
-  const mockDownloadGitRepository =
-    downloadGitRepository as jest.MockedFunction<typeof downloadGitRepository>
-  const mockReadJson = readJson as jest.MockedFunction<typeof readJson>
-  const mockRun = run as jest.MockedFunction<typeof run>
-  const mockOra = ora as jest.MockedFunction<typeof ora>
+  const mockDownloadGitRepository = downloadGitRepository as MockedFunction<
+    typeof downloadGitRepository
+  >
+  const mockReadJson = readJson as MockedFunction<typeof readJson>
+  const mockRun = run as MockedFunction<typeof run>
+  const mockOra = ora as MockedFunction<typeof ora>
 
   // Mock spinner
   const mockSpinner = {
-    start: jest.fn().mockReturnThis(),
-    succeed: jest.fn().mockReturnThis(),
-    fail: jest.fn().mockReturnThis(),
+    start: vi.fn().mockReturnThis(),
+    succeed: vi.fn().mockReturnThis(),
+    fail: vi.fn().mockReturnThis(),
   }
 
   // Test data
@@ -52,13 +72,13 @@ describe('Download 类测试', () => {
   const mockGitUrl = 'https://github.com/user/repo.git'
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // Mock ora to return our mock spinner
     mockOra.mockReturnValue(mockSpinner as unknown as ReturnType<typeof ora>)
 
     // Mock path.join to handle package.json path correctly
-    jest.mocked(path.join).mockImplementation((dir, file) => {
+    vi.mocked(path.join).mockImplementation((dir, file) => {
       if (file === 'package.json') {
         return `${dir}/package.json`
       }
@@ -397,7 +417,7 @@ describe('Download 类测试', () => {
         )
         expect(mockRun).toHaveBeenCalledWith(
           'npm',
-          ['install', '--production'],
+          ['install', '--omit=dev', '--ignore-scripts'],
           {
             cwd: mockDownloadPath,
           },
@@ -435,11 +455,27 @@ describe('Download 类测试', () => {
         )
         expect(mockRun).toHaveBeenCalledWith(
           'npm',
-          ['install', '--production'],
+          ['install', '--omit=dev', '--ignore-scripts'],
           {
             cwd: mockDownloadPath,
           },
         )
+      })
+
+      it('只有显式允许时才执行模板依赖的生命周期脚本', async () => {
+        mockReadJson.mockResolvedValue(mockPackageJson)
+
+        const download = new Download({
+          type: 'npm',
+          value: mockPackageName,
+          allowScripts: true,
+        })
+
+        await download.download()
+
+        expect(mockRun).toHaveBeenCalledWith('npm', ['install', '--omit=dev'], {
+          cwd: mockDownloadPath,
+        })
       })
     })
 
@@ -545,9 +581,13 @@ describe('Download 类测试', () => {
       expect(mockReadJson).toHaveBeenCalledWith(
         path.join(mockDownloadPath, './package.json'),
       )
-      expect(mockRun).toHaveBeenCalledWith('npm', ['install', '--production'], {
-        cwd: mockDownloadPath,
-      })
+      expect(mockRun).toHaveBeenCalledWith(
+        'npm',
+        ['install', '--omit=dev', '--ignore-scripts'],
+        {
+          cwd: mockDownloadPath,
+        },
+      )
     })
 
     it('应该处理完整的git下载流程', async () => {
@@ -593,8 +633,8 @@ describe('Download 类测试', () => {
 
       await download.download()
 
-      const startCalls = (mockSpinner.start as jest.Mock).mock.calls
-      const succeedCalls = (mockSpinner.succeed as jest.Mock).mock.calls
+      const startCalls = (mockSpinner.start as Mock).mock.calls
+      const succeedCalls = (mockSpinner.succeed as Mock).mock.calls
 
       expect(startCalls.length).toBeGreaterThan(0)
       expect(succeedCalls.length).toBeGreaterThan(0)
