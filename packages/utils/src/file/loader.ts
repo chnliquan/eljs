@@ -1,19 +1,19 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import { dirname } from 'node:path'
+import { randomUUID } from 'node:crypto'
+import { basename, dirname, extname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { TranspileOptions } from 'typescript'
 
-import { isESModule } from '../type'
-import { isPathExists, isPathExistsSync } from './is'
+import { isESModule } from '../type/index.js'
+import { isPathExists, isPathExistsSync } from './is.js'
 import {
   loadImportFresh,
   loadParseJson,
   loadTypeScript,
   loadYaml as loadYamlDependency,
-} from './loader-dependencies'
-import { readFile, readFileSync } from './read'
-import { remove, removeSync } from './remove'
-import { writeFile, writeFileSync } from './write'
+} from './loader-dependencies.js'
+import { readFile, readFileSync } from './read.js'
+import { remove, removeSync } from './remove.js'
+import { writeFile, writeFileSync } from './write.js'
 
 /**
  * 默认异步加载器
@@ -94,6 +94,17 @@ export function loadJsSync<T>(path: string): T {
 }
 
 let typescript: typeof import('typescript')
+
+function createTranspiledPath(filePath: string): string {
+  const extension = extname(filePath)
+  const fileName = basename(filePath, extension)
+
+  return join(
+    dirname(filePath),
+    `.${fileName}.eljs-${process.pid}-${randomUUID()}.cjs`,
+  )
+}
+
 /**
  * 加载 ts 文件
  * @param path 文件路径
@@ -103,7 +114,7 @@ export async function loadTs<T = any>(path: string): Promise<T> {
   if (!typescript) {
     typescript = loadTypeScript()
   }
-  const compiledPath = `${path.slice(0, -2)}cjs`
+  const compiledPath = createTranspiledPath(path)
 
   try {
     const config = resolveTsConfig(dirname(path)) ?? {}
@@ -143,7 +154,7 @@ export function loadTsSync<T>(path: string): T {
   if (!typescript) {
     typescript = loadTypeScript()
   }
-  const compiledPath = `${path.slice(0, -2)}cjs`
+  const compiledPath = createTranspiledPath(path)
 
   try {
     const config = resolveTsConfig(dirname(path)) ?? {}

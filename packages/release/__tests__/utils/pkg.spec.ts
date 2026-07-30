@@ -6,7 +6,7 @@ import {
   vi,
   type MockedFunction,
 } from 'vitest'
-/* eslint-disable @typescript-eslint/naming-convention */
+
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 /**
  * @file packages/release utils/pkg 模块单元测试

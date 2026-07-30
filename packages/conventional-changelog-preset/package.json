@@ -19,6 +19,14 @@
   "license": "MIT",
   "author": "chnliquan",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js",
+      "default": "./src/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "main": "src/index.js",
   "types": "src/index.d.ts",
   "files": [
@@ -28,6 +36,7 @@
     "typecheck": "node --check src/index.js && node --check src/parser.js && node --check src/what-bump.js && node --check src/writer.js"
   },
   "dependencies": {
+    "@types/conventional-changelog-core": "^8.0.1",
     "compare-func": "^2.0.0"
   },
   "engines": {

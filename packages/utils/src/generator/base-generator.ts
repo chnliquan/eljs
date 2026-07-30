@@ -3,7 +3,7 @@ import { readdirSync } from 'node:fs'
 import { EOL } from 'node:os'
 import prompts, { type Answers, type PromptObject } from 'prompts'
 
-import { confirm } from '../cli'
+import { confirm } from '../cli/index.js'
 import {
   copyDirectory,
   copyDirectorySync,
@@ -13,9 +13,9 @@ import {
   copyTplSync,
   type CopyFileOptions,
   type RenderTemplateOptions,
-} from '../file'
-import { logger } from '../logger'
-import { isFunction } from '../type'
+} from '../file/index.js'
+import { logger } from '../logger/index.js'
+import { isFunction } from '../type/index.js'
 
 const TARGET_DIR_WHITE_LIST = ['.git', 'LICENSE']
 

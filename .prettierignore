@@ -1,0 +1,16 @@
+CHANGELOG.md
+pnpm-lock.yaml
+
+coverage/
+dist/
+esm/
+lib/
+node_modules/
+.turbo/
+.vitest-cache/
+.package-smoke-*/
+**/.rslib/
+
+# Handlebars partials are not supported by Prettier, and template whitespace
+# affects the generated changelog.
+packages/conventional-changelog-preset/src/templates/

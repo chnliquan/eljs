@@ -10,7 +10,6 @@ import {
 } from 'vitest'
 import { hookPropertyMap } from '../src/require-hook'
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const mod = require('module')
 
 describe('require-hook', () => {

@@ -18,7 +18,6 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    setupFiles: [path.join(repoRoot, 'vitest.setup.ts')],
     include: ['packages/**/__tests__/**/*.spec.{ts,tsx}'],
     exclude: ['**/node_modules/**', '**/examples/__tests__/**'],
     clearMocks: true,

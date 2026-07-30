@@ -10,7 +10,7 @@ import {
 import * as importedModule0 from '../../src/file'
 import * as importedModule1 from '../../src/type'
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 import execa from 'execa'
 import type { ChildProcess } from 'node:child_process'
 import cp from 'node:child_process'

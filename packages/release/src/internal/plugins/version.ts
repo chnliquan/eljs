@@ -7,10 +7,10 @@ import {
   prompts,
 } from '@eljs/utils'
 import { EOL } from 'node:os'
-import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
+import semver, { type ReleaseType } from 'semver'
 
-import { prereleaseTypes } from '../../constants'
-import type { Api, PrereleaseId } from '../../types'
+import { prereleaseTypes } from '../../constants.js'
+import type { Api, PrereleaseId } from '../../types/index.js'
 import {
   AppError,
   getCanaryVersion,
@@ -23,7 +23,9 @@ import {
   onCancel,
   updatePackageLock,
   updatePackageVersion,
-} from '../../utils'
+} from '../../utils/index.js'
+
+const { RELEASE_TYPES } = semver
 
 const debug = createDebugger('release:version')
 

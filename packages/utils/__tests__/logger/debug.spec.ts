@@ -7,7 +7,7 @@ import {
   vi,
   type MockedFunction,
 } from 'vitest'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 import debug from 'debug'
 
 import { createDebugger } from '../../src/logger/debug'

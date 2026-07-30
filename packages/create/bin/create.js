@@ -1,7 +1,6 @@
 #! /usr/bin/env node
-'use strict'
 
-require('../lib/require-hook')
-const { cli } = require('../lib/cli')
+import { cli } from '../dist/cli.js'
+import '../dist/require-hook.js'
 
 cli()

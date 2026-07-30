@@ -6,10 +6,10 @@ import {
   type Pluggable,
   type PluginDeclaration,
   type ResolvedPlugin,
-} from '../pluggable'
-import { Hook, type HookOptions } from './hook'
-import { Plugin } from './plugin'
-import { PluginTypeEnum, type Enable } from './types'
+} from '../pluggable/index.js'
+import { Hook, type HookOptions } from './hook.js'
+import { Plugin } from './plugin.js'
+import { PluginTypeEnum, type Enable } from './types.js'
 
 /**
  * 插件 Api 类

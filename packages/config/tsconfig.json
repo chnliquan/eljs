@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src", "__tests__", "../../global.d.ts"],
+  "include": ["src", "__tests__"],
   "compilerOptions": {
     "declaration": false,
     "declarationMap": false,

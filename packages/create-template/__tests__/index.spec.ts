@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 /**
  * @fileoverview index.ts 模块的单元测试
  * @description 测试主入口文件的导出功能

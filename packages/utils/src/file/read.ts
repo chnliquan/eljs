@@ -61,7 +61,7 @@ export async function readJson<T extends object>(file: string): Promise<T> {
  * 读取 Json 文件
  * @param file 文件路径
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 export function readJsonSync<T extends object>(file: string): T {
   const content = readFileSync(file)
 

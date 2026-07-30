@@ -8,7 +8,7 @@ import {
   type MockedFunction,
 } from 'vitest'
 import * as importedModule0 from '../../src/file/is'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'

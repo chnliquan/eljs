@@ -3,16 +3,13 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["lib/**", "esm/**", "dist/**"]
+      "outputs": ["dist/**"]
     },
     "clean": {
       "cache": false
     },
     "dev": {
       "cache": false
-    },
-    "test": {
-      "outputs": [".vitest-cache/**"]
     },
     "typecheck": {
       "dependsOn": ["^typecheck"],
@@ -21,8 +18,7 @@
   },
   "globalDependencies": [
     "tsconfig.base.json",
-    "tsconfig.json",
     "vitest.config.ts",
-    ".fatherrc.base.ts"
+    "rslib.base.config.ts"
   ]
 }

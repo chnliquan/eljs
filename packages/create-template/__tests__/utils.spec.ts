@@ -20,22 +20,9 @@ vi.mock('@eljs/utils', () => ({
 }))
 
 describe('utils 模块测试', () => {
-  let mockProcess: {
-    exit: MockedFunction<(code?: number) => never>
-  }
-
   beforeEach(() => {
     vi.clearAllMocks()
-
-    // 模拟 process 对象
-    mockProcess = {
-      exit: vi.fn() as never,
-    }
-
-    Object.defineProperty(global, 'process', {
-      value: mockProcess,
-      writable: true,
-    })
+    vi.spyOn(process, 'exit').mockImplementation(() => undefined as never)
   })
 
   afterEach(() => {
@@ -169,7 +156,7 @@ describe('utils 模块测试', () => {
 
       onCancel()
 
-      expect(mockProcess.exit).toHaveBeenCalledWith(0)
+      expect(process.exit).toHaveBeenCalledWith(0)
     })
 
     it('应该按正确的顺序执行日志记录和进程退出', async () => {
@@ -180,7 +167,7 @@ describe('utils 模块测试', () => {
 
       // 验证调用顺序：先记录日志，再退出进程
       expect(logger.event).toHaveBeenCalled()
-      expect(mockProcess.exit).toHaveBeenCalled()
+      expect(process.exit).toHaveBeenCalled()
     })
 
     it('应该在任何情况下都执行退出操作', async () => {

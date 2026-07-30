@@ -9,7 +9,7 @@ import {
 } from 'vitest'
 import * as importedModule1 from '../../src/npm/package-manager'
 import * as importedModule0 from '../../src/type'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 import execa from 'execa'
 
 import {

@@ -1,11 +1,14 @@
-import { chalk, createDebugger, readJson, type PackageJson } from '@eljs/utils'
-import { Command, InvalidArgumentError, program } from 'commander'
+import { createDebugger, readJson, type PackageJson } from '@eljs/utils'
+import { InvalidArgumentError, program } from 'commander'
 import path from 'node:path'
-import semver, { RELEASE_TYPES, type ReleaseType } from 'semver'
+import { fileURLToPath } from 'node:url'
+import semver, { type ReleaseType } from 'semver'
 import updateNotifier from 'update-notifier'
 
-import { release } from './release'
-import { onCancel } from './utils'
+import { release } from './release.js'
+import { onCancel } from './utils/index.js'
+
+const { RELEASE_TYPES } = semver
 
 export function cli() {
   registerSignalHandler()
@@ -29,10 +32,12 @@ function handleSigint() {
 
 async function main() {
   const debug = createDebugger('release:cli')
+  const packageJsonPath =
+    typeof __dirname === 'string'
+      ? path.join(__dirname, '../package.json')
+      : fileURLToPath(new URL('../package.json', import.meta.url))
 
-  const pkg = await readJson<Required<PackageJson>>(
-    path.join(__dirname, '../package.json'),
-  )
+  const pkg = await readJson<Required<PackageJson>>(packageJsonPath)
 
   updateNotifier({ pkg }).notify()
 
@@ -65,68 +70,8 @@ async function main() {
       await release(version, options)
     })
 
-  // https://github.com/tj/commander.js/blob/master/lib/command.js#L1994
-  enhanceErrorMessages('missingArgument', argName => {
-    return `Missing required argument ${chalk.yellow(`<${argName}>`)}.`
-  })
-
-  // https://github.com/tj/commander.js/blob/master/lib/command.js#L2074
-  enhanceErrorMessages('unknownOption', optionName => {
-    return `Unknown option ${chalk.yellow(optionName)}.`
-  })
-
-  // https://github.com/tj/commander.js/blob/master/lib/command.js#L2006
-  enhanceErrorMessages('optionMissingArgument', (option, flag) => {
-    return (
-      `Missing required argument for option ${chalk.yellow(option.flags)}` +
-      (flag ? `, got ${chalk.yellow(flag)}` : ``)
-    )
-  })
-
-  enhanceExcessArguments()
-
+  program.showHelpAfterError()
   await program.parseAsync(process.argv)
-}
-
-function enhanceErrorMessages(
-  methodName: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  log: (...args: any[]) => void,
-) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(Command['prototype'] as any)[methodName] = function (...args: any[]) {
-    if (methodName === 'unknownOption' && this._allowUnknownOption) {
-      return
-    }
-
-    this.outputHelp()
-
-    console.log()
-    console.log(`  ` + chalk.red(log(...args)))
-    console.log()
-    process.exit(1)
-  }
-}
-
-function enhanceExcessArguments() {
-  // https://github.com/tj/commander.js/blob/master/lib/command.js#L2106
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(Command['prototype'] as any)['_excessArguments'] = function (
-    receivedArgs: string[],
-  ) {
-    if (this._allowExcessArguments) return
-
-    const expected = this.registeredArguments.length
-    const s = expected === 1 ? '' : 's'
-    const message = `Expected ${expected} argument${s} but got ${chalk.yellow(receivedArgs.length)}.`
-
-    this.outputHelp()
-
-    console.log()
-    console.log(`  ` + chalk.red(message))
-    console.log()
-    process.exit(1)
-  }
 }
 
 function checkVersion(value: ReleaseType) {

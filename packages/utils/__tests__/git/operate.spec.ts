@@ -9,7 +9,7 @@ import {
 import * as importedModule0 from '../../src/cp'
 import * as importedModule2 from '../../src/git/meta'
 import * as importedModule1 from '../../src/type'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 import { gitCommit, gitPush, gitTag } from '../../src/git/operate'
 
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })

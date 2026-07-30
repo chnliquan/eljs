@@ -1,7 +1,7 @@
 import * as importedModule1 from '@eljs/pluggable'
 import * as importedModule0 from '@eljs/utils'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 /**
  * @file packages/release runner 模块单元测试
  * @description 测试 Runner 类的核心功能

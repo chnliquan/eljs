@@ -116,41 +116,42 @@ pnpm --filter <package-name> run dev
 pnpm run test
 
 # Run tests for specific package
-pnpm --filter <package-name> run test
+pnpm exec vitest run packages/<package-name>
 
 # Run tests in watch mode
-pnpm run test:w
+pnpm run test:watch
 ```
 
 ## 🛠 Scripts Reference
 
 ### Monorepo Commands
 
-| Command                | Description                                   | Usage                                           |
-| ---------------------- | --------------------------------------------- | ----------------------------------------------- |
-| **Development**        |                                               |                                                 |
-| `dev`                  | Build all packages in watch mode              | `pnpm dev`                                      |
-| `build`                | Build all packages                            | `pnpm build`                                    |
-| `test`                 | Run tests for all packages                    | `pnpm test`                                     |
-| `test:w`               | Run tests in watch mode                       | `pnpm test:w`                                   |
-| `pack:check`           | Verify files included in npm package tarballs | `pnpm pack:check`                               |
-| **Code Quality**       |                                               |                                                 |
-| `lint`                 | Lint all packages source code                 | `pnpm lint`                                     |
-| `typecheck`            | Type-check all TypeScript packages            | `pnpm typecheck`                                |
-| `format`               | Format all packages with prettier             | `pnpm format`                                   |
-| `coverage`             | Generate test coverage report                 | `pnpm coverage`                                 |
-| **Release Management** |                                               |                                                 |
-| `release`              | Release all packages with unified versioning  | `pnpm release`                                  |
-| `release:patch`        | Patch version release for all packages        | `pnpm release:patch` (1.0.0 → 1.0.1)            |
-| `release:minor`        | Minor version release for all packages        | `pnpm release:minor` (1.0.0 → 1.1.0)            |
-| `release:major`        | Major version release for all packages        | `pnpm release:major` (1.0.0 → 2.0.0)            |
-| `prerelease:alpha`     | Alpha prerelease for all packages             | `pnpm prerelease:alpha` (1.0.0 → 1.0.1-alpha.1) |
-| `prerelease:beta`      | Beta prerelease for all packages              | `pnpm prerelease:beta` (1.0.0 → 1.0.1-beta.1)   |
-| `prerelease:next`      | Next prerelease for all packages              | `pnpm prerelease:next` (1.0.0 → 1.0.1-next.1)   |
-| **Utilities**          |                                               |                                                 |
-| `boot`                 | Initialize new package structure              | `pnpm boot <package-name>`                      |
-| `add-owner`            | Add npm ownership for all packages            | `pnpm add-owner <username1> <username2>`        |
-| `clean`                | Clean build artifacts from all packages       | `pnpm clean`                                    |
+| Command                | Description                                   | Usage                                         |
+| ---------------------- | --------------------------------------------- | --------------------------------------------- |
+| **Development**        |                                               |                                               |
+| `dev`                  | Build all packages in watch mode              | `pnpm dev`                                    |
+| `build`                | Build all packages                            | `pnpm build`                                  |
+| `test`                 | Run tests for all packages                    | `pnpm test`                                   |
+| `test:watch`           | Run tests in watch mode                       | `pnpm test:watch`                             |
+| `pack:check`           | Verify files included in npm package tarballs | `pnpm pack:check`                             |
+| **Code Quality**       |                                               |                                               |
+| `lint`                 | Lint all packages source code                 | `pnpm lint`                                   |
+| `typecheck`            | Type-check all TypeScript packages            | `pnpm typecheck`                              |
+| `format`               | Format all packages with prettier             | `pnpm format`                                 |
+| `coverage`             | Generate test coverage report                 | `pnpm coverage`                               |
+| `verify`               | Run the complete local/CI verification suite  | `pnpm verify`                                 |
+| **Release Management** |                                               |                                               |
+| `release`              | Release all packages with unified versioning  | `pnpm release`                                |
+| `release:patch`        | Patch version release for all packages        | `pnpm release:patch` (1.0.0 → 1.0.1)          |
+| `release:minor`        | Minor version release for all packages        | `pnpm release:minor` (1.0.0 → 1.1.0)          |
+| `release:major`        | Major version release for all packages        | `pnpm release:major` (1.0.0 → 2.0.0)          |
+| `release:alpha`        | Alpha prerelease for all packages             | `pnpm release:alpha` (1.0.0 → 1.0.1-alpha.1)  |
+| `release:beta`         | Beta prerelease for all packages              | `pnpm release:beta` (1.0.0 → 1.0.1-beta.1)    |
+| `release:next`         | Next prerelease for all packages              | `pnpm release:next` (1.0.0 → 1.0.1-next.1)    |
+| **Utilities**          |                                               |                                               |
+| `package:create`       | Create or complete a package scaffold         | `pnpm package:create packages/<package-name>` |
+| `add-owner`            | Add npm ownership for all packages            | `pnpm add-owner <username1> <username2>`      |
+| `clean`                | Clean build artifacts from all packages       | `pnpm clean`                                  |
 
 ## 📦 Package Management
 
@@ -173,15 +174,11 @@ pnpm --filter ...<package-name> run build
 ### Adding New Packages
 
 ```bash
-# Create new package directory
-mkdir packages/<new-package-name>
-cd packages/<new-package-name>
+# Create a package scaffold from the repository root
+pnpm package:create packages/<new-package-name>
 
-# Initialize package structure
-pnpm boot
-
-# Or initialize from root
-pnpm run boot packages/<new-package-name>
+# Complete missing scaffold files in existing workspace packages
+pnpm package:create
 ```
 
 ## 📋 Version Management

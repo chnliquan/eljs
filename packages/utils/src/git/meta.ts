@@ -4,9 +4,14 @@ import os, { EOL } from 'node:os'
 import path from 'node:path'
 
 import { URL } from 'node:url'
-import { run, type RunCommandOptions } from '../cp'
-import { isPathExists, isPathExistsSync, readFile, readFileSync } from '../file'
-import { isObject } from '../type'
+import { run, type RunCommandOptions } from '../cp/index.js'
+import {
+  isPathExists,
+  isPathExistsSync,
+  readFile,
+  readFileSync,
+} from '../file/index.js'
+import { isObject } from '../type/index.js'
 
 /**
  * git 远程仓库信息

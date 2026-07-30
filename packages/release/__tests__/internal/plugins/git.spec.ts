@@ -484,7 +484,6 @@ describe('Git 插件测试', () => {
   })
 
   describe('onRelease 钩子测试', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let onReleaseHandler: OnReleaseHandler
 
     beforeEach(() => {
@@ -622,7 +621,6 @@ describe('Git 插件测试', () => {
   })
 
   describe('Git 命令参数处理', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let onReleaseHandler: OnReleaseHandler
 
     beforeEach(() => {
@@ -692,7 +690,6 @@ describe('Git 插件测试', () => {
   })
 
   describe('Git 插件错误处理', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let onReleaseHandler: OnReleaseHandler
 
     beforeEach(() => {
@@ -734,7 +731,6 @@ describe('Git 插件测试', () => {
   })
 
   describe('变更日志处理集成测试', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let onBeforeReleaseHandler: OnBeforeReleaseHandler
 
     beforeEach(() => {

@@ -1,3 +1,3 @@
-export * from './command'
-export * from './normalize'
-export * from './process'
+export * from './command.js'
+export * from './normalize.js'
+export * from './process.js'

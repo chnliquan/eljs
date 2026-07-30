@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
 // create package.json, README, etc. for packages that don't have them yet.
 import {
   camelCase,
@@ -16,12 +15,12 @@ import { EOL } from 'node:os'
 import path from 'node:path'
 import { argv, chalk } from 'zx'
 
-const step = logger.step('Bootstrap')
+const step = logger.step('Create package')
 
 main()
   .then(() => process.exit(0))
   .catch(error => {
-    console.error(`bootstrap error:${EOL}${error.message}.`)
+    console.error(`create package error:${EOL}${error.message}.`)
     process.exit(1)
   })
 
@@ -51,7 +50,7 @@ async function main(): Promise<void> {
     ensurePackageJson(name, version as string, dirname, shortName)
     ensureReadme(name, dirname, shortName)
     ensureSrcIndex(dirname)
-    ensureFatherrc(dirname)
+    ensureRslibConfig(dirname)
     ensureTsconfig(dirname)
   })
 }
@@ -91,16 +90,32 @@ function ensurePackageJson(
       },
       license: 'MIT',
       author: 'chnliquan',
-      main: `lib/index.js`,
-      types: `esm/index.d.ts`,
-      files: ['esm/*', 'lib/*'],
+      type: 'module',
+      main: './dist/index.cjs',
+      module: './dist/index.js',
+      types: './dist/index.d.ts',
+      exports: {
+        '.': {
+          import: {
+            types: './dist/index.d.ts',
+            default: './dist/index.js',
+          },
+          require: {
+            types: './dist/index.d.cts',
+            default: './dist/index.cjs',
+          },
+          default: './dist/index.js',
+        },
+        './package.json': './package.json',
+      },
+      files: ['dist'],
       engines: {
         node: '>=22.14.0',
       },
       scripts: {
-        build: 'father build',
-        clean: 'rimraf lib && rimraf esm && rimraf node_modules/.cache/father',
-        dev: 'father dev',
+        build: 'rslib build',
+        clean: 'rimraf dist',
+        dev: 'rslib build --watch',
         typecheck: 'tsc --noEmit && tsc --noEmit -p tsconfig.build.json',
       },
     }
@@ -110,9 +125,12 @@ function ensurePackageJson(
         'description',
         'keywords',
         'author',
+        'type',
         'sideEffects',
         'main',
+        'module',
         'types',
+        'exports',
         'files',
         'engines',
         'scripts',
@@ -220,19 +238,15 @@ export {}
   }
 }
 
-function ensureFatherrc(dirname: string): void {
-  const ensureFatherrcPath = path.resolve(dirname, `.fatherrc.ts`)
+function ensureRslibConfig(dirname: string): void {
+  const rslibConfigPath = path.resolve(dirname, 'rslib.config.ts')
 
-  if (!isPathExistsSync(ensureFatherrcPath)) {
-    step('Generate .fatherrc.ts')
+  if (!isPathExistsSync(rslibConfigPath)) {
+    step('Generate rslib.config.ts')
     safeWriteFileSync(
-      ensureFatherrcPath,
+      rslibConfigPath,
       `
-import { defineConfig } from 'father'
-
-export default defineConfig({
-  extends: '../../.fatherrc.base.ts',
-})      
+export { default } from '../../rslib.base.config.ts'
 `.trim() + EOL,
     )
   }
@@ -257,7 +271,7 @@ function ensureTsconfig(dirname: string): void {
     "types": ["node"],
     "verbatimModuleSyntax": false
   },
-  "include": ["src", "__tests__", "../../global.d.ts"]
+  "include": ["src", "__tests__"]
 }
 `.trim() + EOL,
     )
@@ -271,10 +285,10 @@ function ensureTsconfig(dirname: string): void {
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "declarationDir": "esm",
+    "declarationMap": false,
     "types": ["node"]
   },
-  "include": ["src", "../../global.d.ts"]
+  "include": ["src"]
 }
 `.trim() + EOL,
     )

@@ -5,8 +5,8 @@ import execa, {
 } from 'execa'
 import path from 'node:path'
 
-import { isPathExists } from '../file'
-import { isObject } from '../type'
+import { isPathExists } from '../file/index.js'
+import { isObject } from '../type/index.js'
 
 const SPACES_REGEXP = / +/g
 

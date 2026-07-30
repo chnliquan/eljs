@@ -10,7 +10,7 @@ import {
 } from 'vitest'
 import * as importedModule0 from '../../src/cp'
 import * as importedModule1 from '../../src/type'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 import urllib from 'urllib'
 import which from 'which'
 

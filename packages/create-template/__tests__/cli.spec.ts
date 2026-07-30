@@ -48,17 +48,13 @@ const { mockProgram } = vi.hoisted(() => ({
     argument: vi.fn().mockReturnThis(),
     option: vi.fn().mockReturnThis(),
     action: vi.fn().mockReturnThis(),
+    showHelpAfterError: vi.fn().mockReturnThis(),
     parseAsync: vi.fn().mockResolvedValue(undefined),
     outputHelp: vi.fn(),
   },
 }))
 
 vi.mock('commander', () => ({
-  Command: vi.fn().mockImplementation(function Command() {
-    return {
-      outputHelp: vi.fn(),
-    }
-  }),
   program: mockProgram,
 }))
 
@@ -84,7 +80,6 @@ vi.mock('../src/utils', () => ({
 
 // 导入模块
 import { createDebugger, readJson } from '@eljs/utils'
-import { Command } from 'commander'
 import path from 'node:path'
 import updateNotifier from 'update-notifier'
 import { cli } from '../src/cli'
@@ -315,136 +310,11 @@ describe('CLI 命令行接口综合测试', () => {
     })
   })
 
-  describe('错误处理增强验证', () => {
-    it('应该增强 Command 原型方法', async () => {
+  describe('错误帮助配置', () => {
+    it('应该使用 Commander 的公开 API 在错误后展示帮助', async () => {
       await cli()
 
-      // 验证原型方法被增强
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect(Command.prototype as any).toHaveProperty('missingArgument')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect(Command.prototype as any).toHaveProperty('unknownOption')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect(Command.prototype as any).toHaveProperty('optionMissingArgument')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect(Command.prototype as any).toHaveProperty('_excessArguments')
-    })
-
-    it('应该验证错误处理增强函数的存在和调用', async () => {
-      await cli()
-
-      // 验证方法被正确添加并能被调用
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect(typeof (Command.prototype as any).missingArgument).toBe('function')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect(typeof (Command.prototype as any).unknownOption).toBe('function')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect(typeof (Command.prototype as any).optionMissingArgument).toBe(
-        'function',
-      )
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect(typeof (Command.prototype as any)._excessArguments).toBe(
-        'function',
-      )
-
-      // 测试方法可以被正常调用（这里会实际执行增强的错误处理逻辑）
-      const mockCommand = {
-        outputHelp: vi.fn(),
-        _allowUnknownOption: false,
-        registeredArguments: [{ name: 'project-name' }],
-        _allowExcessArguments: false,
-      }
-
-      // 这些调用会触发实际的错误处理代码，从而提高覆盖率
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(Command.prototype as any).missingArgument.call(
-        mockCommand,
-        'project-name',
-      )
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(Command.prototype as any).unknownOption.call(mockCommand, '--invalid')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(Command.prototype as any).optionMissingArgument.call(mockCommand, {
-        flags: '--test',
-      })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(Command.prototype as any)._excessArguments.call(mockCommand, [
-        'arg1',
-        'arg2',
-      ])
-
-      expect(mockCommand.outputHelp).toHaveBeenCalledTimes(4)
-    })
-
-    it('应该测试条件分支逻辑', async () => {
-      await cli()
-
-      // 测试 unknownOption 允许未知选项的分支
-      const allowUnknownCommand = {
-        outputHelp: vi.fn(),
-        _allowUnknownOption: true,
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(Command.prototype as any).unknownOption.call(
-        allowUnknownCommand,
-        '--allowed',
-      )
-      expect(allowUnknownCommand.outputHelp).not.toHaveBeenCalled()
-
-      // 测试 _excessArguments 允许多余参数的分支
-      const allowExcessCommand = {
-        outputHelp: vi.fn(),
-        registeredArguments: [{ name: 'project-name' }],
-        _allowExcessArguments: true,
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(Command.prototype as any)._excessArguments.call(allowExcessCommand, [
-        'arg1',
-        'arg2',
-      ])
-      expect(allowExcessCommand.outputHelp).not.toHaveBeenCalled()
-    })
-
-    it('应该测试单参数情况下的错误信息', async () => {
-      await cli()
-
-      const mockCommand = {
-        outputHelp: vi.fn(),
-        _allowUnknownOption: false,
-        registeredArguments: [{ name: 'single-arg' }],
-        _allowExcessArguments: false,
-      }
-
-      // 测试单参数情况（expected = 1, s = ''）
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(Command.prototype as any)._excessArguments.call(mockCommand, [
-        'arg1',
-        'arg2',
-      ])
-
-      expect(mockCommand.outputHelp).toHaveBeenCalled()
-    })
-
-    it('应该测试带 flag 参数的选项错误', async () => {
-      await cli()
-
-      const mockCommand = {
-        outputHelp: vi.fn(),
-      }
-
-      // 测试带 flag 的选项错误
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(Command.prototype as any).optionMissingArgument.call(
-        mockCommand,
-        {
-          flags: '--test',
-        },
-        '--flag',
-      )
-
-      expect(mockCommand.outputHelp).toHaveBeenCalled()
+      expect(mockProgram.showHelpAfterError).toHaveBeenCalledWith()
     })
   })
 

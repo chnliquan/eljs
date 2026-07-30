@@ -1,8 +1,8 @@
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 
-import { isPathExists, isPathExistsSync } from './is'
-import { remove, removeSync } from './remove'
+import { isPathExists, isPathExistsSync } from './is.js'
+import { remove, removeSync } from './remove.js'
 
 /**
  * 移动文件

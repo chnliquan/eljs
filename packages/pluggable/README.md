@@ -53,9 +53,7 @@ export class Runner extends Pluggable {
 
     const result = await this.applyPlugins('modifyConfig', {
       type: ApplyPluginTypeEnum.Modify,
-      initialValue: {
-        /* initial config */
-      },
+      initialValue: {/* initial config */},
     })
   }
 }

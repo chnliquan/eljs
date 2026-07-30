@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 // Mock @eljs/utils
 const { mockUtils } = vi.hoisted(() => ({
   mockUtils: {

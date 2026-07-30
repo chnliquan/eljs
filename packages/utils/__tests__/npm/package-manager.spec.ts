@@ -8,7 +8,7 @@ import {
 } from 'vitest'
 import * as importedModule0 from '../../src/env'
 import * as importedModule1 from '../../src/path'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 import { cache, getPackageManager } from '../../src/npm/package-manager'
 
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })

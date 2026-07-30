@@ -1,19 +1,19 @@
-import {
-  ParserOptions,
-  WhatBumpFunction,
-  WriterOptions,
-} from 'conventional-changelog-core'
+import type conventionalChangelogCore from 'conventional-changelog-core'
 
-export default function createPreset(): Promise<{
-  parser: ParserOptions
-  writer: Promise<WriterOptions>
-  whatBump: WhatBumpFunction
-}>
+export interface PresetCommit {
+  notes: readonly unknown[]
+  type?: string
+}
 
-declare function createParserOpts(): ParserOptions
+export interface WhatBumpResult {
+  level: 0 | 1 | 2
+  reason: string
+}
 
-declare function createWriterOpts(): Promise<WriterOptions>
+export interface EljsChangelogPreset {
+  parser: conventionalChangelogCore.ParserOptions
+  writer: conventionalChangelogCore.WriterOptions
+  whatBump(commits: PresetCommit[]): WhatBumpResult
+}
 
-declare function whatBump(
-  commits: any[],
-): Promise<{ level: number; reason: string }>
+export default function createPreset(): Promise<EljsChangelogPreset>

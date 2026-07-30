@@ -48,13 +48,18 @@ vi.mock('@eljs/utils', () => ({
   prompts: vi.fn(),
 }))
 
-vi.mock('semver', () => ({
-  default: {
+vi.mock('semver', () => {
+  const releaseTypes = ['major', 'minor', 'patch']
+
+  return {
+    default: {
+      valid: vi.fn(),
+      RELEASE_TYPES: releaseTypes,
+    },
+    RELEASE_TYPES: releaseTypes,
     valid: vi.fn(),
-  },
-  RELEASE_TYPES: ['major', 'minor', 'patch'],
-  valid: vi.fn(),
-}))
+  }
+})
 
 vi.mock('../../../src/constants', () => ({
   prereleaseTypes: ['prerelease', 'prepatch', 'preminor', 'premajor'],
@@ -160,7 +165,7 @@ describe('版本插件测试', () => {
     ).mockResolvedValue(undefined)
 
     // 模拟 semver.valid
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+
     const semverModule = requiredModule0 as unknown as {
       valid: Mock
       default: { valid: Mock }
@@ -171,7 +176,6 @@ describe('版本插件测试', () => {
 
   describe('插件注册', () => {
     it('应该注册所有必需的钩子方法', () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       versionPlugin(mockApi)
 
       expect(mockApi.onCheck).toHaveBeenCalledWith(expect.any(Function))
@@ -194,9 +198,8 @@ describe('版本插件测试', () => {
     let onCheckHandler: any
 
     beforeEach(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       versionPlugin(mockApi)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
       onCheckHandler = mockApi.onCheck.mock.calls[0][0]
     })
 
@@ -205,7 +208,6 @@ describe('版本插件测试', () => {
         isVersionValid as MockedFunction<typeof isVersionValid>
       ).mockReturnValue(true)
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await onCheckHandler({ releaseTypeOrVersion: '1.2.0' })
 
       expect(isVersionValid).toHaveBeenCalledWith('1.2.0', true)
@@ -216,14 +218,12 @@ describe('版本插件测试', () => {
         isVersionValid as MockedFunction<typeof isVersionValid>
       ).mockReturnValue(false)
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await expect(
         onCheckHandler({ releaseTypeOrVersion: 'invalid' }),
       ).rejects.toThrow('Invalid semantic version [cyan]invalid[/cyan].')
     })
 
     it('应该允许空的版本参数', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await expect(
         onCheckHandler({ releaseTypeOrVersion: undefined }),
       ).resolves.toBeUndefined()
@@ -236,7 +236,6 @@ describe('版本插件测试', () => {
         isVersionValid as MockedFunction<typeof isVersionValid>
       ).mockReturnValue(true)
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await onCheckHandler({ releaseTypeOrVersion: 'major' })
 
       expect(isVersionValid).toHaveBeenCalledWith('major', true)
@@ -248,16 +247,14 @@ describe('版本插件测试', () => {
     let getIncrementVersionHandler: any
 
     beforeEach(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       versionPlugin(mockApi)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
       getIncrementVersionHandler = mockApi.getIncrementVersion.mock.calls[0][0]
     })
 
     it('应该获取增量版本', async () => {
       mockApi.config.npm.confirm = false
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
       const result = await getIncrementVersionHandler({
         releaseTypeOrVersion: 'minor',
       })
@@ -279,7 +276,7 @@ describe('版本插件测试', () => {
       ).mockResolvedValue('1.1.0-canary.20231113-abc123')
 
       // 当没有提供 releaseTypeOrVersion 且配置为 canary 模式时，会调用 getCanaryVersion
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
+
       const result = await getIncrementVersionHandler({
         releaseTypeOrVersion: undefined,
       })
@@ -293,7 +290,6 @@ describe('版本插件测试', () => {
       mockApi.config.npm.prereleaseId = 'beta'
       mockApi.config.npm.confirm = false
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await getIncrementVersionHandler({ releaseTypeOrVersion: 'minor' })
 
       // 当提供了 releaseTypeOrVersion 时，直接使用该类型，不会自动转换为 preminor
@@ -308,7 +304,6 @@ describe('版本插件测试', () => {
       mockApi.config.npm.confirm = true
       ;(confirm as MockedFunction<typeof confirm>).mockResolvedValue(true)
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
       const result = await getIncrementVersionHandler({
         releaseTypeOrVersion: 'patch',
       })
@@ -328,7 +323,6 @@ describe('版本插件测试', () => {
         value: '1.0.1',
       })
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await getIncrementVersionHandler({
         releaseTypeOrVersion: 'patch',
       })
@@ -341,9 +335,9 @@ describe('版本插件测试', () => {
       mockApi.config.npm.confirm = false
 
       // 先测试在 onBeforeBumpVersion 中的版本检查
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+
       versionPlugin(mockApi)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
       const onBeforeBumpVersionHandler =
         mockApi.onBeforeBumpVersion.mock.calls[0][0]
       ;(
@@ -355,7 +349,7 @@ describe('版本插件测试', () => {
         isPrerelease: false,
         prereleaseId: null,
       }
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+
       await expect(onBeforeBumpVersionHandler(versionInfo)).rejects.toThrow(
         'Package [cyan]test-package@1.1.0[/cyan] has been published already.',
       )
@@ -367,7 +361,6 @@ describe('版本插件测试', () => {
         value: '1.0.1',
       })
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
       const result = await getIncrementVersionHandler({
         releaseTypeOrVersion: undefined,
       })
@@ -393,7 +386,6 @@ describe('版本插件测试', () => {
         getCanaryVersion as MockedFunction<typeof getCanaryVersion>
       ).mockResolvedValue('1.1.0-canary.123')
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
       const result = await getIncrementVersionHandler({
         releaseTypeOrVersion: undefined,
       })
@@ -408,7 +400,6 @@ describe('版本插件测试', () => {
         .mockResolvedValueOnce({ value: 'custom' }) // 第一次选择 custom
         .mockResolvedValueOnce({ value: '2.0.0' }) // 第二次输入自定义版本
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
       const result = await getIncrementVersionHandler({
         releaseTypeOrVersion: undefined,
       })
@@ -423,7 +414,6 @@ describe('版本插件测试', () => {
         .mockResolvedValueOnce({ value: 'alpha' }) // 第一次选择 alpha
         .mockResolvedValueOnce({ value: '1.1.0-alpha.1' }) // 第二次选择具体的预发布版本
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
       const result = await getIncrementVersionHandler({
         releaseTypeOrVersion: undefined,
       })
@@ -439,7 +429,6 @@ describe('版本插件测试', () => {
         value: '1.1.0-beta.1',
       })
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
       const result = await getIncrementVersionHandler({
         releaseTypeOrVersion: undefined,
       })
@@ -458,7 +447,6 @@ describe('版本插件测试', () => {
     it('应该处理具体版本字符串', async () => {
       mockApi.config.npm.confirm = false
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
       const result = await getIncrementVersionHandler({
         releaseTypeOrVersion: '2.0.0',
       })
@@ -473,9 +461,8 @@ describe('版本插件测试', () => {
     let onBumpVersionHandler: any
 
     beforeEach(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       versionPlugin(mockApi)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
       onBumpVersionHandler = mockApi.onBumpVersion.mock.calls[0][0]
     })
 
@@ -486,7 +473,6 @@ describe('版本插件测试', () => {
         prereleaseId: null,
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await onBumpVersionHandler(versionInfo)
 
       expect(updatePackageVersion).toHaveBeenCalledWith(
@@ -507,7 +493,6 @@ describe('版本插件测试', () => {
         prereleaseId: null,
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await onBumpVersionHandler(versionInfo)
 
       expect(updatePackageVersion).toHaveBeenCalledWith(
@@ -534,7 +519,6 @@ describe('版本插件测试', () => {
         prereleaseId: null,
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await onBumpVersionHandler(versionInfo)
 
       expect(updatePackageVersion).toHaveBeenCalledTimes(1)
@@ -557,7 +541,6 @@ describe('版本插件测试', () => {
         prereleaseId: null,
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await onBumpVersionHandler(versionInfo)
 
       expect(updatePackageVersion).toHaveBeenCalledTimes(3)
@@ -574,7 +557,6 @@ describe('版本插件测试', () => {
         prereleaseId: null,
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await expect(onBumpVersionHandler(versionInfo)).rejects.toThrow(
         '版本更新失败',
       )
@@ -586,9 +568,8 @@ describe('版本插件测试', () => {
     let onBeforeBumpVersionHandler: any
 
     beforeEach(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       versionPlugin(mockApi)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
       onBeforeBumpVersionHandler = mockApi.onBeforeBumpVersion.mock.calls[0][0]
     })
 
@@ -599,7 +580,6 @@ describe('版本插件测试', () => {
         prereleaseId: null,
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await onBeforeBumpVersionHandler(versionInfo)
 
       expect(isVersionExist).toHaveBeenCalledWith(
@@ -618,7 +598,6 @@ describe('版本插件测试', () => {
         prereleaseId: 'beta' as PrereleaseId,
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await expect(onBeforeBumpVersionHandler(versionInfo)).rejects.toThrow(
         'Expected a alpha tag, but got',
       )
@@ -633,7 +612,6 @@ describe('版本插件测试', () => {
         prereleaseId: null,
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await expect(onBeforeBumpVersionHandler(versionInfo)).rejects.toThrow(
         'Expected a prerelease type, but got',
       )
@@ -648,7 +626,6 @@ describe('版本插件测试', () => {
         prereleaseId: 'beta' as PrereleaseId,
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await expect(onBeforeBumpVersionHandler(versionInfo)).rejects.toThrow(
         'Expected a release type, but got',
       )
@@ -665,7 +642,6 @@ describe('版本插件测试', () => {
         prereleaseId: null,
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await expect(onBeforeBumpVersionHandler(versionInfo)).rejects.toThrow(
         'Package [cyan]test-package@1.1.0[/cyan] has been published already.',
       )
@@ -673,7 +649,7 @@ describe('版本插件测试', () => {
 
     it('当版本无效时应该抛出错误', async () => {
       // 模拟 semver.valid 返回 null (无效版本)
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+
       const semverModule = requiredModule0 as unknown as {
         valid: Mock
         default: { valid: Mock }
@@ -686,7 +662,6 @@ describe('版本插件测试', () => {
         prereleaseId: null,
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await expect(onBeforeBumpVersionHandler(versionInfo)).rejects.toThrow(
         'Invalid semantic version',
       )
@@ -698,9 +673,8 @@ describe('版本插件测试', () => {
     let onAfterBumpVersionHandler: any
 
     beforeEach(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       versionPlugin(mockApi)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
       onAfterBumpVersionHandler = mockApi.onAfterBumpVersion.mock.calls[0][0]
     })
 
@@ -711,7 +685,6 @@ describe('版本插件测试', () => {
         prereleaseId: null,
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await onAfterBumpVersionHandler(versionInfo)
 
       expect(mockApi.step).toHaveBeenCalledWith('Updating Lockfile ...')
@@ -729,7 +702,6 @@ describe('版本插件测试', () => {
         prereleaseId: null,
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await onAfterBumpVersionHandler(versionInfo)
 
       expect(updatePackageLock).toHaveBeenCalledWith('pnpm', {
@@ -749,7 +721,6 @@ describe('版本插件测试', () => {
         prereleaseId: null,
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await onAfterBumpVersionHandler(versionInfo)
 
       expect(mockApi.step).not.toHaveBeenCalled()
@@ -767,7 +738,6 @@ describe('版本插件测试', () => {
         prereleaseId: null,
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await expect(onAfterBumpVersionHandler(versionInfo)).rejects.toThrow(
         '锁文件更新失败',
       )
@@ -779,9 +749,8 @@ describe('版本插件测试', () => {
     let getIncrementVersionHandler: any
 
     beforeEach(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       versionPlugin(mockApi)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
       getIncrementVersionHandler = mockApi.getIncrementVersion.mock.calls[0][0]
     })
 
@@ -794,7 +763,6 @@ describe('版本插件测试', () => {
         getReleaseVersion as MockedFunction<typeof getReleaseVersion>
       ).mockReturnValue('1.0.1')
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
       const result = await getIncrementVersionHandler({
         releaseTypeOrVersion: undefined,
       })
@@ -820,7 +788,6 @@ describe('版本插件测试', () => {
       ).mockReturnValue('1.1.0')
       ;(confirm as MockedFunction<typeof confirm>).mockResolvedValue(true)
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
       const result = await getIncrementVersionHandler({
         releaseTypeOrVersion: 'minor',
       })
@@ -837,7 +804,6 @@ describe('版本插件测试', () => {
         getReleaseVersion as MockedFunction<typeof getReleaseVersion>
       ).mockReturnValue('1.1.0')
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
       const result = await getIncrementVersionHandler({
         releaseTypeOrVersion: 'minor',
       })
@@ -852,9 +818,8 @@ describe('版本插件测试', () => {
     let getIncrementVersionHandler: any
 
     beforeEach(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       versionPlugin(mockApi)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
       getIncrementVersionHandler = mockApi.getIncrementVersion.mock.calls[0][0]
     })
 
@@ -866,7 +831,6 @@ describe('版本插件测试', () => {
         getReleaseVersion as MockedFunction<typeof getReleaseVersion>
       ).mockReturnValue('1.1.0-alpha.1')
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
       const result = await getIncrementVersionHandler({
         releaseTypeOrVersion: 'minor',
       })
@@ -884,7 +848,6 @@ describe('版本插件测试', () => {
       mockApi.config.npm.prerelease = true
       mockApi.config.npm.confirm = false
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await getIncrementVersionHandler({ releaseTypeOrVersion: 'minor' })
 
       // 当预发布类型为 true 但没有指定 prereleaseId 时，会使用 undefined
@@ -904,7 +867,7 @@ describe('版本插件测试', () => {
       mockApi.appData.pkgs[0].version = '1.0.0-canary.20231112-old123'
 
       // 当没有提供 releaseTypeOrVersion 且配置为 canary 模式时，会调用 getCanaryVersion
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+
       await getIncrementVersionHandler({ releaseTypeOrVersion: undefined })
 
       expect(getCanaryVersion).toHaveBeenCalled()
@@ -916,9 +879,8 @@ describe('版本插件测试', () => {
     let getIncrementVersionHandler: any
 
     beforeEach(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       versionPlugin(mockApi)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
       getIncrementVersionHandler = mockApi.getIncrementVersion.mock.calls[0][0]
     })
 
@@ -936,7 +898,6 @@ describe('版本插件测试', () => {
         '1.5.0',
       )
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await getIncrementVersionHandler({ releaseTypeOrVersion: 'minor' })
 
       expect(getRemoteDistTag).toHaveBeenCalledWith(['test-package'], {
@@ -952,7 +913,6 @@ describe('版本插件测试', () => {
         getRemoteDistTag as MockedFunction<typeof getRemoteDistTag>
       ).mockRejectedValue(new Error('网络错误'))
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await expect(
         getIncrementVersionHandler({ releaseTypeOrVersion: 'minor' }),
       ).rejects.toThrow('网络错误')
@@ -984,13 +944,11 @@ describe('版本插件测试', () => {
           confirm: false,
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         versionPlugin(mockApi)
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
         const getIncrementVersionHandler =
           mockApi.getIncrementVersion.mock.calls[0][0]
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         await expect(
           getIncrementVersionHandler({ releaseTypeOrVersion: 'minor' }),
         ).resolves.toBeDefined()
@@ -1010,7 +968,6 @@ describe('版本插件测试', () => {
     })
 
     it('应该没有返回值', () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const result = versionPlugin(mockApi)
       expect(result).toBeUndefined()
     })
@@ -1018,31 +975,30 @@ describe('版本插件测试', () => {
 
   describe('版本插件完整工作流', () => {
     it('应该完整执行版本管理流程', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       versionPlugin(mockApi)
 
       // 1. 检查版本有效性
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
       const onCheckHandler = mockApi.onCheck.mock.calls[0][0]
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+
       await onCheckHandler({ releaseTypeOrVersion: 'minor' })
       expect(isVersionValid).toHaveBeenCalled()
 
       // 2. 获取增量版本
       mockApi.config.npm.confirm = false
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
       const getIncrementVersionHandler =
         mockApi.getIncrementVersion.mock.calls[0][0]
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
+
       const version = await getIncrementVersionHandler({
         releaseTypeOrVersion: 'minor',
       })
       expect(version).toBe('1.1.0')
 
       // 3. 更新版本
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
       const onBumpVersionHandler = mockApi.onBumpVersion.mock.calls[0][0]
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+
       await onBumpVersionHandler({
         version: '1.1.0',
         isPrerelease: false,
@@ -1051,10 +1007,10 @@ describe('版本插件测试', () => {
       expect(updatePackageVersion).toHaveBeenCalled()
 
       // 4. 更新锁文件
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
       const onAfterBumpVersionHandler =
         mockApi.onAfterBumpVersion.mock.calls[0][0]
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+
       await onAfterBumpVersionHandler({
         version: '1.1.0',
         isPrerelease: false,
@@ -1064,17 +1020,15 @@ describe('版本插件测试', () => {
     })
 
     it('应该处理错误情况', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       versionPlugin(mockApi)
 
       // 测试无效版本错误
       ;(
         isVersionValid as MockedFunction<typeof isVersionValid>
       ).mockReturnValue(false)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
       const onCheckHandler = mockApi.onCheck.mock.calls[0][0]
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await expect(
         onCheckHandler({ releaseTypeOrVersion: 'invalid' }),
       ).rejects.toThrow()
@@ -1083,10 +1037,9 @@ describe('版本插件测试', () => {
       ;(
         updatePackageVersion as MockedFunction<typeof updatePackageVersion>
       ).mockRejectedValue(new Error('更新失败'))
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
       const onBumpVersionHandler = mockApi.onBumpVersion.mock.calls[0][0]
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await expect(
         onBumpVersionHandler({
           version: '1.1.0',
@@ -1102,9 +1055,8 @@ describe('版本插件测试', () => {
     let getIncrementVersionHandler: any
 
     beforeEach(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       versionPlugin(mockApi)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
       getIncrementVersionHandler = mockApi.getIncrementVersion.mock.calls[0][0]
     })
 
@@ -1123,7 +1075,6 @@ describe('版本插件测试', () => {
         value: '1.0.6',
       })
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await getIncrementVersionHandler({ releaseTypeOrVersion: undefined })
 
       expect(logger.info).toHaveBeenCalledWith(
@@ -1159,7 +1110,6 @@ describe('版本插件测试', () => {
         value: '1.1.0-alpha.2',
       })
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await getIncrementVersionHandler({ releaseTypeOrVersion: undefined })
 
       expect(logger.info).toHaveBeenCalledWith(

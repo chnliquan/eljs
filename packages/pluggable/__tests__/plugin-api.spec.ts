@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-/* eslint-disable @typescript-eslint/naming-convention */
+
 import type { ResolvedPlugin } from '../src'
 import { PluggableStateEnum, Plugin, PluginApi } from '../src'
 import { createMockPlugin } from './setup'

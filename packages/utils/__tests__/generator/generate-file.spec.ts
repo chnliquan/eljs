@@ -7,7 +7,7 @@ import {
   type Mocked,
   type MockedClass,
 } from 'vitest'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 import {
   generateFile,
   Generator,

@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-'use strict'
 
-const { cli } = require('../lib/cli')
+import { cli } from '../dist/cli.js'
 
 cli()

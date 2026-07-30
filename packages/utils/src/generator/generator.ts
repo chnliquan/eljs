@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { PromptObject } from 'prompts'
 
-import { isDirectorySync, isPathExistsSync, mkdirSync } from '../file'
-import { isFunction } from '../type'
-import { BaseGenerator } from './base-generator'
+import { isDirectorySync, isPathExistsSync, mkdirSync } from '../file/index.js'
+import { isFunction } from '../type/index.js'
+import { BaseGenerator } from './base-generator.js'
 
 export interface GeneratorOptions {
   /**
@@ -48,7 +48,7 @@ interface GeneratorDoneCtx {
   /**
    * 模版渲染数据
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   data: Record<string, any>
 }
 
@@ -56,12 +56,12 @@ export class Generator extends BaseGenerator {
   /**
    * 模版文件夹路径
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   public src: string | ((prompts: Record<string, any>) => string)
   /**
    * 目标文件夹路径
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   public dest: string | ((prompts: Record<string, any>) => string)
   /**
    * 问询列表
@@ -71,7 +71,6 @@ export class Generator extends BaseGenerator {
    * 模版渲染数据
    */
   public data:
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     | Record<string, any>
     | ((prompts: Record<string, any>) => Record<string, any>)
   /**

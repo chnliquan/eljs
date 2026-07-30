@@ -1,8 +1,7 @@
 import * as importedModule0 from '@eljs/utils'
 import * as importedModule1 from 'pkg-up'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-/* eslint-disable @typescript-eslint/no-var-requires */
-/* eslint-disable @typescript-eslint/naming-convention */
+
 import type { PluginOptions } from '../src'
 import { Plugin, PluginTypeEnum } from '../src'
 import { createTempDir } from './setup'
@@ -40,7 +39,6 @@ vi.mock('@eljs/utils', () => ({
     ),
 }))
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { isPathExistsSync, fileLoadersSync } = requiredModule0
 
 describe('插件', () => {

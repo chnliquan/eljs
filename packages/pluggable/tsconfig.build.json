@@ -1,8 +1,8 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src", "../../global.d.ts"],
+  "include": ["src"],
   "compilerOptions": {
-    "declarationDir": "esm",
+    "declarationMap": false,
     "types": ["node"]
   }
 }

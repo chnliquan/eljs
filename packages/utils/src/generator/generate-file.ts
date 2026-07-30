@@ -1,4 +1,4 @@
-import { Generator, type GeneratorOptions } from './generator'
+import { Generator, type GeneratorOptions } from './generator.js'
 
 /**
  * 生成文件

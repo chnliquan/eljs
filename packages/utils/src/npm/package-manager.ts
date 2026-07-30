@@ -1,10 +1,10 @@
-import { hasGlobalInstallation } from '../env'
+import { hasGlobalInstallation } from '../env/index.js'
 import {
   getNpmWorkspaceRoot,
   getPnpmWorkspaceRoot,
   getYarnWorkspaceRoot,
-} from '../path'
-import type { PackageManager } from '../types'
+} from '../path/index.js'
+import type { PackageManager } from '../types/index.js'
 
 const cache = new Map()
 

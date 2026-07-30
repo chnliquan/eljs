@@ -1,7 +1,6 @@
 import * as importedModule0 from 'conventional-changelog'
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
-/* eslint-disable @typescript-eslint/no-var-requires */
-/* eslint-disable @typescript-eslint/naming-convention */
+
 /**
  * @file packages/release utils/changelog 模块单元测试
  * @description 测试 changelog.ts 更新日志生成功能

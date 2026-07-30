@@ -39,7 +39,7 @@ export interface PackageJson {
   bin?: Record<string, string> | string
   files?: string[]
   scripts?: Record<string, string>
-  // eslint-disable-next-line @typescript-eslint/naming-convention
+
   'lint-staged'?: Record<string, string | string[]>
   dependencies?: Record<string, string>
   devDependencies?: Record<string, string>

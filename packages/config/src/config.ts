@@ -8,8 +8,8 @@ import {
 } from '@eljs/utils'
 import { extname, join } from 'node:path'
 
-import type { ConfigManagerOptions } from './types'
-import { addFileExt, getAbsFiles } from './utils'
+import type { ConfigManagerOptions } from './types.js'
+import { addFileExt, getAbsFiles } from './utils.js'
 
 /**
  * 配置管理器类

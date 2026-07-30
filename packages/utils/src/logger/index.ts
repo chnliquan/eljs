@@ -1,2 +1,2 @@
-export * from './debug'
-export * from './logger'
+export * from './debug.js'
+export * from './logger.js'

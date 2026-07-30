@@ -13,7 +13,7 @@ import * as importedModule3 from '../../src/file/is'
 import * as importedModule4 from '../../src/file/read'
 import * as importedModule5 from '../../src/file/render'
 import * as importedModule6 from '../../src/file/write'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 import { glob, globSync } from 'glob'
 
 import {

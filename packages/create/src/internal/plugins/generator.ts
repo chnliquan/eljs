@@ -6,7 +6,7 @@ import {
 } from '@eljs/utils'
 import { resolve } from 'node:path'
 
-import type { Api } from '../../types'
+import type { Api } from '../../types/index.js'
 
 export default (api: Api) => {
   api.registerMethod('resolve', (...paths: string[]) => {

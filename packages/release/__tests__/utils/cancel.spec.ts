@@ -1,4 +1,5 @@
 import {
+  afterEach,
   beforeEach,
   describe,
   expect,
@@ -24,6 +25,11 @@ vi.mock('@eljs/utils', () => ({
 describe('用户取消功能测试', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.spyOn(process, 'exit').mockImplementation(() => undefined as never)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   describe('onCancel 函数基本功能', () => {
@@ -32,7 +38,6 @@ describe('用户取消功能测试', () => {
         typeof logger.event
       >
 
-      // 现在 process.exit 已经在 vi.setup.js 中被全局模拟了
       onCancel()
 
       expect(mockLoggerEvent).toHaveBeenCalledWith('Cancel release')
@@ -42,7 +47,6 @@ describe('用户取消功能测试', () => {
     it('应该调用 process.exit(0)', () => {
       onCancel()
 
-      // process.exit 已经被全局模拟，我们检查它被调用
       expect(process.exit).toHaveBeenCalledWith(0)
     })
   })

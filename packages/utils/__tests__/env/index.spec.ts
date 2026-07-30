@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 import type { ExecaReturnValue } from 'execa'
 import execa from 'execa'
 

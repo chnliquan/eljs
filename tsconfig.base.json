@@ -19,5 +19,5 @@
     "jsx": "react",
     "lib": ["esnext"]
   },
-  "exclude": ["node_modules", "lib", "esm"]
+  "exclude": ["node_modules", "dist", "lib", "esm"]
 }

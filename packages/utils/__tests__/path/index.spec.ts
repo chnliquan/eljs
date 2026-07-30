@@ -11,7 +11,7 @@ import {
 } from 'vitest'
 import * as importedModule3 from '../../src/file'
 import * as importedModule4 from '../../src/npm'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 import * as path from 'node:path'
 
 import {

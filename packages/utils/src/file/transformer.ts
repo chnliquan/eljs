@@ -1,7 +1,7 @@
 import path from 'node:path'
 import { addHook } from 'pirates'
 
-import type { AnyFunction, NoopFunction } from '../types'
+import type { AnyFunction, NoopFunction } from '../types/index.js'
 
 /**
  * 转换器构造函数选项
@@ -44,7 +44,7 @@ export class Transformer<T extends AnyFunction> {
    * 执行文件劫持
    * @param options 文件转换函数选项
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   public apply(options?: Parameters<T>[1]) {
     const { exts = ['.ts'], ignoreNodeModules } = this.constructorOptions
     this._revert = addHook(

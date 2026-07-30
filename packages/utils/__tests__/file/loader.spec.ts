@@ -11,7 +11,7 @@ import * as importedModule7 from '../../src/file/is'
 import * as importedModule4 from '../../src/file/read'
 import * as importedModule6 from '../../src/file/remove'
 import * as importedModule5 from '../../src/file/write'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -423,10 +423,12 @@ describe('文件加载器工具 - 完整测试', () => {
         }),
       )
       expect(mockWriteFileSync).toHaveBeenCalledWith(
-        '/test.cjs',
+        expect.stringMatching(/^\/\.test\.eljs-\d+-[0-9a-f-]{36}\.cjs$/),
         mockCompiledContent,
       )
-      expect(mockRemoveSync).toHaveBeenCalledWith('/test.cjs')
+      expect(mockRemoveSync).toHaveBeenCalledWith(
+        mockWriteFileSync.mock.calls[0][0],
+      )
       expect(result).toEqual(mockResult)
     })
 
@@ -458,7 +460,7 @@ describe('文件加载器工具 - 完整测试', () => {
       expect(mockTypeScript.transpileModule).toHaveBeenCalled()
     })
 
-    it('应该正确处理编译后的文件路径', () => {
+    it('应该使用唯一临时路径，避免覆盖同名 CJS 文件', () => {
       const mockTsContent = 'export const test = "hello"'
       const mockCompiledContent = 'exports.test = "hello";'
 
@@ -470,7 +472,31 @@ describe('文件加载器工具 - 完整测试', () => {
 
       loadTsSync('/path/to/file.ts')
 
-      expect(mockImportFresh).toHaveBeenCalledWith('/path/to/file.cjs')
+      const compiledPath = mockWriteFileSync.mock.calls[0][0]
+
+      expect(compiledPath).toMatch(
+        /^\/path\/to\/\.file\.eljs-\d+-[0-9a-f-]{36}\.cjs$/,
+      )
+      expect(compiledPath).not.toBe('/path/to/file.cjs')
+      expect(mockImportFresh).toHaveBeenCalledWith(compiledPath)
+      expect(mockRemoveSync).toHaveBeenCalledWith(compiledPath)
+    })
+
+    it('并发加载同一个 TS 文件时应该使用不同的临时路径', async () => {
+      mockReadFile.mockResolvedValue('export default "test"')
+      mockTypeScript.transpileModule.mockReturnValue({
+        outputText: 'module.exports = "test"',
+      })
+      mockImportFresh.mockReturnValue({ default: 'test' })
+
+      await Promise.all([loadTs('/config.ts'), loadTs('/config.ts')])
+
+      const compiledPaths = requiredModule5.writeFile.mock.calls.map(
+        ([filePath]) => filePath,
+      )
+
+      expect(new Set(compiledPaths).size).toBe(2)
+      expect(compiledPaths).not.toContain('/config.cjs')
     })
   })
 

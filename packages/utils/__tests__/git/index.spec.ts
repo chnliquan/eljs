@@ -12,7 +12,7 @@ import * as importedModule1 from '../../src/cp'
 import * as importedModule0 from '../../src/env'
 import * as importedModule2 from '../../src/file'
 import * as importedModule3 from '../../src/type'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 import type { ExecaReturnValue } from 'execa'
 import execa from 'execa'
 import ini from 'ini'
@@ -291,7 +291,6 @@ describe('Git 工具函数', () => {
     fetch = +refs/heads/*:refs/remotes/origin/*
 `)
         mockIni.parse.mockReturnValue({
-          // eslint-disable-next-line @typescript-eslint/naming-convention
           'remote "origin"': {
             url: 'https://github.com/user/repo.git',
           },

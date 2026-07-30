@@ -3,9 +3,9 @@ import { glob } from 'glob'
 import yaml from 'js-yaml'
 import path from 'node:path'
 
-import { isPathExists, readFile, readJson } from '../file'
-import { getPackageManager } from '../npm'
-import type { PackageJson } from '../types'
+import { isPathExists, readFile, readJson } from '../file/index.js'
+import { getPackageManager } from '../npm/index.js'
+import type { PackageJson } from '../types/index.js'
 
 /**
  * 获取 pnpm 工作目录根路径

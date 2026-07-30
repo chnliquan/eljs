@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 import * as generatorModule from '../../src/generator'
 import {
   BaseGenerator,

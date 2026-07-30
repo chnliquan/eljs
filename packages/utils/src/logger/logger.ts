@@ -26,9 +26,12 @@ class Logger {
   }
 
   public log(message: string, tag = ''): void {
-    tag
-      ? console.log(this.format(this._chalkTag(tag), message))
-      : console.log(message)
+    if (tag) {
+      console.log(this.format(this._chalkTag(tag), message))
+      return
+    }
+
+    console.log(message)
   }
 
   public event(message: string): void {

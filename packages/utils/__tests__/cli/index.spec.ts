@@ -9,7 +9,7 @@ import {
   type MockedFunction,
 } from 'vitest'
 import * as importedModule0 from '../../src/type'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 import * as readline from 'node:readline'
 import type { Answers, PromptObject } from 'prompts'
 import prompts from 'prompts'

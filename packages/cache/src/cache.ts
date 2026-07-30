@@ -20,7 +20,7 @@ import type {
   CacheStats,
   CacheValidator,
   CleanupResult,
-} from './types'
+} from './types.js'
 
 /**
  * 缓存类

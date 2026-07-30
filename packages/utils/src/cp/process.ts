@@ -2,8 +2,8 @@ import cp from 'node:child_process'
 import { EOL } from 'node:os'
 import { read } from 'read'
 
-import { isObject } from '../type'
-import { getExecutableCommand, runCommand } from './command'
+import { isObject } from '../type/index.js'
+import { getExecutableCommand, runCommand } from './command.js'
 
 /**
  * 获取命令对应的进程 ID

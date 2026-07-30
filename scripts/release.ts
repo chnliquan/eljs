@@ -27,21 +27,22 @@ async function main(): Promise<void> {
     }
   }
 
-  // run tests before release
-  logger.step('Release', 'Running tests ...')
+  logger.step('Release', 'Running static verification ...')
+  await $`pnpm run verify:static`
+
   if (!skipTests) {
-    await $`pnpm run test --bail=1 --passWithNoTests`
+    logger.step('Release', 'Running tests with coverage ...')
+    await $`pnpm run verify:test --bail=1`
   } else {
-    console.log(`(skipped)`)
+    logger.info('Tests skipped.')
   }
 
-  // build all packages
-  logger.step('Release', 'Building all packages ...')
   if (!skipBuild) {
+    logger.step('Release', 'Building and verifying packages ...')
     await $`pnpm run clean`
-    await $`pnpm run build --force`
+    await $`pnpm run verify:package`
   } else {
-    console.log(`(skipped)`)
+    logger.info('Package build skipped.')
   }
 
   // https://github.com/chnliquan/eljs/tree/master/packages/release#configuration

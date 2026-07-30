@@ -7,16 +7,21 @@ import {
   type PluggablePluginApi,
 } from '@eljs/pluggable'
 import { deepMerge, prompts, type RequiredRecursive } from '@eljs/utils'
+import { createRequire } from 'node:module'
 
-import { defaultConfig } from '../default'
-import { resolveInternalModule } from '../internal'
+import { defaultConfig } from '../default.js'
+import { resolveInternalModule } from '../internal/index.js'
 import {
   RunnerStageEnum,
   type AppData,
   type Config,
   type Paths,
   type Prompts,
-} from '../types'
+} from '../types/index.js'
+
+const localRequire = createRequire(
+  typeof __filename === 'string' ? __filename : import.meta.url,
+)
 
 /**
  * 运行器
@@ -82,8 +87,7 @@ export class Runner extends Pluggable<Config> {
     this.appData = await this.applyPlugins('modifyAppData', {
       initialValue: {
         scene: 'web',
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        cliVersion: require('../../package.json').version,
+        cliVersion: localRequire('../../package.json').version,
         pkg: {},
         projectName,
         packageManager: 'pnpm',

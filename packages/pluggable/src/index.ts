@@ -1,2 +1,2 @@
-export * from './pluggable'
-export * from './plugin'
+export * from './pluggable/index.js'
+export * from './plugin/index.js'

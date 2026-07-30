@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
-/* eslint-disable @typescript-eslint/naming-convention */
+
 /**
  * @file packages/release utils/npm 模块单元测试
  * @description 测试 npm.ts 的 npm 相关工具函数

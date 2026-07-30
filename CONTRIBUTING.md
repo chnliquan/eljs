@@ -35,8 +35,8 @@ utils ─┬─> config
 ```
 
 `conventional-changelog-preset` is an independent native ESM package consumed
-by the release tooling. The TypeScript packages publish a CommonJS runtime
-entry that works with both Node.js `require()` and `import()`, plus TypeScript
+by the release tooling. The TypeScript packages publish separate CommonJS and
+native ESM runtime entries, selected through package exports, plus TypeScript
 declarations.
 
 ## Validation
@@ -44,18 +44,17 @@ declarations.
 Run the same checks as CI before opening a pull request:
 
 ```bash
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm pack:check
+pnpm verify
 ```
+
+This runs formatting, linting, type checking, coverage, builds, and isolated
+checks against the files that would be published to npm.
 
 During development, scope commands to a package:
 
 ```bash
 pnpm --filter @eljs/create typecheck
-pnpm test -- packages/create/__tests__/core/create.spec.ts
+pnpm exec vitest run packages/create/__tests__/core/create.spec.ts
 pnpm --filter @eljs/create... build
 ```
 
@@ -79,4 +78,4 @@ reports or debug logs.
 - Add regression tests for behavior changes.
 - Use Conventional Commits, preferably with the package name as scope, for
   example `fix(create): validate target path`.
-- Do not edit generated `lib/` or `esm/` output; rebuild it from source.
+- Do not edit generated `dist/` output; rebuild it from source.

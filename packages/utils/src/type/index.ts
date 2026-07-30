@@ -2,7 +2,7 @@ import type {
   AnyAsyncFunction,
   AnyConstructorFunction,
   AnyFunction,
-} from '../types'
+} from '../types/index.js'
 
 function isTypeOf(target: unknown, type: string): boolean {
   if (!type) {
@@ -260,7 +260,6 @@ export function isPromise<T>(target: unknown): target is Promise<T> {
  */
 export function isESModule<T>(
   module: unknown,
-  // eslint-disable-next-line @typescript-eslint/naming-convention
 ): module is { __esModule: true; default: T } {
   return (
     !!module &&

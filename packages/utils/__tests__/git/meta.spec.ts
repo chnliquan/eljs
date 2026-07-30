@@ -12,8 +12,7 @@ import {
 import * as importedModule0 from '../../src/cp'
 import * as importedModule2 from '../../src/file'
 import * as importedModule1 from '../../src/type'
-/* eslint-disable @typescript-eslint/naming-convention */
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 import os from 'node:os'
 
 import {

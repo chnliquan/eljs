@@ -9,7 +9,7 @@ import {
   PluginTypeEnum,
   type Hook,
   type ResolvedPluginReturnType,
-} from '../plugin'
+} from '../plugin/index.js'
 import {
   ApplyPluginTypeEnum,
   PluggableStateEnum,
@@ -19,7 +19,7 @@ import {
   type PluginMethods,
   type ResolvedPlugin,
   type UserConfig,
-} from './types'
+} from './types.js'
 
 /**
  * 可插拔类

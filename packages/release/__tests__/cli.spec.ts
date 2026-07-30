@@ -1,11 +1,13 @@
 import {
   afterAll,
+  afterEach,
   beforeEach,
   describe,
   expect,
   it,
   vi,
   type MockedFunction,
+  type MockInstance,
 } from 'vitest'
 import * as importedModule0 from '../src/cli'
 /**
@@ -39,13 +41,13 @@ const { mockProgram } = vi.hoisted(() => ({
     argument: vi.fn().mockReturnThis(),
     option: vi.fn().mockReturnThis(),
     action: vi.fn().mockReturnThis(),
+    showHelpAfterError: vi.fn().mockReturnThis(),
     parseAsync: vi.fn().mockResolvedValue(undefined),
     outputHelp: vi.fn(),
   },
 }))
 
 vi.mock('commander', () => ({
-  Command: vi.fn(),
   InvalidArgumentError: class InvalidArgumentError extends Error {},
   program: mockProgram,
 }))
@@ -74,7 +76,7 @@ vi.mock('semver', () => {
   ]
 
   return {
-    default: { valid },
+    default: { valid, RELEASE_TYPES: releaseTypes },
     valid,
     RELEASE_TYPES: releaseTypes,
   }
@@ -88,7 +90,6 @@ vi.mock('../src/utils', () => ({
 
 // 导入模块
 import { createDebugger, readJson } from '@eljs/utils'
-import { Command } from 'commander'
 import path from 'node:path'
 import semver, { RELEASE_TYPES } from 'semver'
 import updateNotifier from 'update-notifier'
@@ -106,9 +107,13 @@ describe('CLI 命令行接口综合测试', () => {
     version: '1.3.1',
     description: 'Release npm package easily.',
   }
+  let exitSpy: MockInstance<typeof process.exit>
 
   beforeEach(() => {
     vi.clearAllMocks()
+    exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation(() => undefined as never)
     ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue(
       mockPackageJson,
     )
@@ -128,6 +133,10 @@ describe('CLI 命令行接口综合测试', () => {
           ? version
           : null
       })
+  })
+
+  afterEach(() => {
+    exitSpy.mockRestore()
   })
 
   afterAll(() => {
@@ -257,13 +266,11 @@ describe('CLI 命令行接口综合测试', () => {
     })
 
     it('应该正确解析嵌套选项', async () => {
-      /* eslint-disable @typescript-eslint/naming-convention */
       await actionHandler('minor', {
         'git.requireClean': false,
         'npm.confirm': false,
         'github.release': true,
       })
-      /* eslint-enable @typescript-eslint/naming-convention */
 
       expect(release).toHaveBeenCalledWith(
         'minor',
@@ -282,14 +289,12 @@ describe('CLI 命令行接口综合测试', () => {
     })
 
     it('应该删除默认 true 值的特定选项', async () => {
-      /* eslint-disable @typescript-eslint/naming-convention */
       await actionHandler('patch', {
         'git.requireClean': true, // 应该被删除
         'git.commit': true, // 应该被删除
         'npm.confirm': true, // 应该被删除
         'git.independent': true, // 不应该被删除
       })
-      /* eslint-enable @typescript-eslint/naming-convention */
 
       const releaseCall = (release as MockedFunction<typeof release>).mock
         .calls[0]
@@ -305,15 +310,11 @@ describe('CLI 命令行接口综合测试', () => {
     })
   })
 
-  describe('错误处理增强验证', () => {
-    it('应该增强 Command 原型方法', async () => {
+  describe('错误帮助配置', () => {
+    it('应该使用 Commander 的公开 API 在错误后展示帮助', async () => {
       await cli()
 
-      // 验证原型方法被增强
-      expect(Command.prototype).toHaveProperty('missingArgument')
-      expect(Command.prototype).toHaveProperty('unknownOption')
-      expect(Command.prototype).toHaveProperty('optionMissingArgument')
-      expect(Command.prototype).toHaveProperty('_excessArguments')
+      expect(mockProgram.showHelpAfterError).toHaveBeenCalledWith()
     })
   })
 
@@ -375,13 +376,11 @@ describe('CLI 命令行接口综合测试', () => {
     })
 
     it('应该处理复杂的选项键路径', async () => {
-      /* eslint-disable @typescript-eslint/naming-convention */
       await actionHandler('1.0.0', {
         'git.changelog.filename': 'CHANGES.md',
         'git.changelog.preset': 'angular',
         'npm.publishArgs': '--access public',
       })
-      /* eslint-enable @typescript-eslint/naming-convention */
 
       expect(release).toHaveBeenCalledWith(
         '1.0.0',
@@ -407,14 +406,12 @@ describe('CLI 命令行接口综合测试', () => {
     })
 
     it('应该处理混合的平级和嵌套选项', async () => {
-      /* eslint-disable @typescript-eslint/naming-convention */
       await actionHandler('minor', {
         cwd: '/mixed/path',
         'git.push': false,
         'npm.canary': true,
         someFlat: 'value',
       })
-      /* eslint-enable @typescript-eslint/naming-convention */
 
       expect(release).toHaveBeenCalledWith(
         'minor',
@@ -590,7 +587,7 @@ describe('CLI 命令行接口综合测试', () => {
       const actionHandler = actionCall[0]
 
       // 模拟真实的发布命令调用
-      /* eslint-disable @typescript-eslint/naming-convention */
+
       await actionHandler('1.0.0', {
         cwd: process.cwd(),
         'git.requireClean': false,
@@ -599,7 +596,6 @@ describe('CLI 命令行接口综合测试', () => {
         'npm.prerelease': false,
         'github.release': true,
       })
-      /* eslint-enable @typescript-eslint/naming-convention */
 
       // 修正测试期望，因为 'git.changelog': true 不会被删除（只有特定的 true 值会被删除）
       expect(release).toHaveBeenCalledWith(
@@ -627,7 +623,7 @@ describe('CLI 命令行接口综合测试', () => {
       const actionHandler = actionCall[0]
 
       // 测试所有会被删除的 true 值选项
-      /* eslint-disable @typescript-eslint/naming-convention */
+
       await actionHandler('major', {
         'git.requireClean': true,
         'git.changelog': true,
@@ -636,7 +632,6 @@ describe('CLI 命令行接口综合测试', () => {
         'npm.requireOwner': true,
         'npm.confirm': true,
       })
-      /* eslint-enable @typescript-eslint/naming-convention */
 
       const releaseCall = (release as MockedFunction<typeof release>).mock
         .calls[0]

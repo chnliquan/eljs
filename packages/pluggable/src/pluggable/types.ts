@@ -1,6 +1,6 @@
 import type { AnyFunction, MaybePromise } from '@eljs/utils'
 
-import type { Plugin } from '../plugin'
+import type { Plugin } from '../plugin/index.js'
 
 /**
  * 可插拔类构造函数选项

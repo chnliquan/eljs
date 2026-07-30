@@ -1,3 +1,9 @@
+import { createRequire } from 'node:module'
+
+const localRequire = createRequire(
+  typeof __filename === 'string' ? __filename : import.meta.url,
+)
+
 /**
  * 文件加载器的惰性依赖边界。
  *
@@ -5,17 +11,17 @@
  * 就初始化 TypeScript 等体积较大的模块。
  */
 export function loadImportFresh(): typeof import('import-fresh') {
-  return require('import-fresh')
+  return localRequire('import-fresh')
 }
 
 export function loadParseJson(): typeof import('parse-json') {
-  return require('parse-json')
+  return localRequire('parse-json')
 }
 
 export function loadTypeScript(): typeof import('typescript') {
-  return require('typescript')
+  return localRequire('typescript')
 }
 
 export function loadYaml(): typeof import('js-yaml') {
-  return require('js-yaml')
+  return localRequire('js-yaml')
 }

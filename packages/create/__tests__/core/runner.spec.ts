@@ -10,7 +10,7 @@ import {
   type Mock,
 } from 'vitest'
 import * as importedModule2 from '../../src/default'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * @file packages/create runner 模块完整单元测试

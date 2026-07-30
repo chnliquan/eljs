@@ -10,36 +10,38 @@
   "license": "MIT",
   "author": "chnliquan",
   "scripts": {
-    "add-owner": "tsx scripts/add-owner",
-    "boot": "tsx scripts/bootstrap",
+    "add-owner": "tsx scripts/add-owner.ts",
     "build": "turbo run build",
     "clean": "turbo run clean",
     "coverage": "vitest run --coverage",
     "dev": "turbo run dev",
-    "format": "prettier --write 'packages/**/*.{ts,tsx}'",
+    "format": "prettier --write --ignore-unknown .",
+    "format:check": "prettier --check --ignore-unknown .",
     "preinstall": "npx only-allow pnpm",
-    "lint": "eslint 'packages/**/*.{ts,tsx}'",
-    "pack:check": "tsx scripts/check-packages.ts",
+    "lint": "eslint .",
+    "pack:check": "node --import tsx scripts/check-packages.ts",
+    "package:create": "tsx scripts/create-package.ts",
     "prepare": "husky",
-    "prerelease:alpha": "tsx scripts/release --npm.prereleaseId=alpha",
-    "prerelease:beta": "tsx scripts/release --npm.prereleaseId=beta",
-    "prerelease:next": "tsx scripts/release --npm.prereleaseId=next",
-    "release": "tsx scripts/release",
-    "release:major": "tsx scripts/release major",
-    "release:minor": "tsx scripts/release minor",
-    "release:patch": "tsx scripts/release patch",
+    "release": "tsx scripts/release.ts",
+    "release:alpha": "tsx scripts/release.ts --npm.prereleaseId=alpha",
+    "release:beta": "tsx scripts/release.ts --npm.prereleaseId=beta",
+    "release:major": "tsx scripts/release.ts major",
+    "release:minor": "tsx scripts/release.ts minor",
+    "release:next": "tsx scripts/release.ts --npm.prereleaseId=next",
+    "release:patch": "tsx scripts/release.ts patch",
     "test": "vitest run",
-    "test:w": "vitest",
-    "typecheck": "turbo run typecheck"
+    "test:watch": "vitest",
+    "typecheck": "turbo run typecheck",
+    "verify": "pnpm verify:static && pnpm verify:test && pnpm verify:package",
+    "verify:package": "pnpm build && pnpm pack:check",
+    "verify:static": "pnpm format:check && pnpm lint && pnpm typecheck",
+    "verify:test": "pnpm coverage"
   },
   "lint-staged": {
-    "packages/**/*.{ts,tsx}": [
-      "prettier --write",
-      "eslint --fix"
+    "*": [
+      "eslint --fix --no-warn-ignored",
+      "prettier --write --ignore-unknown"
     ]
-  },
-  "resolutions": {
-    "esbuild": "0.25.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.0",
@@ -47,17 +49,17 @@
     "@eljs/create": "workspace:*",
     "@eljs/release": "workspace:*",
     "@eljs/utils": "workspace:*",
+    "@eslint/js": "^9.0.0",
+    "@rslib/core": "0.23.2",
     "@types/inquirer": "^9.0.7",
     "@types/inquirer-autocomplete-prompt": "^3.0.3",
     "@types/node": "^22.14.0",
-    "@typescript-eslint/eslint-plugin": "^7.18.0",
-    "@typescript-eslint/parser": "^7.18.0",
+    "@typescript-eslint/eslint-plugin": "^8.65.0",
+    "@typescript-eslint/parser": "^8.65.0",
     "@vitest/coverage-v8": "4.1.10",
-    "eslint": "^8.50.0",
+    "eslint": "^9.0.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-dirs": "^0.0.4",
-    "eslint-plugin-prettier": "^5.2.3",
-    "father": "^4.5.2",
     "husky": "^9.1.7",
     "lint-staged": "^15.5.0",
     "only-allow": "^1.2.1",
@@ -76,8 +78,5 @@
   "engines": {
     "node": ">=22.14.0",
     "pnpm": ">=11.17.0"
-  },
-  "overwrites": {
-    "esbuild": "0.25.0"
   }
 }

@@ -41,17 +41,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Lint
-        run: pnpm lint
+      - name: Static verification
+        if: matrix.node == 24
+        run: pnpm verify:static
 
-      - name: Type check
-        run: pnpm typecheck
+      - name: Tests with coverage
+        if: matrix.node == 24
+        run: pnpm verify:test
 
-      - name: Test
+      - name: Runtime compatibility tests
+        if: matrix.node != 24
         run: pnpm test
 
       - name: Build
         run: pnpm build
 
-      - name: Verify package contents
+      - name: Verify package runtime, types, and contents
         run: pnpm pack:check

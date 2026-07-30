@@ -9,7 +9,7 @@ import {
 } from 'vitest'
 import * as importedModule0 from '../../src/file'
 import * as importedModule1 from '../../src/type'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'

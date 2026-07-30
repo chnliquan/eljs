@@ -1,6 +1,5 @@
 import * as eljsUtils from '@eljs/utils'
 import {
-  afterAll,
   afterEach,
   beforeEach,
   describe,
@@ -20,22 +19,14 @@ vi.mock('@eljs/utils', () => ({
 
 const mockedEljs = eljsUtils as Mocked<typeof eljsUtils>
 
-// Mock process.exit
-const mockProcessExit = vi.spyOn(process, 'exit').mockImplementation(() => {
-  throw new Error('process.exit called')
-})
-
 describe('工具函数模块', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.spyOn(process, 'exit').mockImplementation(() => undefined as never)
   })
 
   afterEach(() => {
-    mockProcessExit.mockClear()
-  })
-
-  afterAll(() => {
-    mockProcessExit.mockRestore()
+    vi.restoreAllMocks()
   })
 
   describe('AppError 类', () => {
@@ -97,25 +88,25 @@ describe('工具函数模块', () => {
     })
 
     it('应该调用 logger.event 记录正确的信息', () => {
-      expect(() => onCancel()).toThrow('process.exit called')
+      onCancel()
 
       expect(mockedEljs.logger.event).toHaveBeenCalledTimes(1)
       expect(mockedEljs.logger.event).toHaveBeenCalledWith('Cancel create')
     })
 
     it('应该调用 process.exit 并传入退出码 0', () => {
-      expect(() => onCancel()).toThrow('process.exit called')
+      onCancel()
 
-      expect(mockProcessExit).toHaveBeenCalledTimes(1)
-      expect(mockProcessExit).toHaveBeenCalledWith(0)
+      expect(process.exit).toHaveBeenCalledTimes(1)
+      expect(process.exit).toHaveBeenCalledWith(0)
     })
 
     it('应该在退出进程前记录日志', () => {
       // 验证 logger.event 和 process.exit 都被调用
-      expect(() => onCancel()).toThrow('process.exit called')
+      onCancel()
 
       expect(mockedEljs.logger.event).toHaveBeenCalledWith('Cancel create')
-      expect(mockProcessExit).toHaveBeenCalledWith(0)
+      expect(process.exit).toHaveBeenCalledWith(0)
     })
   })
 })

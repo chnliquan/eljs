@@ -15,15 +15,19 @@ import {
   type PackageJson,
   type RequiredRecursive,
 } from '@eljs/utils'
+import { createRequire } from 'node:module'
 import { EOL } from 'node:os'
 import path from 'node:path'
 import type { ReleaseType } from 'semver'
-import { type AppData, type Config } from './types'
+import { type AppData, type Config } from './types/index.js'
 
-import { defaultConfig } from './default'
-import { resolveInternalModule } from './internal'
-import { AppError, parseVersion } from './utils'
+import { defaultConfig } from './default.js'
+import { resolveInternalModule } from './internal/index.js'
+import { AppError, parseVersion } from './utils/index.js'
 
+const localRequire = createRequire(
+  typeof __filename === 'string' ? __filename : import.meta.url,
+)
 const debug = createDebugger('release:config')
 
 /**
@@ -79,8 +83,7 @@ export class Runner extends Pluggable<Config> {
       this.appData = await this.applyPlugins('modifyAppData', {
         initialValue: {
           ...this.appData,
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          cliVersion: require('../package.json').version,
+          cliVersion: localRequire('../package.json').version,
           packageManager: 'pnpm',
         } as AppData,
         args: {

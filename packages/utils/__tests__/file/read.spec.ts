@@ -7,7 +7,7 @@ import {
   vi,
   type MockedFunction,
 } from 'vitest'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'

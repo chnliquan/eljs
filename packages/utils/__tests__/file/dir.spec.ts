@@ -9,7 +9,7 @@ import {
 } from 'vitest'
 import * as importedModule0 from '../../src/file/is'
 import * as importedModule1 from '../../src/type'
-/* eslint-disable @typescript-eslint/no-var-requires */
+
 import { mkdirp, mkdirpSync } from 'mkdirp'
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
