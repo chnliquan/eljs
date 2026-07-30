@@ -1,5 +1,24 @@
 # ChangeLog 
 
+## [1.3.2-alpha.0](https://github.com/chnliquan/eljs/compare/v1.3.1...v1.3.2-alpha.0) (2026-07-30)
+
+### ♻ Code Refactoring
+
+* modernize build and release workflow ([7c6c314](https://github.com/chnliquan/eljs/commit/7c6c314cb388d831589a78fa389a54b8a4eb81d7))
+* 移除 .js 扩展名并切换为 bundler 模块解析 ([f1cb576](https://github.com/chnliquan/eljs/commit/f1cb57619eaf4d7ce8143d12df8b951b08055715))
+* **config:** independent types ([368b6e0](https://github.com/chnliquan/eljs/commit/368b6e0e376824ff911d103b15fdc17847b666e6))
+
+### ✨ Features
+
+* add extendPluginApi hook for customizing Plugin API ([1dd638a](https://github.com/chnliquan/eljs/commit/1dd638a92ab354847d91c710c34211471fa3520a))
+* **cache:** add cache & update jest ([8546071](https://github.com/chnliquan/eljs/commit/8546071fb9d36338870147ea8d33842ff61e68a7))
+* **config:** support default config ([56d3872](https://github.com/chnliquan/eljs/commit/56d38722d1f8683498e6b305e095c7f3c9412ce7))
+* **release:** skip update lock when bump canary ([370c6a1](https://github.com/chnliquan/eljs/commit/370c6a1ce816d39a88d80ecd5e896d157ca0bba8))
+
+### 🐛 Bug Fixes
+
+* **utils:** deepmerge array ([9cba081](https://github.com/chnliquan/eljs/commit/9cba081c9a06357b6c55682c7ed40791d44600cf)) 
+
 ## [1.3.1](https://github.com/chnliquan/eljs/compare/v1.3.0...v1.3.1) (2025-08-01)
 
 **Note:** No changes, only version bump. 

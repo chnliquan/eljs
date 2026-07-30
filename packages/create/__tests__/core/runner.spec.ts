@@ -9,6 +9,7 @@ import {
   vi,
   type Mock,
 } from 'vitest'
+import packageJson from '../../package.json'
 import * as importedModule2 from '../../src/default'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -292,7 +293,7 @@ describe('Runner 类完整测试', () => {
       expect(modifyAppDataCall?.[1]).toEqual({
         initialValue: {
           scene: 'web',
-          cliVersion: '1.3.1',
+          cliVersion: packageJson.version,
           pkg: {},
           projectName,
           packageManager: 'pnpm',
