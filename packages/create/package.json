@@ -52,12 +52,12 @@
   "dependencies": {
     "@eljs/pluggable": "workspace:*",
     "@eljs/utils": "workspace:*",
-    "commander": "^13.1.0",
+    "commander": "^15.0.0",
     "dayjs": "^1.11.13",
-    "ora": "^5.4.1",
-    "sort-package-json": "^3.0.0",
-    "typescript": "5.2.2",
-    "update-notifier": "^5.1.0"
+    "ora": "^9.4.1",
+    "sort-package-json": "^4.0.0",
+    "typescript": "7.0.2",
+    "update-notifier": "^7.3.1"
   },
   "devDependencies": {
     "@types/update-notifier": "^6.0.8"
