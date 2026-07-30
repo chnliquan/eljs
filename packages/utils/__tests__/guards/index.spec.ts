@@ -13,7 +13,7 @@ import {
   isPromise,
   isString,
   isUndefined,
-} from '../../src/type'
+} from '../../src/guards'
 
 describe('类型检查工具函数', () => {
   describe('基础类型检查', () => {
@@ -160,12 +160,11 @@ describe('类型检查工具函数', () => {
       expect(isPromise('string')).toBe(false)
       expect(isPromise(123)).toBe(false)
 
-      // 实现特性：返回原始假值
-      expect(isPromise(null)).toBe(null)
-      expect(isPromise(undefined)).toBe(undefined)
+      expect(isPromise(null)).toBe(false)
+      expect(isPromise(undefined)).toBe(false)
       expect(isPromise(false)).toBe(false)
-      expect(isPromise(0)).toBe(0)
-      expect(isPromise('')).toBe('')
+      expect(isPromise(0)).toBe(false)
+      expect(isPromise('')).toBe(false)
 
       const notPromiseLike = { then: 'not a function' }
       expect(isPromise(notPromiseLike)).toBe(false)

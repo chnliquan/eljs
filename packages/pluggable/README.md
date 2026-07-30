@@ -1,6 +1,6 @@
 # @eljs/pluggable
 
-A powerful, type-safe plugin system with zero-configuration setup and flexible extensibility.
+A type-safe plugin runtime for Node.js tools with presets, ordered hooks, and extensible APIs.
 
 [![NPM Version](https://img.shields.io/npm/v/@eljs/pluggable.svg)](https://www.npmjs.com/package/@eljs/pluggable)
 [![NPM Downloads](https://img.shields.io/npm/dm/@eljs/pluggable.svg)](https://www.npmjs.com/package/@eljs/pluggable)
@@ -10,9 +10,9 @@ A powerful, type-safe plugin system with zero-configuration setup and flexible e
 
 - 🔧 **Flexible Architecture** - Support for plugins and presets with nested registration
 - 🔒 **Type Safety** - Full TypeScript support with comprehensive type definitions
-- 📊 **Performance Monitoring** - Built-in execution time tracking and statistics
+- 📊 **Debug Diagnostics** - Bounded hook timing samples and failure counts
 - 🎯 **Hook System** - Multiple hook types: Add, Modify, Get, and Event
-- 🛡️ **Robust** - Intelligent plugin resolution and error handling
+- 🛡️ **Guarded Lifecycle** - Single-load state validation and failed-load cleanup
 - 🔌 **Extensible** - Easy to extend with custom APIs and methods
 
 ## 📦 Installation
@@ -33,7 +33,11 @@ npm install @eljs/pluggable -S
 ### Basic Usage
 
 ```ts
-import { Pluggable } from '@eljs/pluggable'
+import {
+  ApplyPluginTypeEnum,
+  Pluggable,
+  type PluggableOptions,
+} from '@eljs/pluggable'
 
 // Create a pluggable runner
 export class Runner extends Pluggable {
@@ -74,6 +78,8 @@ await runner.run()
 ### Type-Safe Plugin Development
 
 ```ts
+import type { PluginApi } from '@eljs/pluggable'
+
 // Define your plugin with TypeScript
 interface MyPluginOptions {
   outputDir: string
@@ -81,7 +87,13 @@ interface MyPluginOptions {
 }
 
 // Plugin implementation
-export default function myPlugin(api: PluginApi, options: MyPluginOptions) {
+export default function myPlugin(
+  api: PluginApi,
+  options: MyPluginOptions = {
+    outputDir: 'dist',
+    minify: true,
+  },
+) {
   // Describe plugin metadata
   api.describe({
     key: 'my-custom-plugin',
@@ -116,10 +128,10 @@ If you are building a complex framework on top of `@eljs/pluggable`, you might w
 custom properties or utilities directly into the PluginApi so that all plugins can access them
 seamlessly.
 
-You can safely achieve this by overriding the extendPluginApi hook in your runner class.
+You can achieve this by overriding the `extendPluginApi` hook in your runner class.
 
 ```ts
-import { Pluggable, Plugin } from '@eljs/pluggable'
+import { Pluggable, Plugin, type PluginApi } from '@eljs/pluggable'
 
 export class CustomRunner extends Pluggable {
   // Safe extension point: inject custom utilities into PluginApi
@@ -133,8 +145,7 @@ export class CustomRunner extends Pluggable {
       // Plugins can access: api.frameworkVersion
       frameworkVersion: '1.0.0',
 
-      // You can even override default API behaviors if needed
-      // describe: (options) => { ... }
+      // Extension names must not conflict with built-in PluginApi or Runner names.
     }
   }
 }
@@ -147,7 +158,7 @@ export default function plugin(
 }
 ```
 
-> 💡 Note: Any public method defined on your CustomRunner class will also be automatically proxied and accessible via the api object in plugins. However, using extendPluginApi provides a safer and cleaner isolated context specifically meant for plugins.
+> 💡 Note: Any public method defined on your CustomRunner class will also be automatically proxied and accessible via the api object in plugins. Extension and dynamically registered method names must not conflict with built-in PluginApi or Runner names.
 
 ## 📖 API Reference
 
@@ -184,9 +195,8 @@ interface PluggableOptions {
   defaultConfigExts?: string[]
 }
 
-type PluginDeclaration<Options = Record<string, any>> =
+type PluginDeclaration<Options = Record<string, unknown>> =
   | string
-  | string[]
   | [string, Options]
 ```
 
@@ -199,12 +209,14 @@ protected async load(): Promise<void>
 ```
 
 Loads and initializes all presets and plugins based on configuration files and constructor options.
+Each instance can be loaded exactly once. A failed load moves the instance into the terminal `failed`
+state and clears partial registrations.
 
 **Features:**
 
 - Automatic config file discovery and parsing
 - Nested preset resolution
-- Plugin dependency management
+- Nested preset/plugin registration and duplicate detection
 - Error handling with detailed messages
 
 #### `applyPlugins()` - Execute Plugin Hooks
@@ -227,7 +239,7 @@ interface ApplyPluginsOptions<T, U> {
 enum ApplyPluginTypeEnum {
   Add = 'add',       // Accumulate values into array
   Modify = 'modify', // Transform initial value
-  Get = 'get',       // Return first non-null result
+  Get = 'get',       // Return first non-nullish result
   Event = 'event',   // Execute side effects
 }
 ```
@@ -251,29 +263,29 @@ const config = await this.applyPlugins('modifyConfig', {
 })
 // Result: transformed config object
 
-// Get Hook - Return first non-null result
+// Get Hook - Return first non-nullish result
 const result = await this.applyPlugins('getResult', {
   type: ApplyPluginTypeEnum.Get,
   args: { query: 'something' },
 })
-// Result: first plugin's non-null return value
+// Result: first plugin's non-nullish return value
 
 // Event Hook - Execute side effects
 await this.applyPlugins('onComplete', {
   type: ApplyPluginTypeEnum.Event,
   args: { stats: buildStats },
 })
-// Result: void (all plugins executed)
+// Result: undefined (all plugins executed)
 ```
 
 ### `extendPluginApi()` - Inject Custom API
 
 ```ts
-protected extendPluginApi(plugin: Plugin): Record<string, any>
+protected extendPluginApi(plugin: Plugin): Record<string, unknown>
 ```
 
-A lifecycle hook that allows you to safely inject or override properties and methods on the
-`PluginApi` object exposed to plugins.
+A lifecycle hook that injects non-conflicting properties and methods into the `PluginApi` object
+exposed to plugins.
 
 ### Plugin API
 
@@ -287,15 +299,15 @@ interface PluginApi {
   /** Register hook function */
   register(
     key: string,
-    fn: (...args: any[]) => MaybePromise<any>,
+    fn: (...args: unknown[]) => MaybePromise<unknown>,
     options?: { before?: string; stage?: number },
   ): void
 
   /** Register custom method */
   registerMethod(name: string, fn?: Function): void
 
-  /** Skip other plugins */
-  skipPlugins(keys: string[]): void
+  /** Skip hooks from plugins that have already been registered */
+  skipPluginHooks(keys: string[]): void
 
   /** Register additional presets */
   registerPresets(presets: PluginDeclaration[]): void
@@ -306,6 +318,30 @@ interface PluginApi {
 
 type Enable = boolean | (() => boolean)
 ```
+
+`enable` and `skipPluginHooks()` control hook execution only. They do not prevent plugin
+initialization or undo methods and side effects registered during initialization. To avoid loading a
+plugin entirely, remove it from the `plugins` or `presets` declaration.
+
+### Plugin module formats
+
+Plugin entry files support `.js`, `.cjs`, and `.ts`. `.mjs`, `.jsx`, `.tsx`, and exports-only
+packages are not part of the supported contract. TypeScript plugin loading requires TypeScript to be
+available in the consuming project.
+
+### Trust model
+
+Plugins and JavaScript/TypeScript configuration files execute in the current Node.js process with
+the current process permissions. Only load trusted plugins and configuration.
+
+### Debug diagnostics
+
+```ts
+const diagnostics = runner.getPluginDiagnostics()
+```
+
+Diagnostics contain plugin registration time, the latest 20 timing samples for each hook, and hook
+failure counts. They are intended for local debugging rather than production monitoring.
 
 ## 🎯 Hook System
 

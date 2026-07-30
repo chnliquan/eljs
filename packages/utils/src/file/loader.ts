@@ -3,7 +3,7 @@ import { basename, dirname, extname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { TranspileOptions } from 'typescript'
 
-import { isESModule } from '../type'
+import { isESModule } from '../guards'
 import { isPathExists, isPathExistsSync } from './is'
 import {
   loadImportFresh,

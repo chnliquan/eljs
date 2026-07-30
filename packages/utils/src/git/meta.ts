@@ -6,7 +6,7 @@ import path from 'node:path'
 import { URL } from 'node:url'
 import { run, type RunCommandOptions } from '../cp'
 import { isPathExists, isPathExistsSync, readFile, readFileSync } from '../file'
-import { isObject } from '../type'
+import { isObject } from '../guards'
 
 /**
  * git 远程仓库信息

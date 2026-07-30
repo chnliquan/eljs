@@ -11,7 +11,7 @@ import {
 import * as importedModule1 from '../../src/cp'
 import * as importedModule0 from '../../src/env'
 import * as importedModule2 from '../../src/file'
-import * as importedModule3 from '../../src/type'
+import * as importedModule3 from '../../src/guards'
 
 import type { ExecaReturnValue } from 'execa'
 import execa from 'execa'
@@ -47,7 +47,7 @@ vi.mock('ini')
 vi.mock('../../src/env')
 vi.mock('../../src/cp')
 vi.mock('../../src/file')
-vi.mock('../../src/type')
+vi.mock('../../src/guards')
 
 describe('Git 工具函数', () => {
   const mockExeca = execa as MockedFunction<typeof execa>

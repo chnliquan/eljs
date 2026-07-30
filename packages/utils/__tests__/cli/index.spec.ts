@@ -8,7 +8,7 @@ import {
   type Mocked,
   type MockedFunction,
 } from 'vitest'
-import * as importedModule0 from '../../src/type'
+import * as importedModule0 from '../../src/guards'
 
 import * as readline from 'node:readline'
 import type { Answers, PromptObject } from 'prompts'
@@ -22,7 +22,7 @@ const requiredModule0 = vi.mocked(importedModule0, { deep: true })
 // Mock 依赖项
 vi.mock('node:readline')
 vi.mock('prompts')
-vi.mock('../../src/type')
+vi.mock('../../src/guards')
 
 // 定义类型
 interface MockReadlineInterface {

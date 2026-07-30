@@ -7,8 +7,8 @@ import {
   type Mock,
   type MockedFunction,
 } from 'vitest'
+import * as importedModule0 from '../../src/guards'
 import * as importedModule1 from '../../src/npm/package-manager'
-import * as importedModule0 from '../../src/type'
 
 import execa from 'execa'
 
@@ -23,7 +23,7 @@ const requiredModule0 = vi.mocked(importedModule0, { deep: true })
 
 // Mock 依赖项
 vi.mock('execa')
-vi.mock('../../src/type')
+vi.mock('../../src/guards')
 vi.mock('../../src/npm/package-manager')
 
 describe('NPM 安装工具', () => {

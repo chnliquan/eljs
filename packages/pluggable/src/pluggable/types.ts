@@ -36,18 +36,16 @@ export interface PluggableOptions {
 /**
  * 插件声明
  */
-export type PluginDeclaration<
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Options extends Record<string, any> = Record<string, any>,
-> = string | string[] | [string, Options]
+export type PluginDeclaration<Options = Record<string, unknown>> =
+  string | [string, Options]
 
 /**
  * 解析后的插件
  */
-export type ResolvedPlugin<
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Options extends Record<string, any> = Record<string, any>,
-> = [Plugin, Options]
+export type ResolvedPlugin<Options = Record<string, unknown>> = [
+  Plugin,
+  Options | undefined,
+]
 
 /**
  * 用户配置项
@@ -72,7 +70,7 @@ export enum PluggableStateEnum {
    */
   Uninitialized = 'uninitialized',
   /**
-   * 初始化完成
+   * 开始初始化
    */
   Init = 'init',
   /**
@@ -87,6 +85,10 @@ export enum PluggableStateEnum {
    * 加载完成
    */
   Loaded = 'loaded',
+  /**
+   * 加载失败，不可重试
+   */
+  Failed = 'failed',
 }
 
 /**

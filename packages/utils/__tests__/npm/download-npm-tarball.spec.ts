@@ -7,18 +7,18 @@ import {
   type MockedFunction,
 } from 'vitest'
 import * as importedModule0 from '../../src/file'
-import * as importedModule1 from '../../src/type'
+import * as importedModule1 from '../../src/guards'
 
-import { downloadNpmTarball } from '../../src/npm/download'
-import download, { type DownloadOptions } from '../../src/npm/download-file'
+import download, { type DownloadOptions } from '../../src/http/download'
+import { downloadNpmTarball } from '../../src/npm/download-npm-tarball'
 
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
 const requiredModule1 = vi.mocked(importedModule1, { deep: true })
 
 // Mock 依赖项
-vi.mock('../../src/npm/download-file')
+vi.mock('../../src/http/download')
 vi.mock('../../src/file')
-vi.mock('../../src/type')
+vi.mock('../../src/guards')
 
 describe('NPM Download 工具', () => {
   const mockDownload = download as MockedFunction<typeof download>

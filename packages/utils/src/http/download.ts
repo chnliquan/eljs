@@ -4,46 +4,82 @@ import { PassThrough, Readable, type Duplex } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { x as extractTar } from 'tar'
 
+/**
+ * HTTP 下载操作的返回值。
+ *
+ * @remarks
+ * 为兼容历史公开 API，该对象既可作为 Promise 等待完整响应内容，
+ * 也可作为双工流消费下载结果。
+ */
 export type DownloadResult = Promise<Buffer> & Duplex
 
+/**
+ * 下载资源时使用的选项。
+ */
 export interface DownloadOptions {
   /**
-   * Extract the downloaded tar archive into the destination.
+   * 是否将下载内容作为 tar 归档解压到目标目录。
+   *
+   * @defaultValue false
    */
   extract?: boolean
+
   /**
-   * Override the filename used when the response is written without extraction.
+   * 不解压时写入目标目录的文件名。
+   *
+   * @remarks
+   * 最终只使用文件名部分，避免通过相对路径写出目标目录。
    */
   filename?: string
+
   /**
-   * HTTP request headers.
+   * HTTP 请求头。
    */
   headers?: Headers | Record<string, string> | Array<[string, string]>
+
   /**
-   * Abort signal supplied by the caller.
+   * 用于主动取消请求的信号。
    */
   signal?: AbortSignal
+
   /**
-   * Number of leading archive path components to remove.
+   * 解压时移除的归档路径层级数。
+   *
+   * @defaultValue 0
    */
   strip?: number
+
   /**
-   * Request timeout in milliseconds. Set to `0` to disable it.
+   * 请求超时时间，单位为毫秒。设置为 `0` 时不启用超时。
    *
-   * @default 30000
+   * @defaultValue 30000
    */
   timeout?: number
 }
 
 /**
- * Download an HTTP(S) resource. When a destination is provided, the response
- * is either written to a file or securely extracted as a tar archive.
+ * 下载 HTTP(S) 资源并写入目标目录。
+ *
+ * @param url - 资源地址
+ * @param destination - 写入或解压资源的目标目录
+ * @param options - 下载选项
+ * @returns 可作为 Promise 或双工流消费的下载结果
+ * @throws URL 不是 HTTP(S) 协议、请求失败、操作被取消或文件处理失败时抛出错误
  */
 export default function download(
   url: string,
   destination?: string,
   options?: DownloadOptions,
 ): DownloadResult
+
+/**
+ * 下载 HTTP(S) 资源并返回完整响应内容。
+ *
+ * @param url - 资源地址
+ * @param options - 下载选项
+ * @returns 可作为 Promise 或双工流消费的下载结果
+ * @throws URL 不是 HTTP(S) 协议、请求失败或操作被取消时抛出错误
+ */
 export default function download(
   url: string,
   options?: DownloadOptions,
@@ -61,8 +97,7 @@ export default function download(
   const stream = new PassThrough() as unknown as DownloadResult
   const promise = downloadResource(url, destination, options)
 
-  // Keep compatibility with the historical `download` API, which is both a
-  // readable stream and a thenable resolving to the complete response body.
+  // 保持历史 download API 的行为：既是可读流，也是返回完整内容的 Promise。
   void stream.on('error', () => {})
   stream.then = promise.then.bind(promise)
   stream.catch = promise.catch.bind(promise)
@@ -79,6 +114,14 @@ export default function download(
   return stream
 }
 
+/**
+ * 请求资源，并根据参数返回、写入或解压响应内容。
+ *
+ * @param url - 资源地址
+ * @param destination - 可选的目标目录
+ * @param options - 下载选项
+ * @returns 完整响应内容
+ */
 async function downloadResource(
   url: string,
   destination: string | undefined,
@@ -138,6 +181,14 @@ async function downloadResource(
   return data
 }
 
+/**
+ * 根据显式文件名或最终响应地址生成安全的文件名。
+ *
+ * @param filename - 调用方指定的文件名
+ * @param url - 最终响应地址
+ * @returns 不包含目录部分的安全文件名
+ * @throws 无法从参数中确定有效文件名时抛出错误
+ */
 function getSafeFilename(filename: string | undefined, url: string): string {
   const candidate = filename || path.basename(new URL(url).pathname)
   const safeFilename = path.basename(candidate)

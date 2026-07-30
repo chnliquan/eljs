@@ -6,7 +6,7 @@ import execa, {
 import path from 'node:path'
 
 import { isPathExists } from '../file'
-import { isObject } from '../type'
+import { isObject } from '../guards'
 
 const SPACES_REGEXP = / +/g
 

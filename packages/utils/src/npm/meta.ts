@@ -4,7 +4,7 @@ import which from 'which'
 
 import { PLATFORM } from '../constants'
 import { run, type RunCommandOptions } from '../cp'
-import { isString } from '../type'
+import { isString } from '../guards'
 import type { OmitIndexSignature, PackageJson } from '../types'
 
 /**

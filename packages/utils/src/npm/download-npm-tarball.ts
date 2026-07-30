@@ -1,22 +1,29 @@
-import download, { type DownloadOptions } from './download-file'
+import download, { type DownloadOptions } from '../http/download'
 
 import { tmpdir } from '../file'
-import { isObject } from '../type'
+import { isObject } from '../guards'
 
 /**
- * 下载 Npm 压缩包
- * @param url Npm 地址
- * @param options 选项
+ * 下载并解压 npm tarball 到自动创建的临时目录。
+ *
+ * @param url - npm tarball 地址
+ * @param options - 下载选项
+ * @returns 解压目录的绝对路径
+ * @throws 下载或解压失败时抛出包含 tarball 地址的错误
  */
 export async function downloadNpmTarball(
   url: string,
   options?: DownloadOptions,
 ): Promise<string>
+
 /**
- * 下载 Npm 压缩包
- * @param url Npm 地址
- * @param dest 目标地址
- * @param options 选项
+ * 下载并解压 npm tarball 到指定目录。
+ *
+ * @param url - npm tarball 地址
+ * @param dest - 解压目标目录
+ * @param options - 下载选项
+ * @returns 解压目录的绝对路径
+ * @throws 下载或解压失败时抛出包含 tarball 地址的错误
  */
 export async function downloadNpmTarball(
   url: string,
@@ -52,6 +59,3 @@ export async function downloadNpmTarball(
 
   return dest
 }
-
-export { download }
-export type { DownloadOptions }

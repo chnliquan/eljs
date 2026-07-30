@@ -1,13 +1,20 @@
 import { ConfigManager } from '@eljs/config'
 import { isFunction, isPathExistsSync } from '@eljs/utils'
 import assert from 'node:assert'
-import { AsyncSeriesBailHook, AsyncSeriesWaterfallHook } from 'tapable'
+import {
+  AsyncSeriesBailHook,
+  AsyncSeriesHook,
+  AsyncSeriesWaterfallHook,
+} from 'tapable'
 
+import { PluggableError, PluggableErrorCode } from '../errors'
 import {
   Plugin,
   PluginApi,
   PluginTypeEnum,
   type Hook,
+  type PluginDiagnostics,
+  type PluginReturnType,
   type ResolvedPluginReturnType,
 } from '../plugin'
 import {
@@ -54,13 +61,17 @@ export class Pluggable<T extends UserConfig = UserConfig> {
    */
   public pluginMethods: PluginMethods = Object.create(null)
   /**
-   * 已跳过插件 ID 集合
+   * 已跳过 Hook 的插件 ID 集合
    */
-  public skippedPluginIds: Set<string> = new Set<string>()
+  public skippedPluginHookIds: Set<string> = new Set<string>()
   /**
    * 执行阶段
    */
   private _state = PluggableStateEnum.Uninitialized
+  /**
+   * 单个 Hook 保留的最大调试耗时样本数
+   */
+  private static readonly _hookTimingSampleLimit = 20
 
   /**
    * 当前工作目录
@@ -88,8 +99,29 @@ export class Pluggable<T extends UserConfig = UserConfig> {
    * 加载预设和插件
    */
   protected async load(): Promise<void> {
+    if (this._state !== PluggableStateEnum.Uninitialized) {
+      throw new PluggableError(
+        PluggableErrorCode.InvalidState,
+        `Pluggable.load() can only be called once from the \`${PluggableStateEnum.Uninitialized}\` state, current state is \`${this._state}\`.`,
+      )
+    }
+
     this._state = PluggableStateEnum.Init
 
+    try {
+      await this._load()
+      this._state = PluggableStateEnum.Loaded
+    } catch (error) {
+      this._resetRuntimeState()
+      this._state = PluggableStateEnum.Failed
+      throw error
+    }
+  }
+
+  /**
+   * 执行实际加载流程
+   */
+  private async _load(): Promise<void> {
     this.configManager = new ConfigManager({
       defaultConfigFiles: this.constructorOptions.defaultConfigFiles || [],
       defaultConfigExts: this.constructorOptions.defaultConfigExts,
@@ -130,8 +162,6 @@ export class Pluggable<T extends UserConfig = UserConfig> {
       await this._initPlugin(plugins.shift() as ResolvedPlugin, plugins)
     }
     // #endregion
-
-    this._state = PluggableStateEnum.Loaded
   }
 
   /**
@@ -140,8 +170,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
    * @param plugin 当前正在被初始化的插件实例
    * @returns 需要注入到 API 上的扩展对象
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
-  protected extendPluginApi(plugin: Plugin): Record<string, any> {
+  protected extendPluginApi(_plugin: Plugin): Record<string, unknown> {
     return {}
   }
 
@@ -149,16 +178,39 @@ export class Pluggable<T extends UserConfig = UserConfig> {
    * 获取插件 Api
    * @param plugin 插件
    */
-  protected _getPluginApi(plugin: Plugin): PluginApi {
-    const pluginApi = new PluginApi(this, plugin)
-
+  protected _getPluginApi(
+    plugin: Plugin,
+    remainingPresets: ResolvedPlugin[] = [],
+    remainingPlugins: ResolvedPlugin[] = [],
+  ): PluginApi {
     // 获取子类提供的扩展对象
     const extensions = this.extendPluginApi(plugin)
+    const extensionNames = Object.keys(extensions)
+    const pluginApi = new PluginApi(this, plugin, {
+      remainingPlugins,
+      remainingPresets,
+      reservedMethodNames: extensionNames,
+    })
+    const conflictingExtensionName = extensionNames.find(
+      name =>
+        name in pluginApi || name in this || Boolean(this.pluginMethods[name]),
+    )
+
+    if (conflictingExtensionName) {
+      throw new PluggableError(
+        PluggableErrorCode.ApiNameConflict,
+        `extendPluginApi() failed, property \`${conflictingExtensionName}\` conflicts with a reserved Plugin API name.`,
+      )
+    }
 
     return new Proxy(pluginApi, {
-      get: (target, prop: string, receiver) => {
+      get: (target, prop, receiver) => {
+        if (typeof prop !== 'string') {
+          return Reflect.get(target, prop, receiver)
+        }
+
         // 1. 子类注入的自定义扩展属性/方法
-        if (prop in extensions) {
+        if (Object.hasOwn(extensions, prop)) {
           const value = extensions[prop]
           // 如果是函数，绑定 this 到 extensions 对象自身，防止上下文丢失
           return isFunction(value) ? value.bind(extensions) : value
@@ -224,23 +276,22 @@ export class Pluggable<T extends UserConfig = UserConfig> {
 
     this.plugins[plugin.id] = plugin
 
-    const pluginApi = this._getPluginApi(plugin)
-
-    pluginApi.registerPresets = pluginApi.registerPresets.bind(
-      pluginApi,
+    const pluginApi = this._getPluginApi(
+      plugin,
       remainingPresets,
-    )
-
-    pluginApi.registerPlugins = pluginApi.registerPlugins.bind(
-      pluginApi,
       remainingPlugins || [],
     )
 
     const result: ResolvedPluginReturnType = Object.create(null)
 
-    const registrationStart = new Date()
-    const pluginResult = await plugin.apply()(pluginApi, pluginOptions)
-    plugin.time.register = new Date().getTime() - registrationStart.getTime()
+    const registrationStart = performance.now()
+    let pluginResult: PluginReturnType | void
+
+    try {
+      pluginResult = await plugin.apply()(pluginApi, pluginOptions)
+    } finally {
+      plugin.time.register = performance.now() - registrationStart
+    }
 
     if (plugin.type === PluginTypeEnum.Plugin) {
       assert(!pluginResult, `Plugin should return nothing.`)
@@ -286,6 +337,13 @@ export class Pluggable<T extends UserConfig = UserConfig> {
     key: string,
     options: ApplyPluginsOptions<T, U> = {},
   ): Promise<T> {
+    if (this._state !== PluggableStateEnum.Loaded) {
+      throw new PluggableError(
+        PluggableErrorCode.InvalidState,
+        `Pluggable.applyPlugins() can only be called from the \`${PluggableStateEnum.Loaded}\` state, current state is \`${this._state}\`.`,
+      )
+    }
+
     let { type } = options
 
     // guess type from key
@@ -329,13 +387,8 @@ export class Pluggable<T extends UserConfig = UserConfig> {
               before: hook.before,
             },
             async memo => {
-              const startTime = new Date()
-              const ret = await hook.fn(args)
-              hook.plugin.time.hooks[key] ||= []
-              hook.plugin.time.hooks[key].push(
-                new Date().getTime() - startTime.getTime(),
-              )
-              return (memo as []).concat(ret)
+              const ret = await this._runHook(hook, key, () => hook.fn(args))
+              return ret == null ? memo : (memo as []).concat(ret)
             },
           )
         }
@@ -358,13 +411,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
               before: hook.before,
             },
             async memo => {
-              const startTime = new Date()
-              const ret = await hook.fn(memo, args)
-              hook.plugin.time.hooks[key] ||= []
-              hook.plugin.time.hooks[key].push(
-                new Date().getTime() - startTime.getTime(),
-              )
-              return ret
+              return this._runHook(hook, key, () => hook.fn(memo, args))
             },
           )
         }
@@ -387,13 +434,8 @@ export class Pluggable<T extends UserConfig = UserConfig> {
               before: hook.before,
             },
             async () => {
-              const startTime = new Date()
-              const ret = await hook.fn(args)
-              hook.plugin.time.hooks[key] ||= []
-              hook.plugin.time.hooks[key].push(
-                new Date().getTime() - startTime.getTime(),
-              )
-              return ret
+              const ret = await this._runHook(hook, key, () => hook.fn(args))
+              return ret == null ? undefined : ret
             },
           )
         }
@@ -402,7 +444,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
       }
 
       case ApplyPluginTypeEnum.Event: {
-        const tapableEvent = new AsyncSeriesWaterfallHook(['_'])
+        const tapableEvent = new AsyncSeriesHook(['_'])
 
         for (const hook of hooks) {
           if (!this.isPluginEnable(hook)) {
@@ -416,17 +458,13 @@ export class Pluggable<T extends UserConfig = UserConfig> {
               before: hook.before,
             },
             async () => {
-              const startTime = new Date()
-              await hook.fn(args)
-              hook.plugin.time.hooks[key] ||= []
-              hook.plugin.time.hooks[key].push(
-                new Date().getTime() - startTime.getTime(),
-              )
+              await this._runHook(hook, key, () => hook.fn(args))
             },
           )
         }
 
-        return tapableEvent.promise(0) as T
+        await tapableEvent.promise(0)
+        return undefined as T
       }
 
       default:
@@ -451,7 +489,7 @@ export class Pluggable<T extends UserConfig = UserConfig> {
 
     const { id, enable } = plugin
 
-    if (this.skippedPluginIds.has(id)) {
+    if (this.skippedPluginHookIds.has(id)) {
       return false
     }
 
@@ -459,7 +497,72 @@ export class Pluggable<T extends UserConfig = UserConfig> {
       return enable()
     }
 
-    return true
+    return enable
+  }
+
+  /**
+   * 获取插件调试信息快照
+   */
+  public getPluginDiagnostics(): PluginDiagnostics[] {
+    return Object.values(this.plugins).map(plugin => ({
+      id: plugin.id,
+      key: plugin.key,
+      path: plugin.path,
+      type: plugin.type,
+      time: {
+        register: plugin.time.register,
+        hooks: Object.fromEntries(
+          Object.entries(plugin.time.hooks).map(([key, samples]) => [
+            key,
+            [...samples],
+          ]),
+        ),
+        hookErrors: { ...plugin.time.hookErrors },
+      },
+    }))
+  }
+
+  /**
+   * 执行 Hook 并记录有限的调试数据
+   */
+  private async _runHook<T>(
+    hook: Hook,
+    key: string,
+    fn: () => T | Promise<T>,
+  ): Promise<T> {
+    const startTime = performance.now()
+    let failed = true
+
+    try {
+      const result = await fn()
+      failed = false
+      return result
+    } finally {
+      const samples = (hook.plugin.time.hooks[key] ||= [])
+      samples.push(performance.now() - startTime)
+
+      if (samples.length > Pluggable._hookTimingSampleLimit) {
+        samples.splice(0, samples.length - Pluggable._hookTimingSampleLimit)
+      }
+
+      if (failed) {
+        hook.plugin.time.hookErrors[key] =
+          (hook.plugin.time.hookErrors[key] || 0) + 1
+      }
+    }
+  }
+
+  /**
+   * 清理失败加载产生的运行期注册数据
+   */
+  private _resetRuntimeState(): void {
+    this.configManager = null
+    this.userConfig = null
+    this.hooks = Object.create(null)
+    this.plugins = Object.create(null)
+    this.key2Plugin = Object.create(null)
+    this.pluginMethods = Object.create(null)
+    this.skippedPluginHookIds = new Set<string>()
   }
 }
 
@@ -479,6 +582,10 @@ export interface PluggablePluginApi {
    * 执行插件
    */
   applyPlugins: typeof Pluggable.prototype.applyPlugins
+  /**
+   * 获取插件调试信息快照
+   */
+  getPluginDiagnostics: typeof Pluggable.prototype.getPluginDiagnostics
   /**
    * 注册预设
    * @param presets 预设声明集合

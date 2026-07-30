@@ -8,7 +8,7 @@ import {
   type MockedFunction,
 } from 'vitest'
 import * as importedModule0 from '../../src/file'
-import * as importedModule1 from '../../src/type'
+import * as importedModule1 from '../../src/guards'
 
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
@@ -25,7 +25,7 @@ vi.mock('prompts')
 vi.mock('../../src/cli')
 vi.mock('../../src/file')
 vi.mock('../../src/logger')
-vi.mock('../../src/type')
+vi.mock('../../src/guards')
 
 describe('Generator 生成器', () => {
   const mockPrompts = prompts as MockedFunction<typeof prompts>

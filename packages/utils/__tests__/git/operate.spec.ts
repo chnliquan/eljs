@@ -8,7 +8,7 @@ import {
 } from 'vitest'
 import * as importedModule0 from '../../src/cp'
 import * as importedModule2 from '../../src/git/meta'
-import * as importedModule1 from '../../src/type'
+import * as importedModule1 from '../../src/guards'
 
 import { gitCommit, gitPush, gitTag } from '../../src/git/operate'
 
@@ -18,7 +18,7 @@ const requiredModule1 = vi.mocked(importedModule1, { deep: true })
 
 // Mock 依赖项
 vi.mock('../../src/cp')
-vi.mock('../../src/type')
+vi.mock('../../src/guards')
 vi.mock('../../src/git/meta')
 
 describe('Git 操作工具', () => {

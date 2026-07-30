@@ -14,8 +14,8 @@ import {
   type CopyFileOptions,
   type RenderTemplateOptions,
 } from '../file'
+import { isFunction } from '../guards'
 import { logger } from '../logger'
-import { isFunction } from '../type'
 
 const TARGET_DIR_WHITE_LIST = ['.git', 'LICENSE']
 

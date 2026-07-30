@@ -8,7 +8,7 @@ import {
   type MockedFunction,
 } from 'vitest'
 import * as importedModule0 from '../../src/file'
-import * as importedModule1 from '../../src/type'
+import * as importedModule1 from '../../src/guards'
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import execa from 'execa'
@@ -36,7 +36,7 @@ vi.mock('execa')
 vi.mock('node:child_process')
 vi.mock('read')
 vi.mock('../../src/file')
-vi.mock('../../src/type')
+vi.mock('../../src/guards')
 vi.mock('../../src/cp/command', async importOriginal => ({
   ...(await importOriginal<typeof import('../../src/cp/command')>()),
   getExecutableCommand: vi.fn(),

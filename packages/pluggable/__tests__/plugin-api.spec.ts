@@ -8,7 +8,7 @@ interface MockPluggable {
   hooks: Record<string, unknown[]>
   pluginMethods: Record<string, { plugin: Plugin; fn: () => void }>
   key2Plugin: Record<string, Plugin>
-  skippedPluginIds: Set<string>
+  skippedPluginHookIds: Set<string>
   state: PluggableStateEnum
   cwd: string
 }
@@ -26,7 +26,7 @@ describe('插件API', () => {
       hooks: {},
       pluginMethods: {},
       key2Plugin: {},
-      skippedPluginIds: new Set(),
+      skippedPluginHookIds: new Set(),
       state: PluggableStateEnum.InitPlugins,
       cwd: '/test/cwd',
     }
@@ -113,6 +113,28 @@ describe('插件API', () => {
         'api.registerMethod() failed, method `customMethod` already exist.',
       )
     })
+
+    it.each(['register', 'cwd'])('应该拒绝保留方法名 %s', name => {
+      expect(() => {
+        pluginApi.registerMethod(name, vi.fn())
+      }).toThrow(
+        `api.registerMethod() failed, method \`${name}\` conflicts with a reserved Plugin API name.`,
+      )
+    })
+
+    it('应该拒绝子类扩展占用的方法名', () => {
+      const apiWithExtension = new PluginApi(
+        mockPluggable as unknown as ConstructorParameters<typeof PluginApi>[0],
+        mockPlugin,
+        { reservedMethodNames: ['logger'] },
+      )
+
+      expect(() => {
+        apiWithExtension.registerMethod('logger', vi.fn())
+      }).toThrow(
+        'api.registerMethod() failed, method `logger` conflicts with a reserved Plugin API name.',
+      )
+    })
   })
 
   describe('跳过插件', () => {
@@ -126,25 +148,25 @@ describe('插件API', () => {
     it('应该跳过指定的插件', () => {
       const keysToSkip = ['plugin-1', 'plugin-2']
 
-      pluginApi.skipPlugins(keysToSkip)
+      pluginApi.skipPluginHooks(keysToSkip)
 
-      expect(mockPluggable.skippedPluginIds.has('plugin-1')).toBe(true)
-      expect(mockPluggable.skippedPluginIds.has('plugin-2')).toBe(true)
+      expect(mockPluggable.skippedPluginHookIds.has('plugin-1')).toBe(true)
+      expect(mockPluggable.skippedPluginHookIds.has('plugin-2')).toBe(true)
     })
 
     it('不应该允许插件跳过自己', () => {
       mockPlugin.key = 'test-plugin'
 
       expect(() => {
-        pluginApi.skipPlugins(['test-plugin'])
+        pluginApi.skipPluginHooks(['test-plugin'])
       }).toThrow('Plugin `test-plugin` could not skip itself.')
     })
 
     it('应该对不存在的插件抛出错误', () => {
       expect(() => {
-        pluginApi.skipPlugins(['non-existent-plugin'])
+        pluginApi.skipPluginHooks(['non-existent-plugin'])
       }).toThrow(
-        '`non-existent-plugin` has not been registered by any plugin, could not be skipped.',
+        '`non-existent-plugin` has not been registered by any plugin, its hooks could not be skipped.',
       )
     })
   })
@@ -159,39 +181,59 @@ describe('插件API', () => {
 
       // Mock Plugin.resolvePlugins
       vi.spyOn(Plugin, 'resolvePlugins').mockReturnValue([])
+      pluginApi = new PluginApi(
+        mockPluggable as unknown as ConstructorParameters<typeof PluginApi>[0],
+        mockPlugin,
+        {
+          remainingPlugins: mockRemainingPlugins,
+          remainingPresets: mockRemainingPresets,
+        },
+      )
     })
 
     it('应该在初始化预设阶段注册预设', () => {
       mockPluggable.state = PluggableStateEnum.InitPresets
       const presets = ['preset1', 'preset2']
+      const resolvedPreset: ResolvedPlugin = [
+        createMockPlugin('resolved-preset'),
+        undefined,
+      ]
+      vi.mocked(Plugin.resolvePlugins).mockReturnValueOnce([resolvedPreset])
 
-      pluginApi.registerPresets(mockRemainingPresets, presets)
+      pluginApi.registerPresets(presets)
 
       expect(Plugin.resolvePlugins).toHaveBeenCalledWith(
         presets,
         'preset',
         '/test/cwd',
       )
+      expect(mockRemainingPresets).toEqual([resolvedPreset])
     })
 
     it('应该在预设初始化期间注册插件', () => {
       mockPluggable.state = PluggableStateEnum.InitPresets
       const plugins = ['plugin1', 'plugin2']
+      const resolvedPlugin: ResolvedPlugin = [
+        createMockPlugin('resolved-plugin'),
+        undefined,
+      ]
+      vi.mocked(Plugin.resolvePlugins).mockReturnValueOnce([resolvedPlugin])
 
-      pluginApi.registerPlugins(mockRemainingPlugins, plugins)
+      pluginApi.registerPlugins(plugins)
 
       expect(Plugin.resolvePlugins).toHaveBeenCalledWith(
         plugins,
         'plugin',
         '/test/cwd',
       )
+      expect(mockRemainingPlugins).toEqual([resolvedPlugin])
     })
 
     it('应该在插件初始化期间注册插件', () => {
       mockPluggable.state = PluggableStateEnum.InitPlugins
       const plugins = ['plugin1', 'plugin2']
 
-      pluginApi.registerPlugins(mockRemainingPlugins, plugins)
+      pluginApi.registerPlugins(plugins)
 
       expect(Plugin.resolvePlugins).toHaveBeenCalledWith(
         plugins,
@@ -204,7 +246,7 @@ describe('插件API', () => {
       mockPluggable.state = PluggableStateEnum.Loaded
 
       expect(() => {
-        pluginApi.registerPresets(mockRemainingPresets, ['preset'])
+        pluginApi.registerPresets(['preset'])
       }).toThrow(
         'api.registerPresets() failed, it should only be used during the presets state.',
       )
@@ -214,7 +256,7 @@ describe('插件API', () => {
       mockPluggable.state = PluggableStateEnum.Loaded
 
       expect(() => {
-        pluginApi.registerPlugins(mockRemainingPlugins, ['plugin'])
+        pluginApi.registerPlugins(['plugin'])
       }).toThrow(
         'api.registerPlugins() failed, it should only be used during the registering state.',
       )

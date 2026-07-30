@@ -1,7 +1,7 @@
 import execa from 'execa'
 
 import type { RunCommandOptions } from '../cp'
-import { isArray, isObject } from '../type'
+import { isArray, isObject } from '../guards'
 import type { PackageManager } from '../types'
 import { getPackageManager } from './package-manager'
 

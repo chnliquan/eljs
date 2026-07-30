@@ -6,20 +6,26 @@ import {
   readJsonSync,
   resolve,
   winPath,
-  type MaybePromise,
   type PackageJson,
 } from '@eljs/utils'
-import hash from 'hash-sum'
 import assert from 'node:assert'
+import { createHash } from 'node:crypto'
 import { basename, dirname, extname, join, relative } from 'node:path'
 
+import { PluggableError, PluggableErrorCode } from '../errors'
 import type { PluginDeclaration, ResolvedPlugin } from '../pluggable'
 import type {
   Enable,
+  PluginApply,
   PluginOptions,
-  PluginReturnType,
+  PluginTime,
   PluginType,
 } from './types'
+
+/**
+ * 支持的插件入口扩展名
+ */
+export const SUPPORTED_PLUGIN_EXTENSIONS = ['.js', '.cjs', '.ts'] as const
 
 /**
  * 插件类
@@ -48,21 +54,18 @@ export class Plugin {
   /**
    * 插件执行时间
    */
-  public time: {
-    register?: number
-    hooks: Record<string, number[]>
-  } = { hooks: {} }
+  public time: PluginTime = {
+    hooks: Object.create(null),
+    hookErrors: Object.create(null),
+  }
   /**
    * 插件执行函数
    */
-  public apply: () => (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ...args: any[]
-  ) => MaybePromise<PluginReturnType | void>
+  public apply: () => PluginApply
   /**
    * 插件是否可以执行
    */
-  public enable!: Enable
+  public enable: Enable = true
   /**
    * 当前工作目录
    */
@@ -78,6 +81,20 @@ export class Plugin {
       isPathExistsSync(this.path),
       `Invalid \`${this.type}\` in ${this.path}, could not be found.`,
     )
+
+    const extension = extname(this.path)
+    if (
+      !SUPPORTED_PLUGIN_EXTENSIONS.includes(
+        extension as (typeof SUPPORTED_PLUGIN_EXTENSIONS)[number],
+      )
+    ) {
+      throw new PluggableError(
+        PluggableErrorCode.UnsupportedPluginExtension,
+        `Unsupported ${this.type} extension \`${extension || '(none)'}\` in ${
+          this.path
+        }. Supported extensions: ${SUPPORTED_PLUGIN_EXTENSIONS.join(', ')}.`,
+      )
+    }
 
     let pkg = {} as PackageJson
     let isPkgEntry = false
@@ -99,6 +116,13 @@ export class Plugin {
         fileLoadersSync[extname(this.path) as keyof typeof fileLoadersSync]
 
       try {
+        if (!loader) {
+          throw new PluggableError(
+            PluggableErrorCode.UnsupportedPluginExtension,
+            `No loader is available for ${this.type} ${this.path}.`,
+          )
+        }
+
         const content = loader(this.path) as {
           default: ReturnType<typeof Plugin.prototype.apply>
         }
@@ -134,7 +158,7 @@ export class Plugin {
       this.key = key
     }
 
-    if (enable) {
+    if (enable !== undefined) {
       this.enable = enable
     }
   }
@@ -170,7 +194,11 @@ export class Plugin {
     const key = basename(this.path, extname(this.path))
 
     if (key === 'index') {
-      return `${hash(this.path)}_${key}`
+      const pathHash = createHash('sha256')
+        .update(this.path)
+        .digest('hex')
+        .slice(0, 8)
+      return `${pathHash}_${key}`
     }
 
     return name2Key(key)
@@ -224,7 +252,7 @@ export class Plugin {
     return plugins
       .map(plugin => {
         const [pluginName, pluginOptions] =
-          typeof plugin === 'string' ? [plugin, null] : plugin
+          typeof plugin === 'string' ? [plugin, undefined] : plugin
 
         let resolvedPath: string
 
@@ -235,10 +263,11 @@ export class Plugin {
         try {
           resolvedPath = resolve.sync(pluginName, {
             basedir: cwd,
-            extensions: ['.tsx', '.ts', '.mjs', '.jsx', '.js'],
+            extensions: [...SUPPORTED_PLUGIN_EXTENSIONS].reverse(),
           })
         } catch (error) {
-          throw new Error(
+          throw new PluggableError(
+            PluggableErrorCode.PluginResolveFailed,
             `Invalid plugin \`${pluginName}\`, can not be resolved.`,
             { cause: error },
           )

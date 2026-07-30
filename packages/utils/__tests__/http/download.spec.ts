@@ -11,7 +11,7 @@ import {
   type MockedFunction,
 } from 'vitest'
 
-import download from '../../src/npm/download-file'
+import download from '../../src/http/download'
 
 vi.mock('node:fs/promises')
 vi.mock('tar')

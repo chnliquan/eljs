@@ -4,7 +4,7 @@ import path from 'node:path'
 import { c as createTar } from 'tar'
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
 
-import download from '../../src/npm/download-file'
+import download from '../../src/http/download'
 
 const temporaryPaths: string[] = []
 

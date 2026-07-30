@@ -9,7 +9,7 @@ import {
   type MockedFunction,
 } from 'vitest'
 import * as importedModule0 from '../../src/cp'
-import * as importedModule1 from '../../src/type'
+import * as importedModule1 from '../../src/guards'
 
 import urllib from 'urllib'
 import which from 'which'
@@ -29,7 +29,7 @@ const requiredModule1 = vi.mocked(importedModule1, { deep: true })
 vi.mock('urllib')
 vi.mock('which')
 vi.mock('../../src/cp')
-vi.mock('../../src/type')
+vi.mock('../../src/guards')
 
 describe('NPM Meta 工具', () => {
   const mockUrllib = urllib as Mocked<typeof urllib>

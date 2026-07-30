@@ -40,17 +40,19 @@ describe('类型定义', () => {
       expect(declaration).toBe('plugin-name')
     })
 
-    it('should accept string array plugin declaration', () => {
-      const declaration: PluginDeclaration = ['plugin-name', 'another-plugin']
-      expect(declaration).toEqual(['plugin-name', 'another-plugin'])
-    })
-
     it('should accept tuple with options', () => {
       const declaration: PluginDeclaration<{ option: string }> = [
         'plugin-name',
         { option: 'value' },
       ]
       expect(declaration).toEqual(['plugin-name', { option: 'value' }])
+    })
+
+    it('should reject an array of multiple plugin names', () => {
+      // @ts-expect-error PluginDeclaration 只接受插件名或 [插件名, 参数]
+      const declaration: PluginDeclaration = ['plugin-name', 'another-plugin']
+
+      expect(declaration).toEqual(['plugin-name', 'another-plugin'])
     })
   })
 
@@ -70,7 +72,7 @@ describe('类型定义', () => {
           case ApplyPluginTypeEnum.Modify:
             return 'Transform initial value'
           case ApplyPluginTypeEnum.Get:
-            return 'Return first non-null result'
+            return 'Return first non-nullish result'
           case ApplyPluginTypeEnum.Event:
             return 'Execute side effects'
           default:
@@ -85,7 +87,7 @@ describe('类型定义', () => {
         'Transform initial value',
       )
       expect(getHookDescription(ApplyPluginTypeEnum.Get)).toBe(
-        'Return first non-null result',
+        'Return first non-nullish result',
       )
       expect(getHookDescription(ApplyPluginTypeEnum.Event)).toBe(
         'Execute side effects',
@@ -100,6 +102,7 @@ describe('类型定义', () => {
       expect(PluggableStateEnum.InitPresets).toBe('initPresets')
       expect(PluggableStateEnum.InitPlugins).toBe('initPlugins')
       expect(PluggableStateEnum.Loaded).toBe('loaded')
+      expect(PluggableStateEnum.Failed).toBe('failed')
     })
 
     it('should represent state progression', () => {
@@ -109,6 +112,7 @@ describe('类型定义', () => {
         PluggableStateEnum.InitPresets,
         PluggableStateEnum.InitPlugins,
         PluggableStateEnum.Loaded,
+        PluggableStateEnum.Failed,
       ]
 
       expect(states).toEqual([
@@ -117,6 +121,7 @@ describe('类型定义', () => {
         'initPresets',
         'initPlugins',
         'loaded',
+        'failed',
       ])
     })
   })

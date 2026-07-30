@@ -4,7 +4,7 @@ import path from 'node:path'
 import util from 'node:util'
 
 import { PLATFORM } from '../constants'
-import { isBoolean } from '../type'
+import { isBoolean } from '../guards'
 import { isPathExists, isPathExistsSync } from './is'
 
 /**

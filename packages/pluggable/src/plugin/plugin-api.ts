@@ -1,6 +1,7 @@
 import { type MaybePromiseFunction } from '@eljs/utils'
 import assert from 'node:assert'
 
+import { PluggableError, PluggableErrorCode } from '../errors'
 import {
   PluggableStateEnum,
   type Pluggable,
@@ -10,6 +11,24 @@ import {
 import { Hook, type HookOptions } from './hook'
 import { Plugin } from './plugin'
 import { PluginTypeEnum, type Enable } from './types'
+
+/**
+ * 插件 Api 内部上下文
+ */
+export interface PluginApiOptions {
+  /**
+   * 子类扩展占用的方法名
+   */
+  reservedMethodNames?: Iterable<string>
+  /**
+   * 当前加载流程待处理的预设
+   */
+  remainingPresets?: ResolvedPlugin[]
+  /**
+   * 当前加载流程待处理的插件
+   */
+  remainingPlugins?: ResolvedPlugin[]
+}
 
 /**
  * 插件 Api 类
@@ -23,10 +42,29 @@ export class PluginApi<T extends Pluggable = Pluggable> {
    * 插件
    */
   public plugin: Plugin
+  /**
+   * 子类扩展占用的方法名
+   */
+  private readonly _reservedMethodNames: Set<string>
+  /**
+   * 当前加载流程待处理的预设
+   */
+  private readonly _remainingPresets: ResolvedPlugin[]
+  /**
+   * 当前加载流程待处理的插件
+   */
+  private readonly _remainingPlugins: ResolvedPlugin[]
 
-  public constructor(pluggable: T, plugin: Plugin) {
+  public constructor(
+    pluggable: T,
+    plugin: Plugin,
+    options: PluginApiOptions = {},
+  ) {
     this.pluggable = pluggable
     this.plugin = plugin
+    this._reservedMethodNames = new Set(options.reservedMethodNames)
+    this._remainingPresets = options.remainingPresets || []
+    this._remainingPlugins = options.remainingPlugins || []
   }
 
   /**
@@ -66,6 +104,18 @@ export class PluginApi<T extends Pluggable = Pluggable> {
       `api.registerMethod() failed, method \`${name}\` already exist.`,
     )
 
+    if (
+      !name ||
+      name in this ||
+      name in this.pluggable ||
+      this._reservedMethodNames.has(name)
+    ) {
+      throw new PluggableError(
+        PluggableErrorCode.ApiNameConflict,
+        `api.registerMethod() failed, method \`${name}\` conflicts with a reserved Plugin API name.`,
+      )
+    }
+
     this.pluggable.pluginMethods[name] = {
       plugin: this.plugin,
       fn:
@@ -84,21 +134,17 @@ export class PluginApi<T extends Pluggable = Pluggable> {
 
   /**
    * 注册预设
-   * @param remainingPresets 待处理预设集合
    * @param presets 待注册预设集合
    */
-  public registerPresets(
-    remainingPresets: ResolvedPlugin[],
-    presets: unknown[],
-  ): void {
+  public registerPresets(presets: PluginDeclaration[]): void {
     assert(
       this.pluggable.state === PluggableStateEnum.InitPresets,
       `api.registerPresets() failed, it should only be used during the presets state.`,
     )
 
-    remainingPresets.unshift(
+    this._remainingPresets.unshift(
       ...Plugin.resolvePlugins(
-        presets as PluginDeclaration[],
+        presets,
         PluginTypeEnum.Preset,
         this.pluggable.cwd,
       ),
@@ -107,22 +153,18 @@ export class PluginApi<T extends Pluggable = Pluggable> {
 
   /**
    * 注册插件
-   * @param remainingPlugins 待处理插件集合
    * @param plugins 待注册插件集合
    */
-  public registerPlugins(
-    remainingPlugins: ResolvedPlugin[],
-    plugins: unknown[],
-  ): void {
+  public registerPlugins(plugins: PluginDeclaration[]): void {
     assert(
       this.pluggable.state === PluggableStateEnum.InitPresets ||
         this.pluggable.state === PluggableStateEnum.InitPlugins,
       `api.registerPlugins() failed, it should only be used during the registering state.`,
     )
 
-    remainingPlugins.unshift(
+    this._remainingPlugins.unshift(
       ...Plugin.resolvePlugins(
-        plugins as PluginDeclaration[],
+        plugins,
         PluginTypeEnum.Plugin,
         this.pluggable.cwd,
       ),
@@ -130,10 +172,12 @@ export class PluginApi<T extends Pluggable = Pluggable> {
   }
 
   /**
-   * 跳过插件
+   * 跳过插件 Hook
+   *
+   * 该方法不会阻止插件初始化，也不会撤销插件注册的方法或初始化副作用。
    * @param keys 插件 key
    */
-  public skipPlugins(keys: string[]): void {
+  public skipPluginHooks(keys: string[]): void {
     for (const key of keys) {
       const plugin = this.pluggable.key2Plugin[key]
       assert(
@@ -142,9 +186,9 @@ export class PluginApi<T extends Pluggable = Pluggable> {
       )
       assert(
         plugin,
-        `\`${key}\` has not been registered by any plugin, could not be skipped.`,
+        `\`${key}\` has not been registered by any plugin, its hooks could not be skipped.`,
       )
-      this.pluggable.skippedPluginIds.add(plugin.id)
+      this.pluggable.skippedPluginHookIds.add(plugin.id)
     }
   }
 }

@@ -1,5 +1,6 @@
 import type { MaybePromiseFunction } from '@eljs/utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { PluggableErrorCode } from '../src/errors'
 import { Pluggable } from '../src/pluggable/pluggable'
 import type { PluggableOptions } from '../src/pluggable/types'
 import { ApplyPluginTypeEnum, PluggableStateEnum } from '../src/pluggable/types'
@@ -43,11 +44,6 @@ vi.mock('@eljs/utils', () => ({
     .mockReturnValue({ main: 'index.js', name: 'test-package' }),
   fileLoadersSync: vi.fn().mockReturnValue(() => ({})),
   resolve: vi.fn().mockImplementation(str => str || 'resolved-path'),
-}))
-
-// Mock hash-sum
-vi.mock('hash-sum', () => ({
-  default: vi.fn().mockReturnValue('mocked-hash'),
 }))
 
 // Mock path functions
@@ -110,7 +106,7 @@ function createTestPlugin(
     id,
     key: id,
     enable: () => true,
-    time: { hooks: {} },
+    time: { hooks: {}, hookErrors: {} },
     ...overrides,
   })
 
@@ -166,7 +162,7 @@ describe('可插拔系统', () => {
       expect(pluggable.plugins).toEqual({})
       expect(pluggable.key2Plugin).toEqual({})
       expect(pluggable.pluginMethods).toEqual({})
-      expect(pluggable.skippedPluginIds).toBeInstanceOf(Set)
+      expect(pluggable.skippedPluginHookIds).toBeInstanceOf(Set)
     })
 
     it('应该处理缺失的可选属性', () => {
@@ -175,6 +171,14 @@ describe('可插拔系统', () => {
 
       expect(pluggable.constructorOptions.presets).toBeUndefined()
       expect(pluggable.constructorOptions.plugins).toBeUndefined()
+    })
+
+    it('加载前不应该执行插件 Hook', async () => {
+      pluggable = new TestablePluggable({ cwd: mockCwd })
+
+      await expect(pluggable.applyPlugins('onStart')).rejects.toMatchObject({
+        code: PluggableErrorCode.InvalidState,
+      })
     })
   })
 
@@ -190,7 +194,7 @@ describe('可插拔系统', () => {
 
       const result = await pluggable.applyPlugins('onStart')
 
-      expect(result).toBe(0) // tapable returns 0 for event hooks
+      expect(result).toBeUndefined()
     })
 
     it('应该从"get"前缀推断获取类型', async () => {
@@ -266,13 +270,22 @@ describe('可插拔系统', () => {
       expect(result).toBe(false)
     })
 
+    it('应该支持静态 false 启用条件', () => {
+      const hook = createTestHook(mockCwd, {
+        id: 'test-plugin',
+        enable: false,
+      })
+
+      expect(pluggable.testIsPluginEnable(hook)).toBe(false)
+    })
+
     it('应该对跳过的插件返回false', () => {
       const hook = createTestHook(mockCwd, {
         id: 'skipped-plugin',
         enable: () => true,
       })
 
-      pluggable.skippedPluginIds.add('skipped-plugin')
+      pluggable.skippedPluginHookIds.add('skipped-plugin')
 
       const result = pluggable.testIsPluginEnable(hook)
 
@@ -316,7 +329,10 @@ describe('可插拔系统', () => {
     it('应该正确执行添加钩子', async () => {
       const mockFn = vi.fn().mockResolvedValue(['item1'])
       const plugin = createTestPlugin(mockCwd, 'plugin1', {
-        time: { hooks: {} as Record<string, number[]> },
+        time: {
+          hooks: {} as Record<string, number[]>,
+          hookErrors: {},
+        },
       })
       const hook = {
         fn: mockFn,
@@ -341,7 +357,10 @@ describe('可插拔系统', () => {
     it('应该正确执行修改钩子', async () => {
       const mockFn = vi.fn().mockResolvedValue({ modified: true })
       const plugin = createTestPlugin(mockCwd, 'plugin1', {
-        time: { hooks: {} as Record<string, number[]> },
+        time: {
+          hooks: {} as Record<string, number[]>,
+          hookErrors: {},
+        },
       })
       const hook = {
         fn: mockFn,
@@ -368,11 +387,17 @@ describe('可插拔系统', () => {
       const disabledFn = vi.fn().mockResolvedValue(['disabled'])
 
       const enabledPlugin = createTestPlugin(mockCwd, 'enabled-plugin', {
-        time: { hooks: {} as Record<string, number[]> },
+        time: {
+          hooks: {} as Record<string, number[]>,
+          hookErrors: {},
+        },
         enable: () => true,
       })
       const disabledPlugin = createTestPlugin(mockCwd, 'disabled-plugin', {
-        time: { hooks: {} as Record<string, number[]> },
+        time: {
+          hooks: {} as Record<string, number[]>,
+          hookErrors: {},
+        },
         enable: () => false,
       })
 
@@ -415,7 +440,10 @@ describe('可插拔系统', () => {
     it('应该跟踪钩子执行性能', async () => {
       const mockFn = vi.fn().mockResolvedValue(['result'])
       const mockPlugin = createTestPlugin(mockCwd, 'test-plugin', {
-        time: { hooks: {} as Record<string, number[]> },
+        time: {
+          hooks: {} as Record<string, number[]>,
+          hookErrors: {},
+        },
       })
       const hook = {
         fn: mockFn,
@@ -440,6 +468,59 @@ describe('可插拔系统', () => {
       expect(mockPlugin.time.hooks['addItems']).toHaveLength(1)
       expect(typeof mockPlugin.time.hooks['addItems'][0]).toBe('number')
       expect(mockPlugin.time.hooks['addItems'][0]).toBeGreaterThanOrEqual(0)
+    })
+
+    it('应该限制每个 Hook 保留的耗时样本数量', async () => {
+      const mockFn = vi.fn().mockResolvedValue([])
+      const mockPlugin = createTestPlugin(mockCwd, 'test-plugin', {
+        time: {
+          hooks: {},
+          hookErrors: {},
+        },
+      })
+      const hook = {
+        fn: mockFn,
+        plugin: mockPlugin,
+        constructorOptions: { plugin: mockPlugin, key: 'addItems', fn: mockFn },
+        key: 'addItems',
+      } as Hook
+      pluggable.hooks['addItems'] = [hook]
+
+      for (let index = 0; index < 25; index += 1) {
+        await pluggable.applyPlugins('addItems', {
+          type: ApplyPluginTypeEnum.Add,
+          initialValue: [],
+        })
+      }
+
+      expect(mockPlugin.time.hooks['addItems']).toHaveLength(20)
+    })
+
+    it('应该记录失败 Hook 的耗时和错误次数', async () => {
+      const error = new Error('hook failed')
+      const mockFn = vi.fn().mockRejectedValue(error)
+      const mockPlugin = createTestPlugin(mockCwd, 'test-plugin', {
+        time: {
+          hooks: {},
+          hookErrors: {},
+        },
+      })
+      const hook = {
+        fn: mockFn,
+        plugin: mockPlugin,
+        constructorOptions: { plugin: mockPlugin, key: 'onFail', fn: mockFn },
+        key: 'onFail',
+      } as Hook
+      pluggable.hooks['onFail'] = [hook]
+
+      await expect(
+        pluggable.applyPlugins('onFail', {
+          type: ApplyPluginTypeEnum.Event,
+        }),
+      ).rejects.toBe(error)
+
+      expect(mockPlugin.time.hooks['onFail']).toHaveLength(1)
+      expect(mockPlugin.time.hookErrors['onFail']).toBe(1)
     })
   })
 
@@ -466,6 +547,42 @@ describe('可插拔系统', () => {
 
       expect(pluggable.state).toBe(PluggableStateEnum.Loaded)
     })
+
+    it('应该拒绝第二次加载', async () => {
+      await pluggable.testLoad()
+
+      await expect(pluggable.testLoad()).rejects.toMatchObject({
+        code: PluggableErrorCode.InvalidState,
+      })
+      expect(pluggable.state).toBe(PluggableStateEnum.Loaded)
+    })
+
+    it('加载失败后应该清理注册数据并进入失败终态', async () => {
+      const brokenPlugin = createTestPlugin(mockCwd, 'broken-plugin')
+      brokenPlugin.apply = vi.fn(() => (api: PluginApi) => {
+        api.register('onBroken', vi.fn())
+        api.registerMethod('brokenMethod', vi.fn())
+        throw new Error('plugin failed')
+      }) as Plugin['apply']
+      vi.mocked(Plugin.getPresetsAndPlugins).mockReturnValue({
+        presets: [],
+        plugins: [[brokenPlugin, undefined]],
+      })
+
+      await expect(pluggable.testLoad()).rejects.toThrow('plugin failed')
+
+      expect(pluggable.state).toBe(PluggableStateEnum.Failed)
+      expect(pluggable.configManager).toBeNull()
+      expect(pluggable.userConfig).toBeNull()
+      expect(pluggable.plugins).toEqual({})
+      expect(pluggable.key2Plugin).toEqual({})
+      expect(pluggable.hooks).toEqual({})
+      expect(pluggable.pluginMethods).toEqual({})
+
+      await expect(pluggable.testLoad()).rejects.toMatchObject({
+        code: PluggableErrorCode.InvalidState,
+      })
+    })
   })
 
   describe('获取插件API', () => {
@@ -491,6 +608,23 @@ describe('可插拔系统', () => {
       // Just verify the proxy structure exists
       expect(pluginApi.pluggable).toBe(pluggable)
       expect(pluginApi.plugin).toBe(plugin)
+    })
+
+    it('应该拒绝覆盖核心 Plugin API 的扩展', () => {
+      class ConflictingPluggable extends TestablePluggable {
+        protected override extendPluginApi() {
+          return {
+            register: vi.fn(),
+          }
+        }
+      }
+
+      const conflictingPluggable = new ConflictingPluggable({ cwd: mockCwd })
+      const plugin = createTestPlugin(mockCwd, 'test-plugin')
+
+      expect(() => conflictingPluggable.testGetPluginApi(plugin)).toThrow(
+        'extendPluginApi() failed, property `register` conflicts with a reserved Plugin API name.',
+      )
     })
   })
 
@@ -523,7 +657,10 @@ describe('可插拔系统', () => {
     it('应该正确执行获取钩子', async () => {
       const mockFn = vi.fn().mockResolvedValue('result')
       const plugin = createTestPlugin(mockCwd, 'plugin1', {
-        time: { hooks: {} as Record<string, number[]> },
+        time: {
+          hooks: {} as Record<string, number[]>,
+          hookErrors: {},
+        },
       })
       const hook = {
         fn: mockFn,
@@ -545,10 +682,54 @@ describe('可插拔系统', () => {
       expect(mockFn).toHaveBeenCalledWith({ param: 'test' })
     })
 
+    it('获取钩子应该跳过 null 并返回第一个非空结果', async () => {
+      const firstFn = vi.fn().mockResolvedValue(null)
+      const secondFn = vi.fn().mockResolvedValue('result')
+      const firstPlugin = createTestPlugin(mockCwd, 'plugin1', {
+        time: { hooks: {}, hookErrors: {} },
+      })
+      const secondPlugin = createTestPlugin(mockCwd, 'plugin2', {
+        time: { hooks: {}, hookErrors: {} },
+      })
+      pluggable.hooks['getConfig'] = [
+        {
+          fn: firstFn,
+          plugin: firstPlugin,
+          constructorOptions: {
+            plugin: firstPlugin,
+            key: 'getConfig',
+            fn: firstFn,
+          },
+          key: 'getConfig',
+        } as Hook,
+        {
+          fn: secondFn,
+          plugin: secondPlugin,
+          constructorOptions: {
+            plugin: secondPlugin,
+            key: 'getConfig',
+            fn: secondFn,
+          },
+          key: 'getConfig',
+        } as Hook,
+      ]
+
+      const result = await pluggable.applyPlugins('getConfig', {
+        type: ApplyPluginTypeEnum.Get,
+      })
+
+      expect(result).toBe('result')
+      expect(firstFn).toHaveBeenCalledOnce()
+      expect(secondFn).toHaveBeenCalledOnce()
+    })
+
     it('应该正确执行事件钩子', async () => {
       const mockFn = vi.fn().mockResolvedValue(undefined)
       const plugin = createTestPlugin(mockCwd, 'plugin1', {
-        time: { hooks: {} as Record<string, number[]> },
+        time: {
+          hooks: {} as Record<string, number[]>,
+          hookErrors: {},
+        },
       })
       const hook = {
         fn: mockFn,
@@ -566,8 +747,34 @@ describe('可插拔系统', () => {
         },
       )
 
-      expect(result).toBe(0)
+      expect(result).toBeUndefined()
       expect(mockFn).toHaveBeenCalledWith({ eventData: 'test' })
+    })
+  })
+
+  describe('插件调试信息', () => {
+    it('应该返回不会修改内部统计的快照', () => {
+      pluggable = new TestablePluggable({ cwd: mockCwd })
+      const plugin = createTestPlugin(mockCwd, 'plugin1', {
+        time: {
+          register: 1,
+          hooks: { onStart: [2] },
+          hookErrors: { onStart: 1 },
+        },
+      })
+      pluggable.plugins[plugin.id] = plugin
+
+      const diagnostics = pluggable.getPluginDiagnostics()
+      diagnostics[0].time.hooks['onStart'].push(3)
+
+      expect(diagnostics[0]).toMatchObject({
+        id: 'plugin1',
+        time: {
+          register: 1,
+          hookErrors: { onStart: 1 },
+        },
+      })
+      expect(plugin.time.hooks['onStart']).toEqual([2])
     })
   })
 

@@ -8,7 +8,7 @@ import {
   type MockedFunction,
 } from 'vitest'
 import * as importedModule0 from '../../src/file/is'
-import * as importedModule1 from '../../src/type'
+import * as importedModule1 from '../../src/guards'
 
 import { mkdirp, mkdirpSync } from 'mkdirp'
 import * as fsp from 'node:fs/promises'
@@ -23,7 +23,7 @@ const requiredModule1 = vi.mocked(importedModule1, { deep: true })
 // Mock 依赖项
 vi.mock('mkdirp')
 vi.mock('../../src/file/is')
-vi.mock('../../src/type')
+vi.mock('../../src/guards')
 
 describe('目录操作工具', () => {
   const mockMkdirp = mkdirp as MockedFunction<typeof mkdirp>

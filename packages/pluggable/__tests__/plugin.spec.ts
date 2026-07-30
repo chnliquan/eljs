@@ -2,7 +2,12 @@ import * as importedModule0 from '@eljs/utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { PluginOptions } from '../src'
-import { Plugin, PluginTypeEnum } from '../src'
+import {
+  PluggableErrorCode,
+  Plugin,
+  PluginTypeEnum,
+  SUPPORTED_PLUGIN_EXTENSIONS,
+} from '../src'
 import { createTempDir } from './setup'
 
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
@@ -58,7 +63,8 @@ describe('插件', () => {
       expect(plugin.path).toBe('/mock/plugin/index.js')
       expect(plugin.type).toBe(PluginTypeEnum.Plugin)
       expect(plugin.constructorOptions).toEqual(validOptions)
-      expect(plugin.time).toEqual({ hooks: {} })
+      expect(plugin.time).toEqual({ hooks: {}, hookErrors: {} })
+      expect(plugin.enable).toBe(true)
       expect(plugin.id).toBeTruthy()
       expect(plugin.key).toBeTruthy()
     })
@@ -78,6 +84,20 @@ describe('插件', () => {
       })
 
       expect(plugin.type).toBe(PluginTypeEnum.Preset)
+    })
+
+    it('should reject unsupported plugin extensions', () => {
+      expect(
+        () =>
+          new Plugin({
+            ...validOptions,
+            path: '/mock/plugin/index.mjs',
+          }),
+      ).toThrow(
+        expect.objectContaining({
+          code: PluggableErrorCode.UnsupportedPluginExtension,
+        }),
+      )
     })
 
     it('should generate plugin ID and key', () => {
@@ -142,6 +162,14 @@ describe('插件', () => {
       expect(plugin.enable).toBe(enableFn)
     })
 
+    it('should support a static false enable option', () => {
+      const plugin = new Plugin(validOptions)
+
+      plugin.merge({ enable: false })
+
+      expect(plugin.enable).toBe(false)
+    })
+
     it('should handle partial merge', () => {
       const plugin = new Plugin(validOptions)
       const originalKey = plugin.key
@@ -149,7 +177,8 @@ describe('插件', () => {
       plugin.merge({ enable: () => true })
 
       expect(plugin.key).toBe(originalKey) // Should not change
-      expect(plugin.enable()).toBe(true)
+      expect(typeof plugin.enable).toBe('function')
+      expect(typeof plugin.enable === 'function' && plugin.enable()).toBe(true)
     })
   })
 
@@ -206,7 +235,14 @@ describe('插件', () => {
 
         expect(result).toHaveLength(1)
         expect(result[0][0]).toBeInstanceOf(Plugin)
-        expect(result[0][1]).toBeNull()
+        expect(result[0][1]).toBeUndefined()
+        expect(requiredModule0.resolve.sync).toHaveBeenCalledWith(
+          'plugin-name',
+          {
+            basedir: mockCwd,
+            extensions: [...SUPPORTED_PLUGIN_EXTENSIONS].reverse(),
+          },
+        )
       })
 
       it('应该解析带有选项的插件声明', () => {

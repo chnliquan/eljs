@@ -1,6 +1,6 @@
 import prompts, { type Answers, type PromptObject } from 'prompts'
 
-import { isNull } from '../type'
+import { isNull } from '../guards'
 
 /**
  * 确认问询

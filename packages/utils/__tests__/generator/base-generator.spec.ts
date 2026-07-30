@@ -10,8 +10,8 @@ import {
 } from 'vitest'
 import * as importedModule0 from '../../src/cli'
 import * as importedModule1 from '../../src/file'
+import * as importedModule3 from '../../src/guards'
 import * as importedModule2 from '../../src/logger'
-import * as importedModule3 from '../../src/type'
 
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
@@ -32,7 +32,7 @@ vi.mock('prompts')
 vi.mock('../../src/cli')
 vi.mock('../../src/file')
 vi.mock('../../src/logger')
-vi.mock('../../src/type')
+vi.mock('../../src/guards')
 vi.mock('node:fs')
 
 describe('BaseGenerator 基础生成器', () => {
