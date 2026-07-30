@@ -3,17 +3,17 @@ import { basename, dirname, extname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { TranspileOptions } from 'typescript'
 
-import { isESModule } from '../type/index.js'
-import { isPathExists, isPathExistsSync } from './is.js'
+import { isESModule } from '../type'
+import { isPathExists, isPathExistsSync } from './is'
 import {
   loadImportFresh,
   loadParseJson,
   loadTypeScript,
   loadYaml as loadYamlDependency,
-} from './loader-dependencies.js'
-import { readFile, readFileSync } from './read.js'
-import { remove, removeSync } from './remove.js'
-import { writeFile, writeFileSync } from './write.js'
+} from './loader-dependencies'
+import { readFile, readFileSync } from './read'
+import { remove, removeSync } from './remove'
+import { writeFile, writeFileSync } from './write'
 
 /**
  * 默认异步加载器

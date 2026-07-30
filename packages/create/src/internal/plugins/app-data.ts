@@ -1,4 +1,4 @@
-import type { Api, AppData } from '../../types/index.js'
+import type { Api, AppData } from '../../types'
 
 export default (api: Api) => {
   api.modifyAppData(memo => {

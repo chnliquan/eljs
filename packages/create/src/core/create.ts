@@ -14,10 +14,10 @@ import {
 } from '@eljs/utils'
 import path, { join } from 'node:path'
 
-import type { Config, RemoteTemplate } from '../types/index.js'
-import { AppError } from '../utils.js'
-import { Download, type DownloadOptions } from './download.js'
-import { Runner } from './runner.js'
+import type { Config, RemoteTemplate } from '../types'
+import { AppError } from '../utils'
+import { Download, type DownloadOptions } from './download'
+import { Runner } from './runner'
 
 const debug = createDebugger('create:class')
 

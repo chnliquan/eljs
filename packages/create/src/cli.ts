@@ -4,8 +4,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import updateNotifier from 'update-notifier'
 
-import { Create } from './core/index.js'
-import { AppError, onCancel } from './utils.js'
+import { Create } from './core'
+import { AppError, onCancel } from './utils'
 
 export function cli() {
   registerSignalHandler()

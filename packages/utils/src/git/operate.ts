@@ -1,6 +1,6 @@
-import { run, type RunCommandOptions } from '../cp/index.js'
-import { isObject } from '../type/index.js'
-import { getGitBranch, getGitUpstreamBranch } from './meta.js'
+import { run, type RunCommandOptions } from '../cp'
+import { isObject } from '../type'
+import { getGitBranch, getGitUpstreamBranch } from './meta'
 
 /**
  * 提交 git 信息

@@ -1,4 +1,4 @@
-import type { Api } from '../types/index.js'
+import type { Api } from '../types'
 
 export default (api: Api) => {
   ;[

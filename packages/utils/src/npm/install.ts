@@ -1,9 +1,9 @@
 import execa from 'execa'
 
-import type { RunCommandOptions } from '../cp/index.js'
-import { isArray, isObject } from '../type/index.js'
-import type { PackageManager } from '../types/index.js'
-import { getPackageManager } from './package-manager.js'
+import type { RunCommandOptions } from '../cp'
+import { isArray, isObject } from '../type'
+import type { PackageManager } from '../types'
+import { getPackageManager } from './package-manager'
 
 /**
  * 安装依赖选项

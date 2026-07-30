@@ -3,9 +3,9 @@ import os from 'node:os'
 import path from 'node:path'
 import util from 'node:util'
 
-import { PLATFORM } from '../constants/index.js'
-import { isBoolean } from '../type/index.js'
-import { isPathExists, isPathExistsSync } from './is.js'
+import { PLATFORM } from '../constants'
+import { isBoolean } from '../type'
+import { isPathExists, isPathExistsSync } from './is'
 
 /**
  * 创建文件夹

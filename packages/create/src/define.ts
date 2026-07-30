@@ -1,4 +1,4 @@
-import type { Config } from './types/index.js'
+import type { Config } from './types'
 
 /**
  * Define create config

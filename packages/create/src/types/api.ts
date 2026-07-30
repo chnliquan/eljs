@@ -6,7 +6,7 @@ import type {
   RunCommandOptions,
 } from '@eljs/utils'
 
-import { type RunnerPluginApi } from '../core/index.js'
+import { type RunnerPluginApi } from '../core'
 
 /**
  * 插件 Api 参数

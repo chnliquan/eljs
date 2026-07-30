@@ -4,11 +4,11 @@ import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
 
-import { mkdir, mkdirSync } from './dir.js'
-import { isDirectory, isDirectorySync } from './is.js'
-import { readFile, readFileSync } from './read.js'
-import { renderTemplate, type RenderTemplateOptions } from './render.js'
-import { writeFile, writeFileSync } from './write.js'
+import { mkdir, mkdirSync } from './dir'
+import { isDirectory, isDirectorySync } from './is'
+import { readFile, readFileSync } from './read'
+import { renderTemplate, type RenderTemplateOptions } from './render'
+import { writeFile, writeFileSync } from './write'
 
 /**
  * 拷贝文件选项

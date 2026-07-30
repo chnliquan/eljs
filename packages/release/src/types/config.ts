@@ -1,6 +1,6 @@
 import type { UserConfig } from '@eljs/pluggable'
 
-import type { PrereleaseId } from './npm.js'
+import type { PrereleaseId } from './npm'
 
 /**
  * Release Configuration

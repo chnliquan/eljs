@@ -1,6 +1,6 @@
 import { getGitCommitSha, run } from '@eljs/utils'
 import semver, { type ReleaseType } from 'semver'
-import type { DistTag, PrereleaseId } from '../types/index.js'
+import type { DistTag, PrereleaseId } from '../types'
 
 const { RELEASE_TYPES } = semver
 

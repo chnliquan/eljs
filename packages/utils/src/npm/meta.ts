@@ -2,10 +2,10 @@ import path from 'node:path'
 import urllib from 'urllib'
 import which from 'which'
 
-import { PLATFORM } from '../constants/index.js'
-import { run, type RunCommandOptions } from '../cp/index.js'
-import { isString } from '../type/index.js'
-import type { OmitIndexSignature, PackageJson } from '../types/index.js'
+import { PLATFORM } from '../constants'
+import { run, type RunCommandOptions } from '../cp'
+import { isString } from '../type'
+import type { OmitIndexSignature, PackageJson } from '../types'
 
 /**
  * 获取 Npm 仓库

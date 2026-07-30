@@ -9,8 +9,8 @@ import {
 import { EOL } from 'node:os'
 import semver, { type ReleaseType } from 'semver'
 
-import { prereleaseTypes } from '../../constants.js'
-import type { Api, PrereleaseId } from '../../types/index.js'
+import { prereleaseTypes } from '../../constants'
+import type { Api, PrereleaseId } from '../../types'
 import {
   AppError,
   getCanaryVersion,
@@ -23,7 +23,7 @@ import {
   onCancel,
   updatePackageLock,
   updatePackageVersion,
-} from '../../utils/index.js'
+} from '../../utils'
 
 const { RELEASE_TYPES } = semver
 

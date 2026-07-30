@@ -4,7 +4,7 @@
     "target": "es2022",
     "useDefineForClassFields": false,
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowJs": false,
     "declaration": true,
     "declarationMap": true,

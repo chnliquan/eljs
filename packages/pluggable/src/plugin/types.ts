@@ -1,4 +1,4 @@
-import type { PluginDeclaration, ResolvedPlugin } from '../pluggable/index.js'
+import type { PluginDeclaration, ResolvedPlugin } from '../pluggable'
 
 /**
  * 插件类构造函数选项

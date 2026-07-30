@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { PromptObject } from 'prompts'
 
-import { isDirectorySync, isPathExistsSync, mkdirSync } from '../file/index.js'
-import { isFunction } from '../type/index.js'
-import { BaseGenerator } from './base-generator.js'
+import { isDirectorySync, isPathExistsSync, mkdirSync } from '../file'
+import { isFunction } from '../type'
+import { BaseGenerator } from './base-generator'
 
 export interface GeneratorOptions {
   /**

@@ -12,7 +12,7 @@ import {
 } from '@eljs/utils'
 import { join } from 'node:path'
 
-import type { Api } from '../../types/index.js'
+import type { Api } from '../../types'
 
 export default (api: Api) => {
   api.registerMethod(

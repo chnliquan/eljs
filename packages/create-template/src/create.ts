@@ -2,8 +2,8 @@ import { Create } from '@eljs/create'
 import { prompts } from '@eljs/utils'
 import assert from 'node:assert'
 
-import { defaultConfig, type RemoteTemplate } from './config.js'
-import { objectToArray, onCancel } from './utils.js'
+import { defaultConfig, type RemoteTemplate } from './config'
+import { objectToArray, onCancel } from './utils'
 
 /**
  * 构造函数选项

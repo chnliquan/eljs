@@ -1,7 +1,7 @@
 import { EOL } from 'node:os'
 import path from 'node:path'
 
-import { isPathExists, isPathExistsSync } from '../file/index.js'
+import { isPathExists, isPathExistsSync } from '../file'
 
 /**
  * 获取存在的路径

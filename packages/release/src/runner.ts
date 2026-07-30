@@ -19,11 +19,11 @@ import { createRequire } from 'node:module'
 import { EOL } from 'node:os'
 import path from 'node:path'
 import type { ReleaseType } from 'semver'
-import { type AppData, type Config } from './types/index.js'
+import { type AppData, type Config } from './types'
 
-import { defaultConfig } from './default.js'
-import { resolveInternalModule } from './internal/index.js'
-import { AppError, parseVersion } from './utils/index.js'
+import { defaultConfig } from './default'
+import { resolveInternalModule } from './internal'
+import { AppError, parseVersion } from './utils'
 
 const localRequire = createRequire(
   typeof __filename === 'string' ? __filename : import.meta.url,

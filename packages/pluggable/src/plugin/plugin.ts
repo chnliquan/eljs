@@ -13,13 +13,13 @@ import assert from 'node:assert'
 import { basename, dirname, extname, join, relative } from 'node:path'
 import pkgUp from 'pkg-up'
 
-import type { PluginDeclaration, ResolvedPlugin } from '../pluggable/index.js'
+import type { PluginDeclaration, ResolvedPlugin } from '../pluggable'
 import type {
   Enable,
   PluginOptions,
   PluginReturnType,
   PluginType,
-} from './types.js'
+} from './types'
 
 /**
  * 插件类

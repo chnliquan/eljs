@@ -4,8 +4,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import updateNotifier from 'update-notifier'
 
-import { CreateTemplate } from './create.js'
-import { onCancel } from './utils.js'
+import { CreateTemplate } from './create'
+import { onCancel } from './utils'
 
 export async function cli() {
   registerSignalHandler()

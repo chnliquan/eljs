@@ -9,15 +9,15 @@ import {
 import { deepMerge, prompts, type RequiredRecursive } from '@eljs/utils'
 import { createRequire } from 'node:module'
 
-import { defaultConfig } from '../default.js'
-import { resolveInternalModule } from '../internal/index.js'
+import { defaultConfig } from '../default'
+import { resolveInternalModule } from '../internal'
 import {
   RunnerStageEnum,
   type AppData,
   type Config,
   type Paths,
   type Prompts,
-} from '../types/index.js'
+} from '../types'
 
 const localRequire = createRequire(
   typeof __filename === 'string' ? __filename : import.meta.url,

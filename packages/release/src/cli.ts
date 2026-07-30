@@ -5,8 +5,8 @@ import { fileURLToPath } from 'node:url'
 import semver, { type ReleaseType } from 'semver'
 import updateNotifier from 'update-notifier'
 
-import { release } from './release.js'
-import { onCancel } from './utils/index.js'
+import { release } from './release'
+import { onCancel } from './utils'
 
 const { RELEASE_TYPES } = semver
 

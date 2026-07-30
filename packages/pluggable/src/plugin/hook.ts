@@ -1,7 +1,7 @@
 import type { MaybePromiseFunction } from '@eljs/utils'
 import assert from 'node:assert'
 
-import type { Plugin } from './plugin.js'
+import type { Plugin } from './plugin'
 
 /**
  * 钩子类构造函数选项

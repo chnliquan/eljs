@@ -1,7 +1,7 @@
 import download, { type DownloadOptions } from 'download'
 
-import { tmpdir } from '../file/index.js'
-import { isObject } from '../type/index.js'
+import { tmpdir } from '../file'
+import { isObject } from '../type'
 
 /**
  * 下载 Npm 压缩包

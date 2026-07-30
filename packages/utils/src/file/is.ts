@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 
-import { fstat, fstatSync } from './meta.js'
+import { fstat, fstatSync } from './meta'
 
 /**
  * 是否是文件

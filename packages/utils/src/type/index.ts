@@ -2,7 +2,7 @@ import type {
   AnyAsyncFunction,
   AnyConstructorFunction,
   AnyFunction,
-} from '../types/index.js'
+} from '../types'
 
 function isTypeOf(target: unknown, type: string): boolean {
   if (!type) {

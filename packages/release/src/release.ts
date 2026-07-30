@@ -1,5 +1,5 @@
-import { Runner } from './runner.js'
-import type { Config } from './types/index.js'
+import { Runner } from './runner'
+import type { Config } from './types'
 
 /**
  * 发布 NPM 包

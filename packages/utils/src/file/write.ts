@@ -3,7 +3,7 @@ import fsp from 'node:fs/promises'
 import { EOL } from 'node:os'
 import { v4 } from 'uuid'
 
-import { isPathExists, isPathExistsSync } from './is.js'
+import { isPathExists, isPathExistsSync } from './is'
 
 /**
  * 写入文件内容

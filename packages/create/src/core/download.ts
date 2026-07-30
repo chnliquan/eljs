@@ -11,7 +11,7 @@ import {
 import path from 'node:path'
 import ora, { type Ora } from 'ora'
 
-import type { RemoteTemplate } from '../types/index.js'
+import type { RemoteTemplate } from '../types'
 
 /**
  * 下载构造函数

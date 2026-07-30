@@ -10,8 +10,8 @@ import {
 } from '@eljs/utils'
 import path from 'node:path'
 
-import type { Api } from '../../types/index.js'
-import { AppError } from '../../utils/index.js'
+import type { Api } from '../../types'
+import { AppError } from '../../utils'
 
 export default (api: Api) => {
   api.modifyAppData(async (memo, { cwd }) => {

@@ -14,8 +14,8 @@ import {
 import { EOL } from 'node:os'
 import path from 'node:path'
 
-import type { Api } from '../../types/index.js'
-import { AppError, getChangelog } from '../../utils/index.js'
+import type { Api } from '../../types'
+import { AppError, getChangelog } from '../../utils'
 
 export default (api: Api) => {
   api.onCheck(async () => {

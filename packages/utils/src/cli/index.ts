@@ -1,2 +1,2 @@
-export * from './pause.js'
-export * from './prompt.js'
+export * from './pause'
+export * from './prompt'

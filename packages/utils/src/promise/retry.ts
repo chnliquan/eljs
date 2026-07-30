@@ -1,5 +1,5 @@
-import type { MaybePromiseFunction } from '../types/index.js'
-import { sleep } from './timer.js'
+import type { MaybePromiseFunction } from '../types'
+import { sleep } from './timer'
 
 /**
  * 重试任务

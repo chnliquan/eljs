@@ -1,4 +1,4 @@
-import { run, type RunCommandOptions } from '../cp/index.js'
+import { run, type RunCommandOptions } from '../cp'
 
 /**
  * git 是否干净

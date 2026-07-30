@@ -1,7 +1,7 @@
 import path from 'node:path'
 
-import { run } from '../cp/index.js'
-import { tmpdir } from '../file/index.js'
+import { run } from '../cp'
+import { tmpdir } from '../file'
 
 /**
  * 下载选项

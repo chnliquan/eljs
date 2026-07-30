@@ -1,5 +1,5 @@
-import * as importedModule1 from 'ejs'
-import * as importedModule2 from 'mustache'
+import ejs from 'ejs'
+import Mustache from 'mustache'
 import {
   afterEach,
   beforeEach,
@@ -27,8 +27,6 @@ import {
   type MustacheRenderTemplateOptions,
 } from '../../src/file'
 
-const requiredModule1 = vi.mocked(importedModule1, { deep: true })
-const requiredModule2 = vi.mocked(importedModule2, { deep: true })
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
 
 // Mock 依赖项
@@ -47,29 +45,8 @@ describe('文件移动、删除和渲染工具', () => {
     requiredModule0.isPathExistsSync as MockedFunction<
       (filePath: string) => boolean
     >
-  const mockEjs = (
-    requiredModule1 as unknown as { default: typeof requiredModule1 }
-  ).default as {
-    render: MockedFunction<
-      (
-        template: string,
-        data: Record<string, unknown>,
-        options?: unknown,
-      ) => string
-    >
-  }
-  const mockMustache = (
-    requiredModule2 as unknown as { default: typeof requiredModule2 }
-  ).default as {
-    render: MockedFunction<
-      (
-        template: string,
-        data: Record<string, unknown>,
-        partials?: unknown,
-        tags?: unknown,
-      ) => string
-    >
-  }
+  const mockEjs = vi.mocked(ejs, { deep: true })
+  const mockMustache = vi.mocked(Mustache, { deep: true })
 
   let tempDir: string
   let sourceFile: string
