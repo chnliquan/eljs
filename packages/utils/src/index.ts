@@ -1,5 +1,4 @@
 export { default as chalk } from 'chalk'
-export { default as download } from 'download'
 export { default as ejs } from 'ejs'
 export { default as findUp } from 'find-up'
 export * as glob from 'glob'

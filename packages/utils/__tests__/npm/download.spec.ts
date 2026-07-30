@@ -9,15 +9,14 @@ import {
 import * as importedModule0 from '../../src/file'
 import * as importedModule1 from '../../src/type'
 
-import download, { type DownloadOptions } from 'download'
-
 import { downloadNpmTarball } from '../../src/npm/download'
+import download, { type DownloadOptions } from '../../src/npm/download-file'
 
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
 const requiredModule1 = vi.mocked(importedModule1, { deep: true })
 
 // Mock 依赖项
-vi.mock('download')
+vi.mock('../../src/npm/download-file')
 vi.mock('../../src/file')
 vi.mock('../../src/type')
 

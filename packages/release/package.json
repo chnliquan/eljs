@@ -62,7 +62,7 @@
     "open": "^8.4.2",
     "resolve-bin": "^1.0.1",
     "semver": "^7.7.1",
-    "update-notifier": "^5.1.0"
+    "update-notifier": "^7.3.1"
   },
   "devDependencies": {
     "@types/concat-stream": "^2.0.3",

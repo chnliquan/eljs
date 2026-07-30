@@ -1,4 +1,4 @@
-import download, { type DownloadOptions } from 'download'
+import download, { type DownloadOptions } from './download-file'
 
 import { tmpdir } from '../file'
 import { isObject } from '../type'
@@ -52,3 +52,6 @@ export async function downloadNpmTarball(
 
   return dest
 }
+
+export { download }
+export type { DownloadOptions }
