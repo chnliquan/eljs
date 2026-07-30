@@ -23,6 +23,7 @@ import {
   getReleaseVersion,
   getRemoteDistTag,
   isCanaryVersion,
+  isGitTagAtHead,
   isVersionExist,
   isVersionValid,
   updatePackageLock,
@@ -43,6 +44,7 @@ vi.mock('@eljs/utils', () => ({
   createDebugger: vi.fn(() => vi.fn()),
   logger: {
     info: vi.fn(),
+    warn: vi.fn(),
   },
   pascalCase: vi.fn(),
   prompts: vi.fn(),
@@ -77,6 +79,7 @@ vi.mock('../../../src/utils', () => ({
   getReleaseVersion: vi.fn(),
   getRemoteDistTag: vi.fn(),
   isCanaryVersion: vi.fn(),
+  isGitTagAtHead: vi.fn(),
   isVersionExist: vi.fn(),
   isVersionValid: vi.fn(),
   onCancel: vi.fn(),
@@ -98,6 +101,9 @@ describe('版本插件测试', () => {
       onBumpVersion: vi.fn(),
       step: vi.fn(),
       config: {
+        git: {
+          independent: false,
+        },
         npm: {
           confirm: true,
           canary: false,
@@ -153,6 +159,9 @@ describe('版本插件测试', () => {
     ;(
       isCanaryVersion as MockedFunction<typeof isCanaryVersion>
     ).mockReturnValue(false)
+    ;(
+      isGitTagAtHead as MockedFunction<typeof isGitTagAtHead>
+    ).mockResolvedValue(false)
     ;(confirm as MockedFunction<typeof confirm>).mockResolvedValue(true)
     ;(prompts as MockedFunction<typeof prompts>).mockResolvedValue({
       value: '1.1.0',
@@ -589,6 +598,29 @@ describe('版本插件测试', () => {
       )
     })
 
+    it('应该在修改文件前检查所有可发布包的目标版本', async () => {
+      mockApi.appData.validPkgNames = ['pkg1', 'pkg2']
+
+      await onBeforeBumpVersionHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+      })
+
+      expect(isVersionExist).toHaveBeenNthCalledWith(
+        1,
+        'pkg1',
+        '1.1.0',
+        'https://registry.npmjs.org',
+      )
+      expect(isVersionExist).toHaveBeenNthCalledWith(
+        2,
+        'pkg2',
+        '1.1.0',
+        'https://registry.npmjs.org',
+      )
+    })
+
     it('当预发布ID不匹配时应该抛出错误', async () => {
       mockApi.config.npm.prereleaseId = 'alpha'
 
@@ -645,6 +677,31 @@ describe('版本插件测试', () => {
       await expect(onBeforeBumpVersionHandler(versionInfo)).rejects.toThrow(
         'Package [cyan]test-package@1.1.0[/cyan] has been published already.',
       )
+    })
+
+    it('应该在本地发布标签指向 HEAD 时安全重试并记录已发布包', async () => {
+      ;(
+        isVersionExist as MockedFunction<typeof isVersionExist>
+      ).mockResolvedValue(true)
+      ;(
+        isGitTagAtHead as MockedFunction<typeof isGitTagAtHead>
+      ).mockResolvedValue(true)
+
+      const versionInfo = {
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+      }
+
+      await expect(
+        onBeforeBumpVersionHandler(versionInfo),
+      ).resolves.toBeUndefined()
+      expect(mockApi.appData.existingPkgNames).toEqual(['test-package'])
+      expect(isGitTagAtHead).toHaveBeenCalledWith('v1.1.0', {
+        cwd: '/test/project',
+        verbose: false,
+      })
+      expect(logger.warn).toHaveBeenCalled()
     })
 
     it('当版本无效时应该抛出错误', async () => {

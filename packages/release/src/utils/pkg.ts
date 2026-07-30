@@ -4,7 +4,6 @@ import {
   writeJson,
   type PackageJson,
   type PackageManager,
-  type RunCommandChildProcess,
   type RunCommandOptions,
 } from '@eljs/utils'
 
@@ -17,7 +16,7 @@ export async function updatePackageLock(
   packageManager: PackageManager,
   options?: RunCommandOptions,
 ): Promise<void> {
-  let command = ''
+  let command: string
 
   if (packageManager === 'pnpm') {
     command = 'pnpm install --lockfile-only'
@@ -29,33 +28,7 @@ export async function updatePackageLock(
     command = 'npm install --package-lock-only'
   }
 
-  let child: RunCommandChildProcess | undefined = undefined
-
-  try {
-    child = runCommand(command, {
-      ...options,
-    })
-
-    child.stdout?.on('data', chunk => {
-      const content = chunk.toString() as string
-      if (content.startsWith('ERR_PNPM')) {
-        child?.kill()
-      }
-    })
-
-    child.stderr?.on('data', () => {
-      child?.kill()
-    })
-
-    child.on('close', code => {
-      if (code !== 0) {
-        child?.kill()
-      }
-    })
-    await child
-  } catch (_) {
-    child?.kill()
-  }
+  await runCommand(command, { ...options })
 }
 
 /**

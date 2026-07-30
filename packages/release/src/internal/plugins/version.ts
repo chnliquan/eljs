@@ -18,6 +18,7 @@ import {
   getReleaseVersion,
   getRemoteDistTag,
   isCanaryVersion,
+  isGitTagAtHead,
   isVersionExist,
   isVersionValid,
   onCancel,
@@ -75,11 +76,47 @@ export default (api: Api) => {
         )
       }
 
-      await checkVersion(
-        api.appData.validPkgNames[0],
-        version,
-        api.appData.registry,
-      )
+      const existingPkgNames: string[] = []
+      const tagChecks = new Map<string, boolean>()
+
+      for (const pkgName of api.appData.validPkgNames) {
+        if (!(await checkVersion(pkgName, version, api.appData.registry))) {
+          continue
+        }
+
+        const tagName = api.config.git.independent
+          ? `${pkgName}@${version}`
+          : `v${version}`
+        const cachedTagCheck = tagChecks.get(tagName)
+        const isRetry =
+          cachedTagCheck ??
+          (await isGitTagAtHead(tagName, {
+            cwd: api.cwd,
+            verbose: false,
+          }))
+
+        if (cachedTagCheck === undefined) {
+          tagChecks.set(tagName, isRetry)
+        }
+
+        if (!isRetry) {
+          throw new AppError(
+            `Package ${chalk.cyan(`${pkgName}@${version}`)} has been published already.`,
+          )
+        }
+
+        existingPkgNames.push(pkgName)
+      }
+
+      api.appData.existingPkgNames = existingPkgNames
+
+      if (existingPkgNames.length) {
+        logger.warn(
+          `Retrying release; already published packages will be skipped: ${existingPkgNames
+            .map(pkgName => chalk.cyan(`${pkgName}@${version}`))
+            .join(', ')}.`,
+        )
+      }
     },
   )
 
@@ -203,8 +240,6 @@ async function getIncrementVersion(
     prerelease,
   )
 
-  let releaseType = ''
-
   if (!prereleaseId) {
     answer = await prompts(
       [
@@ -220,7 +255,7 @@ async function getIncrementVersion(
       },
     )
 
-    releaseType = answer.value
+    const releaseType = answer.value
 
     if (releaseType === 'canary') {
       return getCanaryVersion(referenceVersionMap.latest, api.cwd)
@@ -343,16 +378,12 @@ async function checkVersion(
   pkgName: string,
   version: string,
   registry?: string,
-) {
+): Promise<boolean> {
   if (!semver.valid(version)) {
     throw new AppError(`Invalid semantic version ${chalk.cyan(version)}.`)
   }
 
-  if (await isVersionExist(pkgName, version, registry)) {
-    throw new AppError(
-      `Package ${chalk.cyan(`${pkgName}@${version}`)} has been published already.`,
-    )
-  }
+  return isVersionExist(pkgName, version, registry)
 }
 
 async function confirmVersion(api: Api, version: string): Promise<string> {
@@ -362,7 +393,7 @@ async function confirmVersion(api: Api, version: string): Promise<string> {
     return version
   }
 
-  let confirmMessage = ''
+  let confirmMessage: string
 
   if (validPkgNames.length === 1) {
     confirmMessage = `Are you sure to bump version to ${chalk.cyan(version)}`

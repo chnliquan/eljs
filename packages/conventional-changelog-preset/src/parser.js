@@ -1,4 +1,7 @@
 // https://github.com/conventional-changelog/conventional-changelog/blob/master/packages/conventional-changelog-angular/src/parser.js
+/**
+ * @returns {import('conventional-commits-parser').ParserStreamOptions}
+ */
 export function createParserOpts() {
   return {
     headerPattern: /^(\w*)(?:\((.*)\))?: (.*)$/,

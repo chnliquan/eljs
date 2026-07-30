@@ -26,7 +26,7 @@ import {
 
 import gitPlugin from '../../../src/internal/plugins/git'
 import type { Api, Config, PrereleaseId } from '../../../src/types'
-import { getChangelog } from '../../../src/utils'
+import { getChangelog, isGitTagAtHead } from '../../../src/utils'
 
 // 定义测试专用的 Mock API 类型，基于源代码类型但适应测试环境
 interface GitTestApi {
@@ -132,6 +132,7 @@ vi.mock('../../../src/utils', () => ({
     }
   },
   getChangelog: vi.fn(),
+  isGitTagAtHead: vi.fn(),
 }))
 
 describe('Git 插件测试', () => {
@@ -588,9 +589,11 @@ describe('Git 插件测试', () => {
     })
 
     it('应该处理标签已存在的情况', async () => {
-      mockApi.appData.latestTag = 'v1.1.0' // 设置 latestTag 以匹配条件
       const tagError = new Error("tag 'v1.1.0' already exists")
       ;(gitTag as MockedFunction<typeof gitTag>).mockRejectedValue(tagError)
+      ;(
+        isGitTagAtHead as MockedFunction<typeof isGitTagAtHead>
+      ).mockResolvedValue(true)
 
       const releaseInfo = {
         version: '1.1.0',
@@ -601,6 +604,23 @@ describe('Git 插件测试', () => {
 
       // 标签已存在的错误应该被忽略
       await expect(onReleaseHandler(releaseInfo)).resolves.toBeUndefined()
+    })
+
+    it('标签已存在但不指向 HEAD 时应该拒绝重用', async () => {
+      const tagError = new Error("tag 'v1.1.0' already exists")
+      ;(gitTag as MockedFunction<typeof gitTag>).mockRejectedValue(tagError)
+      ;(
+        isGitTagAtHead as MockedFunction<typeof isGitTagAtHead>
+      ).mockResolvedValue(false)
+
+      await expect(
+        onReleaseHandler({
+          version: '1.1.0',
+          isPrerelease: false,
+          prereleaseId: null,
+          changelog: '## Changes',
+        }),
+      ).rejects.toThrow("tag 'v1.1.0' already exists")
     })
 
     it('应该传播非标签存在的错误', async () => {

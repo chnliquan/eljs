@@ -3,6 +3,7 @@
   "include": ["src"],
   "compilerOptions": {
     "declarationMap": false,
+    "rootDir": "src",
     "types": ["node"]
   }
 }

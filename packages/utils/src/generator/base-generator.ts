@@ -26,8 +26,7 @@ export class BaseGenerator {
   /**
    * 目标文件基准路径
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public basedir: string | ((prompts: Record<string, any>) => string)
+  public basedir: string | ((prompts: Answers<string>) => string)
   /**
    * 问询结果
    */
@@ -111,8 +110,7 @@ export class BaseGenerator {
   public copyTplSync(
     from: string,
     to: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    data: Record<string, any>,
+    data: object,
     options: CopyFileOptions = {},
   ) {
     copyTplSync(from, to, data, {
@@ -132,8 +130,7 @@ export class BaseGenerator {
   public async copyTpl(
     from: string,
     to: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    data: Record<string, any>,
+    data: object,
     options: CopyFileOptions = {},
   ) {
     await copyTpl(from, to, data, {
@@ -152,8 +149,7 @@ export class BaseGenerator {
   public copyDirectorySync(
     from: string,
     to: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    data: Record<string, any>,
+    data: object,
     options: CopyFileOptions = {},
   ) {
     copyDirectorySync(from, to, data, {
@@ -172,8 +168,7 @@ export class BaseGenerator {
   public async copyDirectory(
     from: string,
     to: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    data: Record<string, any>,
+    data: object,
     options: CopyFileOptions = {},
   ) {
     await copyDirectory(from, to, data, {

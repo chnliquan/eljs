@@ -41,6 +41,14 @@ interface NpmTestApi {
     validPkgNames: string[]
     pkgNames: string[]
     validPkgRootPaths: string[]
+    pkgs: Array<{
+      name: string
+      version: string
+      private?: boolean
+      dependencies?: Record<string, string>
+      optionalDependencies?: Record<string, string>
+    }>
+    existingPkgNames?: string[]
     registry?: string
     packageManager: string
   }
@@ -69,6 +77,7 @@ vi.mock('@eljs/utils', () => ({
     info: vi.fn(),
     ready: vi.fn(),
     error: vi.fn(),
+    warn: vi.fn(),
   },
   normalizeArgs: vi.fn(),
   run: vi.fn(),
@@ -116,6 +125,7 @@ describe('NPM 插件测试', () => {
         validPkgNames: ['test-package'],
         pkgNames: ['test-package'],
         validPkgRootPaths: ['/test/package'],
+        pkgs: [{ name: 'test-package', version: '1.1.0' }],
         packageManager: 'npm',
       },
       cwd: '/test/project',
@@ -236,6 +246,7 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该为预发布版本使用 tag', async () => {
+      mockApi.appData.pkgs[0].version = '1.1.0-alpha.1'
       const versionInfo = {
         version: '1.1.0-alpha.1',
         isPrerelease: true,
@@ -256,7 +267,12 @@ describe('NPM 插件测试', () => {
 
     it('应该处理多个包的发布', async () => {
       mockApi.appData.validPkgNames = ['pkg1', 'pkg2']
+      mockApi.appData.pkgNames = ['pkg1', 'pkg2']
       mockApi.appData.validPkgRootPaths = ['/test/pkg1', '/test/pkg2']
+      mockApi.appData.pkgs = [
+        { name: 'pkg1', version: '1.1.0' },
+        { name: 'pkg2', version: '1.1.0' },
+      ]
       const versionInfo = {
         version: '1.1.0',
         isPrerelease: false,
@@ -278,6 +294,96 @@ describe('NPM 插件测试', () => {
       )
     })
 
+    it('应该按照 workspace 运行时依赖顺序发布', async () => {
+      mockApi.appData.validPkgNames = ['app', 'core']
+      mockApi.appData.pkgNames = ['app', 'core']
+      mockApi.appData.validPkgRootPaths = ['/test/app', '/test/core']
+      mockApi.appData.pkgs = [
+        {
+          name: 'app',
+          version: '1.1.0',
+          dependencies: { core: 'workspace:*' },
+        },
+        { name: 'core', version: '1.1.0' },
+      ]
+
+      await onReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: 'test',
+      })
+
+      expect(run).toHaveBeenNthCalledWith(
+        1,
+        'npm',
+        expect.arrayContaining(['publish']),
+        expect.objectContaining({ cwd: '/test/core' }),
+      )
+      expect(run).toHaveBeenNthCalledWith(
+        2,
+        'npm',
+        expect.arrayContaining(['publish']),
+        expect.objectContaining({ cwd: '/test/app' }),
+      )
+    })
+
+    it('应该在发布前拒绝循环运行时依赖', async () => {
+      mockApi.appData.validPkgNames = ['pkg1', 'pkg2']
+      mockApi.appData.pkgNames = ['pkg1', 'pkg2']
+      mockApi.appData.validPkgRootPaths = ['/test/pkg1', '/test/pkg2']
+      mockApi.appData.pkgs = [
+        {
+          name: 'pkg1',
+          version: '1.1.0',
+          dependencies: { pkg2: 'workspace:*' },
+        },
+        {
+          name: 'pkg2',
+          version: '1.1.0',
+          dependencies: { pkg1: 'workspace:*' },
+        },
+      ]
+
+      await expect(
+        onReleaseHandler({
+          version: '1.1.0',
+          isPrerelease: false,
+          prereleaseId: null,
+          changelog: 'test',
+        }),
+      ).rejects.toThrow('circular runtime dependency')
+      expect(run).not.toHaveBeenCalled()
+    })
+
+    it('应该在发布前拒绝依赖私有 workspace 包', async () => {
+      mockApi.appData.validPkgNames = ['public-package']
+      mockApi.appData.pkgNames = ['public-package', 'private-package']
+      mockApi.appData.validPkgRootPaths = ['/test/public-package']
+      mockApi.appData.pkgs = [
+        {
+          name: 'public-package',
+          version: '1.1.0',
+          dependencies: { 'private-package': 'workspace:*' },
+        },
+        {
+          name: 'private-package',
+          version: '1.1.0',
+          private: true,
+        },
+      ]
+
+      await expect(
+        onReleaseHandler({
+          version: '1.1.0',
+          isPrerelease: false,
+          prereleaseId: null,
+          changelog: 'test',
+        }),
+      ).rejects.toThrow('depends on non-publishable workspace package')
+      expect(run).not.toHaveBeenCalled()
+    })
+
     it('应该使用自定义发布参数', async () => {
       mockApi.config.npm!.publishArgs = ['--access', 'public']
       const versionInfo = {
@@ -297,6 +403,22 @@ describe('NPM 插件测试', () => {
       )
     })
 
+    it('应该在重试发布时跳过已由版本预检确认的包', async () => {
+      mockApi.appData.existingPkgNames = ['test-package']
+
+      await onReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: 'test',
+      })
+
+      expect(run).not.toHaveBeenCalled()
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Skipping already published [cyan]test-package@1.1.0[/cyan].',
+      )
+    })
+
     it('应该处理发布失败情况', async () => {
       // 模拟所有发布都失败
       ;(run as MockedFunction<typeof run>).mockRejectedValue(
@@ -310,10 +432,42 @@ describe('NPM 插件测试', () => {
       }
 
       await expect(onReleaseHandler(versionInfo)).rejects.toThrow(
-        'Failed to publish test-package@1.1.0. Git changes were not pushed.',
+        'Failed to publish test-package@1.1.0. Published before failure: none. Not published: test-package@1.1.0. Git changes were not pushed.',
       )
 
       expect(logger.error).toHaveBeenCalled()
+    })
+
+    it('应该在首个失败后停止并报告已经发布和尚未发布的包', async () => {
+      mockApi.appData.validPkgNames = ['core', 'app', 'cli']
+      mockApi.appData.pkgNames = ['core', 'app', 'cli']
+      mockApi.appData.validPkgRootPaths = [
+        '/test/core',
+        '/test/app',
+        '/test/cli',
+      ]
+      mockApi.appData.pkgs = [
+        { name: 'core', version: '1.1.0' },
+        { name: 'app', version: '1.1.0' },
+        { name: 'cli', version: '1.1.0' },
+      ]
+      ;(run as MockedFunction<typeof run>)
+        .mockResolvedValueOnce({
+          stdout: '',
+        } as Awaited<ReturnType<typeof run>>)
+        .mockRejectedValueOnce(new Error('registry unavailable'))
+
+      await expect(
+        onReleaseHandler({
+          version: '1.1.0',
+          isPrerelease: false,
+          prereleaseId: null,
+          changelog: 'test',
+        }),
+      ).rejects.toThrow(
+        'Published before failure: core@1.1.0. Not published: app@1.1.0, cli@1.1.0.',
+      )
+      expect(run).toHaveBeenCalledTimes(2)
     })
   })
 
@@ -365,6 +519,7 @@ describe('NPM 插件测试', () => {
         .calls[0][0] as OnReleaseHandler
 
       // 测试正式发布
+      mockApi.appData.pkgs[0].version = '1.0.0'
       await onReleaseHandler({
         version: '1.0.0',
         isPrerelease: false,
@@ -380,6 +535,7 @@ describe('NPM 插件测试', () => {
       vi.clearAllMocks()
 
       // 测试预发布
+      mockApi.appData.pkgs[0].version = '1.1.0-beta.1'
       await onReleaseHandler({
         version: '1.1.0-beta.1',
         isPrerelease: true,

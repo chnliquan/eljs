@@ -48,7 +48,6 @@
     "@eljs/config": "workspace:*",
     "@eljs/utils": "workspace:*",
     "hash-sum": "^2.0.0",
-    "pkg-up": "^3.1.0",
     "tapable": "^2.2.1"
   },
   "devDependencies": {

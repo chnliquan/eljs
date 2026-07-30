@@ -7,7 +7,6 @@ import {
   type MockedFunction,
 } from 'vitest'
 
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 /**
  * @file packages/release utils/pkg 模块单元测试
  * @description 测试 pkg.ts 包管理相关工具函数
@@ -19,7 +18,6 @@ import {
   writeJson,
   type PackageJson,
   type PackageManager,
-  type RunCommandChildProcess,
 } from '@eljs/utils'
 
 import {
@@ -37,57 +35,20 @@ vi.mock('@eljs/utils', () => ({
   writeJson: vi.fn(),
 }))
 
-// 简化的子进程模拟
-interface MockChildProcess {
-  stdout?: {
-    on: MockedFunction<
-      (event: string, callback: (data: Buffer) => void) => void
-    >
-  }
-  stderr?: {
-    on: MockedFunction<
-      (event: string, callback: (data: Buffer) => void) => void
-    >
-  }
-  on: MockedFunction<(event: string, callback: (code: number) => void) => void>
-  kill: MockedFunction<() => void>
-}
-
 describe('包管理工具函数测试', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   describe('updatePackageLock 函数', () => {
-    let mockChild: MockChildProcess
-
     beforeEach(() => {
-      mockChild = {
-        stdout: {
-          on: vi.fn(),
-        },
-        stderr: {
-          on: vi.fn(),
-        },
-        on: vi.fn(),
-        kill: vi.fn(),
-      }
-      ;(runCommand as MockedFunction<typeof runCommand>).mockReturnValue(
-        mockChild as unknown as RunCommandChildProcess,
+      ;(runCommand as MockedFunction<typeof runCommand>).mockResolvedValue(
+        {} as Awaited<ReturnType<typeof runCommand>>,
       )
     })
 
     it('应该为 pnpm 执行正确的命令', async () => {
       const packageManager: PackageManager = 'pnpm'
-
-      // 模拟成功的子进程
-      mockChild.on.mockImplementation(
-        (event: string, callback: (code: number) => void) => {
-          if (event === 'close') {
-            setTimeout(() => callback(0), 0) // 成功退出
-          }
-        },
-      )
 
       await updatePackageLock(packageManager)
 
@@ -100,14 +61,6 @@ describe('包管理工具函数测试', () => {
     it('应该为 yarn 执行正确的命令', async () => {
       const packageManager: PackageManager = 'yarn'
 
-      mockChild.on.mockImplementation(
-        (event: string, callback: (code: number) => void) => {
-          if (event === 'close') {
-            setTimeout(() => callback(0), 0)
-          }
-        },
-      )
-
       await updatePackageLock(packageManager)
 
       expect(runCommand).toHaveBeenCalledWith('yarn install', {})
@@ -116,14 +69,6 @@ describe('包管理工具函数测试', () => {
     it('应该为 bun 执行正确的命令', async () => {
       const packageManager: PackageManager = 'bun'
 
-      mockChild.on.mockImplementation(
-        (event: string, callback: (code: number) => void) => {
-          if (event === 'close') {
-            setTimeout(() => callback(0), 0)
-          }
-        },
-      )
-
       await updatePackageLock(packageManager)
 
       expect(runCommand).toHaveBeenCalledWith('bun install --lockfile-only', {})
@@ -131,14 +76,6 @@ describe('包管理工具函数测试', () => {
 
     it('应该为 npm 执行正确的命令', async () => {
       const packageManager: PackageManager = 'npm'
-
-      mockChild.on.mockImplementation(
-        (event: string, callback: (code: number) => void) => {
-          if (event === 'close') {
-            setTimeout(() => callback(0), 0)
-          }
-        },
-      )
 
       await updatePackageLock(packageManager)
 
@@ -151,14 +88,6 @@ describe('包管理工具函数测试', () => {
     it('应该传递选项给 runCommand', async () => {
       const options = { cwd: '/custom/path', timeout: 5000 }
 
-      mockChild.on.mockImplementation(
-        (event: string, callback: (code: number) => void) => {
-          if (event === 'close') {
-            setTimeout(() => callback(0), 0)
-          }
-        },
-      )
-
       await updatePackageLock('pnpm', options)
 
       expect(runCommand).toHaveBeenCalledWith(
@@ -167,71 +96,21 @@ describe('包管理工具函数测试', () => {
       )
     })
 
-    it('应该在收到 ERR_PNPM 输出时终止进程', async () => {
-      mockChild.on.mockImplementation(
-        (event: string, callback: (code: number) => void) => {
-          if (event === 'close') {
-            setTimeout(() => callback(0), 0)
-          }
-        },
-      )
+    it('应该允许命令成功时输出 stderr', async () => {
+      ;(runCommand as MockedFunction<typeof runCommand>).mockResolvedValue({
+        stderr: 'warning',
+      } as Awaited<ReturnType<typeof runCommand>>)
 
-      updatePackageLock('pnpm')
-
-      // 模拟收到 ERR_PNPM 输出
-      const dataCallback = mockChild.stdout!.on.mock.calls[0][1]
-      dataCallback(Buffer.from('ERR_PNPM 错误信息'))
-
-      expect(mockChild.kill).toHaveBeenCalled()
-    })
-
-    it('应该在收到 stderr 输出时终止进程', async () => {
-      mockChild.on.mockImplementation(
-        (event: string, callback: (code: number) => void) => {
-          if (event === 'close') {
-            setTimeout(() => callback(0), 0)
-          }
-        },
-      )
-
-      updatePackageLock('pnpm')
-
-      // 模拟收到 stderr 输出
-      const dataCallback = mockChild.stderr!.on.mock.calls[0][1]
-      dataCallback(Buffer.from('错误信息'))
-
-      expect(mockChild.kill).toHaveBeenCalled()
-    })
-
-    it('应该在进程非正常退出时调用 kill 方法', async () => {
-      let closeCallback: (code: number) => void = () => {}
-      mockChild.on.mockImplementation(
-        (event: string, callback: (code: number) => void) => {
-          if (event === 'close') {
-            closeCallback = callback
-          }
-        },
-      )
-
-      const promise = updatePackageLock('pnpm')
-
-      // 模拟非正常退出
-      closeCallback(1) // 非正常退出码
-
-      await promise
-
-      expect(mockChild.kill).toHaveBeenCalled()
-    })
-
-    it('应该捕获异常并终止进程', async () => {
-      ;(runCommand as MockedFunction<typeof runCommand>).mockImplementation(
-        () => {
-          throw new Error('命令执行失败')
-        },
-      )
-
-      // 应该不抛出错误
       await expect(updatePackageLock('pnpm')).resolves.toBeUndefined()
+    })
+
+    it('应该向调用方传播命令执行失败', async () => {
+      const error = new Error('命令执行失败')
+      ;(runCommand as MockedFunction<typeof runCommand>).mockRejectedValue(
+        error,
+      )
+
+      await expect(updatePackageLock('pnpm')).rejects.toBe(error)
     })
   })
 

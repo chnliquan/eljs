@@ -18,7 +18,10 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['packages/**/__tests__/**/*.spec.{ts,tsx}'],
+    include: [
+      'packages/**/__tests__/**/*.spec.{ts,tsx}',
+      'scripts/**/__tests__/**/*.spec.ts',
+    ],
     exclude: ['**/node_modules/**', '**/examples/__tests__/**'],
     clearMocks: true,
     restoreMocks: true,

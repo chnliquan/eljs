@@ -508,7 +508,9 @@ export class Cache<T = any> {
 
       // 自动清理过期文件
       if (this.options.autoCleanup) {
-        setImmediate(() => this.cleanup())
+        setImmediate(() => {
+          void this.cleanup()
+        })
       }
 
       // 预加载有效缓存

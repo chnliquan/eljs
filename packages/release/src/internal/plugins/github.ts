@@ -28,7 +28,7 @@ export default (api: Api) => {
         return
       }
 
-      const url = await newGithubReleaseUrl({
+      const url = newGithubReleaseUrl({
         repoUrl,
         tag: `v${version}`,
         body: changelog,

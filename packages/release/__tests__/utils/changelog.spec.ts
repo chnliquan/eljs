@@ -1,4 +1,4 @@
-import * as importedModule0 from 'conventional-changelog'
+import { ConventionalChangelog } from 'conventional-changelog'
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 
 /**
@@ -13,8 +13,6 @@ import {
   type GenerateChangelogOptions,
 } from '../../src/utils/changelog'
 
-const requiredModule0 = vi.mocked(importedModule0, { deep: true })
-
 // 定义 finalizeContext 函数的类型
 type FinalizeContextFunction = (
   context: Record<string, unknown>,
@@ -27,17 +25,25 @@ type FinalizeContextFunction = (
 // 模拟依赖
 vi.mock('concat-stream')
 vi.mock('conventional-changelog', () => ({
-  __esModule: true,
-  default: vi.fn(),
+  ConventionalChangelog: vi.fn(),
 }))
 vi.mock('@eljs/conventional-changelog-preset', () => ({
-  __esModule: true,
-  default: {
+  default: vi.fn().mockResolvedValue({
     name: 'eljs-preset',
-  },
+  }),
 }))
 
 describe('更新日志生成工具函数测试', () => {
+  const ConventionalChangelogMock = vi.mocked(ConventionalChangelog)
+  let generator: {
+    config: Mock
+    context: Mock
+    loadPreset: Mock
+    readPackage: Mock
+    tags: Mock
+    writeStream: Mock
+    writer: Mock
+  }
   let mockStream: {
     pipe: Mock
     on: Mock
@@ -51,8 +57,34 @@ describe('更新日志生成工具函数测试', () => {
       on: vi.fn(),
     }
 
-    const conventionalChangelog = requiredModule0.default as unknown as Mock
-    conventionalChangelog.mockReturnValue(mockStream)
+    generator = {
+      config: vi.fn(),
+      context: vi.fn(),
+      loadPreset: vi.fn(),
+      readPackage: vi.fn(),
+      tags: vi.fn(),
+      writeStream: vi.fn().mockReturnValue(mockStream),
+      writer: vi.fn(),
+    }
+
+    for (const method of [
+      generator.config,
+      generator.context,
+      generator.loadPreset,
+      generator.readPackage,
+      generator.tags,
+      generator.writer,
+    ]) {
+      method.mockReturnValue(generator)
+    }
+
+    ConventionalChangelogMock.mockImplementation(
+      class {
+        public constructor() {
+          return generator
+        }
+      } as never,
+    )
     ;(concat as Mock).mockImplementation(callback => {
       return {
         callback,
@@ -79,19 +111,12 @@ describe('更新日志生成工具函数测试', () => {
 
       expect(result).toBe(expectedChangelog)
 
-      const conventionalChangelog = requiredModule0.default as unknown as Mock
-      expect(conventionalChangelog).toHaveBeenCalledWith(
-        {
-          cwd: process.cwd(),
-          config: { name: 'eljs-preset' },
-          tagPrefix: '',
-        },
-        { commit: 'commit' },
-        {},
-        {},
-        expect.objectContaining({
-          finalizeContext: expect.any(Function),
-        }),
+      expect(ConventionalChangelogMock).toHaveBeenCalledWith(process.cwd())
+      expect(generator.readPackage).toHaveBeenCalledOnce()
+      expect(generator.config).toHaveBeenCalledWith(expect.any(Promise))
+      expect(generator.context).toHaveBeenCalledWith({ commit: 'commit' })
+      expect(generator.writer).toHaveBeenCalledWith(
+        expect.objectContaining({ finalizeContext: expect.any(Function) }),
       )
     })
 
@@ -109,16 +134,7 @@ describe('更新日志生成工具函数测试', () => {
 
       await getChangelog(options)
 
-      const conventionalChangelog = requiredModule0.default as unknown as Mock
-      expect(conventionalChangelog).toHaveBeenCalledWith(
-        expect.objectContaining({
-          cwd: '/custom/path',
-        }),
-        expect.any(Object),
-        expect.any(Object),
-        expect.any(Object),
-        expect.any(Object),
-      )
+      expect(ConventionalChangelogMock).toHaveBeenCalledWith('/custom/path')
     })
 
     it('应该使用独立标签前缀', async () => {
@@ -135,16 +151,7 @@ describe('更新日志生成工具函数测试', () => {
 
       await getChangelog(options)
 
-      const conventionalChangelog = requiredModule0.default as unknown as Mock
-      expect(conventionalChangelog).toHaveBeenCalledWith(
-        expect.objectContaining({
-          tagPrefix: /^.+@/,
-        }),
-        expect.any(Object),
-        expect.any(Object),
-        expect.any(Object),
-        expect.any(Object),
-      )
+      expect(generator.tags).toHaveBeenCalledWith({ prefix: /^.+@/ })
     })
 
     it('应该使用指定的预设', async () => {
@@ -162,11 +169,9 @@ describe('更新日志生成工具函数测试', () => {
 
       await getChangelog(options)
 
-      const conventionalChangelog = requiredModule0.default as unknown as Mock
-      expect(conventionalChangelog).toHaveBeenCalledWith({
-        cwd: '/it/path',
-        preset: 'angular',
-      })
+      expect(ConventionalChangelogMock).toHaveBeenCalledWith('/it/path')
+      expect(generator.loadPreset).toHaveBeenCalledWith('angular')
+      expect(generator.config).not.toHaveBeenCalled()
     })
 
     it('应该正确处理流错误', async () => {
@@ -227,8 +232,7 @@ describe('更新日志生成工具函数测试', () => {
 
       await getChangelog(options)
 
-      const conventionalChangelog = requiredModule0.default as unknown as Mock
-      const writerOpts = conventionalChangelog.mock.calls[0][4]
+      const writerOpts = generator.writer.mock.calls[0][0]
       finalizeContext = writerOpts.finalizeContext
     })
 
@@ -354,17 +358,8 @@ describe('更新日志生成工具函数测试', () => {
 
       await getChangelog(options)
 
-      // 验证独立模式的 tagPrefix 配置正确
-      const conventionalChangelog = requiredModule0.default as unknown as Mock
-      expect(conventionalChangelog).toHaveBeenCalledWith(
-        expect.objectContaining({
-          tagPrefix: /^.+@/,
-        }),
-        expect.any(Object),
-        expect.any(Object),
-        expect.any(Object),
-        expect.any(Object),
-      )
+      // 验证独立模式的标签前缀配置正确
+      expect(generator.tags).toHaveBeenCalledWith({ prefix: /^.+@/ })
     })
 
     it('应该正确处理不同的版本格式', async () => {
@@ -379,8 +374,7 @@ describe('更新日志生成工具函数测试', () => {
 
       await getChangelog(options)
 
-      const conventionalChangelog = requiredModule0.default as unknown as Mock
-      const writerOpts = conventionalChangelog.mock.calls[0][4]
+      const writerOpts = generator.writer.mock.calls[0][0]
       const finalizeContext = writerOpts.finalizeContext
 
       // 测试不同的版本格式处理

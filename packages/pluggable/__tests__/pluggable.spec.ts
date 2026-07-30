@@ -31,6 +31,9 @@ vi.mock('@eljs/config', () => ({
 
 // Mock utils with simple implementations
 vi.mock('@eljs/utils', () => ({
+  findUp: {
+    sync: vi.fn().mockReturnValue('/mock/package.json'),
+  },
   isPathExistsSync: vi.fn().mockReturnValue(true),
   isFunction: vi.fn().mockReturnValue(true),
   winPath: vi.fn().mockImplementation(path => path || 'mocked-path'),
@@ -46,16 +49,6 @@ vi.mock('@eljs/utils', () => ({
 vi.mock('hash-sum', () => ({
   default: vi.fn().mockReturnValue('mocked-hash'),
 }))
-
-// Mock pkg-up
-vi.mock('pkg-up', () => {
-  const sync = vi.fn().mockReturnValue('/mock/package.json')
-
-  return {
-    default: { sync },
-    sync,
-  }
-})
 
 // Mock path functions
 vi.mock('node:path', () => ({

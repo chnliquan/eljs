@@ -1,42 +1,45 @@
 import eslint from '@eslint/js'
 import tseslint from '@typescript-eslint/eslint-plugin'
-import tsParser from '@typescript-eslint/parser'
-import eslintConfigPrettier from 'eslint-config-prettier'
-import dirs from 'eslint-plugin-dirs'
+import eslintConfigPrettier from 'eslint-config-prettier/flat'
+import checkFile from 'eslint-plugin-check-file'
+import { defineConfig, globalIgnores } from 'eslint/config'
 
-export default [
+export default defineConfig([
+  globalIgnores([
+    '**/node_modules/**',
+    '**/dist/**',
+    '**/lib/**',
+    '**/esm/**',
+    'coverage/**',
+    '.turbo/**',
+    '.vitest-cache/**',
+    '.package-smoke-*/**',
+    '**/*.d.ts',
+  ]),
   {
-    ignores: [
-      '**/node_modules/**',
-      '**/dist/**',
-      '**/lib/**',
-      '**/esm/**',
-      'coverage/**',
-      '.turbo/**',
-      '.vitest-cache/**',
-      '.package-smoke-*/**',
-      '**/*.d.ts',
-      '**/*.js',
-      '**/*.mjs',
-    ],
+    files: ['**/*.{js,mjs,cjs}'],
+    extends: [eslint.configs.recommended],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: {
+        module: 'readonly',
+        require: 'readonly',
+        URL: 'readonly',
+      },
+    },
   },
   {
     files: ['**/*.{ts,tsx}'],
+    extends: [
+      eslint.configs.recommended,
+      ...tseslint.configs['flat/recommended'],
+    ],
     languageOptions: {
       ecmaVersion: 'latest',
-      parser: tsParser,
-      parserOptions: {
-        sourceType: 'module',
-      },
-    },
-    plugins: {
-      '@typescript-eslint': tseslint,
-      dirs,
+      sourceType: 'module',
     },
     rules: {
-      ...eslint.configs.recommended.rules,
-      ...tseslint.configs.recommended.rules,
-      ...eslintConfigPrettier.rules,
       'no-redeclare': 'off',
       'no-undef': 'off',
       '@typescript-eslint/explicit-member-accessibility': 'error',
@@ -70,14 +73,48 @@ export default [
           varsIgnorePattern: '^_',
         },
       ],
-      'dirs/dirnames': ['error', { pattern: '^([a-z0-9\\-]+)|__tests__$' }],
-      'dirs/filenames': [
+    },
+  },
+  {
+    files: ['packages/*/src/**/*.{ts,tsx}'],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      '@typescript-eslint/await-thenable': 'error',
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-for-in-array': 'error',
+      '@typescript-eslint/no-misused-promises': 'error',
+    },
+  },
+  {
+    files: ['**/*.{js,mjs,cjs,ts,tsx}'],
+    plugins: {
+      'check-file': checkFile,
+    },
+    rules: {
+      'check-file/folder-naming-convention': [
         'error',
         {
-          '**/*.md/*': '.*',
-          '**/*': '^[a-z0-9\\-\\.]+$',
+          '**/': 'KEBAB_CASE',
+        },
+        {
+          ignoreWords: ['__tests__'],
+        },
+      ],
+      'check-file/filename-naming-convention': [
+        'error',
+        {
+          '**/*.{js,mjs,cjs,ts,tsx}': 'KEBAB_CASE',
+        },
+        {
+          ignoreMiddleExtensions: true,
         },
       ],
     },
   },
-]
+  eslintConfigPrettier,
+])

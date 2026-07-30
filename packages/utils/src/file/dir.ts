@@ -70,7 +70,7 @@ export async function tmpdir(
     dirname = ''
   }
 
-  let tmpdir = ''
+  let tmpdir: string
 
   if (process.platform === PLATFORM.WIN) {
     tmpdir = os.tmpdir()
@@ -125,7 +125,7 @@ export async function tmpdirSync(
     dirname = ''
   }
 
-  let tmpdir = ''
+  let tmpdir: string
 
   if (process.platform === PLATFORM.WIN) {
     tmpdir = os.tmpdir()

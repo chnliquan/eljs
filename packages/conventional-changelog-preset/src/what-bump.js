@@ -1,4 +1,7 @@
 // https://github.com/conventional-changelog/conventional-changelog/blob/master/packages/conventional-changelog-angular/src/whatBump.js
+/**
+ * @param {Array<{ notes: readonly unknown[], type?: string }>} commits
+ */
 export function whatBump(commits) {
   let level = 2
   let breakings = 0

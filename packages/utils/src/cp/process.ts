@@ -101,7 +101,7 @@ export async function sudo(
           } else if (cachePassword && cachedPassword) {
             child.stdin?.write(cachedPassword + EOL)
           } else {
-            read({ prompt, silent: true }).then(value => {
+            void read({ prompt, silent: true }).then(value => {
               child.stdin?.write(value + EOL)
 
               if (cachePassword) {

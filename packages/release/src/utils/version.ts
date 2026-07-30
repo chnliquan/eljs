@@ -97,7 +97,18 @@ export async function isVersionExist(
       return false
     }
   } catch (error) {
-    return false
+    const message = error instanceof Error ? error.message : String(error)
+
+    if (
+      /\bE404\b/i.test(message) ||
+      /404 Not Found/i.test(message) ||
+      /is not in this registry/i.test(message) ||
+      /No match found for version/i.test(message)
+    ) {
+      return false
+    }
+
+    throw error
   }
 
   return true

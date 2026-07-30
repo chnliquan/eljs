@@ -9,16 +9,13 @@
       "cache": false
     },
     "dev": {
-      "cache": false
+      "cache": false,
+      "persistent": true
     },
     "typecheck": {
-      "dependsOn": ["^typecheck"],
+      "dependsOn": ["^build", "^typecheck"],
       "outputs": []
     }
   },
-  "globalDependencies": [
-    "tsconfig.base.json",
-    "vitest.config.ts",
-    "rslib.base.config.ts"
-  ]
+  "globalDependencies": ["tsconfig.base.json", "rslib.base.config.ts"]
 }

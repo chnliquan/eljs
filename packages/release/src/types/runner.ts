@@ -49,6 +49,11 @@ export interface AppData {
    */
   validPkgNames: string[]
   /**
+   * 当前版本已经发布、且本地发布标签指向 HEAD 的包名。
+   * 仅在恢复一次中断的发布时存在。
+   */
+  existingPkgNames?: string[]
+  /**
    * 包管理器
    */
   packageManager: PackageManager

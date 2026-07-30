@@ -1,5 +1,4 @@
 import * as importedModule0 from '@eljs/utils'
-import * as importedModule1 from 'pkg-up'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { PluginOptions } from '../src'
@@ -7,19 +6,12 @@ import { Plugin, PluginTypeEnum } from '../src'
 import { createTempDir } from './setup'
 
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
-const requiredModule1 = vi.mocked(importedModule1, { deep: true })
 
 // Mock dependencies
-vi.mock('pkg-up', () => {
-  const sync = vi.fn().mockReturnValue('/mock/package.json')
-
-  return {
-    default: { sync },
-    sync,
-  }
-})
-
 vi.mock('@eljs/utils', () => ({
+  findUp: {
+    sync: vi.fn().mockReturnValue('/mock/package.json'),
+  },
   isPathExistsSync: vi.fn().mockReturnValue(true),
   readJsonSync: vi
     .fn()
@@ -39,7 +31,7 @@ vi.mock('@eljs/utils', () => ({
     ),
 }))
 
-const { isPathExistsSync, fileLoadersSync } = requiredModule0
+const { fileLoadersSync, findUp, isPathExistsSync } = requiredModule0
 
 describe('插件', () => {
   let mockCwd: string
@@ -298,8 +290,7 @@ describe('插件', () => {
 
     describe('constructor 边界情况', () => {
       it('应该处理没有package.json的情况', () => {
-        const pkgUp = requiredModule1
-        pkgUp.sync.mockReturnValue(null)
+        findUp.sync.mockReturnValue(undefined)
 
         const plugin = new Plugin(validOptions)
 

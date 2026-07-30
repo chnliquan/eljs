@@ -25,7 +25,7 @@ export default (api: Api) => {
 
   api.modifyPrompts(memo => {
     let gitUrl = memo.gitUrl
-    let gitHref = ''
+    let gitHref: string
 
     if (!gitUrl || (!gitUrl.startsWith('git') && !gitUrl.startsWith('http'))) {
       gitUrl = '{{gitUrl}}'

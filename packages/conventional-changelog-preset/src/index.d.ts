@@ -1,4 +1,5 @@
-import type conventionalChangelogCore from 'conventional-changelog-core'
+import type { Options as WriterOptions } from 'conventional-changelog-writer'
+import type { ParserStreamOptions } from 'conventional-commits-parser'
 
 export interface PresetCommit {
   notes: readonly unknown[]
@@ -11,8 +12,8 @@ export interface WhatBumpResult {
 }
 
 export interface EljsChangelogPreset {
-  parser: conventionalChangelogCore.ParserOptions
-  writer: conventionalChangelogCore.WriterOptions
+  parser: ParserStreamOptions
+  writer: WriterOptions
   whatBump(commits: PresetCommit[]): WhatBumpResult
 }
 

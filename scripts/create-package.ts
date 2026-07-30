@@ -15,6 +15,11 @@ import { EOL } from 'node:os'
 import path from 'node:path'
 import { argv, chalk } from 'zx'
 
+import {
+  createPackageManifest,
+  createTsconfigFiles,
+} from './internal/create-package'
+
 const step = logger.step('Create package')
 
 main()
@@ -74,75 +79,13 @@ function ensurePackageJson(
   }
 
   if (argv.force || !pkgJSONExists) {
-    const json = {
+    const json = createPackageManifest({
       name,
       version,
-      description: name,
-      keywords: ['eljs', shortName],
-      homepage: `https://github.com/chnliquan/eljs/tree/master/${dirname}#readme`,
-      bugs: {
-        url: 'https://github.com/chnliquan/eljs/issues',
-      },
-      repository: {
-        type: 'git',
-        url: 'https://github.com/chnliquan/eljs.git',
-        directory: dirname,
-      },
-      license: 'MIT',
-      author: 'chnliquan',
-      type: 'module',
-      main: './dist/index.cjs',
-      module: './dist/index.js',
-      types: './dist/index.d.ts',
-      exports: {
-        '.': {
-          import: {
-            types: './dist/index.d.ts',
-            default: './dist/index.js',
-          },
-          require: {
-            types: './dist/index.d.cts',
-            default: './dist/index.cjs',
-          },
-          default: './dist/index.js',
-        },
-        './package.json': './package.json',
-      },
-      files: ['dist'],
-      engines: {
-        node: '>=22.14.0',
-      },
-      scripts: {
-        build: 'rslib build',
-        clean: 'rimraf dist',
-        dev: 'rslib build --watch',
-        typecheck: 'tsc --noEmit && tsc --noEmit -p tsconfig.build.json',
-      },
-    }
-
-    if (pkgJSONExists) {
-      ;[
-        'description',
-        'keywords',
-        'author',
-        'type',
-        'sideEffects',
-        'main',
-        'module',
-        'types',
-        'exports',
-        'files',
-        'engines',
-        'scripts',
-        'dependencies',
-        'devDependencies',
-        'peerDependencies',
-      ].forEach(key => {
-        if (pkgJSON[key]) {
-          json[key as keyof typeof json] = pkgJSON[key]
-        }
-      })
-    }
+      dirname,
+      shortName,
+      existingPackageJson: pkgJSONExists ? pkgJSON : undefined,
+    })
 
     step('Generate package.json')
     writeJsonSync(pkgJSONPath, json)
@@ -255,42 +198,18 @@ export { default } from '../../rslib.base.config.ts'
 function ensureTsconfig(dirname: string): void {
   const ensureTsconfigPath = path.resolve(dirname, `tsconfig.json`)
   const ensureBuildTsconfigPath = path.resolve(dirname, `tsconfig.build.json`)
+  const tsconfigFiles = createTsconfigFiles()
 
   if (!isPathExistsSync(ensureTsconfigPath)) {
     step('Generate tsconfig.json')
-    safeWriteFileSync(
-      ensureTsconfigPath,
-      `
-{
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "declaration": false,
-    "declarationMap": false,
-    "noEmit": true,
-    "noUnusedLocals": false,
-    "types": ["node"],
-    "verbatimModuleSyntax": false
-  },
-  "include": ["src", "__tests__"]
-}
-`.trim() + EOL,
-    )
+    safeWriteFileSync(ensureTsconfigPath, tsconfigFiles['tsconfig.json'])
   }
 
   if (!isPathExistsSync(ensureBuildTsconfigPath)) {
     step('Generate tsconfig.build.json')
     safeWriteFileSync(
       ensureBuildTsconfigPath,
-      `
-{
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "declarationMap": false,
-    "types": ["node"]
-  },
-  "include": ["src"]
-}
-`.trim() + EOL,
+      tsconfigFiles['tsconfig.build.json'],
     )
   }
 }

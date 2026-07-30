@@ -1,17 +1,14 @@
 import { spawnSync } from 'node:child_process'
 import {
-  chmodSync,
-  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
   rmSync,
-  statSync,
-  symlinkSync,
   writeFileSync,
 } from 'node:fs'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -24,6 +21,8 @@ type ExportTarget =
 
 interface PackageManifest {
   name: string
+  version: string
+  packageManager?: string
   private?: boolean
   type?: string
   main?: string
@@ -32,24 +31,29 @@ interface PackageManifest {
   bin?: Record<string, string>
   exports?: Record<string, ExportTarget>
   dependencies?: Record<string, string>
+  devDependencies?: Record<string, string>
+  optionalDependencies?: Record<string, string>
   peerDependencies?: Record<string, string>
 }
 
-interface NpmPackResult {
+interface PnpmPackResult {
+  name: string
+  version: string
+  filename: string
   files: Array<{ path: string }>
 }
 
 const repoRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)))
 const packagesRoot = path.join(repoRoot, 'packages')
-const smokeRoot = mkdtempSync(path.join(repoRoot, '.package-smoke-'))
+const smokeRoot = mkdtempSync(path.join(tmpdir(), 'eljs-package-smoke-'))
 const smokeNodeModules = path.join(smokeRoot, 'node_modules')
-const npmCache = path.join(smokeRoot, '.npm-cache')
+const tarballsRoot = path.join(smokeRoot, 'tarballs')
 
 function run(
   command: string,
   args: string[],
   options: { cwd?: string } = {},
-): void {
+): string {
   const result = spawnSync(command, args, {
     cwd: options.cwd ?? smokeRoot,
     encoding: 'utf8',
@@ -66,6 +70,8 @@ function run(
       `${command} ${args.join(' ')} failed with exit code ${result.status}.\n${output}`,
     )
   }
+
+  return result.stdout.trim()
 }
 
 function collectExportTargets(target: ExportTarget | undefined): string[] {
@@ -112,43 +118,24 @@ function normalizePackagePath(filePath: string): string {
   return filePath.replace(/^\.\//, '')
 }
 
-function copyPackedFiles(
-  packageRoot: string,
-  packageJson: PackageManifest,
-  files: string[],
-): void {
-  const destinationRoot = path.join(
-    smokeNodeModules,
-    ...packageJson.name.split('/'),
-  )
+function assertNoWorkspaceProtocols(packageJson: PackageManifest): void {
+  const dependencyFields = [
+    'dependencies',
+    'devDependencies',
+    'optionalDependencies',
+    'peerDependencies',
+  ] as const
 
-  for (const file of files) {
-    const source = path.join(packageRoot, file)
-    const destination = path.join(destinationRoot, file)
-
-    mkdirSync(path.dirname(destination), { recursive: true })
-    copyFileSync(source, destination)
-    chmodSync(destination, statSync(source).mode)
-  }
-
-  const dependencies = {
-    ...packageJson.dependencies,
-    ...packageJson.peerDependencies,
-  }
-
-  for (const dependency of Object.keys(dependencies)) {
-    if (dependency.startsWith('@eljs/')) {
-      continue
+  for (const field of dependencyFields) {
+    for (const [dependency, version] of Object.entries(
+      packageJson[field] ?? {},
+    )) {
+      if (version.startsWith('workspace:')) {
+        throw new Error(
+          `${packageJson.name} still contains ${field}.${dependency}=${version} in its packed manifest.`,
+        )
+      }
     }
-
-    const source = path.join(packageRoot, 'node_modules', dependency)
-    if (!existsSync(source)) {
-      continue
-    }
-
-    const destination = path.join(destinationRoot, 'node_modules', dependency)
-    mkdirSync(path.dirname(destination), { recursive: true })
-    symlinkSync(source, destination, 'junction')
   }
 }
 
@@ -156,9 +143,12 @@ function getRootExport(packageJson: PackageManifest): ExportTarget | undefined {
   return packageJson.exports?.['.']
 }
 
-mkdirSync(smokeNodeModules, { recursive: true })
+mkdirSync(tarballsRoot, { recursive: true })
 
 try {
+  const rootPackageJson = JSON.parse(
+    readFileSync(path.join(repoRoot, 'package.json'), 'utf8'),
+  ) as PackageManifest
   const packages = readdirSync(packagesRoot, { withFileTypes: true })
     .filter(entry => entry.isDirectory())
     .map(entry => {
@@ -172,35 +162,19 @@ try {
     })
     .filter(({ packageJson }) => !packageJson.private)
     .sort((a, b) => a.packageJson.name.localeCompare(b.packageJson.name))
-
-  for (const { packageRoot, packageJson } of packages) {
-    const result = spawnSync(
-      'npm',
-      ['pack', '--dry-run', '--json', '--ignore-scripts'],
-      {
+  const packedPackages = packages.map(({ packageRoot, packageJson }) => {
+    const packResult = JSON.parse(
+      run('pnpm', ['pack', '--pack-destination', tarballsRoot, '--json'], {
         cwd: packageRoot,
-        encoding: 'utf8',
-        env: {
-          ...process.env,
-          npm_config_cache: npmCache,
-        },
-      },
-    )
-
-    if (result.status !== 0) {
-      throw new Error(
-        `npm pack failed for ${packageJson.name}.\n${result.stderr}`,
-      )
-    }
-
-    const [packResult] = JSON.parse(result.stdout) as NpmPackResult[]
+      }),
+    ) as PnpmPackResult
     const packedFiles = new Set(packResult.files.map(file => file.path))
     const requiredFiles = [
       packageJson.main,
       packageJson.module,
       packageJson.types,
       ...Object.values(packageJson.bin || {}),
-      ...collectExportTargets(packageJson.exports?.['.']),
+      ...Object.values(packageJson.exports || {}).flatMap(collectExportTargets),
     ]
       .filter((file): file is string => Boolean(file))
       .map(normalizePackagePath)
@@ -213,10 +187,123 @@ try {
       }
     }
 
-    copyPackedFiles(packageRoot, packageJson, [...packedFiles])
+    return { packResult }
+  })
+  const tarballDependencies = Object.fromEntries(
+    packedPackages.map(({ packResult }) => [
+      packResult.name,
+      `file:${path
+        .relative(smokeRoot, packResult.filename)
+        .split(path.sep)
+        .join('/')}`,
+    ]),
+  )
+  const externalDependencyRoots = new Map<string, string>()
+
+  for (const { packageRoot, packageJson } of packages) {
+    for (const name of Object.keys({
+      ...packageJson.dependencies,
+      ...packageJson.optionalDependencies,
+    })) {
+      if (tarballDependencies[name] || externalDependencyRoots.has(name)) {
+        continue
+      }
+
+      externalDependencyRoots.set(
+        name,
+        path.join(packageRoot, 'node_modules', ...name.split('/')),
+      )
+    }
   }
 
-  for (const { packageJson } of packages) {
+  const externalDependencyOverrides = Object.fromEntries(
+    [...externalDependencyRoots].map(([name, dependencyRoot]) => {
+      if (!existsSync(dependencyRoot)) {
+        throw new Error(
+          `${name} is not installed in the workspace and cannot be linked into the tarball smoke test.`,
+        )
+      }
+
+      return [name, `link:${dependencyRoot.split(path.sep).join('/')}`]
+    }),
+  )
+  const toolDependencies = {
+    typescript: `link:${path
+      .join(repoRoot, 'node_modules/typescript')
+      .split(path.sep)
+      .join('/')}`,
+  }
+  const installOverrides = {
+    ...externalDependencyOverrides,
+    ...toolDependencies,
+    ...tarballDependencies,
+  }
+
+  writeFileSync(
+    path.join(smokeRoot, 'package.json'),
+    `${JSON.stringify(
+      {
+        name: 'eljs-package-smoke',
+        private: true,
+        type: 'module',
+        packageManager: rootPackageJson.packageManager,
+        dependencies: {
+          ...tarballDependencies,
+          ...toolDependencies,
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  )
+  writeFileSync(
+    path.join(smokeRoot, 'pnpm-workspace.yaml'),
+    [
+      'packages:',
+      "  - '.'",
+      'autoInstallPeers: false',
+      'overrides:',
+      ...Object.entries(installOverrides).map(
+        ([name, version]) =>
+          `  ${JSON.stringify(name)}: ${JSON.stringify(version)}`,
+      ),
+      '',
+    ].join('\n'),
+  )
+
+  run(
+    'pnpm',
+    ['install', '--offline', '--ignore-scripts', '--no-frozen-lockfile'],
+    { cwd: smokeRoot },
+  )
+
+  const installedPackages = packedPackages.map(({ packResult }) => {
+    const installedRoot = path.join(
+      smokeNodeModules,
+      ...packResult.name.split('/'),
+    )
+    const installedPackageJson = JSON.parse(
+      readFileSync(path.join(installedRoot, 'package.json'), 'utf8'),
+    ) as PackageManifest
+
+    if (
+      installedPackageJson.name !== packResult.name ||
+      installedPackageJson.version !== packResult.version
+    ) {
+      throw new Error(
+        `${packResult.name} installed manifest does not match its tarball metadata.`,
+      )
+    }
+
+    assertNoWorkspaceProtocols(installedPackageJson)
+
+    return {
+      installedRoot,
+      packageJson: installedPackageJson,
+    }
+  })
+
+  for (const { installedRoot, packageJson } of installedPackages) {
     if (supportsRequire(packageJson)) {
       run(process.execPath, [
         '-e',
@@ -232,24 +319,20 @@ try {
 
     for (const binPath of Object.values(packageJson.bin || {})) {
       run(process.execPath, [
-        path.join(
-          smokeNodeModules,
-          ...packageJson.name.split('/'),
-          normalizePackagePath(binPath),
-        ),
+        path.join(installedRoot, normalizePackagePath(binPath)),
         '--help',
       ])
     }
   }
 
-  const typeImports = packages
+  const typeImports = installedPackages
     .map(
       ({ packageJson }, index) =>
         `import * as package${index} from ${JSON.stringify(packageJson.name)}\nvoid package${index}`,
     )
     .join('\n')
 
-  const requireTypeImports = packages
+  const requireTypeImports = installedPackages
     .filter(({ packageJson }) => supportsRequire(packageJson))
     .map(
       ({ packageJson }, index) =>
@@ -285,7 +368,7 @@ try {
   ])
 
   console.log(
-    `Verified runtime, types, CLI, and publish contents for ${packages.length} packages.`,
+    `Verified real tarball installation, runtime, types, CLI, and publish contents for ${packages.length} packages.`,
   )
 } finally {
   rmSync(smokeRoot, { recursive: true, force: true })

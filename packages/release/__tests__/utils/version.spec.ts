@@ -226,12 +226,23 @@ describe('版本处理工具函数测试', () => {
         expect(result).toBe(false)
       })
 
-      it('应该在命令执行失败时返回 false', async () => {
+      it('应该在版本查询返回 404 时返回 false', async () => {
         const mockRun = run as MockedFunction<typeof run>
-        mockRun.mockRejectedValue(new Error('命令执行失败'))
+        mockRun.mockRejectedValue(
+          new Error('npm ERR! code E404 - No match found for version 1.0.0'),
+        )
 
         const result = await isVersionExist('it-package', '1.0.0')
         expect(result).toBe(false)
+      })
+
+      it('应该传播网络或鉴权错误', async () => {
+        const mockRun = run as MockedFunction<typeof run>
+        mockRun.mockRejectedValue(new Error('network timeout'))
+
+        await expect(isVersionExist('it-package', '1.0.0')).rejects.toThrow(
+          'network timeout',
+        )
       })
 
       it('应该使用指定的 registry', async () => {

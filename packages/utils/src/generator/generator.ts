@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import type { PromptObject } from 'prompts'
+import type { Answers, PromptObject } from 'prompts'
 
 import { isDirectorySync, isPathExistsSync, mkdirSync } from '../file'
 import { isFunction } from '../type'
@@ -49,7 +48,7 @@ interface GeneratorDoneCtx {
    * 模版渲染数据
    */
 
-  data: Record<string, any>
+  data: object
 }
 
 export class Generator extends BaseGenerator {
@@ -57,12 +56,12 @@ export class Generator extends BaseGenerator {
    * 模版文件夹路径
    */
 
-  public src: string | ((prompts: Record<string, any>) => string)
+  public src: string | ((prompts: Answers<string>) => string)
   /**
    * 目标文件夹路径
    */
 
-  public dest: string | ((prompts: Record<string, any>) => string)
+  public dest: string | ((prompts: Answers<string>) => string)
   /**
    * 问询列表
    */
@@ -70,9 +69,7 @@ export class Generator extends BaseGenerator {
   /**
    * 模版渲染数据
    */
-  public data:
-    | Record<string, any>
-    | ((prompts: Record<string, any>) => Record<string, any>)
+  public data: object | ((prompts: Answers<string>) => object)
   /**
    * 模版写入完成回调函数
    */
@@ -80,7 +77,7 @@ export class Generator extends BaseGenerator {
 
   private _dest = ''
   private _src = ''
-  private _data = {}
+  private _data: object = {}
 
   public constructor({
     src,
@@ -103,7 +100,7 @@ export class Generator extends BaseGenerator {
     await super.run()
 
     if (this.onGeneratorDone) {
-      this.onGeneratorDone({
+      await this.onGeneratorDone({
         src: this._src,
         dest: this._dest,
         data: this._data,

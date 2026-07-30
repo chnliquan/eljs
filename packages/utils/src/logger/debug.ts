@@ -14,6 +14,12 @@ interface DebuggerOptions {
   depth?: number
 }
 
+type NodeDebugger = Debugger & {
+  inspectOpts?: {
+    depth?: boolean | number | null
+  }
+}
+
 /**
  * 创建调试器
  * @param namespace 命名空间
@@ -23,15 +29,12 @@ export function createDebugger(
   namespace: string,
   options: DebuggerOptions = {},
 ): Debugger['log'] | undefined {
-  const log = debug(namespace)
+  const log = debug(namespace) as NodeDebugger
   const { onlyWhenFocused, depth } = options
+  const inspectOpts = log.inspectOpts
 
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  if (depth && log.inspectOpts && log.inspectOpts.depth == null) {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    log.inspectOpts.depth = options.depth
+  if (depth !== undefined && inspectOpts && inspectOpts.depth == null) {
+    inspectOpts.depth = depth
   }
 
   let enabled = log.enabled
@@ -43,9 +46,8 @@ export function createDebugger(
   }
 
   if (enabled) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (...args: [string, ...any[]]) => {
-      log(...args)
+    return (formatter: unknown, ...args: unknown[]) => {
+      log(formatter, ...args)
     }
   }
 }

@@ -1,6 +1,6 @@
 import findUp from 'find-up'
 import { glob } from 'glob'
-import yaml from 'js-yaml'
+import * as yaml from 'js-yaml'
 import path from 'node:path'
 
 import { isPathExists, readFile, readJson } from '../file'

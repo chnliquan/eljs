@@ -8,7 +8,7 @@ import { isPathExists, isPathExistsSync } from '../file'
  * @param paths 路径数组
  */
 export async function tryPaths(paths: string[]): Promise<string | undefined> {
-  for await (const path of paths) {
+  for (const path of paths) {
     if (await isPathExists(path)) {
       return path
     }

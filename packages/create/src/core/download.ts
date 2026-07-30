@@ -78,7 +78,7 @@ export class Download {
     }
 
     const projectName = chalk.cyan(`${pkgName}@${data.version}`)
-    let templateRootPath = ''
+    let templateRootPath: string
 
     try {
       this._spinner.start(`Downloading ${projectName}`)
@@ -101,7 +101,7 @@ export class Download {
    * @param url git url
    */
   private async _downloadGit(url: string) {
-    let templateRootPath = ''
+    let templateRootPath: string
 
     try {
       this._spinner.start(`Downloading ${url}`)

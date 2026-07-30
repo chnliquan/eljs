@@ -33,11 +33,12 @@
     "src"
   ],
   "scripts": {
-    "typecheck": "node --check src/index.js && node --check src/parser.js && node --check src/what-bump.js && node --check src/writer.js"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@types/conventional-changelog-core": "^8.0.1",
-    "compare-func": "^2.0.0"
+    "@conventional-changelog/template": "^1.2.1",
+    "conventional-changelog-writer": "^9.2.0",
+    "conventional-commits-parser": "^7.1.1"
   },
   "engines": {
     "node": ">=22.14.0"

@@ -15,7 +15,7 @@ import { EOL } from 'node:os'
 import path from 'node:path'
 
 import type { Api } from '../../types'
-import { AppError, getChangelog } from '../../utils'
+import { AppError, getChangelog, isGitTagAtHead } from '../../utils'
 
 export default (api: Api) => {
   api.onCheck(async () => {
@@ -102,7 +102,7 @@ export default (api: Api) => {
   api.onRelease(
     async ({ version }) => {
       const { independent, commit, commitMessage, commitArgs } = api.config.git
-      const { pkgNames, latestTag } = api.appData
+      const { pkgNames } = api.appData
 
       if (!commit) {
         return
@@ -124,7 +124,7 @@ export default (api: Api) => {
         ? pkgNames.map(pkgName => `${pkgName}@${version}`)
         : [`v${version}`]
 
-      for await (const tagName of tags) {
+      for (const tagName of tags) {
         try {
           await gitTag(tagName, {
             cwd: api.cwd,
@@ -132,10 +132,16 @@ export default (api: Api) => {
           })
         } catch (error) {
           const err = error as Error
+          const tagExists =
+            /tag '.+' already exists/.test(err.message) ||
+            /标签 '.+' 已存在/.test(err.message)
+
           if (
-            (/tag '.+' already exists/.test(err.message) ||
-              /标签 '.+' 已存在/.test(err.message)) &&
-            latestTag === tagName
+            tagExists &&
+            (await isGitTagAtHead(tagName, {
+              cwd: api.cwd,
+              verbose: false,
+            }))
           ) {
             logger.warn(`Tag ${chalk.cyan(tagName)} already exists.`)
           } else {

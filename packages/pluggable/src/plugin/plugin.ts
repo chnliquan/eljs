@@ -1,6 +1,7 @@
 import {
   camelCase,
   fileLoadersSync,
+  findUp,
   isPathExistsSync,
   readJsonSync,
   resolve,
@@ -11,7 +12,6 @@ import {
 import hash from 'hash-sum'
 import assert from 'node:assert'
 import { basename, dirname, extname, join, relative } from 'node:path'
-import pkgUp from 'pkg-up'
 
 import type { PluginDeclaration, ResolvedPlugin } from '../pluggable'
 import type {
@@ -81,7 +81,9 @@ export class Plugin {
 
     let pkg = {} as PackageJson
     let isPkgEntry = false
-    const pkgJsonPath = pkgUp.sync({ cwd: this.path }) as string
+    const pkgJsonPath = findUp.sync('package.json', {
+      cwd: this.path,
+    }) as string
 
     if (pkgJsonPath) {
       pkg = readJsonSync(pkgJsonPath)
@@ -144,7 +146,7 @@ export class Plugin {
    * @param isPkgEntry 是否是入口
    */
   private _getId(pkgName: string, pkgPath: string, isPkgEntry: boolean) {
-    let id = ''
+    let id: string
 
     if (isPkgEntry) {
       id = pkgName
@@ -224,7 +226,7 @@ export class Plugin {
         const [pluginName, pluginOptions] =
           typeof plugin === 'string' ? [plugin, null] : plugin
 
-        let resolvedPath = ''
+        let resolvedPath: string
 
         if (!pluginName) {
           return
@@ -235,9 +237,10 @@ export class Plugin {
             basedir: cwd,
             extensions: ['.tsx', '.ts', '.mjs', '.jsx', '.js'],
           })
-        } catch (_) {
+        } catch (error) {
           throw new Error(
             `Invalid plugin \`${pluginName}\`, can not be resolved.`,
+            { cause: error },
           )
         }
 
