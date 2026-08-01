@@ -4,11 +4,10 @@ import {
   defineHooks,
   defineModifyHook,
 } from '@eljs/plugin-host'
-import type { RequiredRecursive } from '@eljs/utils'
 import type { ReleaseType } from 'semver'
 
-import type { Config } from './types/config'
-import type { AppData } from './types/runner'
+import type { ResolvedConfig } from './types/config'
+import type { AppData, ReleaseErrorContext } from './types/runner'
 import type { parseVersion } from './utils/version'
 
 /**
@@ -23,9 +22,15 @@ type ReleaseContext = ParsedVersion & { changelog: string }
 
 /**
  * ReleaseRunner 的 Hook 单一契约
+ *
+ * @remarks
+ * 正常生命周期依次执行 `modifyConfig`、`modifyAppData`、`onCheck`、
+ * `onStart`、版本计算与更新 Hook、`getChangelog`，最后执行三个发布 Hook
+ * 插件加载完成后的任一阶段失败会触发 `onError`
+ * 插件加载前的失败无法调用尚未注册的 Hook，其自身失败只记录警告且不会替换原始错误
  */
 export const releaseHookSchema = defineHooks({
-  modifyConfig: defineModifyHook<RequiredRecursive<Config>>(),
+  modifyConfig: defineModifyHook<ResolvedConfig>(),
   modifyAppData: defineModifyHook<AppData, { cwd: string }>(),
   onCheck: defineEventHook<{
     releaseTypeOrVersion?: ReleaseType | string
@@ -42,6 +47,7 @@ export const releaseHookSchema = defineHooks({
   onBeforeRelease: defineEventHook<ReleaseContext>(),
   onRelease: defineEventHook<ReleaseContext>(),
   onAfterRelease: defineEventHook<ReleaseContext>(),
+  onError: defineEventHook<ReleaseErrorContext>(),
 })
 
 /**
@@ -55,7 +61,7 @@ export interface ReleasePluginCapabilities {
    * 插件初始化及 `modifyConfig` Hook 执行期间不可读取
    * `modifyConfig` Hook 应使用其入参访问当前配置
    */
-  readonly config: RequiredRecursive<Config>
+  readonly config: ResolvedConfig
   /**
    * 当前发布应用数据
    */

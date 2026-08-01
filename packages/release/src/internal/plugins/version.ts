@@ -24,14 +24,27 @@ import {
   isVersionValid,
   onCancel,
   updatePackageLock,
-  updatePackageVersion,
 } from '../../utils'
+import { mapWithConcurrency } from '../concurrency'
+import {
+  captureLockfiles,
+  restoreLockfiles,
+  type LockfileSnapshot,
+} from '../lockfile-transaction'
+import {
+  prepareVersionPlan,
+  rollbackVersionPlan,
+  writeVersionPlan,
+  type PreparedVersionPlan,
+} from '../version-plan'
 
 const { RELEASE_TYPES } = semver
 
 const debug = createDebugger('release:version')
 
 export default definePlugin(context => {
+  let preparedVersionPlan: PreparedVersionPlan | undefined
+
   context.onCheck(async ({ releaseTypeOrVersion }) => {
     if (releaseTypeOrVersion && !isVersionValid(releaseTypeOrVersion, true)) {
       throw new AppError(
@@ -78,27 +91,62 @@ export default definePlugin(context => {
       }
 
       const existingPkgNames: string[] = []
-      const tagChecks = new Map<string, boolean>()
+      const versionChecks = await mapWithConcurrency(
+        context.appData.validPkgNames,
+        context.config.npm.networkConcurrency,
+        async pkgName => ({
+          exists: await checkVersion(
+            pkgName,
+            version,
+            context.appData.registry,
+            context.cwd,
+          ),
+          pkgName,
+        }),
+      )
+      const releaseTagNames = context.config.git.independent
+        ? context.appData.validPkgNames.map(pkgName => `${pkgName}@${version}`)
+        : [`v${version}`]
+      const workspaceVersions = new Map(
+        context.appData.pkgNames.map((pkgName, index) => [
+          pkgName,
+          context.appData.pkgs[index]?.version,
+        ]),
+      )
+      const shouldCheckReleaseTags =
+        versionChecks.some(({ exists }) => exists) ||
+        context.appData.validPkgNames.every(
+          pkgName => workspaceVersions.get(pkgName) === version,
+        )
+      const tagChecks = new Map(
+        shouldCheckReleaseTags
+          ? await Promise.all(
+              releaseTagNames.map(
+                async tagName =>
+                  [
+                    tagName,
+                    await isGitTagAtHead(tagName, {
+                      cwd: context.cwd,
+                      verbose: false,
+                    }),
+                  ] as const,
+              ),
+            )
+          : [],
+      )
+      const isReleaseRetry =
+        shouldCheckReleaseTags &&
+        releaseTagNames.every(tagName => tagChecks.get(tagName) === true)
 
-      for (const pkgName of context.appData.validPkgNames) {
-        if (!(await checkVersion(pkgName, version, context.appData.registry))) {
+      for (const { exists, pkgName } of versionChecks) {
+        if (!exists) {
           continue
         }
 
         const tagName = context.config.git.independent
           ? `${pkgName}@${version}`
           : `v${version}`
-        const cachedTagCheck = tagChecks.get(tagName)
-        const isRetry =
-          cachedTagCheck ??
-          (await isGitTagAtHead(tagName, {
-            cwd: context.cwd,
-            verbose: false,
-          }))
-
-        if (cachedTagCheck === undefined) {
-          tagChecks.set(tagName, isRetry)
-        }
+        const isRetry = tagChecks.get(tagName) === true
 
         if (!isRetry) {
           throw new AppError(
@@ -110,6 +158,7 @@ export default definePlugin(context => {
       }
 
       context.appData.existingPkgNames = existingPkgNames
+      context.appData.isReleaseRetry = isReleaseRetry
 
       if (existingPkgNames.length) {
         logger.warn(
@@ -117,36 +166,83 @@ export default definePlugin(context => {
             .map(pkgName => chalk.cyan(`${pkgName}@${version}`))
             .join(', ')}.`,
         )
+      } else if (isReleaseRetry) {
+        logger.warn(
+          'Retrying release from the existing local release commit and tags.',
+        )
       }
+
+      preparedVersionPlan = await prepareVersionPlan(context.appData, version)
+      context.appData.pkgs = preparedVersionPlan.pkgs
+      context.appData.projectPkg = preparedVersionPlan.projectPkg
     },
   )
 
   context.onBumpVersion(async ({ version }) => {
-    const { projectPkgJsonPath, projectPkg, pkgNames, pkgJsonPaths, pkgs } =
-      context.appData
+    const plan =
+      preparedVersionPlan?.version === version
+        ? preparedVersionPlan
+        : await prepareVersionPlan(context.appData, version)
+    preparedVersionPlan = plan
+    context.appData.pkgs = plan.pkgs
+    context.appData.projectPkg = plan.projectPkg
+    debug?.(context.appData.pkgNames)
 
-    debug?.(pkgNames)
-    // update all packages
-    for (let i = 0; i < pkgNames.length; i++) {
-      await updatePackageVersion(pkgJsonPaths[i], pkgs[i], version, pkgNames)
-    }
-
-    // update polyrepo project root package.json
-    if (pkgJsonPaths[0] !== projectPkgJsonPath) {
-      await updatePackageVersion(projectPkgJsonPath, projectPkg, version)
+    if (!context.config.dryRun) {
+      await writeVersionPlan(plan)
     }
   })
 
   context.onAfterBumpVersion(async ({ version }) => {
-    if (isCanaryVersion(version)) {
+    if (isCanaryVersion(version) || context.config.dryRun) {
       return
     }
 
     context.step('Updating Lockfile ...')
-    await updatePackageLock(context.appData.packageManager, {
-      cwd: context.cwd,
-      verbose: true,
-    })
+    let lockfileSnapshot: LockfileSnapshot | undefined
+
+    try {
+      lockfileSnapshot = await captureLockfiles(context.cwd)
+      await updatePackageLock(
+        context.appData.packageManager,
+        {
+          cwd: context.cwd,
+          verbose: true,
+        },
+        context.appData.packageManagerVariant,
+      )
+    } catch (lockfileError) {
+      const rollbackErrors: unknown[] = []
+
+      if (lockfileSnapshot) {
+        try {
+          await restoreLockfiles(lockfileSnapshot)
+        } catch (error) {
+          rollbackErrors.push(error)
+        }
+      }
+
+      if (preparedVersionPlan?.version === version) {
+        try {
+          await rollbackVersionPlan(preparedVersionPlan)
+        } catch (error) {
+          rollbackErrors.push(error)
+        }
+
+        context.appData.pkgs = preparedVersionPlan.originalPkgs
+        context.appData.projectPkg = preparedVersionPlan.originalProjectPkg
+      }
+
+      if (rollbackErrors.length) {
+        throw new AggregateError(
+          [lockfileError, ...rollbackErrors],
+          'Lockfile update failed and the version transaction could not be fully restored.',
+          { cause: lockfileError },
+        )
+      }
+
+      throw lockfileError
+    }
   })
 })
 
@@ -155,7 +251,7 @@ async function getIncrementVersion(
   releaseTypeOrVersion?: string,
 ): Promise<string> {
   const { prerelease, prereleaseId, canary } = context.config.npm
-  const { registry, projectPkg, validPkgNames } = context.appData
+  const { registry, projectPkg, validPkgNames, pkgs } = context.appData
 
   context.step('Incrementing version ...')
 
@@ -166,22 +262,48 @@ async function getIncrementVersion(
     return releaseTypeOrVersion
   }
 
-  const localVersion = projectPkg.version
-  const {
-    latest: remoteLatestVersion,
-    alpha: remoteAlphaVersion,
-    beta: remoteBetaVersion,
-    rc: remoteRcVersion,
-  } = await getRemoteDistTag(validPkgNames, {
+  const localVersion = getMaxVersion(
+    projectPkg.version,
+    ...pkgs
+      .map(pkg => pkg.version)
+      .filter((version): version is string => Boolean(version)),
+  )
+  const remoteQueryOptions = {
     cwd: context.cwd,
     registry,
-  })
+  }
+  const remoteDistTags =
+    prereleaseId && !['alpha', 'beta', 'rc'].includes(prereleaseId)
+      ? await getRemoteDistTag(
+          validPkgNames,
+          remoteQueryOptions,
+          ['latest', 'alpha', 'beta', 'rc', prereleaseId],
+          context.config.npm.networkConcurrency,
+        )
+      : await getRemoteDistTag(
+          validPkgNames,
+          remoteQueryOptions,
+          undefined,
+          context.config.npm.networkConcurrency,
+        )
+  const remoteLatestVersion = remoteDistTags.latest
+  const remoteAlphaVersion = remoteDistTags.alpha
+  const remoteBetaVersion = remoteDistTags.beta
+  const remoteRcVersion = remoteDistTags.rc
 
-  const referenceVersionMap = {
+  const referenceVersionMap: Record<string, string> = {
     latest: getMaxVersion(localVersion, remoteLatestVersion),
     alpha: getMaxVersion(localVersion, remoteLatestVersion, remoteAlphaVersion),
     beta: getMaxVersion(localVersion, remoteLatestVersion, remoteBetaVersion),
     rc: getMaxVersion(localVersion, remoteLatestVersion, remoteRcVersion),
+  }
+
+  if (prereleaseId && !referenceVersionMap[prereleaseId]) {
+    referenceVersionMap[prereleaseId] = getMaxVersion(
+      localVersion,
+      remoteLatestVersion,
+      remoteDistTags[prereleaseId],
+    )
   }
 
   if (releaseTypeOrVersion) {
@@ -211,6 +333,20 @@ async function getIncrementVersion(
 
     if (remoteRcVersion && (!prereleaseId || prereleaseId === 'rc')) {
       logger.info(`Remote rc version: ${chalk.cyan(remoteRcVersion)}`)
+    }
+
+    const remotePrereleaseVersion = prereleaseId
+      ? remoteDistTags[prereleaseId]
+      : undefined
+
+    if (
+      prereleaseId &&
+      !['alpha', 'beta', 'rc'].includes(prereleaseId) &&
+      remotePrereleaseVersion
+    ) {
+      logger.info(
+        `Remote ${prereleaseId} version: ${chalk.cyan(remotePrereleaseVersion)}`,
+      )
     }
   }
 
@@ -285,8 +421,11 @@ async function getIncrementVersion(
 
   return answer.value
 
-  function getReferenceVersion(prereleaseId: PrereleaseId) {
-    return referenceVersionMap[prereleaseId] || referenceVersionMap.latest
+  function getReferenceVersion(prereleaseId?: PrereleaseId) {
+    const knownVersion = prereleaseId
+      ? referenceVersionMap[prereleaseId as keyof typeof referenceVersionMap]
+      : undefined
+    return knownVersion || referenceVersionMap.latest
   }
 }
 
@@ -379,46 +518,50 @@ async function checkVersion(
   pkgName: string,
   version: string,
   registry?: string,
+  cwd?: string,
 ): Promise<boolean> {
   if (!semver.valid(version)) {
     throw new AppError(`Invalid semantic version ${chalk.cyan(version)}.`)
   }
 
-  return isVersionExist(pkgName, version, registry)
+  return isVersionExist(pkgName, version, registry, cwd)
 }
 
 async function confirmVersion(
   context: ReleasePluginContext,
-  version: string,
+  initialVersion: string,
 ): Promise<string> {
   const { validPkgNames } = context.appData
 
   if (!validPkgNames.length) {
-    return version
+    return initialVersion
   }
 
-  let confirmMessage: string
+  let version = initialVersion
 
-  if (validPkgNames.length === 1) {
-    confirmMessage = `Are you sure to bump version to ${chalk.cyan(version)}`
-  } else {
-    console.log(`The packages will be bumped are as follows:${EOL}`)
+  while (true) {
+    let confirmMessage: string
 
-    for (const pkgName of validPkgNames) {
-      console.log(` - ${chalk.cyan(`${pkgName}@${version}`)}`)
+    if (validPkgNames.length === 1) {
+      confirmMessage = `Are you sure to bump version to ${chalk.cyan(version)}`
+    } else {
+      console.log(`The packages will be bumped are as follows:${EOL}`)
+
+      for (const pkgName of validPkgNames) {
+        console.log(` - ${chalk.cyan(`${pkgName}@${version}`)}`)
+      }
+
+      console.log()
+      confirmMessage = 'Are you sure to bump?'
     }
 
+    const answer = await confirm(confirmMessage)
     console.log()
-    confirmMessage = 'Are you sure to bump?'
-  }
 
-  const answer = await confirm(confirmMessage)
-  console.log()
+    if (answer) {
+      return version
+    }
 
-  if (answer) {
-    return version
-  } else {
-    const version = await getIncrementVersion(context)
-    return confirmVersion(context, version)
+    version = await getIncrementVersion(context)
   }
 }

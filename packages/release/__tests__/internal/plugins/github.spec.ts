@@ -1,4 +1,5 @@
 import {
+  afterEach,
   beforeEach,
   describe,
   expect,
@@ -13,7 +14,7 @@ import {
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-import { getGitUrl, getGitUrlSync, gitUrlAnalysis } from '@eljs/utils'
+import { getGitUrl, getGitUrlSync, gitUrlAnalysis, logger } from '@eljs/utils'
 import newGithubReleaseUrl from 'new-github-release-url'
 import open from 'open'
 
@@ -39,7 +40,11 @@ interface GitHubTestApi {
       }) => Promise<void>,
     ) => void
   >
+  onCheck: MockedFunction<(handler: () => Promise<void>) => void>
   config: Config
+  appData: {
+    validPkgNames: string[]
+  }
   cwd: string
 }
 
@@ -56,6 +61,11 @@ vi.mock('@eljs/utils', () => ({
   getGitUrl: vi.fn(),
   getGitUrlSync: vi.fn(),
   gitUrlAnalysis: vi.fn(),
+  logger: {
+    info: vi.fn(),
+    ready: vi.fn(),
+    warn: vi.fn(),
+  },
 }))
 
 vi.mock('new-github-release-url', () => ({ default: vi.fn() }))
@@ -67,12 +77,21 @@ describe('GitHub 插件测试', () => {
   beforeEach(() => {
     mockContext = {
       describe: vi.fn(),
+      onCheck: vi.fn(),
       onRelease: vi.fn(),
       config: {
+        git: {
+          independent: false,
+        },
         github: {
           release: true,
+          mode: 'browser',
+          tokenEnv: 'GITHUB_TOKEN',
         },
       } as Config,
+      appData: {
+        validPkgNames: ['it-package'],
+      },
       cwd: '/it/project',
     }
 
@@ -96,6 +115,11 @@ describe('GitHub 插件测试', () => {
     )
   })
 
+  afterEach(() => {
+    delete process.env.RELEASE_TEST_GITHUB_TOKEN
+    vi.unstubAllGlobals()
+  })
+
   describe('插件注册', () => {
     it('应该注册所有必需的钩子方法', () => {
       githubPlugin(mockContext as unknown as ReleasePluginContext)
@@ -103,6 +127,7 @@ describe('GitHub 插件测试', () => {
       expect(mockContext.describe).toHaveBeenCalledWith({
         enable: expect.any(Function),
       })
+      expect(mockContext.onCheck).toHaveBeenCalledWith(expect.any(Function))
       expect(mockContext.onRelease).toHaveBeenCalledWith(expect.any(Function), {
         stage: 20,
       })
@@ -126,12 +151,49 @@ describe('GitHub 插件测试', () => {
       ;(getGitUrlSync as MockedFunction<typeof getGitUrlSync>).mockReturnValue(
         'https://gitlab.com/user/repo.git',
       )
+      ;(
+        gitUrlAnalysis as MockedFunction<typeof gitUrlAnalysis>
+      ).mockReturnValue({
+        href: 'https://gitlab.com/user/repo',
+      } as ReturnType<typeof gitUrlAnalysis>)
 
       githubPlugin(mockContext as unknown as ReleasePluginContext)
       const describeCall = mockContext.describe.mock.calls[0][0]
 
       const isEnabled = describeCall.enable({ cwd: '/it/project' })
       expect(isEnabled).toBe(false)
+    })
+
+    it('仓库域名仅包含 github 字样时不应该启用', () => {
+      ;(getGitUrlSync as MockedFunction<typeof getGitUrlSync>).mockReturnValue(
+        'https://evilgithub.com/user/repo.git',
+      )
+      ;(
+        gitUrlAnalysis as MockedFunction<typeof gitUrlAnalysis>
+      ).mockReturnValue({
+        href: 'https://evilgithub.com/user/repo',
+      } as ReturnType<typeof gitUrlAnalysis>)
+
+      githubPlugin(mockContext as unknown as ReleasePluginContext)
+      const describeCall = mockContext.describe.mock.calls[0][0]
+
+      expect(describeCall.enable({ cwd: '/it/project' })).toBe(false)
+    })
+
+    it('应该支持以 github 子域标识的企业仓库', () => {
+      ;(getGitUrlSync as MockedFunction<typeof getGitUrlSync>).mockReturnValue(
+        'https://github.corp.example.com/user/repo.git',
+      )
+      ;(
+        gitUrlAnalysis as MockedFunction<typeof gitUrlAnalysis>
+      ).mockReturnValue({
+        href: 'https://github.corp.example.com/user/repo',
+      } as ReturnType<typeof gitUrlAnalysis>)
+
+      githubPlugin(mockContext as unknown as ReleasePluginContext)
+      const describeCall = mockContext.describe.mock.calls[0][0]
+
+      expect(describeCall.enable({ cwd: '/it/project' })).toBe(true)
     })
   })
 
@@ -183,6 +245,28 @@ describe('GitHub 插件测试', () => {
       })
     })
 
+    it('独立标签模式应该为每个可发布包准备对应的发布页面', async () => {
+      mockContext.config.git!.independent = true
+      mockContext.appData.validPkgNames = ['core', 'app']
+
+      await onReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: '## Changes',
+      })
+
+      expect(newGithubReleaseUrl).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ tag: 'core@1.1.0' }),
+      )
+      expect(newGithubReleaseUrl).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ tag: 'app@1.1.0' }),
+      )
+      expect(open).toHaveBeenCalledTimes(2)
+    })
+
     it('当禁用 GitHub 发布时应该跳过', async () => {
       mockContext.config.github!.release = false
 
@@ -194,6 +278,21 @@ describe('GitHub 插件测试', () => {
       }
 
       await onReleaseHandler(versionInfo)
+
+      expect(getGitUrl).not.toHaveBeenCalled()
+      expect(newGithubReleaseUrl).not.toHaveBeenCalled()
+      expect(open).not.toHaveBeenCalled()
+    })
+
+    it('dry-run 时不应该打开 GitHub 发布页面', async () => {
+      mockContext.config.dryRun = true
+
+      await onReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: '## Changes',
+      })
 
       expect(getGitUrl).not.toHaveBeenCalled()
       expect(newGithubReleaseUrl).not.toHaveBeenCalled()
@@ -277,7 +376,7 @@ describe('GitHub 插件测试', () => {
       )
     })
 
-    it('应该处理 open 错误', async () => {
+    it('打开浏览器失败时应该输出可复制链接且不中断发布', async () => {
       ;(open as MockedFunction<typeof open>).mockRejectedValue(
         new Error('Open failed'),
       )
@@ -289,8 +388,180 @@ describe('GitHub 插件测试', () => {
         changelog: '## Changes',
       }
 
-      // 错误应该被传播
-      await expect(onReleaseHandler(versionInfo)).rejects.toThrow('Open failed')
+      await expect(onReleaseHandler(versionInfo)).resolves.toBeUndefined()
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Could not open the GitHub Release page: Open failed',
+      )
+      expect(logger.info).toHaveBeenCalledWith(
+        'Open this URL manually: https://github.com/user/repo/releases/new?tag=v1.1.0',
+      )
+    })
+  })
+
+  describe('GitHub API 模式', () => {
+    function enableApiMode(): {
+      onCheckHandler: () => Promise<void>
+      onReleaseHandler: OnReleaseHandler
+    } {
+      mockContext.config.github = {
+        mode: 'api',
+        release: true,
+        tokenEnv: 'RELEASE_TEST_GITHUB_TOKEN',
+      }
+      githubPlugin(mockContext as unknown as ReleasePluginContext)
+
+      return {
+        onCheckHandler: mockContext.onCheck.mock.calls[0][0],
+        onReleaseHandler: mockContext.onRelease.mock
+          .calls[0][0] as OnReleaseHandler,
+      }
+    }
+
+    it('预检时应该拒绝缺失令牌', async () => {
+      const { onCheckHandler } = enableApiMode()
+
+      await expect(onCheckHandler()).rejects.toThrow(
+        'RELEASE_TEST_GITHUB_TOKEN',
+      )
+    })
+
+    it('应该通过 REST API 创建 Release', async () => {
+      process.env.RELEASE_TEST_GITHUB_TOKEN = 'secret-token'
+      const fetchMock = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(new Response('', { status: 404 }))
+        .mockResolvedValueOnce(
+          new Response('{"tag_name":"v1.1.0"}', { status: 201 }),
+        )
+      vi.stubGlobal('fetch', fetchMock)
+      const { onCheckHandler, onReleaseHandler } = enableApiMode()
+
+      await expect(onCheckHandler()).resolves.toBeUndefined()
+      await onReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: '## Changes',
+      })
+
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        1,
+        'https://api.github.com/repos/user/repo/releases/tags/v1.1.0',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer secret-token',
+          }),
+        }),
+      )
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        2,
+        'https://api.github.com/repos/user/repo/releases',
+        expect.objectContaining({
+          body: JSON.stringify({
+            body: '## Changes',
+            name: 'v1.1.0',
+            prerelease: false,
+            tag_name: 'v1.1.0',
+          }),
+          method: 'POST',
+        }),
+      )
+      expect(open).not.toHaveBeenCalled()
+      expect(logger.ready).toHaveBeenCalledWith(
+        'Created GitHub Release `v1.1.0` successfully.',
+      )
+    })
+
+    it('已存在同名 Release 时应该幂等跳过', async () => {
+      process.env.RELEASE_TEST_GITHUB_TOKEN = 'secret-token'
+      const fetchMock = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response('{}', { status: 200 }))
+      vi.stubGlobal('fetch', fetchMock)
+      const { onReleaseHandler } = enableApiMode()
+
+      await onReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: '## Changes',
+      })
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(logger.warn).toHaveBeenCalledWith(
+        'GitHub Release `v1.1.0` already exists; skipping creation.',
+      )
+    })
+
+    it('创建时发生并发冲突应该再次查询并复用 Release', async () => {
+      process.env.RELEASE_TEST_GITHUB_TOKEN = 'secret-token'
+      const fetchMock = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(new Response('', { status: 404 }))
+        .mockResolvedValueOnce(new Response('{}', { status: 422 }))
+        .mockResolvedValueOnce(new Response('{}', { status: 200 }))
+      vi.stubGlobal('fetch', fetchMock)
+      const { onReleaseHandler } = enableApiMode()
+
+      await onReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: '## Changes',
+      })
+
+      expect(fetchMock).toHaveBeenCalledTimes(3)
+      expect(logger.warn).toHaveBeenCalledWith(
+        'GitHub Release `v1.1.0` was created concurrently; reusing it.',
+      )
+    })
+
+    it('API 查询失败时应该传播不包含令牌的诊断信息', async () => {
+      process.env.RELEASE_TEST_GITHUB_TOKEN = 'secret-token'
+      const fetchMock = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(
+          new Response('{"message":"server error"}', { status: 500 }),
+        )
+      vi.stubGlobal('fetch', fetchMock)
+      const { onReleaseHandler } = enableApiMode()
+
+      const error = await onReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: '## Changes',
+      }).catch(value => value)
+
+      expect(error).toBeInstanceOf(Error)
+      expect((error as Error).message).toContain('HTTP 500')
+      expect((error as Error).message).not.toContain('secret-token')
+    })
+
+    it('企业 GitHub 应该使用 /api/v3 端点', async () => {
+      process.env.RELEASE_TEST_GITHUB_TOKEN = 'secret-token'
+      ;(
+        gitUrlAnalysis as MockedFunction<typeof gitUrlAnalysis>
+      ).mockReturnValue({
+        href: 'https://github.corp.example.com/team/repo',
+      } as ReturnType<typeof gitUrlAnalysis>)
+      const fetchMock = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response('{}', { status: 200 }))
+      vi.stubGlobal('fetch', fetchMock)
+      const { onReleaseHandler } = enableApiMode()
+
+      await onReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: '## Changes',
+      })
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://github.corp.example.com/api/v3/repos/team/repo/releases/tags/v1.1.0',
+        expect.any(Object),
+      )
     })
   })
 

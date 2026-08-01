@@ -58,6 +58,9 @@ describe('Bootstrap 插件测试', () => {
   beforeEach(() => {
     mockContext = {
       modifyAppData: vi.fn(),
+      config: {
+        npm: {},
+      } as ReleasePluginContext['config'],
     }
 
     // 重置所有模拟
@@ -333,6 +336,153 @@ describe('Bootstrap 插件测试', () => {
       })
 
       expect(result.registry).toBe('https://custom-registry.com')
+    })
+
+    it('应该优先使用 release 配置中的 registry', async () => {
+      if (!mockContext.config) {
+        throw new Error('测试配置未初始化')
+      }
+      mockContext.config.npm.registry = 'https://configured-registry.com'
+      ;(
+        getWorkspaces as MockedFunction<typeof getWorkspaces>
+      ).mockResolvedValue([mockCwd])
+      ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue({
+        name: 'test-pkg',
+        version: '1.0.0',
+        private: false,
+        publishConfig: { registry: 'https://manifest-registry.com' },
+      })
+
+      bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
+      const modifyAppDataFn = mockContext.modifyAppData.mock.calls[0][0]
+      const result = await modifyAppDataFn(
+        {
+          projectPkg: {
+            publishConfig: { registry: 'https://root-registry.com' },
+          },
+        } as unknown as AppData,
+        { cwd: mockCwd },
+      )
+
+      expect(result.registry).toBe('https://configured-registry.com')
+    })
+
+    it('Yarn Berry 应该拒绝会覆盖显式配置的清单 registry', async () => {
+      if (!mockContext.config) {
+        throw new Error('测试配置未初始化')
+      }
+      mockContext.config.npm.registry = 'https://configured-registry.com'
+      ;(
+        getWorkspaces as MockedFunction<typeof getWorkspaces>
+      ).mockResolvedValue([mockCwd])
+      ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue({
+        name: 'test-pkg',
+        version: '1.0.0',
+        private: false,
+        publishConfig: { registry: 'https://manifest-registry.com' },
+      })
+
+      bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
+      const modifyAppDataFn = mockContext.modifyAppData.mock.calls[0][0]
+
+      await expect(
+        modifyAppDataFn(
+          {
+            packageManagerVariant: 'yarn-berry',
+            projectPkg: {},
+          } as unknown as AppData,
+          { cwd: mockCwd },
+        ),
+      ).rejects.toThrow('Yarn Berry gives `publishConfig.registry` precedence')
+    })
+
+    it('未明确配置时应该拒绝混用多个 registry', async () => {
+      ;(
+        getWorkspaces as MockedFunction<typeof getWorkspaces>
+      ).mockResolvedValue(['/test/project/pkg-a', '/test/project/pkg-b'])
+      ;(readJson as MockedFunction<typeof readJson>)
+        .mockResolvedValueOnce({
+          name: 'pkg-a',
+          version: '1.0.0',
+          private: false,
+          publishConfig: { registry: 'https://registry-a.com' },
+        })
+        .mockResolvedValueOnce({
+          name: 'pkg-b',
+          version: '1.0.0',
+          private: false,
+          publishConfig: { registry: 'https://registry-b.com' },
+        })
+
+      bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
+      const modifyAppDataFn = mockContext.modifyAppData.mock.calls[0][0]
+
+      await expect(
+        modifyAppDataFn({ projectPkg: {} } as unknown as AppData, {
+          cwd: mockCwd,
+        }),
+      ).rejects.toThrow(
+        'Publishable package manifests declare different registries',
+      )
+    })
+
+    it('比较 registry 时应该忽略末尾斜杠', async () => {
+      ;(
+        getWorkspaces as MockedFunction<typeof getWorkspaces>
+      ).mockResolvedValue(['/test/project/pkg-a', '/test/project/pkg-b'])
+      ;(readJson as MockedFunction<typeof readJson>)
+        .mockResolvedValueOnce({
+          name: 'pkg-a',
+          version: '1.0.0',
+          private: false,
+          publishConfig: { registry: 'https://registry.example.com/' },
+        })
+        .mockResolvedValueOnce({
+          name: 'pkg-b',
+          version: '1.0.0',
+          private: false,
+          publishConfig: { registry: 'https://registry.example.com' },
+        })
+
+      bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
+      const modifyAppDataFn = mockContext.modifyAppData.mock.calls[0][0]
+
+      await expect(
+        modifyAppDataFn({ projectPkg: {} } as unknown as AppData, {
+          cwd: mockCwd,
+        }),
+      ).resolves.toEqual(
+        expect.objectContaining({
+          registry: 'https://registry.example.com/',
+        }),
+      )
+    })
+
+    it('未明确配置时应该拒绝仅部分发布包声明 registry', async () => {
+      ;(
+        getWorkspaces as MockedFunction<typeof getWorkspaces>
+      ).mockResolvedValue(['/test/project/pkg-a', '/test/project/pkg-b'])
+      ;(readJson as MockedFunction<typeof readJson>)
+        .mockResolvedValueOnce({
+          name: 'pkg-a',
+          version: '1.0.0',
+          private: false,
+          publishConfig: { registry: 'https://registry-a.com' },
+        })
+        .mockResolvedValueOnce({
+          name: 'pkg-b',
+          version: '1.0.0',
+          private: false,
+        })
+
+      bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
+      const modifyAppDataFn = mockContext.modifyAppData.mock.calls[0][0]
+
+      await expect(
+        modifyAppDataFn({ projectPkg: {} } as unknown as AppData, {
+          cwd: mockCwd,
+        }),
+      ).rejects.toThrow('Only some publishable package manifests')
     })
 
     it('当没有有效包时应该抛出 AppError', async () => {

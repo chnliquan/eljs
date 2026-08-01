@@ -32,14 +32,21 @@ vi.mock('@eljs/utils', () => ({
   },
   createDebugger: vi.fn(() => vi.fn()),
   deepMerge: vi.fn(),
+  getPackageManager: vi.fn(),
   isPathExistsSync: vi.fn(),
   logger: {
     error: vi.fn(),
     step: vi.fn(),
+    warn: vi.fn(),
   },
   readJsonSync: vi.fn(),
 }))
 vi.mock('../src/default')
+vi.mock('../src/internal/release-lock', () => ({
+  ReleaseLock: {
+    acquire: vi.fn().mockResolvedValue({ release: vi.fn() }),
+  },
+}))
 vi.mock('../src/utils')
 
 // 模拟 console.log
@@ -54,27 +61,71 @@ describe('ReleaseRunner 类测试', () => {
     vi.clearAllMocks()
 
     // 重新设置基本的模拟
-    const { isPathExistsSync, readJsonSync, logger } = requiredModule0
+    const {
+      deepMerge,
+      getPackageManager,
+      isPathExistsSync,
+      readJsonSync,
+      logger,
+    } = requiredModule0
     const { PluginHost } = requiredModule1
     ;(PluginHost as unknown as Mock).mockImplementation(function (
       this: InstanceType<typeof PluginHost>,
       options: ConstructorParameters<typeof PluginHost>[0],
     ) {
       const target = this as unknown as {
+        readonly cwd: string
         runHook: ReturnType<typeof vi.fn>
         constructorOptions: ConstructorParameters<typeof PluginHost>[0]
         load: ReturnType<typeof vi.fn>
         userConfig: Config | null
       }
       target.constructorOptions = options
+      Object.defineProperty(target, 'cwd', {
+        configurable: true,
+        get: () => target.constructorOptions.cwd,
+      })
       target.userConfig = null
       target.load = vi.fn().mockResolvedValue(undefined)
-      target.runHook = vi.fn().mockResolvedValue(undefined)
+      target.runHook = vi
+        .fn()
+        .mockImplementation((_key, options) =>
+          Promise.resolve(options?.initialValue),
+        )
     })
     isPathExistsSync.mockReturnValue(true)
+    getPackageManager.mockResolvedValue('npm')
+    deepMerge.mockReturnValue({
+      cwd: process.cwd(),
+      dryRun: false,
+      git: {
+        requireClean: true,
+        changelog: {
+          filename: 'CHANGELOG.md',
+          placeholder: 'No changes',
+        },
+        independent: false,
+        commit: true,
+        commitMessage: 'chore: release ${version}',
+        push: true,
+        pushArgs: ['--follow-tags'],
+      },
+      npm: {
+        requireOwner: true,
+        networkConcurrency: 8,
+        canary: false,
+        confirm: true,
+      },
+      github: {
+        release: true,
+        mode: 'browser',
+        tokenEnv: 'GITHUB_TOKEN',
+      },
+    })
     readJsonSync.mockReturnValue({ name: 'it-package', version: '1.0.0' })
     logger.error.mockClear()
     logger.step.mockClear()
+    logger.warn.mockClear()
   })
 
   describe('ReleaseRunner 构造函数', () => {
@@ -100,6 +151,14 @@ describe('ReleaseRunner 类测试', () => {
       const runner = new ReleaseRunner({ cwd })
 
       expect(runner).toBeInstanceOf(ReleaseRunner)
+    })
+
+    it('应该将相对工作目录规范化为绝对路径', () => {
+      new ReleaseRunner({ cwd: 'fixtures/project' })
+
+      expect(requiredModule0.isPathExistsSync).toHaveBeenCalledWith(
+        `${process.cwd()}/fixtures/project/package.json`,
+      )
     })
 
     it('应该正确验证 package.json 路径', () => {
@@ -270,26 +329,142 @@ describe('ReleaseRunner 类测试', () => {
       expect(typeof runner.run).toBe('function')
     })
 
-    it('run 方法应该是异步的', () => {
+    it('run 方法应该是异步的', async () => {
       const runner = new ReleaseRunner()
       // 由于模拟环境的限制，检查函数是否返回 Promise 即可
       const result = runner.run()
       expect(result).toBeInstanceOf(Promise)
-      result.catch(() => {}) // 避免未处理的 rejection
+      await result
     })
 
-    it('run 方法应该接受不同参数类型', () => {
-      const runner = new ReleaseRunner()
+    it('run 方法应该接受不同参数类型', async () => {
+      await expect(new ReleaseRunner().run('patch')).resolves.toBeUndefined()
+      await expect(new ReleaseRunner().run('1.0.0')).resolves.toBeUndefined()
+      await expect(new ReleaseRunner().run()).resolves.toBeUndefined()
+    })
 
-      expect(() => {
-        runner.run('patch').catch(() => {})
-        runner.run('1.0.0').catch(() => {})
-        runner.run().catch(() => {})
-      }).not.toThrow()
+    it('应该立即拒绝同一实例上的并发执行', async () => {
+      const runner = new ReleaseRunner()
+      const firstRun = runner.run()
+
+      await expect(runner.run()).rejects.toMatchObject({
+        code: 'PLUGIN_HOST_INVALID_STATE',
+      })
+      await firstRun
+    })
+
+    it('应该检测目标项目的包管理器并传递给应用数据', async () => {
+      const { deepMerge, getPackageManager } = requiredModule0
+      const resolvedConfig = deepMerge() as Config
+      deepMerge.mockReturnValue({ ...resolvedConfig, cwd: '/it' })
+      getPackageManager.mockResolvedValue('yarn')
+      const runner = new ReleaseRunner({ cwd: '/it' })
+
+      await runner.run()
+
+      expect(getPackageManager).toHaveBeenCalledWith('/it')
+      expect(runner.runHook).toHaveBeenCalledWith(
+        'modifyAppData',
+        expect.objectContaining({
+          initialValue: expect.objectContaining({
+            packageManager: 'yarn',
+          }),
+        }),
+      )
+    })
+
+    it('应该优先使用根清单中的 packageManager 声明', async () => {
+      const { deepMerge, getPackageManager, readJsonSync } = requiredModule0
+      const resolvedConfig = deepMerge() as Config
+      deepMerge.mockReturnValue({ ...resolvedConfig, cwd: '/it' })
+      readJsonSync.mockReturnValue({
+        name: 'it-package',
+        packageManager: 'bun@1.3.3',
+        version: '1.0.0',
+      })
+      const runner = new ReleaseRunner({ cwd: '/it' })
+
+      await runner.run()
+
+      expect(getPackageManager).not.toHaveBeenCalled()
+      expect(runner.runHook).toHaveBeenCalledWith(
+        'modifyAppData',
+        expect.objectContaining({
+          initialValue: expect.objectContaining({
+            packageManager: 'bun',
+            packageManagerVariant: 'bun',
+          }),
+        }),
+      )
+    })
+
+    it('应该让显式构造选项覆盖配置文件', async () => {
+      const { deepMerge } = requiredModule0
+      const resolvedConfig = deepMerge() as Config
+      deepMerge.mockClear()
+      deepMerge.mockReturnValue({ ...resolvedConfig, cwd: '/it' })
+      const runner = new ReleaseRunner({
+        cwd: '/it',
+        dryRun: true,
+        git: { commit: false },
+      })
+      ;(
+        runner as unknown as {
+          userConfig: Config
+        }
+      ).userConfig = {
+        dryRun: false,
+        git: { commit: true },
+      }
+
+      await runner.run()
+
+      const mergeArguments = deepMerge.mock.calls[0]
+      expect(mergeArguments[2]).toEqual({
+        dryRun: false,
+        git: { commit: true },
+      })
+      expect(mergeArguments[3]).toEqual(
+        expect.objectContaining({
+          cwd: '/it',
+          dryRun: true,
+          git: { commit: false },
+        }),
+      )
+    })
+
+    it('应该拒绝配置 Hook 在初始化后切换工作目录', async () => {
+      const { deepMerge } = requiredModule0
+      const resolvedConfig = deepMerge() as Config
+      deepMerge.mockReturnValue({ ...resolvedConfig, cwd: '/other' })
+      const runner = new ReleaseRunner({ cwd: '/it' })
+
+      await expect(runner.run()).rejects.toThrow()
+      expect(requiredModule0.chalk.cyan).toHaveBeenCalledWith('/it')
+      expect(requiredModule0.chalk.cyan).toHaveBeenCalledWith('/other')
+      expect(runner.runHook).toHaveBeenCalledWith('onError', {
+        args: {
+          error: expect.anything(),
+          stage: 'resolvingConfig',
+        },
+      })
+      expect(runner.stage).toBe('failed')
     })
   })
 
   describe('ReleaseRunner 错误处理', () => {
+    it('插件加载失败时不应该调用尚未注册完成的错误 Hook', async () => {
+      const runner = new ReleaseRunner()
+      const error = new Error('load failed')
+      const load = (runner as unknown as { load: ReturnType<typeof vi.fn> })
+        .load
+      load.mockRejectedValue(error)
+
+      await expect(runner.run()).rejects.toBe(error)
+      expect(runner.runHook).not.toHaveBeenCalled()
+      expect(runner.stage).toBe('failed')
+    })
+
     it('应该处理文件系统访问错误', () => {
       const { isPathExistsSync } = requiredModule0
       isPathExistsSync.mockImplementation(() => {

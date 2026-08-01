@@ -66,6 +66,11 @@ describe('版本处理工具函数测试', () => {
         expect(isPrerelease('1.0.0')).toBe(false)
         expect(isPrerelease('2.1.3')).toBe(false)
       })
+
+      it('应该识别自定义预发布 ID', () => {
+        expect(isPrerelease('1.0.0-preview.1')).toBe(true)
+        expect(isPrerelease('1.0.0-next.2')).toBe(true)
+      })
     })
 
     describe('isAlphaVersion', () => {
@@ -197,6 +202,14 @@ describe('版本处理工具函数测试', () => {
           prereleaseId: 'beta',
         })
       })
+
+      it('应该规范化带 v 前缀的版本', () => {
+        expect(parseVersion('v1.2.3')).toEqual({
+          version: '1.2.3',
+          isPrerelease: false,
+          prereleaseId: null,
+        })
+      })
     })
   })
 
@@ -263,6 +276,31 @@ describe('版本处理工具函数测试', () => {
           'https://custom-registry.com',
         ])
       })
+
+      it('应该在指定工作目录中读取 npm 配置', async () => {
+        const mockRun = run as MockedFunction<typeof run>
+        mockRun.mockResolvedValue({ stdout: '@it/package@1.0.0' } as Awaited<
+          ReturnType<typeof run>
+        >)
+
+        await isVersionExist(
+          'it-package',
+          '1.0.0',
+          'https://custom-registry.com',
+          '/target/project',
+        )
+
+        expect(mockRun).toHaveBeenCalledWith(
+          'npm',
+          [
+            'view',
+            'it-package@1.0.0',
+            '--registry',
+            'https://custom-registry.com',
+          ],
+          { cwd: '/target/project' },
+        )
+      })
     })
   })
 
@@ -320,6 +358,15 @@ describe('版本处理工具函数测试', () => {
 
       it('应该使用默认预发布 ID', () => {
         expect(getReleaseVersion('1.2.3', 'premajor')).toBe('2.0.0-beta.0')
+      })
+
+      it('无法生成合法版本时应该抛出明确错误', () => {
+        expect(() => getReleaseVersion('invalid', 'patch')).toThrow(
+          'Unable to increment semantic version `invalid`',
+        )
+        expect(() =>
+          getReleaseVersion('1.2.3', 'prerelease', 'preview tag'),
+        ).toThrow('prerelease identifier `preview tag`')
       })
     })
   })

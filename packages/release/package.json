@@ -47,7 +47,11 @@
     "build": "rslib build",
     "clean": "rimraf dist",
     "dev": "rslib build --watch",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json"
+    "lint": "eslint src __tests__ --max-warnings=0",
+    "test": "vitest run packages/release/__tests__",
+    "test:watch": "vitest packages/release/__tests__",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json",
+    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {
     "@eljs/conventional-changelog-preset": "workspace:*",

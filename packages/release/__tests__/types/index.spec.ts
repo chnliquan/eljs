@@ -219,6 +219,7 @@ describe('类型定义测试', () => {
         validPkgRootPaths: [],
         validPkgNames: [],
         packageManager: 'npm',
+        packageManagerVariant: 'npm',
         // 扩展字段
         customField: 'custom value',
       }

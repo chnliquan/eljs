@@ -13,7 +13,7 @@ import {
  * @description 测试 version.ts 版本管理插件功能
  */
 
-import { confirm, logger, prompts } from '@eljs/utils'
+import { confirm, logger, prompts, safeWriteJson } from '@eljs/utils'
 
 import versionPlugin from '../../../src/internal/plugins/version'
 import type { PrereleaseId } from '../../../src/types'
@@ -48,6 +48,7 @@ vi.mock('@eljs/utils', () => ({
   },
   pascalCase: vi.fn(),
   prompts: vi.fn(),
+  safeWriteJson: vi.fn(),
 }))
 
 vi.mock('semver', () => {
@@ -109,6 +110,7 @@ describe('版本插件测试', () => {
           canary: false,
           prerelease: false,
           requireOwner: false,
+          networkConcurrency: 8,
           prereleaseId: undefined,
           publishArgs: [],
         },
@@ -140,9 +142,9 @@ describe('版本插件测试', () => {
       getRemoteDistTag as MockedFunction<typeof getRemoteDistTag>
     ).mockResolvedValue({
       latest: '1.0.0',
-      alpha: '',
-      beta: '',
-      rc: '',
+      alpha: undefined,
+      beta: undefined,
+      rc: undefined,
     })
     ;(getMaxVersion as MockedFunction<typeof getMaxVersion>).mockReturnValue(
       '1.0.0',
@@ -168,7 +170,10 @@ describe('版本插件测试', () => {
     })
     ;(
       updatePackageVersion as MockedFunction<typeof updatePackageVersion>
-    ).mockResolvedValue(undefined)
+    ).mockImplementation(async (_path, pkg, version) => {
+      pkg.version = version
+    })
+    ;(safeWriteJson as MockedFunction<typeof safeWriteJson>).mockResolvedValue()
     ;(
       updatePackageLock as MockedFunction<typeof updatePackageLock>
     ).mockResolvedValue(undefined)
@@ -273,10 +278,15 @@ describe('版本插件测试', () => {
 
       expect(result).toBe('1.1.0')
       expect(mockContext.step).toHaveBeenCalledWith('Incrementing version ...')
-      expect(getRemoteDistTag).toHaveBeenCalledWith(['test-package'], {
-        cwd: '/test/project',
-        registry: 'https://registry.npmjs.org',
-      })
+      expect(getRemoteDistTag).toHaveBeenCalledWith(
+        ['test-package'],
+        {
+          cwd: '/test/project',
+          registry: 'https://registry.npmjs.org',
+        },
+        undefined,
+        8,
+      )
       expect(getReleaseVersion).toHaveBeenCalled()
     })
 
@@ -489,10 +499,15 @@ describe('版本插件测试', () => {
 
       expect(updatePackageVersion).toHaveBeenCalledWith(
         '/test/package.json',
-        { name: 'test-package', version: '1.0.0' },
+        { name: 'test-package', version: '1.1.0' },
         '1.1.0',
         ['test-package'],
+        { write: false },
       )
+      expect(safeWriteJson).toHaveBeenCalledWith('/test/package.json', {
+        name: 'test-package',
+        version: '1.1.0',
+      })
     })
 
     it('应该更新项目根目录 package.json', async () => {
@@ -509,16 +524,38 @@ describe('版本插件测试', () => {
 
       expect(updatePackageVersion).toHaveBeenCalledWith(
         '/test/packages/pkg1/package.json',
-        { name: 'test-package', version: '1.0.0' },
+        { name: 'test-package', version: '1.1.0' },
         '1.1.0',
         ['test-package'],
+        { write: false },
       )
 
       expect(updatePackageVersion).toHaveBeenCalledWith(
         '/test/project/package.json',
-        { name: 'test-project', version: '1.0.0' },
+        { name: 'test-project', version: '1.1.0' },
         '1.1.0',
+        undefined,
+        { write: false },
       )
+    })
+
+    it('dry-run 时只更新内存中的包信息', async () => {
+      mockContext.config.dryRun = true
+
+      await onBumpVersionHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+      })
+
+      expect(updatePackageVersion).toHaveBeenCalledWith(
+        '/test/package.json',
+        { name: 'test-package', version: '1.1.0' },
+        '1.1.0',
+        ['test-package'],
+        { write: false },
+      )
+      expect(safeWriteJson).not.toHaveBeenCalled()
     })
 
     it('不应该重复更新相同的 package.json 文件', async () => {
@@ -534,6 +571,40 @@ describe('版本插件测试', () => {
       await onBumpVersionHandler(versionInfo)
 
       expect(updatePackageVersion).toHaveBeenCalledTimes(1)
+    })
+
+    it('应该在写入前拒绝未对齐的包数据', async () => {
+      mockContext.appData.pkgJsonPaths = []
+
+      await expect(
+        onBumpVersionHandler({
+          version: '1.1.0',
+          isPrerelease: false,
+          prereleaseId: null,
+        }),
+      ).rejects.toThrow('package names, paths, and manifests are not aligned')
+      expect(updatePackageVersion).not.toHaveBeenCalled()
+    })
+
+    it('根清单位于 workspace 列表非首位时也不应该重复更新', async () => {
+      mockContext.appData.projectPkgJsonPath = '/test/project/package.json'
+      mockContext.appData.pkgJsonPaths = [
+        '/test/packages/pkg1/package.json',
+        '/test/project/package.json',
+      ]
+      mockContext.appData.pkgNames = ['pkg1', 'test-project']
+      mockContext.appData.pkgs = [
+        { name: 'pkg1', version: '1.0.0' },
+        { name: 'test-project', version: '1.0.0' },
+      ]
+
+      await onBumpVersionHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+      })
+
+      expect(updatePackageVersion).toHaveBeenCalledTimes(2)
     })
 
     it('应该处理多个包的版本更新', async () => {
@@ -599,6 +670,7 @@ describe('版本插件测试', () => {
         'test-package',
         '1.1.0',
         'https://registry.npmjs.org',
+        '/test/project',
       )
     })
 
@@ -616,12 +688,14 @@ describe('版本插件测试', () => {
         'pkg1',
         '1.1.0',
         'https://registry.npmjs.org',
+        '/test/project',
       )
       expect(isVersionExist).toHaveBeenNthCalledWith(
         2,
         'pkg2',
         '1.1.0',
         'https://registry.npmjs.org',
+        '/test/project',
       )
     })
 
@@ -708,6 +782,30 @@ describe('版本插件测试', () => {
       expect(logger.warn).toHaveBeenCalled()
     })
 
+    it('首个包尚未发布时也应该通过本地标签识别重试', async () => {
+      mockContext.appData.pkgs[0].version = '1.1.0'
+      ;(
+        isVersionExist as MockedFunction<typeof isVersionExist>
+      ).mockResolvedValue(false)
+      ;(
+        isGitTagAtHead as MockedFunction<typeof isGitTagAtHead>
+      ).mockResolvedValue(true)
+
+      await expect(
+        onBeforeBumpVersionHandler({
+          version: '1.1.0',
+          isPrerelease: false,
+          prereleaseId: null,
+        }),
+      ).resolves.toBeUndefined()
+
+      expect(mockContext.appData.existingPkgNames).toEqual([])
+      expect(mockContext.appData.isReleaseRetry).toBe(true)
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Retrying release from the existing local release commit and tags.',
+      )
+    })
+
     it('当版本无效时应该抛出错误', async () => {
       // 模拟 semver.valid 返回 null (无效版本)
 
@@ -750,10 +848,14 @@ describe('版本插件测试', () => {
       await onAfterBumpVersionHandler(versionInfo)
 
       expect(mockContext.step).toHaveBeenCalledWith('Updating Lockfile ...')
-      expect(updatePackageLock).toHaveBeenCalledWith('npm', {
-        cwd: '/test/project',
-        verbose: true,
-      })
+      expect(updatePackageLock).toHaveBeenCalledWith(
+        'npm',
+        {
+          cwd: '/test/project',
+          verbose: true,
+        },
+        undefined,
+      )
     })
 
     it('应该使用正确的包管理器', async () => {
@@ -766,10 +868,34 @@ describe('版本插件测试', () => {
 
       await onAfterBumpVersionHandler(versionInfo)
 
-      expect(updatePackageLock).toHaveBeenCalledWith('pnpm', {
-        cwd: '/test/project',
-        verbose: true,
+      expect(updatePackageLock).toHaveBeenCalledWith(
+        'pnpm',
+        {
+          cwd: '/test/project',
+          verbose: true,
+        },
+        undefined,
+      )
+    })
+
+    it('应该把包管理器命令变体传给锁文件更新函数', async () => {
+      mockContext.appData.packageManager = 'yarn'
+      mockContext.appData.packageManagerVariant = 'yarn-berry'
+
+      await onAfterBumpVersionHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
       })
+
+      expect(updatePackageLock).toHaveBeenCalledWith(
+        'yarn',
+        {
+          cwd: '/test/project',
+          verbose: true,
+        },
+        'yarn-berry',
+      )
     })
 
     it('应该跳过金丝雀版本的锁文件更新', async () => {
@@ -789,6 +915,19 @@ describe('版本插件测试', () => {
       expect(updatePackageLock).not.toHaveBeenCalled()
     })
 
+    it('dry-run 时不应该更新锁文件', async () => {
+      mockContext.config.dryRun = true
+
+      await onAfterBumpVersionHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+      })
+
+      expect(mockContext.step).not.toHaveBeenCalled()
+      expect(updatePackageLock).not.toHaveBeenCalled()
+    })
+
     it('应该处理锁文件更新失败', async () => {
       ;(
         updatePackageLock as MockedFunction<typeof updatePackageLock>
@@ -803,6 +942,37 @@ describe('版本插件测试', () => {
       await expect(onAfterBumpVersionHandler(versionInfo)).rejects.toThrow(
         '锁文件更新失败',
       )
+    })
+
+    it('锁文件更新失败时应该恢复清单文件和内存状态', async () => {
+      const versionInfo = {
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+      }
+      const onBeforeBumpVersionHandler =
+        mockContext.onBeforeBumpVersion.mock.calls[0][0]
+      const onBumpVersionHandler = mockContext.onBumpVersion.mock.calls[0][0]
+      await onBeforeBumpVersionHandler(versionInfo)
+      await onBumpVersionHandler(versionInfo)
+      ;(
+        updatePackageLock as MockedFunction<typeof updatePackageLock>
+      ).mockRejectedValue(new Error('锁文件更新失败'))
+
+      await expect(onAfterBumpVersionHandler(versionInfo)).rejects.toThrow(
+        '锁文件更新失败',
+      )
+
+      expect(safeWriteJson).toHaveBeenCalledWith(
+        '/test/package.json',
+        expect.objectContaining({ version: '1.0.0' }),
+      )
+      expect(safeWriteJson).toHaveBeenCalledWith(
+        '/test/project/package.json',
+        expect.objectContaining({ version: '1.0.0' }),
+      )
+      expect(mockContext.appData.pkgs[0].version).toBe('1.0.0')
+      expect(mockContext.appData.projectPkg.version).toBe('1.0.0')
     })
   })
 
@@ -965,11 +1135,59 @@ describe('版本插件测试', () => {
 
       await getIncrementVersionHandler({ releaseTypeOrVersion: 'minor' })
 
-      expect(getRemoteDistTag).toHaveBeenCalledWith(['test-package'], {
-        cwd: '/test/project',
-        registry: 'https://registry.npmjs.org',
-      })
+      expect(getRemoteDistTag).toHaveBeenCalledWith(
+        ['test-package'],
+        {
+          cwd: '/test/project',
+          registry: 'https://registry.npmjs.org',
+        },
+        undefined,
+        8,
+      )
       expect(getMaxVersion).toHaveBeenCalled()
+    })
+
+    it('应该将所有工作区包的本地版本纳入版本基线', async () => {
+      mockContext.config.npm.confirm = false
+      mockContext.appData.pkgs = [
+        { name: 'pkg-a', version: '1.0.0' },
+        { name: 'pkg-b', version: '1.4.0' },
+      ]
+
+      await getIncrementVersionHandler({ releaseTypeOrVersion: 'minor' })
+
+      expect(getMaxVersion).toHaveBeenNthCalledWith(
+        1,
+        '1.0.0',
+        '1.0.0',
+        '1.4.0',
+      )
+    })
+
+    it('应该查询自定义预发布 ID 对应的远程 dist tag', async () => {
+      mockContext.config.npm.confirm = false
+      mockContext.config.npm.prereleaseId = 'preview'
+      ;(
+        getRemoteDistTag as MockedFunction<typeof getRemoteDistTag>
+      ).mockResolvedValue({
+        latest: '1.0.0',
+        alpha: undefined,
+        beta: undefined,
+        rc: undefined,
+        preview: '1.1.0-preview.2',
+      })
+
+      await getIncrementVersionHandler({ releaseTypeOrVersion: undefined })
+
+      expect(getRemoteDistTag).toHaveBeenCalledWith(
+        ['test-package'],
+        {
+          cwd: '/test/project',
+          registry: 'https://registry.npmjs.org',
+        },
+        ['latest', 'alpha', 'beta', 'rc', 'preview'],
+        8,
+      )
     })
 
     it('应该处理获取远程版本失败', async () => {

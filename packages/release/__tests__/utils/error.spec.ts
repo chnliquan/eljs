@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
  * @description 测试 AppError 错误类功能
  */
 
-import { AppError } from '../../src/utils/error'
+import { AppError, ReleasePublishError } from '../../src/utils/error'
 
 describe('应用错误类测试', () => {
   describe('AppError 构造函数', () => {
@@ -145,5 +145,44 @@ describe('应用错误类测试', () => {
       const error = new AppError('有效消息')
       expect(typeof error.message).toBe('string')
     })
+  })
+})
+
+describe('ReleasePublishError 错误类测试', () => {
+  it('应该保留结构化发布进度和原始错误', () => {
+    const cause = new Error('registry unavailable')
+    const error = new ReleasePublishError(
+      {
+        failedPackage: 'app',
+        version: '1.2.0',
+        publishedPackages: ['core'],
+        unpublishedPackages: ['app', 'cli'],
+      },
+      cause,
+    )
+
+    expect(error).toBeInstanceOf(AppError)
+    expect(error.name).toBe('ReleasePublishError')
+    expect(error.cause).toBe(cause)
+    expect(error.details).toEqual({
+      failedPackage: 'app',
+      version: '1.2.0',
+      publishedPackages: ['core'],
+      unpublishedPackages: ['app', 'cli'],
+    })
+    expect(error.message).toContain('Published before failure: core@1.2.0')
+  })
+
+  it('应该冻结进度数据避免调用方误改', () => {
+    const error = new ReleasePublishError({
+      failedPackage: 'app',
+      version: '1.2.0',
+      publishedPackages: ['core'],
+      unpublishedPackages: ['app'],
+    })
+
+    expect(Object.isFrozen(error.details)).toBe(true)
+    expect(Object.isFrozen(error.details.publishedPackages)).toBe(true)
+    expect(Object.isFrozen(error.details.unpublishedPackages)).toBe(true)
   })
 })

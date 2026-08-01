@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, expectTypeOf, it } from 'vitest'
 import { defineConfig } from '../src/define'
 import type { Config } from '../src/types'
 
@@ -53,6 +53,15 @@ describe('defineConfig', () => {
       }
 
       expect(verify).toBeTypeOf('function')
+    })
+
+    it('应该保留配置对象的字面量类型', () => {
+      const config = defineConfig({
+        template: 'react-template',
+      })
+
+      expectTypeOf(config.template).toEqualTypeOf<'react-template'>()
+      expect(config.template).toBe('react-template')
     })
 
     it('应该保持输入对象的类型和属性', () => {

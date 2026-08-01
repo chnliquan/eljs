@@ -2,6 +2,13 @@ import { run, type RunCommandOptions } from '@eljs/utils'
 
 /**
  * 判断 Git 标签是否指向当前提交
+ *
+ * @remarks
+ * 标签不存在或 Git 命令执行失败时返回 `false`
+ *
+ * @param tagName - 待检查的 Git 标签
+ * @param options - Git 命令执行选项
+ * @returns 标签解析出的提交是否与 HEAD 相同
  */
 export async function isGitTagAtHead(
   tagName: string,

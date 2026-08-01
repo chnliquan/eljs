@@ -57,6 +57,10 @@ async function main() {
     .version(pkg.version, '-v, --version', 'Output the current version')
     .argument('[version]', 'Specify the bump version', checkVersion)
     .option('--cwd <cwd>', 'Specify the working directory')
+    .option(
+      '--dry-run',
+      'Validate and preview without publishing or modifying project files',
+    )
     .option('--git.independent', 'Generate git tag independent')
     .option('--no-git.requireClean', 'Skip git working tree clean check')
     .option('--no-git.changelog', 'Skip changelog generation')
@@ -68,10 +72,20 @@ async function main() {
     )
     .option('--npm.prerelease', 'Specify the release type as prerelease')
     .option('--npm.canary', 'Specify the release type as canary')
+    .option('--npm.registry <registry>', 'Specify the npm registry')
     .option('--no-npm.requireOwner', 'Skip npm owner check')
+    .option(
+      '--npm.networkConcurrency <count>',
+      'Limit concurrent npm registry requests',
+      parsePositiveInteger,
+    )
     .option('--no-npm.confirm', 'Skip confirm bump version')
     .option('--npm.prereleaseId <prereleaseId>', 'Specify the prereleaseId')
     .option('--no-github.release', 'Skip github release')
+    .option(
+      '--github.mode <mode>',
+      'Create GitHub releases through browser or api',
+    )
     .action(async (version, opts) => {
       debug?.(`version:`, version)
       debug?.(`opts:%O`, opts)
@@ -84,8 +98,8 @@ async function main() {
   await program.parseAsync(process.argv)
 }
 
-function checkVersion(value: ReleaseType) {
-  if (RELEASE_TYPES.includes(value)) {
+function checkVersion(value: string): string {
+  if (RELEASE_TYPES.includes(value as ReleaseType)) {
     return value
   }
 
@@ -101,10 +115,22 @@ function checkVersion(value: ReleaseType) {
   return value
 }
 
-interface NestedObject {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any
+function parsePositiveInteger(value: string): number {
+  const number = Number(value)
+
+  if (!Number.isInteger(number) || number < 1) {
+    throw new InvalidArgumentError('Expected a positive integer.')
+  }
+
+  return number
 }
+
+/**
+ * CLI 点分路径选项解析期间使用的递归对象容器
+ *
+ * @internal
+ */
+type NestedObject = Record<string, unknown>
 
 function parseOptions<T extends NestedObject = NestedObject>(
   options: T,
@@ -126,12 +152,14 @@ function parseOptions<T extends NestedObject = NestedObject>(
         current[key] = value
       } else {
         current[key] = current[key] || {}
-        current = current[key]
+        current = current[key] as NestedObject
       }
     }
   }
 
-  const { git = {}, npm = {} } = result
+  const git = isNestedObject(result.git) ? result.git : {}
+  const npm = isNestedObject(result.npm) ? result.npm : {}
+  const github = isNestedObject(result.github) ? result.github : {}
 
   for (const key of Object.keys(git)) {
     if (
@@ -148,5 +176,13 @@ function parseOptions<T extends NestedObject = NestedObject>(
     }
   }
 
+  if (github.release === true) {
+    Reflect.deleteProperty(github, 'release')
+  }
+
   return result
+}
+
+function isNestedObject(value: unknown): value is NestedObject {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }

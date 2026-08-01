@@ -100,6 +100,10 @@ describe('默认配置测试', () => {
       expect(defaultConfig.npm?.confirm).toBe(true)
     })
 
+    it('应该默认限制为 8 个并发 registry 请求', () => {
+      expect(defaultConfig.npm?.networkConcurrency).toBe(8)
+    })
+
     it('不应该设置预发布相关配置', () => {
       expect(defaultConfig.npm?.prerelease).toBeUndefined()
       expect(defaultConfig.npm?.prereleaseId).toBeUndefined()
@@ -118,6 +122,11 @@ describe('默认配置测试', () => {
 
     it('应该启用 GitHub 发布', () => {
       expect(defaultConfig.github?.release).toBe(true)
+    })
+
+    it('应该默认使用浏览器模式和 GITHUB_TOKEN', () => {
+      expect(defaultConfig.github?.mode).toBe('browser')
+      expect(defaultConfig.github?.tokenEnv).toBe('GITHUB_TOKEN')
     })
   })
 

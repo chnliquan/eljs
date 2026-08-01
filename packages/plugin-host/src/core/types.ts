@@ -6,8 +6,6 @@ import type { Plugin } from '../plugin/plugin'
 export interface PluginHostOptions {
   /**
    * 工作目录
-   *
-   * @defaultValue `process.cwd()`
    */
   cwd: string
   /**

@@ -5,6 +5,13 @@
 - When creating or modifying a public API, add or update standard TSDoc for
   exported classes, interfaces, type aliases, functions, and enums, as well as
   public extension points intended for package consumers.
+- When creating or modifying an internal declaration, add concise TSDoc when it
+  defines serialized or persisted data, a trust boundary, lifecycle or
+  concurrency state, recovery semantics, a compatibility contract, or a
+  cross-module invariant. Internal visibility alone is not a reason to omit
+  documentation from declarations such as lock metadata or protocol payloads.
+- Use `@internal` when an exported declaration exists only for package-internal
+  module boundaries and is not part of the consumer-facing API.
 - Document the API contract, lifecycle, ordering, errors, side effects, and
   non-obvious constraints where relevant. Do not add comments that only
   restate an identifier or its TypeScript type.
@@ -16,15 +23,17 @@
   English full stop (`。` or `.`).
 - Update existing TSDoc whenever behavior or signatures change. Match the
   language used by the surrounding API documentation.
-- Do not add TSDoc to internal implementation details or obvious members only
-  to increase documentation coverage.
+- Do not add TSDoc to straightforward local helpers, incidental data shapes, or
+  obvious members only to increase documentation coverage. For qualifying
+  internal declarations, document the contract and non-obvious fields without
+  narrating every property.
 - Avoid `{@link Class.instanceMember}` references because TypeScript may resolve
   them as static namespace members. Use inline code for instance members or
   link to the containing declaration.
 - Before finishing, run type checks for affected packages and ESLint over the
   changed source files. `tsdoc/syntax` validates comments that are present;
-  review the diff explicitly to ensure newly added or changed public APIs are
-  documented.
+  review the diff explicitly to ensure newly added or changed public APIs and
+  qualifying internal declarations are documented.
 
 ## Generated code comments
 

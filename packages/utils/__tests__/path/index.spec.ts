@@ -20,6 +20,7 @@ import {
   getLernaWorkspaceRoot,
   getNpmWorkspaceRoot,
   getPnpmWorkspaceRoot,
+  getWorkspaceRoot,
   getWorkspaces,
   getYarnWorkspaceRoot,
   tryPaths,
@@ -246,11 +247,27 @@ describe('路径工具函数', () => {
     })
 
     it('应该检测bun工作区', async () => {
-      mockFindUp.mockResolvedValue('/project/bun.lockb')
+      mockFindUp.mockResolvedValue('/project/bun.lock')
 
       const result = await getBunWorkspaceRoot('/project/sub')
 
       expect(result).toBe('/project')
+      expect(mockFindUp).toHaveBeenCalledWith(['bun.lock', 'bun.lockb'], {
+        cwd: '/project/sub',
+      })
+    })
+
+    it('工作区根目录检测应该包含 Bun 且优先于 npm', async () => {
+      mockFindUp
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce('/project/bun.lock')
+
+      const result = await getWorkspaceRoot('/project/sub')
+
+      expect(result).toBe('/project')
+      expect(mockFindUp).toHaveBeenCalledTimes(4)
     })
 
     it('应该在找不到时返回空字符串', async () => {

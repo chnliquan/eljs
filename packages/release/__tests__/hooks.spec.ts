@@ -17,6 +17,7 @@ describe('Release Hook Schema', () => {
       'onBeforeRelease',
       'onRelease',
       'onAfterRelease',
+      'onError',
     ])
     expect(Object.isFrozen(releaseHookSchema)).toBe(true)
   })

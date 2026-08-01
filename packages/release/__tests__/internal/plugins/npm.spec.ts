@@ -29,6 +29,16 @@ interface NpmTestApi {
       handler: (args: { releaseTypeOrVersion?: string }) => Promise<void>,
     ) => void
   >
+  onBeforeBumpVersion: MockedFunction<
+    (
+      handler: (args: {
+        version: string
+        isPrerelease: boolean
+        prereleaseId: PrereleaseId | null
+      }) => void,
+      options?: { stage?: number },
+    ) => void
+  >
   onRelease: MockedFunction<
     (
       handler: (args: {
@@ -55,12 +65,18 @@ interface NpmTestApi {
     existingPkgNames?: string[]
     registry?: string
     packageManager: string
+    packageManagerVariant: string
   }
   cwd: string
 }
 
 // 全局类型定义
 type OnCheckHandler = (args: { releaseTypeOrVersion?: string }) => Promise<void>
+type OnBeforeBumpVersionHandler = (args: {
+  version: string
+  isPrerelease: boolean
+  prereleaseId: PrereleaseId | null
+}) => void
 type OnReleaseHandler = (args: {
   version: string
   isPrerelease: boolean
@@ -94,6 +110,32 @@ vi.mock('../../../src/utils', () => ({
       this.name = 'AppError'
     }
   },
+  ReleasePublishError: class ReleasePublishError extends Error {
+    public readonly details: Record<string, unknown>
+
+    public constructor(
+      details: {
+        failedPackage: string
+        version: string
+        publishedPackages: string[]
+        unpublishedPackages: string[]
+      },
+      options?: unknown,
+    ) {
+      const published = details.publishedPackages
+        .map(name => `${name}@${details.version}`)
+        .join(', ')
+      const unpublished = details.unpublishedPackages
+        .map(name => `${name}@${details.version}`)
+        .join(', ')
+      super(
+        `Failed to publish ${details.failedPackage}@${details.version}. Published before failure: ${published || 'none'}. Not published: ${unpublished}. Git changes were not pushed.`,
+      )
+      this.name = 'ReleasePublishError'
+      this.details = details
+      this.cause = options
+    }
+  },
   syncCnpm: vi.fn(),
 }))
 
@@ -103,11 +145,13 @@ describe('NPM 插件测试', () => {
   beforeEach(() => {
     mockContext = {
       onCheck: vi.fn(),
+      onBeforeBumpVersion: vi.fn(),
       onRelease: vi.fn(),
       step: vi.fn(),
       config: {
         npm: {
           requireOwner: true,
+          networkConcurrency: 8,
         },
         git: {
           requireClean: true,
@@ -131,6 +175,7 @@ describe('NPM 插件测试', () => {
         validPkgRootPaths: ['/test/package'],
         pkgs: [{ name: 'test-package', version: '1.1.0' }],
         packageManager: 'npm',
+        packageManagerVariant: 'npm',
       },
       cwd: '/test/project',
     }
@@ -155,6 +200,10 @@ describe('NPM 插件测试', () => {
       npmPlugin(mockContext as unknown as ReleasePluginContext)
 
       expect(mockContext.onCheck).toHaveBeenCalledWith(expect.any(Function))
+      expect(mockContext.onBeforeBumpVersion).toHaveBeenCalledWith(
+        expect.any(Function),
+        { stage: 10 },
+      )
       expect(mockContext.onRelease).toHaveBeenCalledWith(expect.any(Function), {
         stage: 0,
       })
@@ -197,6 +246,41 @@ describe('NPM 插件测试', () => {
       )
     })
 
+    it('应该使用发布 registry 校验当前用户和包所有者', async () => {
+      mockContext.appData.registry = 'https://registry.example.com'
+      ;(run as MockedFunction<typeof run>)
+        .mockResolvedValueOnce({
+          stdout: 'test-user',
+          stderr: '',
+        } as Awaited<ReturnType<typeof run>>)
+        .mockResolvedValueOnce({
+          stdout: 'test-user <test@example.com>',
+          stderr: '',
+        } as Awaited<ReturnType<typeof run>>)
+
+      await onCheckHandler({ releaseTypeOrVersion: 'minor' })
+
+      expect(getNpmUser).not.toHaveBeenCalled()
+      expect(run).toHaveBeenNthCalledWith(
+        1,
+        'npm',
+        ['whoami', '--registry', 'https://registry.example.com'],
+        { cwd: '/test/project' },
+      )
+      expect(run).toHaveBeenNthCalledWith(
+        2,
+        'npm',
+        [
+          'owner',
+          'ls',
+          'test-package',
+          '--registry',
+          'https://registry.example.com',
+        ],
+        { cwd: '/test/project' },
+      )
+    })
+
     it('应该处理包不存在的情况', async () => {
       const notFoundError = new Error('npm ERR! 404 Not Found')
       notFoundError.message = 'npm ERR! 404 Not Found - test-package not found'
@@ -214,6 +298,43 @@ describe('NPM 插件测试', () => {
       await onCheckHandler({ releaseTypeOrVersion: 'minor' })
 
       expect(getNpmUser).not.toHaveBeenCalled()
+      expect(run).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('onBeforeBumpVersion 钩子测试', () => {
+    let onBeforeBumpVersionHandler: OnBeforeBumpVersionHandler
+
+    beforeEach(() => {
+      npmPlugin(mockContext as unknown as ReleasePluginContext)
+      onBeforeBumpVersionHandler = mockContext.onBeforeBumpVersion.mock
+        .calls[0][0] as OnBeforeBumpVersionHandler
+    })
+
+    it('应该在写入版本文件前拒绝循环运行时依赖', () => {
+      mockContext.appData.validPkgNames = ['pkg1', 'pkg2']
+      mockContext.appData.pkgNames = ['pkg1', 'pkg2']
+      mockContext.appData.validPkgRootPaths = ['/test/pkg1', '/test/pkg2']
+      mockContext.appData.pkgs = [
+        {
+          name: 'pkg1',
+          version: '1.1.0',
+          dependencies: { pkg2: 'workspace:*' },
+        },
+        {
+          name: 'pkg2',
+          version: '1.1.0',
+          dependencies: { pkg1: 'workspace:*' },
+        },
+      ]
+
+      expect(() =>
+        onBeforeBumpVersionHandler({
+          version: '1.1.0',
+          isPrerelease: false,
+          prereleaseId: null,
+        }),
+      ).toThrow('circular runtime dependency')
       expect(run).not.toHaveBeenCalled()
     })
   })
@@ -250,6 +371,69 @@ describe('NPM 插件测试', () => {
       )
     })
 
+    it('应该使用项目包管理器发布以正确转换 workspace 协议', async () => {
+      mockContext.appData.packageManager = 'yarn'
+      mockContext.appData.packageManagerVariant = 'yarn-classic'
+
+      await onReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: 'test',
+      })
+
+      expect(run).toHaveBeenCalledWith(
+        'yarn',
+        expect.arrayContaining(['publish']),
+        expect.objectContaining({ cwd: '/test/package' }),
+      )
+    })
+
+    it('Yarn Berry 应该使用 yarn npm publish', async () => {
+      mockContext.appData.packageManager = 'yarn'
+      mockContext.appData.packageManagerVariant = 'yarn-berry'
+      mockContext.appData.registry = 'https://registry.example.com'
+
+      await onReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: 'test',
+      })
+
+      expect(run).toHaveBeenCalledWith(
+        'yarn',
+        expect.not.arrayContaining(['--registry']),
+        expect.objectContaining({
+          cwd: '/test/package',
+          env: {
+            YARN_NPM_PUBLISH_REGISTRY: 'https://registry.example.com',
+          },
+        }),
+      )
+      expect(run).toHaveBeenCalledWith(
+        'yarn',
+        expect.arrayContaining(['npm', 'publish']),
+        expect.any(Object),
+      )
+    })
+
+    it('dry-run 时应该输出发布计划且不执行 npm publish', async () => {
+      mockContext.config.dryRun = true
+
+      await onReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: 'test',
+      })
+
+      expect(run).not.toHaveBeenCalled()
+      expect(logger.info).toHaveBeenCalledWith(
+        'Would publish [cyan]test-package@1.1.0[/cyan] from /test/package.',
+      )
+    })
+
     it('应该为预发布版本使用 tag', async () => {
       mockContext.appData.pkgs[0].version = '1.1.0-alpha.1'
       const versionInfo = {
@@ -267,6 +451,23 @@ describe('NPM 插件测试', () => {
         expect.objectContaining({
           cwd: '/test/package',
         }),
+      )
+    })
+
+    it('数字型预发布版本应该使用安全的 next tag', async () => {
+      mockContext.appData.pkgs[0].version = '1.1.0-1'
+
+      await onReleaseHandler({
+        version: '1.1.0-1',
+        isPrerelease: true,
+        prereleaseId: null,
+        changelog: 'test',
+      })
+
+      expect(run).toHaveBeenCalledWith(
+        'npm',
+        expect.arrayContaining(['publish', '--tag', 'next']),
+        expect.objectContaining({ cwd: '/test/package' }),
       )
     })
 
@@ -358,6 +559,41 @@ describe('NPM 插件测试', () => {
           changelog: 'test',
         }),
       ).rejects.toThrow('circular runtime dependency')
+      expect(run).not.toHaveBeenCalled()
+    })
+
+    it('应该在发布前拒绝重复的 workspace 包名', async () => {
+      mockContext.appData.validPkgNames = ['pkg1']
+      mockContext.appData.pkgNames = ['pkg1', 'pkg1']
+      mockContext.appData.validPkgRootPaths = ['/test/pkg1']
+      mockContext.appData.pkgs = [
+        { name: 'pkg1', version: '1.1.0' },
+        { name: 'pkg1', version: '1.1.0' },
+      ]
+
+      await expect(
+        onReleaseHandler({
+          version: '1.1.0',
+          isPrerelease: false,
+          prereleaseId: null,
+          changelog: 'test',
+        }),
+      ).rejects.toThrow('workspace package names must be unique')
+      expect(run).not.toHaveBeenCalled()
+    })
+
+    it('应该在发布前拒绝未对齐的包名和清单', async () => {
+      mockContext.appData.pkgNames = ['pkg1', 'pkg2']
+      mockContext.appData.pkgs = [{ name: 'pkg1', version: '1.1.0' }]
+
+      await expect(
+        onReleaseHandler({
+          version: '1.1.0',
+          isPrerelease: false,
+          prereleaseId: null,
+          changelog: 'test',
+        }),
+      ).rejects.toThrow('package names and manifests are not aligned')
       expect(run).not.toHaveBeenCalled()
     })
 
@@ -473,6 +709,38 @@ describe('NPM 插件测试', () => {
         'Published before failure: core@1.1.0. Not published: app@1.1.0, cli@1.1.0.',
       )
       expect(run).toHaveBeenCalledTimes(2)
+    })
+
+    it('发布中断错误应该提供结构化恢复进度', async () => {
+      mockContext.appData.validPkgNames = ['core', 'app']
+      mockContext.appData.pkgNames = ['core', 'app']
+      mockContext.appData.validPkgRootPaths = ['/test/core', '/test/app']
+      mockContext.appData.pkgs = [
+        { name: 'core', version: '1.1.0' },
+        { name: 'app', version: '1.1.0' },
+      ]
+      ;(run as MockedFunction<typeof run>)
+        .mockResolvedValueOnce({ stdout: '' } as Awaited<
+          ReturnType<typeof run>
+        >)
+        .mockRejectedValueOnce(new Error('registry unavailable'))
+
+      const error = await onReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: 'test',
+      }).catch(value => value)
+
+      expect(error).toMatchObject({
+        name: 'ReleasePublishError',
+        details: {
+          failedPackage: 'app',
+          version: '1.1.0',
+          publishedPackages: ['core'],
+          unpublishedPackages: ['app'],
+        },
+      })
     })
   })
 

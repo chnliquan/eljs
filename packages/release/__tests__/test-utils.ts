@@ -96,6 +96,7 @@ export function createMockAppData(
     validPkgRootPaths: ['/it'],
     validPkgNames: ['it-project'],
     packageManager: 'npm',
+    packageManagerVariant: 'npm',
     ...overrides,
   }
 }

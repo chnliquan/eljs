@@ -54,10 +54,12 @@ export async function getNpmWorkspaceRoot(cwd: string): Promise<string> {
 
 /**
  * 获取 bun 工作目录根路径
+ *
  * @param cwd - 当前工作目录
+ * @returns 最近的 Bun 锁文件所在目录，未找到时返回空字符串
  */
 export async function getBunWorkspaceRoot(cwd: string): Promise<string> {
-  const lock = await findUp(['bun.lockb'], {
+  const lock = await findUp(['bun.lock', 'bun.lockb'], {
     cwd,
   })
   return lock ? path.dirname(lock) : ''
@@ -65,13 +67,16 @@ export async function getBunWorkspaceRoot(cwd: string): Promise<string> {
 
 /**
  * 获取工作区根目录
+ *
  * @param cwd - 当前工作目录
+ * @returns 最近的受支持工作区根目录，未找到时返回空字符串
  */
 export async function getWorkspaceRoot(cwd: string): Promise<string> {
   return (
     (await getPnpmWorkspaceRoot(cwd)) ||
     (await getYarnWorkspaceRoot(cwd)) ||
     (await getLernaWorkspaceRoot(cwd)) ||
+    (await getBunWorkspaceRoot(cwd)) ||
     (await getNpmWorkspaceRoot(cwd))
   )
 }

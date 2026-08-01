@@ -51,6 +51,14 @@ const PLUGIN_API_RESERVED_PROPERTY_NAMES = (() => {
 })()
 
 /**
+ * 在 TypeScript 5.0 至 5.3 中兼容内置 `NoInfer` 的延迟推导类型
+ *
+ * @typeParam Value - 不参与当前位置类型推导的值类型
+ * @internal
+ */
+type NoInferCompat<Value> = [Value][Value extends unknown ? 0 : never]
+
+/**
  * 合并核心插件 API、Schema 注册 API 和 Runner 扩展能力
  *
  * @remarks
@@ -849,7 +857,7 @@ export abstract class PluginHost<
    */
   public async runHook<Key extends keyof Schema & string>(
     key: Key,
-    ...args: HookRunArguments<Schema[NoInfer<Key>]>
+    ...args: HookRunArguments<Schema[NoInferCompat<Key>]>
   ): Promise<HookRunResult<Schema[Key]>> {
     if (this._state !== PluginHostState.Ready) {
       throw new PluginHostError(

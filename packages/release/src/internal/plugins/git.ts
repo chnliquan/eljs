@@ -9,7 +9,7 @@ import {
   logger,
   normalizeArgs,
   readFile,
-  writeFile,
+  safeWriteFile,
 } from '@eljs/utils'
 import { EOL } from 'node:os'
 import path from 'node:path'
@@ -45,7 +45,7 @@ export default definePlugin(context => {
 
     if (requireBranch && context.appData.branch !== requireBranch) {
       throw new AppError(
-        `Require branch ${requireBranch}\`, but got ${chalk.cyan(context.appData.branch)}.`,
+        `Required branch ${chalk.cyan(requireBranch)}, but got ${chalk.cyan(context.appData.branch)}.`,
       )
     }
   })
@@ -70,7 +70,12 @@ export default definePlugin(context => {
   )
 
   context.onBeforeRelease(async ({ changelog }) => {
-    if (!changelog || !context.config.git.changelog) {
+    if (
+      !changelog ||
+      !context.config.git.changelog ||
+      context.appData.isReleaseRetry ||
+      context.appData.existingPkgNames?.length
+    ) {
       return
     }
 
@@ -79,33 +84,47 @@ export default definePlugin(context => {
 
     context.step(`Writing changelog to ${changelogFile} ...`)
 
+    if (context.config.dryRun) {
+      return
+    }
+
     if (changelog.indexOf('###') === -1) {
-      changelog = changelog.replace(new RegExp(EOL, 'g'), '')
-      changelog += `${EOL}${EOL}${placeholder}`
+      changelog = `${changelog.trim()}${EOL}${EOL}${placeholder}`
     }
 
     if (await isPathExists(changelogFile)) {
       const remain = (await readFile(changelogFile)).trim()
-      changelog = remain.length
-        ? remain.replace(
-            /# Change\s?Log/,
-            `# ChangeLog ${EOL}${EOL}${changelog}`,
-          )
-        : `# ChangeLog ${EOL}${EOL}${changelog}`
+      const titlePattern = /^#\s+.+$/m
+
+      if (!remain.length) {
+        changelog = `# ChangeLog${EOL}${EOL}${changelog}`
+      } else if (titlePattern.test(remain)) {
+        changelog = remain.replace(
+          titlePattern,
+          title => `${title}${EOL}${EOL}${changelog}`,
+        )
+      } else {
+        changelog = `# ChangeLog${EOL}${EOL}${changelog}${EOL}${EOL}${remain}`
+      }
     } else {
-      changelog = `# ChangeLog ${EOL}${EOL}${changelog}`
+      changelog = `# ChangeLog${EOL}${EOL}${changelog}`
     }
 
-    await writeFile(changelogFile, changelog)
+    await safeWriteFile(changelogFile, changelog)
   })
 
   context.onRelease(
     async ({ version }) => {
       const { independent, commit, commitMessage, commitArgs } =
         context.config.git
-      const { pkgNames } = context.appData
+      const { validPkgNames } = context.appData
 
-      if (!commit) {
+      if (
+        !commit ||
+        context.config.dryRun ||
+        context.appData.isReleaseRetry ||
+        context.appData.existingPkgNames?.length
+      ) {
         return
       }
 
@@ -122,7 +141,7 @@ export default definePlugin(context => {
       )
 
       const tags = independent
-        ? pkgNames.map(pkgName => `${pkgName}@${version}`)
+        ? validPkgNames.map(pkgName => `${pkgName}@${version}`)
         : [`v${version}`]
 
       for (const tagName of tags) {
@@ -161,7 +180,7 @@ export default definePlugin(context => {
     async () => {
       const { commit, push, pushArgs } = context.config.git
 
-      if (!commit || !push) {
+      if (!commit || !push || context.config.dryRun) {
         return
       }
 

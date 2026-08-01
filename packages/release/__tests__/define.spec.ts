@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, expectTypeOf, it } from 'vitest'
 /**
  * @file packages/release define 模块单元测试
  * @description 测试 define.ts 配置定义功能
@@ -85,13 +85,22 @@ describe('配置定义函数测试', () => {
       const verify = () => {
         // @ts-expect-error requireClean 必须是 boolean
         defineConfig({ git: { requireClean: 'true' } })
-        // @ts-expect-error prereleaseId 必须是受支持的预发布标识
-        defineConfig({ npm: { prereleaseId: 'preview' } })
         // @ts-expect-error presets 只接受插件声明
         defineConfig({ presets: [1] })
       }
 
       expect(verify).toBeTypeOf('function')
+    })
+
+    it('应该保留配置字面量类型并支持自定义预发布标识', () => {
+      const config = defineConfig({
+        npm: {
+          prereleaseId: 'preview',
+        },
+      })
+
+      expectTypeOf(config.npm.prereleaseId).toEqualTypeOf<'preview'>()
+      expect(config.npm.prereleaseId).toBe('preview')
     })
 
     it('应该支持禁用 changelog', () => {

@@ -434,8 +434,8 @@ describe('入口文件', () => {
 
       // 测试 ProjectCreator 类的使用
       const creator = new ProjectCreator({
-        template: 'test-template',
         ...config,
+        template: 'test-template',
       })
 
       expect(creator).toBeInstanceOf(ProjectCreator)
@@ -479,8 +479,8 @@ describe('入口文件', () => {
       })
 
       const creator = new ProjectCreator({
-        template: 'test-template',
         ...config,
+        template: 'test-template',
       })
 
       expect(creator).toBeInstanceOf(ProjectCreator)

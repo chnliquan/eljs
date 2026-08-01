@@ -12,12 +12,13 @@ import {
 import type { Config, CreatePluginContext, CreatePresetContext } from './types'
 
 /**
- * 定义 create 配置并保留输入对象类型
+ * 定义 create 配置并保留输入对象的字面量类型
  *
+ * @typeParam Input - create 配置输入类型
  * @param config - create 配置
  * @returns 原始配置对象
  */
-export function defineConfig(config: Config): Config {
+export function defineConfig<const Input extends Config>(config: Input): Input {
   return config
 }
 

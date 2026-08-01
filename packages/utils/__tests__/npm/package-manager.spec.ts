@@ -31,6 +31,10 @@ describe('Package Manager 工具', () => {
     requiredModule1.getYarnWorkspaceRoot as MockedFunction<
       (cwd: string) => Promise<string | null>
     >
+  const mockGetBunWorkspaceRoot =
+    requiredModule1.getBunWorkspaceRoot as MockedFunction<
+      (cwd: string) => Promise<string | null>
+    >
   const mockGetNpmWorkspaceRoot =
     requiredModule1.getNpmWorkspaceRoot as MockedFunction<
       (cwd: string) => Promise<string | null>
@@ -46,6 +50,7 @@ describe('Package Manager 工具', () => {
     mockHasGlobalInstallation.mockResolvedValue(false)
     mockGetPnpmWorkspaceRoot.mockResolvedValue(null)
     mockGetYarnWorkspaceRoot.mockResolvedValue(null)
+    mockGetBunWorkspaceRoot.mockResolvedValue(null)
     mockGetNpmWorkspaceRoot.mockResolvedValue(null)
   })
 
@@ -80,6 +85,15 @@ describe('Package Manager 工具', () => {
       expect(result).toBe('npm')
     })
 
+    it('应该检测 bun 通过 lock 文件', async () => {
+      mockGetBunWorkspaceRoot.mockResolvedValue('/project')
+
+      const result = await getPackageManager('/project')
+
+      expect(mockGetBunWorkspaceRoot).toHaveBeenCalledWith('/project')
+      expect(result).toBe('bun')
+    })
+
     it('应该回退到全局 pnpm 检测', async () => {
       // 没有 lock 文件
       mockGetPnpmWorkspaceRoot.mockResolvedValue(null)
@@ -111,6 +125,16 @@ describe('Package Manager 工具', () => {
       const result = await getPackageManager()
 
       expect(result).toBe('yarn')
+    })
+
+    it('应该回退到全局 bun 检测', async () => {
+      mockHasGlobalInstallation.mockImplementation((bin: string) => {
+        return Promise.resolve(bin === 'bun')
+      })
+
+      const result = await getPackageManager()
+
+      expect(result).toBe('bun')
     })
 
     it('应该默认使用 npm', async () => {
@@ -188,6 +212,15 @@ describe('Package Manager 工具', () => {
       const result = await getPackageManager('/project')
 
       expect(result).toBe('yarn') // yarn 优先
+    })
+
+    it('应该 bun 优先于 npm', async () => {
+      mockGetBunWorkspaceRoot.mockResolvedValue('/project')
+      mockGetNpmWorkspaceRoot.mockResolvedValue('/project')
+
+      const result = await getPackageManager('/project')
+
+      expect(result).toBe('bun')
     })
 
     it('应该 lock 文件优先于全局安装', async () => {

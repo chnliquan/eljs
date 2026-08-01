@@ -7,21 +7,33 @@ import {
   chalk,
   createDebugger,
   deepMerge,
+  getPackageManager,
   isPathExistsSync,
   logger,
   readJsonSync,
   type PackageJson,
-  type RequiredRecursive,
 } from '@eljs/utils'
 import { createRequire } from 'node:module'
 import { EOL } from 'node:os'
 import path from 'node:path'
 import type { ReleaseType } from 'semver'
-import { ReleaseRunnerStage, type AppData, type Config } from './types'
+import {
+  ReleaseRunnerStage,
+  type AppData,
+  type Config,
+  type ProjectPackageJson,
+  type ResolvedConfig,
+} from './types'
 
 import { defaultConfig } from './default'
 import { releaseHookSchema, type ReleasePluginCapabilities } from './hooks'
 import { resolveInternalModule } from './internal'
+import { validateResolvedConfig } from './internal/config'
+import {
+  resolveDeclaredPackageManager,
+  resolvePackageManagerVariant,
+} from './internal/package-manager'
+import { ReleaseLock } from './internal/release-lock'
 import { AppError, parseVersion } from './utils'
 
 const currentModulePath =
@@ -31,6 +43,10 @@ const debug = createDebugger('release:config')
 
 /**
  * 编排版本计算、版本更新和发布 Hook 的运行器
+ *
+ * @remarks
+ * 每个实例只能运行一次，同一工作目录同时只允许一个发布进程
+ * 启用 Git 提交时，发布提交和标签会先保留在本地，所有包发布成功后才推送到远程
  */
 export class ReleaseRunner extends PluginHost<
   Config,
@@ -40,7 +56,11 @@ export class ReleaseRunner extends PluginHost<
   /**
    * 已解析的最终配置
    */
-  private _config: RequiredRecursive<Config> | null = null
+  private _config: ResolvedConfig | null = null
+  /**
+   * 构造函数接收的 release 领域配置
+   */
+  private readonly _releaseOptions: Readonly<Config>
   /**
    * 发布流程共享的项目及工作区数据
    */
@@ -60,7 +80,7 @@ export class ReleaseRunner extends PluginHost<
   }
 
   /**
-   * 合并默认值、构造选项、用户配置和 `modifyConfig` Hook 后的最终配置
+   * 合并默认值、用户配置、显式构造选项和 `modifyConfig` Hook 后的最终配置
    *
    * @remarks
    * 插件初始化及 `modifyConfig` Hook 执行期间最终配置尚未生成
@@ -70,7 +90,7 @@ export class ReleaseRunner extends PluginHost<
    * @throws {@link PluginHostError}
    * 当配置尚未解析时抛出
    */
-  public get config(): RequiredRecursive<Config> {
+  public get config(): ResolvedConfig {
     if (!this._config) {
       throw new PluginHostError(
         PluginHostErrorCode.InvalidState,
@@ -90,7 +110,8 @@ export class ReleaseRunner extends PluginHost<
    * 当项目缺少 `package.json` 或版本号时抛出
    */
   public constructor(options: Config = {}) {
-    const { cwd = process.cwd(), presets = [], plugins = [] } = options
+    const cwd = path.resolve(options.cwd ?? process.cwd())
+    const { presets = [], plugins = [] } = options
     const projectPkgJsonPath = path.join(cwd, 'package.json')
 
     if (!isPathExistsSync(projectPkgJsonPath)) {
@@ -119,9 +140,14 @@ export class ReleaseRunner extends PluginHost<
       releaseHookSchema,
     )
 
+    this._releaseOptions = {
+      ...options,
+      cwd,
+    }
+
     this.appData = {
       projectPkgJsonPath,
-      projectPkg,
+      projectPkg: projectPkg as ProjectPackageJson,
     } as AppData
   }
 
@@ -130,6 +156,9 @@ export class ReleaseRunner extends PluginHost<
    *
    * @param releaseTypeOrVersion - semver 升级类型或明确版本号
    * @returns 发布流程完成后兑现的 Promise
+   * @throws {@link PluginHostError}
+   * 当同一运行器被重复执行时抛出
+   * @throws 当锁获取、配置、检查、版本更新、发布或清理阶段失败时传播原始错误
    */
   public async run(releaseTypeOrVersion?: ReleaseType | string): Promise<void> {
     if (this._stage !== ReleaseRunnerStage.Uninitialized) {
@@ -140,14 +169,31 @@ export class ReleaseRunner extends PluginHost<
       )
     }
 
+    let releaseLock: ReleaseLock | undefined
+    let pluginsLoaded = false
+    let hasRunError = false
+    let hasCleanupError = false
+    let cleanupError: unknown
+    this._stage = ReleaseRunnerStage.LoadingPlugins
+
     try {
-      this._stage = ReleaseRunnerStage.LoadingPlugins
+      releaseLock = await ReleaseLock.acquire(this.cwd)
       await this.load()
+      pluginsLoaded = true
 
       this._stage = ReleaseRunnerStage.ResolvingConfig
       await this._resolveConfig()
 
       this._stage = ReleaseRunnerStage.Preparing
+      // 根清单的 Corepack 声明可消除迁移期间同时存在多个锁文件时的歧义
+      const packageManager =
+        resolveDeclaredPackageManager(this.appData.projectPkg) ??
+        (await getPackageManager(this.cwd))
+      const packageManagerVariant = resolvePackageManagerVariant(
+        packageManager,
+        this.cwd,
+        this.appData.projectPkg,
+      )
       /**
        * 修改应用数据
        */
@@ -155,7 +201,8 @@ export class ReleaseRunner extends PluginHost<
         initialValue: {
           ...this.appData,
           cliVersion: localRequire('../package.json').version,
-          packageManager: 'pnpm',
+          packageManager,
+          packageManagerVariant,
         } as AppData,
         args: {
           cwd: this.cwd,
@@ -236,8 +283,44 @@ export class ReleaseRunner extends PluginHost<
       }
       this._stage = ReleaseRunnerStage.Completed
     } catch (error) {
+      const failedStage = this._stage
       this._stage = ReleaseRunnerStage.Failed
+      hasRunError = true
+
+      if (pluginsLoaded) {
+        try {
+          await this.runHook('onError', {
+            args: {
+              error,
+              stage: failedStage,
+            },
+          })
+        } catch (hookError) {
+          logger.warn(
+            `Release error hook failed: ${formatErrorMessage(hookError)}`,
+          )
+        }
+      }
+
       throw error
+    } finally {
+      try {
+        await releaseLock?.release()
+      } catch (lockError) {
+        if (!hasRunError) {
+          this._stage = ReleaseRunnerStage.Failed
+          hasCleanupError = true
+          cleanupError = lockError
+        } else {
+          logger.warn(
+            `Release lock cleanup failed: ${formatErrorMessage(lockError)}`,
+          )
+        }
+      }
+    }
+
+    if (hasCleanupError) {
+      throw cleanupError
     }
   }
 
@@ -259,14 +342,27 @@ export class ReleaseRunner extends PluginHost<
     const mergedConfig = deepMerge(
       {},
       defaultConfig,
-      this.constructorOptions,
       this.userConfig || {},
-    ) as RequiredRecursive<Config>
+      this._releaseOptions,
+    ) as ResolvedConfig
 
     debug?.(mergedConfig)
-    this._config = await this.runHook('modifyConfig', {
+    const resolvedConfig = await this.runHook('modifyConfig', {
       initialValue: mergedConfig,
     })
+    const validatedConfig = validateResolvedConfig(resolvedConfig)
+    const configCwd = path.resolve(validatedConfig.cwd)
+
+    if (configCwd !== this.cwd) {
+      throw new AppError(
+        `Release config cannot change cwd from ${chalk.cyan(this.cwd)} to ${chalk.cyan(configCwd)}. Pass cwd to the ReleaseRunner constructor or CLI instead.`,
+      )
+    }
+
+    this._config = {
+      ...validatedConfig,
+      cwd: configCwd,
+    }
   }
 
   /**
@@ -288,4 +384,8 @@ export class ReleaseRunner extends PluginHost<
       step: message => this.step(message),
     }
   }
+}
+
+function formatErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }

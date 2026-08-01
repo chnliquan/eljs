@@ -185,6 +185,10 @@ describe('CLI 命令行接口综合测试', () => {
         'Specify the working directory',
       )
       expect(mockProgram.option).toHaveBeenCalledWith(
+        '--dry-run',
+        'Validate and preview without publishing or modifying project files',
+      )
+      expect(mockProgram.option).toHaveBeenCalledWith(
         '--git.independent',
         'Generate git tag independent',
       )
@@ -195,6 +199,10 @@ describe('CLI 命令行接口综合测试', () => {
       expect(mockProgram.option).toHaveBeenCalledWith(
         '--npm.canary',
         'Specify the release type as canary',
+      )
+      expect(mockProgram.option).toHaveBeenCalledWith(
+        '--npm.registry <registry>',
+        'Specify the npm registry',
       )
     })
 
@@ -267,23 +275,25 @@ describe('CLI 命令行接口综合测试', () => {
 
     it('应该正确解析嵌套选项', async () => {
       await actionHandler('minor', {
+        dryRun: true,
         'git.requireClean': false,
         'npm.confirm': false,
+        'npm.registry': 'https://registry.example.com',
         'github.release': true,
       })
 
       expect(release).toHaveBeenCalledWith(
         'minor',
         expect.objectContaining({
+          dryRun: true,
           git: expect.objectContaining({
             requireClean: false,
           }),
           npm: expect.objectContaining({
             confirm: false,
+            registry: 'https://registry.example.com',
           }),
-          github: expect.objectContaining({
-            release: true,
-          }),
+          github: {},
         }),
       )
     })
@@ -293,6 +303,7 @@ describe('CLI 命令行接口综合测试', () => {
         'git.requireClean': true, // 应该被删除
         'git.commit': true, // 应该被删除
         'npm.confirm': true, // 应该被删除
+        'github.release': true, // 应该被删除
         'git.independent': true, // 不应该被删除
       })
 
@@ -304,6 +315,7 @@ describe('CLI 命令行接口综合测试', () => {
       expect(options?.git).not.toHaveProperty('requireClean')
       expect(options?.git).not.toHaveProperty('commit')
       expect(options?.npm).not.toHaveProperty('confirm')
+      expect(options?.github).not.toHaveProperty('release')
 
       // 验证这个选项保留
       expect(options?.git).toHaveProperty('independent', true)
@@ -610,9 +622,7 @@ describe('CLI 命令行接口综合测试', () => {
             prerelease: false,
             // confirm: false 不会被删除，因为只有 true 值会被删除
           }),
-          github: expect.objectContaining({
-            release: true,
-          }),
+          github: {},
         }),
       )
     })

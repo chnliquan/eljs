@@ -1,10 +1,17 @@
 import type { Config } from './types'
 
+/**
+ * release 内置默认配置
+ */
 export const defaultConfig: Config = {
   /**
    * 当前工作目录
    */
   cwd: process.cwd(),
+  /**
+   * 是否仅演练发布
+   */
+  dryRun: false,
   /**
    * git 相关配置项
    */
@@ -56,6 +63,10 @@ export const defaultConfig: Config = {
      */
     requireOwner: true,
     /**
+     * npm registry 查询并发上限
+     */
+    networkConcurrency: 8,
+    /**
      * 是否发布金丝雀版本
      */
     canary: false,
@@ -69,8 +80,16 @@ export const defaultConfig: Config = {
    */
   github: {
     /**
-     * 是否创建 github 变更
+     * 是否创建 GitHub Release
      */
     release: true,
+    /**
+     * GitHub Release 创建方式
+     */
+    mode: 'browser',
+    /**
+     * API 令牌环境变量名
+     */
+    tokenEnv: 'GITHUB_TOKEN',
   },
 }

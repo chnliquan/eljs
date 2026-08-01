@@ -22,6 +22,7 @@ vi.mock('@eljs/utils', () => ({
   getNpmPackage: vi.fn(),
   logger: {
     ready: vi.fn(),
+    warn: vi.fn(),
   },
   run: vi.fn(),
 }))
@@ -92,29 +93,31 @@ describe('NPM 工具函数测试', () => {
       })
     })
 
-    it('应该处理多个包名，返回第一个有效的', async () => {
-      const mockNpmMeta2 = {
-        'dist-tags': {
-          latest: '1.5.0',
-          alpha: '1.6.0-alpha.1',
-          beta: '1.6.0-beta.1',
-          rc: '1.6.0-rc.1',
-        },
-      }
-
+    it('应该汇总多个包并返回每个 dist tag 的最高版本', async () => {
       ;(getNpmPackage as Mock)
-        .mockResolvedValueOnce(null) // 第一个包不存在
-        .mockResolvedValueOnce(mockNpmMeta2) // 第二个包存在
+        .mockResolvedValueOnce({
+          'dist-tags': {
+            latest: '2.0.0',
+            alpha: '2.1.0-alpha.1',
+            beta: '2.1.0-beta.1',
+            rc: '2.1.0-rc.1',
+          },
+        })
+        .mockResolvedValueOnce({
+          'dist-tags': {
+            latest: '1.5.0',
+            alpha: '2.1.0-alpha.3',
+            beta: '1.6.0-beta.1',
+            rc: '1.6.0-rc.1',
+          },
+        })
 
-      const result = await getRemoteDistTag([
-        'non-existent-package',
-        'it-package-2',
-      ])
+      const result = await getRemoteDistTag(['it-package-1', 'it-package-2'])
 
       expect(getNpmPackage).toHaveBeenCalledTimes(2)
       expect(getNpmPackage).toHaveBeenNthCalledWith(
         1,
-        'non-existent-package',
+        'it-package-1',
         undefined,
       )
       expect(getNpmPackage).toHaveBeenNthCalledWith(
@@ -123,11 +126,49 @@ describe('NPM 工具函数测试', () => {
         undefined,
       )
       expect(result).toEqual({
-        latest: '1.5.0',
-        alpha: '1.6.0-alpha.1',
-        beta: '1.6.0-beta.1',
-        rc: '1.6.0-rc.1',
+        latest: '2.0.0',
+        alpha: '2.1.0-alpha.3',
+        beta: '2.1.0-beta.1',
+        rc: '2.1.0-rc.1',
       })
+    })
+
+    it('应该限制 registry 查询并发数', async () => {
+      let active = 0
+      let maximumActive = 0
+      ;(getNpmPackage as Mock).mockImplementation(async () => {
+        active++
+        maximumActive = Math.max(maximumActive, active)
+        await new Promise(resolve => setTimeout(resolve, 5))
+        active--
+        return { 'dist-tags': { latest: '1.0.0' } }
+      })
+
+      await getRemoteDistTag(
+        ['pkg-a', 'pkg-b', 'pkg-c'],
+        undefined,
+        undefined,
+        2,
+      )
+
+      expect(maximumActive).toBe(2)
+    })
+
+    it('应该按需汇总自定义 dist tag', async () => {
+      ;(getNpmPackage as Mock)
+        .mockResolvedValueOnce({
+          'dist-tags': { latest: '1.0.0', preview: '1.1.0-preview.1' },
+        })
+        .mockResolvedValueOnce({
+          'dist-tags': { latest: '1.0.1', preview: '1.1.0-preview.3' },
+        })
+
+      const result = await getRemoteDistTag(['pkg-a', 'pkg-b'], undefined, [
+        'preview',
+      ])
+
+      expect(result.preview).toBe('1.1.0-preview.3')
+      expect(result.latest).toBe('1.0.1')
     })
 
     it('应该处理没有 dist-tags 的包', async () => {
@@ -142,10 +183,10 @@ describe('NPM 工具函数测试', () => {
       const result = await getRemoteDistTag(['it-package'])
 
       expect(result).toEqual({
-        latest: '',
-        alpha: '',
-        beta: '',
-        rc: '',
+        latest: undefined,
+        alpha: undefined,
+        beta: undefined,
+        rc: undefined,
       })
     })
 
@@ -158,10 +199,10 @@ describe('NPM 工具函数测试', () => {
       ])
 
       expect(result).toEqual({
-        latest: '',
-        alpha: '',
-        beta: '',
-        rc: '',
+        latest: undefined,
+        alpha: undefined,
+        beta: undefined,
+        rc: undefined,
       })
     })
 
@@ -169,10 +210,10 @@ describe('NPM 工具函数测试', () => {
       const result = await getRemoteDistTag([])
 
       expect(result).toEqual({
-        latest: '',
-        alpha: '',
-        beta: '',
-        rc: '',
+        latest: undefined,
+        alpha: undefined,
+        beta: undefined,
+        rc: undefined,
       })
       expect(getNpmPackage).not.toHaveBeenCalled()
     })

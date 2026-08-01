@@ -1,6 +1,9 @@
 import concat from 'concat-stream'
 import type { FinalizedContext, Preset } from 'conventional-changelog'
 
+/**
+ * 更新日志生成选项
+ */
 export interface GenerateChangelogOptions {
   /**
    * 当前工作目录
@@ -20,7 +23,10 @@ export interface GenerateChangelogOptions {
 
 /**
  * 获取更新日志
+ *
  * @param options - 更新日志生成选项
+ * @returns 去除首尾空白后的更新日志
+ * @throws 当预设加载、Git 历史读取或流处理失败时抛出
  */
 export async function getChangelog(
   options: GenerateChangelogOptions,
@@ -52,6 +58,11 @@ export async function getChangelog(
   })
 }
 
+/**
+ * conventional-changelog 写入器完成上下文时的回调类型
+ *
+ * @internal
+ */
 type FinalizeContext = NonNullable<
   NonNullable<Preset['writer']>['finalizeContext']
 >

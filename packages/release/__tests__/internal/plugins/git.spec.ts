@@ -21,7 +21,7 @@ import {
   isPathExists,
   normalizeArgs,
   readFile,
-  writeFile,
+  safeWriteFile,
 } from '@eljs/utils'
 
 import gitPlugin from '../../../src/internal/plugins/git'
@@ -83,6 +83,8 @@ interface GitTestApi {
     pkgNames: string[]
     validPkgRootPaths: string[]
     validPkgNames: string[]
+    existingPkgNames?: string[]
+    isReleaseRetry?: boolean
     packageManager: string
   }
   cwd: string
@@ -125,7 +127,7 @@ vi.mock('@eljs/utils', () => ({
   },
   normalizeArgs: vi.fn(),
   readFile: vi.fn(),
-  writeFile: vi.fn(),
+  safeWriteFile: vi.fn(),
 }))
 
 vi.mock('../../../src/utils', () => ({
@@ -221,7 +223,7 @@ describe('Git 插件测试', () => {
     ;(readFile as MockedFunction<typeof readFile>).mockResolvedValue(
       '# Existing changelog',
     )
-    ;(writeFile as MockedFunction<typeof writeFile>).mockResolvedValue(
+    ;(safeWriteFile as MockedFunction<typeof safeWriteFile>).mockResolvedValue(
       undefined,
     )
     ;(gitCommit as MockedFunction<typeof gitCommit>).mockResolvedValue(
@@ -314,7 +316,9 @@ describe('Git 插件测试', () => {
 
       await expect(
         onCheckHandler({ releaseTypeOrVersion: 'minor' }),
-      ).rejects.toThrow('Require branch main`, but got [cyan]develop[/cyan].')
+      ).rejects.toThrow(
+        'Required branch [cyan]main[/cyan], but got [cyan]develop[/cyan].',
+      )
     })
 
     it('当分支匹配时应该正常通过', async () => {
@@ -430,9 +434,11 @@ describe('Git 插件测试', () => {
       await onBeforeReleaseHandler(releaseInfo)
 
       expect(readFile).toHaveBeenCalledWith('/it/project/CHANGELOG.md')
-      expect(writeFile).toHaveBeenCalledWith(
+      expect(safeWriteFile).toHaveBeenCalledWith(
         '/it/project/CHANGELOG.md',
-        '# Existing changelog',
+        expect.stringContaining(
+          '# Existing changelog\n\n## [1.1.0] - 2023-11-13',
+        ),
       )
     })
 
@@ -449,7 +455,49 @@ describe('Git 插件测试', () => {
       await onBeforeReleaseHandler(releaseInfo)
 
       expect(readFile).not.toHaveBeenCalled()
-      expect(writeFile).not.toHaveBeenCalled()
+      expect(safeWriteFile).not.toHaveBeenCalled()
+    })
+
+    it('dry-run 时不应该更新变更日志文件', async () => {
+      mockContext.config.dryRun = true
+
+      await onBeforeReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: '## Changes',
+      })
+
+      expect(readFile).not.toHaveBeenCalled()
+      expect(safeWriteFile).not.toHaveBeenCalled()
+    })
+
+    it('恢复部分发布时不应该重复写入变更日志', async () => {
+      mockContext.appData.existingPkgNames = ['it-package']
+
+      await onBeforeReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: '## Changes',
+      })
+
+      expect(readFile).not.toHaveBeenCalled()
+      expect(safeWriteFile).not.toHaveBeenCalled()
+    })
+
+    it('首个包发布失败后的重试不应该重复写入变更日志', async () => {
+      mockContext.appData.isReleaseRetry = true
+
+      await onBeforeReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: '## Changes',
+      })
+
+      expect(readFile).not.toHaveBeenCalled()
+      expect(safeWriteFile).not.toHaveBeenCalled()
     })
 
     it('应该处理变更日志文件不存在的情况', async () => {
@@ -467,9 +515,29 @@ describe('Git 插件测试', () => {
       await onBeforeReleaseHandler(releaseInfo)
 
       expect(readFile).not.toHaveBeenCalled()
-      expect(writeFile).toHaveBeenCalledWith(
+      expect(safeWriteFile).toHaveBeenCalledWith(
         '/it/project/CHANGELOG.md',
         expect.stringContaining('## [1.1.0] - 2023-11-13'),
+      )
+    })
+
+    it('已有文件没有一级标题时应该保留旧内容并补充标准标题', async () => {
+      ;(readFile as MockedFunction<typeof readFile>).mockResolvedValue(
+        'Previous release notes',
+      )
+
+      await onBeforeReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: '## Changes\n\n- Added feature',
+      })
+
+      expect(safeWriteFile).toHaveBeenCalledWith(
+        '/it/project/CHANGELOG.md',
+        expect.stringMatching(
+          /^# ChangeLog\n\n## Changes[\s\S]+Previous release notes$/,
+        ),
       )
     })
 
@@ -486,7 +554,7 @@ describe('Git 插件测试', () => {
 
       await onBeforeReleaseHandler(releaseInfo)
 
-      expect(writeFile).toHaveBeenCalledWith(
+      expect(safeWriteFile).toHaveBeenCalledWith(
         '/it/project/HISTORY.md',
         expect.any(String),
       )
@@ -579,6 +647,51 @@ describe('Git 插件测试', () => {
       expect(gitPush).not.toHaveBeenCalled()
     })
 
+    it('dry-run 时不应该提交、打标签或推送', async () => {
+      mockContext.config.dryRun = true
+
+      await onReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: '## Changes',
+      })
+
+      expect(gitCommit).not.toHaveBeenCalled()
+      expect(gitTag).not.toHaveBeenCalled()
+      expect(gitPush).not.toHaveBeenCalled()
+    })
+
+    it('恢复部分发布时应该复用已有提交和标签', async () => {
+      mockContext.appData.existingPkgNames = ['it-package']
+
+      await onReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: '## Changes',
+      })
+
+      expect(gitCommit).not.toHaveBeenCalled()
+      expect(gitTag).not.toHaveBeenCalled()
+      expect(gitPush).toHaveBeenCalled()
+    })
+
+    it('首个包发布失败后的重试应该复用已有提交和标签', async () => {
+      mockContext.appData.isReleaseRetry = true
+
+      await onReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: '## Changes',
+      })
+
+      expect(gitCommit).not.toHaveBeenCalled()
+      expect(gitTag).not.toHaveBeenCalled()
+      expect(gitPush).toHaveBeenCalled()
+    })
+
     it('应该在独立模式下创建包特定标签', async () => {
       mockContext.config.git!.independent = true
 
@@ -592,6 +705,25 @@ describe('Git 插件测试', () => {
       await onReleaseHandler(releaseInfo)
 
       expect(gitTag).toHaveBeenCalledWith('it-package@1.1.0', {
+        cwd: '/it/project',
+        verbose: true,
+      })
+    })
+
+    it('独立模式下不应该为私有包创建标签', async () => {
+      mockContext.config.git!.independent = true
+      mockContext.appData.pkgNames = ['public-package', 'private-package']
+      mockContext.appData.validPkgNames = ['public-package']
+
+      await onReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: '## Changes',
+      })
+
+      expect(gitTag).toHaveBeenCalledTimes(1)
+      expect(gitTag).toHaveBeenCalledWith('public-package@1.1.0', {
         cwd: '/it/project',
         verbose: true,
       })
@@ -769,9 +901,9 @@ describe('Git 插件测试', () => {
     })
 
     it('应该处理文件写入失败', async () => {
-      ;(writeFile as MockedFunction<typeof writeFile>).mockRejectedValue(
-        new Error('write failed'),
-      )
+      ;(
+        safeWriteFile as MockedFunction<typeof safeWriteFile>
+      ).mockRejectedValue(new Error('write failed'))
 
       const releaseInfo = {
         version: '1.1.0',
@@ -833,7 +965,7 @@ describe('Git 插件测试', () => {
         prereleaseId: null,
         changelog,
       })
-      expect(writeFile).toHaveBeenCalled()
+      expect(safeWriteFile).toHaveBeenCalled()
 
       // 4. 提交和推送
       const onReleaseHandler = getOnReleaseHandler()

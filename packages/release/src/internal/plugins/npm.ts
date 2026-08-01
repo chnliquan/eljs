@@ -1,150 +1,61 @@
-import {
-  chalk,
-  getNpmUser,
-  logger,
-  normalizeArgs,
-  run,
-  type PackageJson,
-} from '@eljs/utils'
-import { EOL } from 'node:os'
-
+import { chalk, getNpmUser, logger, normalizeArgs, run } from '@eljs/utils'
 import { definePlugin } from '../../define'
-import type { AppData } from '../../types'
-import { AppError } from '../../utils'
+import { AppError, ReleasePublishError } from '../../utils'
+import { mapWithConcurrency } from '../concurrency'
+import { createPublishPlan, type PublishTarget } from '../publish-plan'
 
-interface PublishTarget {
-  name: string
-  rootPath: string
-  packageJson: PackageJson
-}
-
-export function getPublishTargets(
-  appData: Pick<
-    AppData,
-    'pkgNames' | 'pkgs' | 'validPkgNames' | 'validPkgRootPaths'
-  >,
-  version: string,
-): PublishTarget[] {
-  const { pkgNames, pkgs, validPkgNames, validPkgRootPaths } = appData
-
-  if (validPkgNames.length !== validPkgRootPaths.length) {
-    throw new AppError(
-      'Publish preflight failed: package names and paths are not aligned.',
-    )
-  }
-
-  const workspacePackages = new Map(
-    pkgNames.map((name, index) => [name, pkgs[index]]),
-  )
-  const targets = validPkgNames.map((name, index) => {
-    const packageJson = workspacePackages.get(name)
-
-    if (!packageJson) {
-      throw new AppError(
-        `Publish preflight failed: no manifest was loaded for ${name}.`,
-      )
-    }
-
-    if (packageJson.private) {
-      throw new AppError(
-        `Publish preflight failed: ${name} is marked as private.`,
-      )
-    }
-
-    if (packageJson.version !== version) {
-      throw new AppError(
-        `Publish preflight failed: ${name} has version ${packageJson.version}, expected ${version}.`,
-      )
-    }
-
-    return {
-      name,
-      rootPath: validPkgRootPaths[index],
-      packageJson,
-    }
-  })
-  const targetNames = new Set(validPkgNames)
-
-  for (const target of targets) {
-    const runtimeDependencies = {
-      ...target.packageJson.dependencies,
-      ...target.packageJson.optionalDependencies,
-    }
-
-    for (const dependencyName of Object.keys(runtimeDependencies)) {
-      if (
-        workspacePackages.has(dependencyName) &&
-        !targetNames.has(dependencyName)
-      ) {
-        throw new AppError(
-          `Publish preflight failed: ${target.name} depends on non-publishable workspace package ${dependencyName}.`,
-        )
-      }
-    }
-  }
-
-  const targetByName = new Map(targets.map(target => [target.name, target]))
-  const visiting = new Set<string>()
-  const visited = new Set<string>()
-  const sorted: PublishTarget[] = []
-
-  function visit(target: PublishTarget): void {
-    if (visited.has(target.name)) {
-      return
-    }
-
-    if (visiting.has(target.name)) {
-      throw new AppError(
-        `Publish preflight failed: circular runtime dependency detected at ${target.name}.`,
-      )
-    }
-
-    visiting.add(target.name)
-
-    const runtimeDependencies = {
-      ...target.packageJson.dependencies,
-      ...target.packageJson.optionalDependencies,
-    }
-
-    for (const dependencyName of Object.keys(runtimeDependencies)) {
-      const dependency = targetByName.get(dependencyName)
-      if (dependency) {
-        visit(dependency)
-      }
-    }
-
-    visiting.delete(target.name)
-    visited.add(target.name)
-    sorted.push(target)
-  }
-
-  for (const target of targets) {
-    visit(target)
-  }
-
-  return sorted
+/**
+ * 文件写入前完成校验并绑定目标版本的发布计划
+ *
+ * @remarks
+ * 计划仅能复用于同一目标版本，避免发布阶段重新读取已发生变化的清单映射
+ */
+interface PreparedPublishPlan {
+  readonly targets: PublishTarget[]
+  readonly version: string
 }
 
 export default definePlugin(context => {
+  let preparedPlan: PreparedPublishPlan | undefined
+
+  function preparePublishPlan(version: string): PublishTarget[] {
+    context.step('Preflighting package manifests ...')
+    return createPublishPlan(context.appData, version)
+  }
+
   context.onCheck(async () => {
     const { requireOwner } = context.config.npm
 
     if (requireOwner) {
       context.step('Checking npm owner ...')
 
-      const user = await getNpmUser({
-        cwd: context.cwd,
-      })
+      const { registry } = context.appData
+      const registryArgs = registry ? ['--registry', registry] : []
+      const user = registry
+        ? (
+            await run('npm', ['whoami', ...registryArgs], {
+              cwd: context.cwd,
+            })
+          ).stdout.trim()
+        : await getNpmUser({
+            cwd: context.cwd,
+          })
 
-      for (const pkgName of context.appData.validPkgNames) {
+      await mapWithConcurrency(
+        context.appData.validPkgNames,
+        context.config.npm.networkConcurrency,
+        checkPackageOwner,
+      )
+
+      async function checkPackageOwner(pkgName: string): Promise<void> {
         try {
           const owners = (
-            await run('npm', ['owner', 'ls', pkgName], {
+            await run('npm', ['owner', 'ls', pkgName, ...registryArgs], {
               cwd: context.cwd,
             })
           ).stdout
             .trim()
-            .split(EOL)
+            .split(/\r?\n/)
             .map(line => line.split(' ')?.[0])
 
           if (!owners?.includes(user)) {
@@ -155,8 +66,12 @@ export default definePlugin(context => {
         } catch (error) {
           const err = error as Error
 
-          if (err.message.indexOf('Not Found') > -1) {
-            continue
+          if (
+            /\bE404\b/i.test(err.message) ||
+            /404 Not Found/i.test(err.message) ||
+            /is not in this registry/i.test(err.message)
+          ) {
+            return
           }
 
           throw err
@@ -165,12 +80,28 @@ export default definePlugin(context => {
     }
   })
 
-  context.onRelease(
-    async ({ version, prereleaseId }) => {
-      const { registry, branch, packageManager } = context.appData
+  context.onBeforeBumpVersion(
+    ({ version }) => {
+      preparedPlan = {
+        targets: preparePublishPlan(version),
+        version,
+      }
+    },
+    {
+      // version 插件先生成内存清单，发布预检通过后才允许进入文件写入阶段
+      stage: 10,
+    },
+  )
 
-      context.step('Preflighting package manifests ...')
-      const targets = getPublishTargets(context.appData, version)
+  context.onRelease(
+    async ({ version, isPrerelease, prereleaseId }) => {
+      const { branch, packageManager, packageManagerVariant, registry } =
+        context.appData
+
+      const targets =
+        preparedPlan?.version === version
+          ? preparedPlan.targets
+          : preparePublishPlan(version)
       const existingPkgNames = new Set<string>(
         context.appData.existingPkgNames ?? [],
       )
@@ -185,6 +116,15 @@ export default definePlugin(context => {
         return false
       })
 
+      if (context.config.dryRun) {
+        for (const target of pendingTargets) {
+          logger.info(
+            `Would publish ${chalk.cyan(`${target.name}@${version}`)} from ${target.rootPath}.`,
+          )
+        }
+        return
+      }
+
       context.step('Publishing packages in dependency order ...')
       const publishedPackages: string[] = []
 
@@ -197,9 +137,6 @@ export default definePlugin(context => {
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : String(error)
-          const notPublishedPackages = pendingTargets
-            .slice(index)
-            .map(({ name }) => `${name}@${version}`)
 
           console.log()
           logger.error(
@@ -207,19 +144,16 @@ export default definePlugin(context => {
           )
           console.log(`Error: ${errorMessage}`)
 
-          throw new AppError(
-            [
-              `Failed to publish ${target.name}@${version}.`,
-              `Published before failure: ${
-                publishedPackages.length
-                  ? publishedPackages
-                      .map(name => `${name}@${version}`)
-                      .join(', ')
-                  : 'none'
-              }.`,
-              `Not published: ${notPublishedPackages.join(', ')}.`,
-              'Git changes were not pushed.',
-            ].join(' '),
+          throw new ReleasePublishError(
+            {
+              failedPackage: target.name,
+              version,
+              publishedPackages,
+              unpublishedPackages: pendingTargets
+                .slice(index)
+                .map(({ name }) => name),
+            },
+            error,
           )
         }
       }
@@ -229,25 +163,45 @@ export default definePlugin(context => {
         pkgName: string,
         version: string,
       ) {
-        const tagArg = prereleaseId ? ['--tag', prereleaseId] : []
-        const registryArg = registry ? ['--registry', registry] : []
+        // 数字型或保留标识的预发布版本不能直接作为安全的 npm dist-tag
+        const distTag = isPrerelease
+          ? prereleaseId && prereleaseId !== 'latest'
+            ? prereleaseId
+            : 'next'
+          : undefined
+        const tagArg = distTag ? ['--tag', distTag] : []
+        // Yarn Berry 通过配置项而非 CLI 参数选择发布 registry
+        const registryArg =
+          registry && packageManagerVariant !== 'yarn-berry'
+            ? ['--registry', registry]
+            : []
+        const publishEnv =
+          registry && packageManagerVariant === 'yarn-berry'
+            ? { YARN_NPM_PUBLISH_REGISTRY: registry }
+            : undefined
         const { requireBranch } = context.config.git
-        const gitCheckArg = requireBranch
-          ? ['--publish-branch', requireBranch]
-          : ['master', 'main'].includes(branch)
-            ? []
-            : ['--no-git-checks']
+        const pnpmGitCheckArg =
+          packageManager === 'pnpm'
+            ? requireBranch
+              ? ['--publish-branch', requireBranch]
+              : ['master', 'main'].includes(branch)
+                ? []
+                : ['--no-git-checks']
+            : []
 
         const cliArgs = [
-          'publish',
+          ...(packageManagerVariant === 'yarn-berry'
+            ? ['npm', 'publish']
+            : ['publish']),
           ...tagArg,
           ...registryArg,
-          ...gitCheckArg,
+          ...pnpmGitCheckArg,
           ...normalizeArgs(context.config.npm.publishArgs),
         ].filter(Boolean)
 
         await run(packageManager, cliArgs, {
           cwd: pkgRootPath,
+          ...(publishEnv ? { env: publishEnv } : {}),
           verbose: true,
           stdin: 'inherit',
         })

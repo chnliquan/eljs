@@ -22,6 +22,10 @@ describe('release 插件定义辅助函数', () => {
       expectTypeOf(context).toEqualTypeOf<ReleasePluginContext>()
       expectTypeOf(options).toEqualTypeOf<Options | undefined>()
       context.onAfterRelease(() => undefined)
+      context.onError(({ error, stage }) => {
+        expectTypeOf(error).toBeUnknown()
+        expectTypeOf(stage).toMatchTypeOf<string>()
+      })
     })
   })
 
