@@ -11,7 +11,7 @@ import { defaultConfig } from '../src/config'
 import { CreateTemplate, type CreateTemplateOptions } from '../src/create'
 
 // 导入 mock 后的模块
-import { Create } from '@eljs/create'
+import { ProjectCreator } from '@eljs/create'
 import { prompts } from '@eljs/utils'
 import assert from 'node:assert'
 
@@ -24,7 +24,7 @@ vi.mock('node:assert')
 vi.mock('../src/utils')
 
 describe('CreateTemplate 类功能测试', () => {
-  const mockedCreate = Create as MockedClass<typeof Create>
+  const mockedCreate = ProjectCreator as MockedClass<typeof ProjectCreator>
   const mockedPrompts = prompts as MockedFunction<typeof prompts>
   const mockedObjectToArray = objectToArray as MockedFunction<
     typeof objectToArray
@@ -520,7 +520,7 @@ describe('CreateTemplate 类功能测试', () => {
       expect(mockCreateInstance.run).toHaveBeenCalledWith(specialProjectName)
     })
 
-    it('应该正确传递所有构造函数选项到 Create 实例', async () => {
+    it('应该正确传递所有构造函数选项到 ProjectCreator 实例', async () => {
       const options: CreateTemplateOptions = {
         cwd: '/complex/path',
         scene: 'npm',

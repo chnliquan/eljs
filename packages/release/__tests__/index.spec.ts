@@ -28,9 +28,14 @@ describe('发布模块入口文件测试', () => {
       expect(typeof releaseIndex.defineConfig).toBe('function')
     })
 
-    it('应该导出 Runner 类', () => {
-      expect(releaseIndex.Runner).toBeDefined()
-      expect(typeof releaseIndex.Runner).toBe('function')
+    it('应该导出插件定义辅助函数', () => {
+      expect(typeof releaseIndex.definePlugin).toBe('function')
+      expect(typeof releaseIndex.definePreset).toBe('function')
+    })
+
+    it('应该导出 ReleaseRunner 类', () => {
+      expect(releaseIndex.ReleaseRunner).toBeDefined()
+      expect(typeof releaseIndex.ReleaseRunner).toBe('function')
     })
 
     it('应该导出工具函数模块', () => {
@@ -62,8 +67,10 @@ describe('发布模块入口文件测试', () => {
         'resolveBin',
         'defaultConfig',
         'defineConfig',
+        'definePlugin',
+        'definePreset',
         'release',
-        'Runner',
+        'ReleaseRunner',
         'AppError',
         'onCancel',
         'parseVersion',
@@ -92,6 +99,8 @@ describe('发布模块入口文件测试', () => {
       const functions = [
         'resolveBin',
         'defineConfig',
+        'definePlugin',
+        'definePreset',
         'release',
         'onCancel',
         'parseVersion',
@@ -104,9 +113,9 @@ describe('发布模块入口文件测试', () => {
       })
     })
 
-    it('Runner 类应该是可实例化的', () => {
-      expect(typeof releaseIndex.Runner).toBe('function')
-      expect(() => new releaseIndex.Runner()).not.toThrow()
+    it('ReleaseRunner 类应该是可实例化的', () => {
+      expect(typeof releaseIndex.ReleaseRunner).toBe('function')
+      expect(() => new releaseIndex.ReleaseRunner()).not.toThrow()
     })
 
     it('AppError 类应该是可实例化的错误类', () => {

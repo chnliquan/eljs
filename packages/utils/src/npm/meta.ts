@@ -9,7 +9,7 @@ import type { OmitIndexSignature, PackageJson } from '../types'
 
 /**
  * 获取 Npm 仓库
- * @param options 选项
+ * @param options - 选项
  */
 export async function getNpmRegistry(
   options?: RunCommandOptions,
@@ -21,7 +21,7 @@ export async function getNpmRegistry(
 
 /**
  * 获取 Npm 用户
- * @param options 选项
+ * @param options - 选项
  */
 export async function getNpmUser(options?: RunCommandOptions): Promise<string> {
   return run('npm', ['whoami'], options).then(data => {
@@ -31,7 +31,8 @@ export async function getNpmUser(options?: RunCommandOptions): Promise<string> {
 
 /**
  * Npm 包
- * @link https://github.com/npm/registry/blob/main/docs/REGISTRY-API.md#package
+ *
+ * {@link https://github.com/npm/registry/blob/main/docs/REGISTRY-API.md#package}
  */
 export interface NpmPackage extends OmitIndexSignature<PackageJson> {
   version: string
@@ -56,10 +57,8 @@ export interface NpmPackage extends OmitIndexSignature<PackageJson> {
 
 /**
  * 获取 Npm 包
- * @param name 包名
- * @param options.cwd 当前工作目录
- * @param options.registry 仓库地址
- * @param options.timeout 超时时间
+ * @param name - 包名
+ * @param options - Npm 包查询选项
  */
 export async function getNpmPackage(
   name: string,
@@ -71,11 +70,8 @@ export async function getNpmPackage(
 ): Promise<Omit<NpmPackage, 'version'> | null>
 /**
  * 获取指定版本的 Npm 包
- * @param name 包名
- * @param options.version 包版本
- * @param options.cwd 当前工作目录
- * @param options.registry 仓库地址
- * @param options.timeout 超时时间
+ * @param name - 包名
+ * @param options - 指定版本的 Npm 包查询选项
  */
 export async function getNpmPackage(
   name: string,
@@ -177,12 +173,21 @@ export interface ResolvedPkgName {
 
 /**
  * 解析 Npm 包名
- * @param name 包名
+ * @param name - 包名
  * @example
- * '@eljs/utils@1.0.0' => { name: '@eljs/utils', version: '1.0.0', scope: '@eljs', unscopedName: 'utils'  }
- * 'utils@1.0.0' => { name: 'utils', version: '1.0.0, scope: '', unscopedName: 'utils'  }
- * '@eljs/utils' => { name: '@eljs/utils', version: 'latest', scope: '@eljs', unscopedName: 'utils'  }
- * 'utils' => { name: 'utils', version: 'latest', scope: '', unscopedName: 'utils'  }
+ * ```ts
+ * pkgNameAnalysis('@eljs/utils@1.0.0')
+ * // { name: '@eljs/utils', version: '1.0.0', scope: '@eljs', unscopedName: 'utils' }
+ *
+ * pkgNameAnalysis('utils@1.0.0')
+ * // { name: 'utils', version: '1.0.0', scope: '', unscopedName: 'utils' }
+ *
+ * pkgNameAnalysis('@eljs/utils')
+ * // { name: '@eljs/utils', version: 'latest', scope: '@eljs', unscopedName: 'utils' }
+ *
+ * pkgNameAnalysis('utils')
+ * // { name: 'utils', version: 'latest', scope: '', unscopedName: 'utils' }
+ * ```
  */
 export function pkgNameAnalysis(name: string): ResolvedPkgName {
   try {

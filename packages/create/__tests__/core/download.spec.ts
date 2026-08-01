@@ -19,7 +19,10 @@ import {
   type MockedFunction,
 } from 'vitest'
 
-import { Download, type DownloadOptions } from '../../src/core/download'
+import {
+  TemplateDownloader,
+  type TemplateDownloadOptions,
+} from '../../src/core/template-downloader'
 import type { RemoteTemplate } from '../../src/types'
 
 // Mock external dependencies
@@ -37,7 +40,7 @@ vi.mock('@eljs/utils', () => ({
 vi.mock('ora')
 vi.mock('node:path')
 
-describe('Download 类测试', () => {
+describe('TemplateDownloader 类测试', () => {
   // Mock implementations
   const mockGetNpmPackage = getNpmPackage as MockedFunction<
     typeof getNpmPackage
@@ -107,36 +110,38 @@ describe('Download 类测试', () => {
 
   describe('构造函数测试', () => {
     it('应该使用npm选项初始化', () => {
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         type: 'npm',
         value: mockPackageName,
         cwd: mockCwd,
       }
 
-      const download = new Download(options)
+      const download = new TemplateDownloader(options)
 
-      expect(download.constructorOptions).toBe(options)
+      expect(download.constructorOptions).toEqual(options)
+      expect(Object.isFrozen(download.constructorOptions)).toBe(true)
     })
 
     it('应该使用git选项初始化', () => {
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         type: 'git',
         value: mockGitUrl,
       }
 
-      const download = new Download(options)
+      const download = new TemplateDownloader(options)
 
-      expect(download.constructorOptions).toBe(options)
+      expect(download.constructorOptions).toEqual(options)
+      expect(Object.isFrozen(download.constructorOptions)).toBe(true)
     })
 
     it('应该使用registry选项初始化', () => {
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         type: 'npm',
         value: mockPackageName,
         registry: 'https://custom-registry.com',
       }
 
-      const download = new Download(options)
+      const download = new TemplateDownloader(options)
 
       expect(download.constructorOptions.registry).toBe(
         'https://custom-registry.com',
@@ -144,23 +149,23 @@ describe('Download 类测试', () => {
     })
 
     it('应该在没有cwd选项时初始化', () => {
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         type: 'npm',
         value: mockPackageName,
       }
 
-      const download = new Download(options)
+      const download = new TemplateDownloader(options)
 
       expect(download.constructorOptions.cwd).toBeUndefined()
     })
 
     it('应该初始化spinner', () => {
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         type: 'npm',
         value: mockPackageName,
       }
 
-      expect(() => new Download(options)).not.toThrow()
+      expect(() => new TemplateDownloader(options)).not.toThrow()
       expect(mockOra).toHaveBeenCalled()
     })
   })
@@ -168,12 +173,12 @@ describe('Download 类测试', () => {
   describe('download 方法测试', () => {
     describe('npm 类型', () => {
       it('应该成功下载npm包', async () => {
-        const options: DownloadOptions = {
+        const options: TemplateDownloadOptions = {
           type: 'npm',
           value: mockPackageName,
           cwd: mockCwd,
         }
-        const download = new Download(options)
+        const download = new TemplateDownloader(options)
 
         const result = await download.download()
 
@@ -189,13 +194,13 @@ describe('Download 类测试', () => {
 
       it('应该使用自定义registry下载npm包', async () => {
         const customRegistry = 'https://custom-registry.com'
-        const options: DownloadOptions = {
+        const options: TemplateDownloadOptions = {
           type: 'npm',
           value: mockPackageName,
           registry: customRegistry,
           cwd: mockCwd,
         }
-        const download = new Download(options)
+        const download = new TemplateDownloader(options)
 
         await download.download()
 
@@ -208,11 +213,11 @@ describe('Download 类测试', () => {
 
       it('应该处理包未找到错误', async () => {
         const packageName = 'non-existent-package'
-        const options: DownloadOptions = {
+        const options: TemplateDownloadOptions = {
           type: 'npm',
           value: packageName,
         }
-        const download = new Download(options)
+        const download = new TemplateDownloader(options)
 
         // Mock package name analysis for this specific package
         mockPkgNameAnalysis.mockReturnValueOnce({
@@ -236,11 +241,11 @@ describe('Download 类测试', () => {
           unscopedName: mockPackageName,
         })
 
-        const options: DownloadOptions = {
+        const options: TemplateDownloadOptions = {
           type: 'npm',
           value: mockPackageName,
         }
-        const download = new Download(options)
+        const download = new TemplateDownloader(options)
 
         await download.download()
 
@@ -252,11 +257,11 @@ describe('Download 类测试', () => {
       })
 
       it('应该处理下载失败', async () => {
-        const options: DownloadOptions = {
+        const options: TemplateDownloadOptions = {
           type: 'npm',
           value: mockPackageName,
         }
-        const download = new Download(options)
+        const download = new TemplateDownloader(options)
 
         const downloadError = new Error('Network error')
         mockDownloadNpmTarball.mockRejectedValue(downloadError)
@@ -267,7 +272,7 @@ describe('Download 类测试', () => {
 
       it('应该处理作用域包', async () => {
         const scopedPackage = '@scope/package'
-        const options: DownloadOptions = {
+        const options: TemplateDownloadOptions = {
           type: 'npm',
           value: scopedPackage,
         }
@@ -279,7 +284,7 @@ describe('Download 类测试', () => {
           unscopedName: 'package',
         })
 
-        const download = new Download(options)
+        const download = new TemplateDownloader(options)
 
         await download.download()
 
@@ -293,7 +298,7 @@ describe('Download 类测试', () => {
 
       it('应该处理指定版本的包', async () => {
         const packageWithVersion = 'test-package@2.0.0'
-        const options: DownloadOptions = {
+        const options: TemplateDownloadOptions = {
           type: 'npm',
           value: packageWithVersion,
         }
@@ -314,7 +319,7 @@ describe('Download 类测试', () => {
           },
         } as unknown as Awaited<ReturnType<typeof getNpmPackage>>)
 
-        const download = new Download(options)
+        const download = new TemplateDownloader(options)
 
         await download.download()
 
@@ -328,11 +333,11 @@ describe('Download 类测试', () => {
 
     describe('git 类型', () => {
       it('应该成功下载git仓库', async () => {
-        const options: DownloadOptions = {
+        const options: TemplateDownloadOptions = {
           type: 'git',
           value: mockGitUrl,
         }
-        const download = new Download(options)
+        const download = new TemplateDownloader(options)
 
         const result = await download.download()
 
@@ -341,11 +346,11 @@ describe('Download 类测试', () => {
       })
 
       it('应该处理git下载失败', async () => {
-        const options: DownloadOptions = {
+        const options: TemplateDownloadOptions = {
           type: 'git',
           value: mockGitUrl,
         }
-        const download = new Download(options)
+        const download = new TemplateDownloader(options)
 
         const gitError = new Error('Git clone failed')
         mockDownloadGitRepository.mockRejectedValue(gitError)
@@ -362,11 +367,11 @@ describe('Download 类测试', () => {
         ]
 
         for (const gitUrl of gitUrls) {
-          const options: DownloadOptions = {
+          const options: TemplateDownloadOptions = {
             type: 'git',
             value: gitUrl,
           }
-          const download = new Download(options)
+          const download = new TemplateDownloader(options)
 
           await download.download()
 
@@ -381,10 +386,10 @@ describe('Download 类测试', () => {
           type: 'invalid' as unknown as 'npm' | 'git',
           value: 'test',
         }
-        const download = new Download(options)
+        const download = new TemplateDownloader(options)
 
         await expect(download.download()).rejects.toThrow(
-          'Download type must be `npm` or `git`, but got `invalid`.',
+          'TemplateDownloader type must be `npm` or `git`, but got `invalid`.',
         )
       })
     })
@@ -404,11 +409,11 @@ describe('Download 类测试', () => {
       it('当package.json有依赖时应该安装依赖', async () => {
         mockReadJson.mockResolvedValue(mockPackageJson)
 
-        const options: DownloadOptions = {
+        const options: TemplateDownloadOptions = {
           type: 'npm',
           value: mockPackageName,
         }
-        const download = new Download(options)
+        const download = new TemplateDownloader(options)
 
         await download.download()
 
@@ -429,11 +434,11 @@ describe('Download 类测试', () => {
         const installError = new Error('Installation failed')
         mockRun.mockRejectedValue(installError)
 
-        const options: DownloadOptions = {
+        const options: TemplateDownloadOptions = {
           type: 'npm',
           value: mockPackageName,
         }
-        const download = new Download(options)
+        const download = new TemplateDownloader(options)
 
         await expect(download.download()).rejects.toThrow('Installation failed')
         expect(mockSpinner.fail).toHaveBeenCalled()
@@ -442,11 +447,11 @@ describe('Download 类测试', () => {
       it('应该为git仓库安装依赖', async () => {
         mockReadJson.mockResolvedValue(mockPackageJson)
 
-        const options: DownloadOptions = {
+        const options: TemplateDownloadOptions = {
           type: 'git',
           value: mockGitUrl,
         }
-        const download = new Download(options)
+        const download = new TemplateDownloader(options)
 
         await download.download()
 
@@ -465,7 +470,7 @@ describe('Download 类测试', () => {
       it('只有显式允许时才执行模板依赖的生命周期脚本', async () => {
         mockReadJson.mockResolvedValue(mockPackageJson)
 
-        const download = new Download({
+        const download = new TemplateDownloader({
           type: 'npm',
           value: mockPackageName,
           allowScripts: true,
@@ -487,11 +492,11 @@ describe('Download 类测试', () => {
         }
         mockReadJson.mockResolvedValue(packageJsonNoDeps)
 
-        const options: DownloadOptions = {
+        const options: TemplateDownloadOptions = {
           type: 'npm',
           value: mockPackageName,
         }
-        const download = new Download(options)
+        const download = new TemplateDownloader(options)
 
         await download.download()
 
@@ -506,11 +511,11 @@ describe('Download 类测试', () => {
         }
         mockReadJson.mockResolvedValue(packageJsonEmptyDeps)
 
-        const options: DownloadOptions = {
+        const options: TemplateDownloadOptions = {
           type: 'npm',
           value: mockPackageName,
         }
-        const download = new Download(options)
+        const download = new TemplateDownloader(options)
 
         await download.download()
 
@@ -520,11 +525,11 @@ describe('Download 类测试', () => {
       it('当package.json不存在时应该跳过安装', async () => {
         mockReadJson.mockResolvedValue({})
 
-        const options: DownloadOptions = {
+        const options: TemplateDownloadOptions = {
           type: 'npm',
           value: mockPackageName,
         }
-        const download = new Download(options)
+        const download = new TemplateDownloader(options)
 
         await download.download()
 
@@ -534,11 +539,11 @@ describe('Download 类测试', () => {
       it('应该优雅处理package.json读取错误', async () => {
         mockReadJson.mockRejectedValue(new Error('File read error'))
 
-        const options: DownloadOptions = {
+        const options: TemplateDownloadOptions = {
           type: 'npm',
           value: mockPackageName,
         }
-        const download = new Download(options)
+        const download = new TemplateDownloader(options)
 
         await expect(download.download()).rejects.toThrow('File read error')
       })
@@ -556,13 +561,13 @@ describe('Download 类测试', () => {
       }
       mockReadJson.mockResolvedValue(packageJsonWithDeps)
 
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         type: 'npm',
         value: `${mockPackageName}@${mockVersion}`,
         registry: 'https://registry.npmjs.org',
         cwd: mockCwd,
       }
-      const download = new Download(options)
+      const download = new TemplateDownloader(options)
 
       const result = await download.download()
 
@@ -591,11 +596,11 @@ describe('Download 类测试', () => {
     })
 
     it('应该处理完整的git下载流程', async () => {
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         type: 'git',
         value: mockGitUrl,
       }
-      const download = new Download(options)
+      const download = new TemplateDownloader(options)
 
       const result = await download.download()
 
@@ -609,11 +614,11 @@ describe('Download 类测试', () => {
     it('应该处理无安装的npm下载', async () => {
       mockReadJson.mockResolvedValue({}) // No package.json
 
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         type: 'npm',
         value: mockPackageName,
       }
-      const download = new Download(options)
+      const download = new TemplateDownloader(options)
 
       const result = await download.download()
 
@@ -625,11 +630,11 @@ describe('Download 类测试', () => {
 
   describe('spinner 行为测试', () => {
     it('成功下载时应该按正确顺序调用spinner方法', async () => {
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         type: 'npm',
         value: mockPackageName,
       }
-      const download = new Download(options)
+      const download = new TemplateDownloader(options)
 
       await download.download()
 
@@ -644,11 +649,11 @@ describe('Download 类测试', () => {
     it('下载失败时应该调用fail方法', async () => {
       mockDownloadNpmTarball.mockRejectedValue(new Error('Network error'))
 
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         type: 'npm',
         value: mockPackageName,
       }
-      const download = new Download(options)
+      const download = new TemplateDownloader(options)
 
       await expect(download.download()).rejects.toThrow()
 
@@ -660,11 +665,11 @@ describe('Download 类测试', () => {
     it('git下载失败时应该调用fail方法', async () => {
       mockDownloadGitRepository.mockRejectedValue(new Error('Git error'))
 
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         type: 'git',
         value: mockGitUrl,
       }
-      const download = new Download(options)
+      const download = new TemplateDownloader(options)
 
       await expect(download.download()).rejects.toThrow()
 
@@ -676,49 +681,49 @@ describe('Download 类测试', () => {
 
   describe('属性和类型安全测试', () => {
     it('应该具有所有必需属性', () => {
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         type: 'npm',
         value: mockPackageName,
       }
 
-      const download = new Download(options)
+      const download = new TemplateDownloader(options)
 
       expect(download).toHaveProperty('constructorOptions')
       expect('_spinner' in download).toBe(true)
     })
 
     it('应该正确存储构造函数选项', () => {
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         type: 'git',
         value: mockGitUrl,
         cwd: mockCwd,
       }
 
-      const download = new Download(options)
+      const download = new TemplateDownloader(options)
 
       expect(download.constructorOptions.type).toBe('git')
       expect(download.constructorOptions.value).toBe(mockGitUrl)
       expect(download.constructorOptions.cwd).toBe(mockCwd)
     })
 
-    it('应该接受有效的npm DownloadOptions', () => {
-      const options: DownloadOptions = {
+    it('应该接受有效的npm TemplateDownloadOptions', () => {
+      const options: TemplateDownloadOptions = {
         type: 'npm',
         value: 'package-name',
         registry: 'https://registry.npmjs.org',
         cwd: '/some/path',
       }
 
-      expect(() => new Download(options)).not.toThrow()
+      expect(() => new TemplateDownloader(options)).not.toThrow()
     })
 
-    it('应该接受有效的git DownloadOptions', () => {
-      const options: DownloadOptions = {
+    it('应该接受有效的git TemplateDownloadOptions', () => {
+      const options: TemplateDownloadOptions = {
         type: 'git',
         value: 'https://github.com/user/repo.git',
       }
 
-      expect(() => new Download(options)).not.toThrow()
+      expect(() => new TemplateDownloader(options)).not.toThrow()
     })
 
     it('应该扩展RemoteTemplate接口', () => {
@@ -727,22 +732,22 @@ describe('Download 类测试', () => {
         value: 'test-package',
       }
 
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         ...remoteTemplate,
         cwd: '/test',
       }
 
-      expect(() => new Download(options)).not.toThrow()
+      expect(() => new TemplateDownloader(options)).not.toThrow()
     })
 
     it('应该维护正确的属性类型', () => {
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         type: 'npm',
         value: mockPackageName,
         cwd: mockCwd,
       }
 
-      const download = new Download(options)
+      const download = new TemplateDownloader(options)
 
       expect(typeof download.constructorOptions.type).toBe('string')
       expect(typeof download.constructorOptions.value).toBe('string')
@@ -750,30 +755,30 @@ describe('Download 类测试', () => {
     })
 
     it('应该有download方法', () => {
-      const download = new Download({ type: 'npm', value: 'test' })
+      const download = new TemplateDownloader({ type: 'npm', value: 'test' })
       expect(typeof download.download).toBe('function')
     })
   })
 
   describe('配置验证', () => {
     it('应该正确处理npm类型', () => {
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         type: 'npm',
         value: 'my-package',
       }
 
-      const download = new Download(options)
+      const download = new TemplateDownloader(options)
 
       expect(download.constructorOptions.type).toBe('npm')
     })
 
     it('应该正确处理git类型', () => {
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         type: 'git',
         value: 'https://github.com/user/repo.git',
       }
 
-      const download = new Download(options)
+      const download = new TemplateDownloader(options)
 
       expect(download.constructorOptions.type).toBe('git')
     })
@@ -787,13 +792,13 @@ describe('Download 类测试', () => {
       ]
 
       testCases.forEach(packageName => {
-        const options: DownloadOptions = {
+        const options: TemplateDownloadOptions = {
           type: 'npm',
           value: packageName,
         }
 
-        expect(() => new Download(options)).not.toThrow()
-        const download = new Download(options)
+        expect(() => new TemplateDownloader(options)).not.toThrow()
+        const download = new TemplateDownloader(options)
         expect(download.constructorOptions.value).toBe(packageName)
       })
     })
@@ -806,13 +811,13 @@ describe('Download 类测试', () => {
       ]
 
       testCases.forEach(gitUrl => {
-        const options: DownloadOptions = {
+        const options: TemplateDownloadOptions = {
           type: 'git',
           value: gitUrl,
         }
 
-        expect(() => new Download(options)).not.toThrow()
-        const download = new Download(options)
+        expect(() => new TemplateDownloader(options)).not.toThrow()
+        const download = new TemplateDownloader(options)
         expect(download.constructorOptions.value).toBe(gitUrl)
       })
     })
@@ -821,36 +826,36 @@ describe('Download 类测试', () => {
   describe('registry 处理测试', () => {
     it('应该为npm接受自定义registry', () => {
       const customRegistry = 'https://my-custom-registry.com'
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         type: 'npm',
         value: 'test-package',
         registry: customRegistry,
       }
 
-      const download = new Download(options)
+      const download = new TemplateDownloader(options)
 
       expect(download.constructorOptions.registry).toBe(customRegistry)
     })
 
     it('应该在没有registry的情况下工作', () => {
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         type: 'npm',
         value: 'test-package',
       }
 
-      const download = new Download(options)
+      const download = new TemplateDownloader(options)
 
       expect(download.constructorOptions.registry).toBeUndefined()
     })
 
     it('对于git类型应该忽略registry', () => {
-      const options: DownloadOptions = {
+      const options: TemplateDownloadOptions = {
         type: 'git',
         value: 'https://github.com/user/repo.git',
         registry: 'https://should-be-ignored.com',
       }
 
-      const download = new Download(options)
+      const download = new TemplateDownloader(options)
 
       // Registry should still be there but not relevant for git
       expect(download.constructorOptions.registry).toBe(

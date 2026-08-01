@@ -65,7 +65,7 @@ npx @eljs/release patch
 ### Programmatic API Usage
 
 ```typescript
-import { release, Runner, defineConfig } from '@eljs/release'
+import { release, ReleaseRunner, defineConfig } from '@eljs/release'
 
 // Simple release
 await release('patch')
@@ -302,36 +302,59 @@ export default defineConfig({
 
 ## 🔌 Plugin System
 
-Extend release functionality with custom plugins:
+Extend release functionality with plugin entry modules. Plugin-specific options are passed as the
+second item of the declaration tuple:
 
 ```typescript
+// release.config.ts
 import { defineConfig } from '@eljs/release'
 
 export default defineConfig({
   plugins: [
-    // Custom plugin
-    {
-      name: 'slack-notification',
-      async apply(context) {
-        context.hooks.afterRelease.tap('slack', async result => {
-          await sendSlackNotification(`Released ${result.version}`)
-        })
-      },
-    },
-    // Plugin with options
-    {
-      name: 'custom-validation',
-      options: {
+    [
+      './plugins/custom-validation.ts',
+      {
         checkTests: true,
         checkLinting: true,
       },
-      async apply(context) {
-        context.hooks.beforeRelease.tap('validation', async () => {
-          await runCustomValidation(this.options)
-        })
-      },
-    },
+    ],
+    './plugins/slack-notification.ts',
   ],
+})
+```
+
+```typescript
+// plugins/custom-validation.ts
+import { definePlugin } from '@eljs/release'
+
+interface ValidationOptions {
+  checkTests: boolean
+  checkLinting: boolean
+}
+
+export default definePlugin<ValidationOptions>(
+  (
+    context,
+    options = {
+      checkTests: true,
+      checkLinting: true,
+    },
+  ) => {
+    context.onBeforeRelease(async () => {
+      await runCustomValidation(options)
+    })
+  },
+)
+```
+
+```typescript
+// plugins/slack-notification.ts
+import { definePlugin } from '@eljs/release'
+
+export default definePlugin(context => {
+  context.onAfterRelease(async result => {
+    await sendSlackNotification(`Released ${result.version}`)
+  })
 })
 ```
 
@@ -360,10 +383,10 @@ export default defineConfig({
 ### Custom Prerelease Workflow
 
 ```typescript
-import { Runner } from '@eljs/release'
+import { ReleaseRunner } from '@eljs/release'
 
 async function betaRelease() {
-  const runner = new Runner({
+  const runner = new ReleaseRunner({
     npm: {
       prerelease: true,
       prereleaseId: 'beta',

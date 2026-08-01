@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 // 测试 index.ts 文件中导出所有类型
 describe('类型索引导出', () => {
-  it('应该从 api 模块导出所有类型', async () => {
-    const apiModule = await import('../../src/types/api')
+  it('应该从 plugin-context 模块导出插件上下文类型', async () => {
+    const pluginContextModule = await import('../../src/types/plugin-context')
 
-    // 检查 Api 类型是否可用（通过检查模块是否存在）
-    expect(apiModule).toBeDefined()
+    // 检查 CreatePluginContext 类型是否可用（通过检查模块是否存在）
+    expect(pluginContextModule).toBeDefined()
   })
 
   it('应该从 config 模块导出所有类型', async () => {
@@ -20,8 +20,8 @@ describe('类型索引导出', () => {
 
     // 检查 runner 类型是否可用
     expect(runnerModule).toBeDefined()
-    expect(runnerModule.RunnerStageEnum).toBeDefined()
-    expect(typeof runnerModule.RunnerStageEnum).toBe('object')
+    expect(runnerModule.CreateRunnerStage).toBeDefined()
+    expect(typeof runnerModule.CreateRunnerStage).toBe('object')
   })
 
   it('应该通过索引重新导出所有类型', async () => {
@@ -31,11 +31,11 @@ describe('类型索引导出', () => {
     expect(indexModule).toBeDefined()
   })
 
-  it('应该允许通过索引导入 RunnerStageEnum', async () => {
-    // 测试可以通过索引文件导入 RunnerStageEnum
-    const { RunnerStageEnum } = await import('../../src/types/index')
-    expect(RunnerStageEnum).toBeDefined()
-    expect(RunnerStageEnum.Init).toBe('init')
+  it('应该允许通过索引导入 CreateRunnerStage', async () => {
+    // 测试可以通过索引文件导入 CreateRunnerStage
+    const { CreateRunnerStage } = await import('../../src/types/index')
+    expect(CreateRunnerStage).toBeDefined()
+    expect(CreateRunnerStage.LoadingPlugins).toBe('loadingPlugins')
   })
 
   it('应该维护正确的模块结构', () => {
@@ -44,9 +44,9 @@ describe('类型索引导出', () => {
   })
 
   it('应该为枚举导出运行时值', async () => {
-    // RunnerStageEnum 应该作为运行时值可用
-    const { RunnerStageEnum } = await import('../../src/types/index')
-    expect(typeof RunnerStageEnum).toBe('object')
-    expect(Object.keys(RunnerStageEnum).length).toBeGreaterThan(0)
+    // CreateRunnerStage 应该作为运行时值可用
+    const { CreateRunnerStage } = await import('../../src/types/index')
+    expect(typeof CreateRunnerStage).toBe('object')
+    expect(Object.keys(CreateRunnerStage).length).toBeGreaterThan(0)
   })
 })

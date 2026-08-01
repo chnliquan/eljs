@@ -1,4 +1,4 @@
-import type { UserConfig } from '@eljs/pluggable'
+import type { UserConfig } from '@eljs/plugin-host'
 
 /**
  * Remote Template
@@ -18,19 +18,19 @@ export interface RemoteTemplate {
   registry?: string
   /**
    * Whether this template is maintained by a source already trusted by the
-   * caller. Trusted templates skip the interactive execution warning.
-   * @default false
+   * caller. Trusted templates skip the interactive execution warning
+   * @defaultValue false
    */
   trusted?: boolean
 }
 
 /**
- * Create Configuration
+ * 项目创建配置
  */
 export interface Config extends UserConfig {
   /**
    * Working directory
-   * @default process.cwd()
+   * @defaultValue process.cwd()
    */
   cwd?: string
   /**
@@ -39,37 +39,37 @@ export interface Config extends UserConfig {
   template?: string | RemoteTemplate
   /**
    * Whether overwrite target directory if it exists
-   * @default false
+   * @defaultValue false
    */
   force?: boolean
   /**
    * Whether merge target directory if it exists
-   * @default false
+   * @defaultValue false
    */
   merge?: boolean
   /**
    * Whether enable default prompts
-   * @default true
+   * @defaultValue true
    */
   defaultQuestions?: boolean
   /**
    * Whether initialize git after create done
-   * @default true
+   * @defaultValue true
    */
   gitInit?: boolean
   /**
    * Whether install dependencies after create done
-   * @default true
+   * @defaultValue true
    */
   install?: boolean
   /**
-   * Skip the interactive warning before executing a remote template.
-   * @default false
+   * Skip the interactive warning before executing a remote template
+   * @defaultValue false
    */
   yes?: boolean
   /**
-   * Allow lifecycle scripts while installing remote template dependencies.
-   * @default false
+   * Allow lifecycle scripts while installing remote template dependencies
+   * @defaultValue false
    */
   allowTemplateScripts?: boolean
 }

@@ -117,8 +117,8 @@ export class ConfigManager {
 
   /**
    * 获取主配置文件
-   * @param configFiles 默认配置文件列表
-   * @param cwd 当前工作目录
+   * @param configFiles - 默认配置文件列表
+   * @param cwd - 当前工作目录
    */
   public static async getMainConfigFile(
     configFiles: string[],
@@ -139,8 +139,8 @@ export class ConfigManager {
 
   /**
    * 同步获取主配置文件
-   * @param configFiles 默认配置文件列表
-   * @param cwd 当前工作目录
+   * @param configFiles - 默认配置文件列表
+   * @param cwd - 当前工作目录
    */
   public static getMainConfigFileSync(
     configFiles: string[],
@@ -161,8 +161,8 @@ export class ConfigManager {
 
   /**
    * 获取配置文件列表
-   * @param mainConfigFile 主配置文件路径
-   * @param configExts 配置文件扩展名列表
+   * @param mainConfigFile - 主配置文件路径
+   * @param configExts - 配置文件扩展名列表
    */
   public static getConfigFiles(
     mainConfigFile: string,

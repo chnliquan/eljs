@@ -9,7 +9,7 @@ import type { PackageJson } from '../types'
 
 /**
  * 获取 pnpm 工作目录根路径
- * @param cwd 当前工作目录
+ * @param cwd - 当前工作目录
  */
 export async function getPnpmWorkspaceRoot(cwd: string): Promise<string> {
   const yaml = await findUp(['pnpm-lock.yaml', 'pnpm-workspace.yaml'], {
@@ -21,7 +21,7 @@ export async function getPnpmWorkspaceRoot(cwd: string): Promise<string> {
 
 /**
  * 获取 yarn 工作目录根路径
- * @param cwd 当前工作目录
+ * @param cwd - 当前工作目录
  */
 export async function getYarnWorkspaceRoot(cwd: string): Promise<string> {
   const lock = await findUp(['yarn.lock'], {
@@ -32,7 +32,7 @@ export async function getYarnWorkspaceRoot(cwd: string): Promise<string> {
 
 /**
  * 获取 lerna 工作目录根路径
- * @param cwd 当前工作目录
+ * @param cwd - 当前工作目录
  */
 export async function getLernaWorkspaceRoot(cwd: string): Promise<string> {
   const json = await findUp(['lerna.json'], {
@@ -43,7 +43,7 @@ export async function getLernaWorkspaceRoot(cwd: string): Promise<string> {
 
 /**
  * 获取 npm 工作目录根路径
- * @param cwd 当前工作目录
+ * @param cwd - 当前工作目录
  */
 export async function getNpmWorkspaceRoot(cwd: string): Promise<string> {
   const lock = await findUp(['package-lock.json'], {
@@ -54,7 +54,7 @@ export async function getNpmWorkspaceRoot(cwd: string): Promise<string> {
 
 /**
  * 获取 bun 工作目录根路径
- * @param cwd 当前工作目录
+ * @param cwd - 当前工作目录
  */
 export async function getBunWorkspaceRoot(cwd: string): Promise<string> {
   const lock = await findUp(['bun.lockb'], {
@@ -65,7 +65,7 @@ export async function getBunWorkspaceRoot(cwd: string): Promise<string> {
 
 /**
  * 获取工作区根目录
- * @param cwd 当前工作目录
+ * @param cwd - 当前工作目录
  */
 export async function getWorkspaceRoot(cwd: string): Promise<string> {
   return (
@@ -80,8 +80,8 @@ const cache = new Map()
 
 /**
  * 获取项目工作区
- * @param cwd 当前工作目录
- * @param relative 是否展示相对路径
+ * @param cwd - 当前工作目录
+ * @param relative - 是否展示相对路径
  */
 export async function getWorkspaces(
   cwd: string,

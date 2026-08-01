@@ -10,7 +10,7 @@ import {
   type MockedFunction,
 } from 'vitest'
 import gitInitPlugin from '../../../src/internal/plugins/git-init'
-import type { Api } from '../../../src/types'
+import type { CreatePluginContext } from '../../../src/types'
 
 // Mock types
 interface MockUtils {
@@ -43,7 +43,7 @@ vi.mock('@eljs/utils', () => ({
 }))
 
 describe('内部插件 git-init', () => {
-  let mockApi: Mocked<Api>
+  let mockContext: Mocked<CreatePluginContext>
   let describeCallback: DescribeConfig
   let onGenerateDoneCallback: () => Promise<void>
   let mockUtils: MockUtils
@@ -51,7 +51,7 @@ describe('内部插件 git-init', () => {
   beforeEach(() => {
     mockUtils = mockedUtils as unknown as MockUtils
 
-    mockApi = {
+    mockContext = {
       describe: vi.fn((config: DescribeConfig) => {
         describeCallback = config
       }),
@@ -67,7 +67,7 @@ describe('内部插件 git-init', () => {
       prompts: {
         git: true,
       },
-    } as unknown as Mocked<Api>
+    } as unknown as Mocked<CreatePluginContext>
   })
 
   afterEach(() => {
@@ -79,43 +79,46 @@ describe('内部插件 git-init', () => {
   })
 
   it('应该调用 describe 注册插件配置', async () => {
-    await gitInitPlugin(mockApi)
+    await gitInitPlugin(mockContext)
 
-    expect(mockApi.describe).toHaveBeenCalledTimes(1)
-    expect(mockApi.describe).toHaveBeenCalledWith({
+    expect(mockContext.describe).toHaveBeenCalledTimes(1)
+    expect(mockContext.describe).toHaveBeenCalledWith({
       enable: expect.any(Function),
     })
   })
 
   it('应该调用 onGenerateDone 注册 git 初始化钩子', async () => {
-    await gitInitPlugin(mockApi)
+    await gitInitPlugin(mockContext)
 
-    expect(mockApi.onGenerateDone).toHaveBeenCalledTimes(1)
-    expect(mockApi.onGenerateDone).toHaveBeenCalledWith(expect.any(Function), {
-      stage: Number.NEGATIVE_INFINITY,
-    })
+    expect(mockContext.onGenerateDone).toHaveBeenCalledTimes(1)
+    expect(mockContext.onGenerateDone).toHaveBeenCalledWith(
+      expect.any(Function),
+      {
+        stage: Number.NEGATIVE_INFINITY,
+      },
+    )
   })
 
   describe('启用条件', () => {
     it('当 gitInit 配置为 true 时应该启用', async () => {
-      mockApi.config.gitInit = true
-      await gitInitPlugin(mockApi)
+      mockContext.config.gitInit = true
+      await gitInitPlugin(mockContext)
 
       const result = describeCallback.enable()
       expect(result).toBe(true)
     })
 
     it('当 gitInit 配置为 false 时应该禁用', async () => {
-      mockApi.config.gitInit = false
-      await gitInitPlugin(mockApi)
+      mockContext.config.gitInit = false
+      await gitInitPlugin(mockContext)
 
       const result = describeCallback.enable()
       expect(result).toBe(false)
     })
 
     it('当 gitInit 配置为 undefined 时应该禁用', async () => {
-      mockApi.config.gitInit = undefined as unknown as boolean
-      await gitInitPlugin(mockApi)
+      mockContext.config.gitInit = undefined as unknown as boolean
+      await gitInitPlugin(mockContext)
 
       const result = describeCallback.enable()
       expect(result).toBe(false)
@@ -129,7 +132,7 @@ describe('内部插件 git-init', () => {
     })
 
     it('当所有条件满足时应该初始化 git', async () => {
-      await gitInitPlugin(mockApi)
+      await gitInitPlugin(mockContext)
 
       await onGenerateDoneCallback()
 
@@ -147,7 +150,7 @@ describe('内部插件 git-init', () => {
     it('当 git 不可用时应该跳过 git 初始化', async () => {
       mockUtils.hasGit.mockResolvedValue(false)
 
-      await gitInitPlugin(mockApi)
+      await gitInitPlugin(mockContext)
       await onGenerateDoneCallback()
 
       expect(mockUtils.hasGit).toHaveBeenCalled()
@@ -159,7 +162,7 @@ describe('内部插件 git-init', () => {
     it('当项目已有 git 时应该跳过 git 初始化', async () => {
       mockUtils.hasProjectGit.mockResolvedValue(true)
 
-      await gitInitPlugin(mockApi)
+      await gitInitPlugin(mockContext)
       await onGenerateDoneCallback()
 
       expect(mockUtils.hasGit).toHaveBeenCalled()
@@ -169,9 +172,9 @@ describe('内部插件 git-init', () => {
     })
 
     it('当 prompts.git 为 false 时应该跳过 git 初始化', async () => {
-      mockApi.prompts.git = false
+      mockContext.prompts.git = false
 
-      await gitInitPlugin(mockApi)
+      await gitInitPlugin(mockContext)
       await onGenerateDoneCallback()
 
       expect(mockUtils.hasGit).toHaveBeenCalled()
@@ -181,9 +184,9 @@ describe('内部插件 git-init', () => {
     })
 
     it('当 prompts.git 为 "false" 时应该跳过 git 初始化', async () => {
-      mockApi.prompts.git = 'false'
+      mockContext.prompts.git = 'false'
 
-      await gitInitPlugin(mockApi)
+      await gitInitPlugin(mockContext)
       await onGenerateDoneCallback()
 
       expect(mockUtils.hasGit).toHaveBeenCalled()
@@ -193,9 +196,9 @@ describe('内部插件 git-init', () => {
     })
 
     it('当 prompts.git 为真值字符串时应该初始化 git', async () => {
-      mockApi.prompts.git = 'true'
+      mockContext.prompts.git = 'true'
 
-      await gitInitPlugin(mockApi)
+      await gitInitPlugin(mockContext)
       await onGenerateDoneCallback()
 
       expect(mockUtils.hasGit).toHaveBeenCalled()
@@ -210,9 +213,9 @@ describe('内部插件 git-init', () => {
     })
 
     it('应该处理未定义的 prompts.git', async () => {
-      mockApi.prompts.git = undefined
+      mockContext.prompts.git = undefined
 
-      await gitInitPlugin(mockApi)
+      await gitInitPlugin(mockContext)
       await onGenerateDoneCallback()
 
       expect(mockUtils.hasGit).toHaveBeenCalled()
@@ -231,7 +234,7 @@ describe('内部插件 git-init', () => {
     mockUtils.hasGit.mockResolvedValue(true)
     mockUtils.hasProjectGit.mockResolvedValue(false)
 
-    await expect(gitInitPlugin(mockApi)).resolves.not.toThrow()
+    await expect(gitInitPlugin(mockContext)).resolves.not.toThrow()
     await expect(onGenerateDoneCallback()).resolves.not.toThrow()
   })
 })

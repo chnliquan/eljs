@@ -90,10 +90,10 @@ vi.mock('../../../src/utils', () => ({
 describe('版本插件测试', () => {
   // 为了测试的简洁性，在这个文件中允许使用 any 类型
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockApi: any
+  let mockContext: any
 
   beforeEach(() => {
-    mockApi = {
+    mockContext = {
       onCheck: vi.fn(),
       getIncrementVersion: vi.fn(),
       onBeforeBumpVersion: vi.fn(),
@@ -185,18 +185,20 @@ describe('版本插件测试', () => {
 
   describe('插件注册', () => {
     it('应该注册所有必需的钩子方法', () => {
-      versionPlugin(mockApi)
+      versionPlugin(mockContext)
 
-      expect(mockApi.onCheck).toHaveBeenCalledWith(expect.any(Function))
-      expect(mockApi.getIncrementVersion).toHaveBeenCalledWith(
+      expect(mockContext.onCheck).toHaveBeenCalledWith(expect.any(Function))
+      expect(mockContext.getIncrementVersion).toHaveBeenCalledWith(
         expect.any(Function),
         { stage: 10 },
       )
-      expect(mockApi.onBeforeBumpVersion).toHaveBeenCalledWith(
+      expect(mockContext.onBeforeBumpVersion).toHaveBeenCalledWith(
         expect.any(Function),
       )
-      expect(mockApi.onBumpVersion).toHaveBeenCalledWith(expect.any(Function))
-      expect(mockApi.onAfterBumpVersion).toHaveBeenCalledWith(
+      expect(mockContext.onBumpVersion).toHaveBeenCalledWith(
+        expect.any(Function),
+      )
+      expect(mockContext.onAfterBumpVersion).toHaveBeenCalledWith(
         expect.any(Function),
       )
     })
@@ -207,9 +209,9 @@ describe('版本插件测试', () => {
     let onCheckHandler: any
 
     beforeEach(() => {
-      versionPlugin(mockApi)
+      versionPlugin(mockContext)
 
-      onCheckHandler = mockApi.onCheck.mock.calls[0][0]
+      onCheckHandler = mockContext.onCheck.mock.calls[0][0]
     })
 
     it('应该验证有效的版本', async () => {
@@ -256,20 +258,21 @@ describe('版本插件测试', () => {
     let getIncrementVersionHandler: any
 
     beforeEach(() => {
-      versionPlugin(mockApi)
+      versionPlugin(mockContext)
 
-      getIncrementVersionHandler = mockApi.getIncrementVersion.mock.calls[0][0]
+      getIncrementVersionHandler =
+        mockContext.getIncrementVersion.mock.calls[0][0]
     })
 
     it('应该获取增量版本', async () => {
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.confirm = false
 
       const result = await getIncrementVersionHandler({
         releaseTypeOrVersion: 'minor',
       })
 
       expect(result).toBe('1.1.0')
-      expect(mockApi.step).toHaveBeenCalledWith('Incrementing version ...')
+      expect(mockContext.step).toHaveBeenCalledWith('Incrementing version ...')
       expect(getRemoteDistTag).toHaveBeenCalledWith(['test-package'], {
         cwd: '/test/project',
         registry: 'https://registry.npmjs.org',
@@ -278,8 +281,8 @@ describe('版本插件测试', () => {
     })
 
     it('应该处理 canary 版本', async () => {
-      mockApi.config.npm.canary = true
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.canary = true
+      mockContext.config.npm.confirm = false
       ;(
         getCanaryVersion as MockedFunction<typeof getCanaryVersion>
       ).mockResolvedValue('1.1.0-canary.20231113-abc123')
@@ -295,9 +298,9 @@ describe('版本插件测试', () => {
     })
 
     it('应该处理预发布版本', async () => {
-      mockApi.config.npm.prerelease = true
-      mockApi.config.npm.prereleaseId = 'beta'
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.prerelease = true
+      mockContext.config.npm.prereleaseId = 'beta'
+      mockContext.config.npm.confirm = false
 
       await getIncrementVersionHandler({ releaseTypeOrVersion: 'minor' })
 
@@ -310,7 +313,7 @@ describe('版本插件测试', () => {
     })
 
     it('应该在确认模式下请求用户确认', async () => {
-      mockApi.config.npm.confirm = true
+      mockContext.config.npm.confirm = true
       ;(confirm as MockedFunction<typeof confirm>).mockResolvedValue(true)
 
       const result = await getIncrementVersionHandler({
@@ -324,7 +327,7 @@ describe('版本插件测试', () => {
     })
 
     it('当用户拒绝确认时应该递归调用', async () => {
-      mockApi.config.npm.confirm = true
+      mockContext.config.npm.confirm = true
       ;(confirm as MockedFunction<typeof confirm>)
         .mockResolvedValueOnce(false) // 第一次拒绝
         .mockResolvedValueOnce(true) // 第二次确认
@@ -341,14 +344,14 @@ describe('版本插件测试', () => {
 
     it('应该处理版本已存在的情况', async () => {
       // 版本已存在的检查是在 checkVersion 函数中，该函数在 onBeforeBumpVersion 钩子中调用
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.confirm = false
 
       // 先测试在 onBeforeBumpVersion 中的版本检查
 
-      versionPlugin(mockApi)
+      versionPlugin(mockContext)
 
       const onBeforeBumpVersionHandler =
-        mockApi.onBeforeBumpVersion.mock.calls[0][0]
+        mockContext.onBeforeBumpVersion.mock.calls[0][0]
       ;(
         isVersionExist as MockedFunction<typeof isVersionExist>
       ).mockResolvedValue(true)
@@ -365,7 +368,7 @@ describe('版本插件测试', () => {
     })
 
     it('应该处理用户选择版本类型', async () => {
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.confirm = false
       ;(prompts as MockedFunction<typeof prompts>).mockResolvedValue({
         value: '1.0.1',
       })
@@ -387,7 +390,7 @@ describe('版本插件测试', () => {
     })
 
     it('应该处理金丝雀选择', async () => {
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.confirm = false
       ;(prompts as MockedFunction<typeof prompts>).mockResolvedValue({
         value: 'canary',
       })
@@ -404,7 +407,7 @@ describe('版本插件测试', () => {
     })
 
     it('应该处理自定义版本输入', async () => {
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.confirm = false
       ;(prompts as MockedFunction<typeof prompts>)
         .mockResolvedValueOnce({ value: 'custom' }) // 第一次选择 custom
         .mockResolvedValueOnce({ value: '2.0.0' }) // 第二次输入自定义版本
@@ -418,7 +421,7 @@ describe('版本插件测试', () => {
     })
 
     it('应该处理预发布类型选择', async () => {
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.confirm = false
       ;(prompts as MockedFunction<typeof prompts>)
         .mockResolvedValueOnce({ value: 'alpha' }) // 第一次选择 alpha
         .mockResolvedValueOnce({ value: '1.1.0-alpha.1' }) // 第二次选择具体的预发布版本
@@ -432,8 +435,8 @@ describe('版本插件测试', () => {
     })
 
     it('应该处理预配置的预发布ID', async () => {
-      mockApi.config.npm.prereleaseId = 'beta'
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.prereleaseId = 'beta'
+      mockContext.config.npm.confirm = false
       ;(prompts as MockedFunction<typeof prompts>).mockResolvedValue({
         value: '1.1.0-beta.1',
       })
@@ -454,7 +457,7 @@ describe('版本插件测试', () => {
     })
 
     it('应该处理具体版本字符串', async () => {
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.confirm = false
 
       const result = await getIncrementVersionHandler({
         releaseTypeOrVersion: '2.0.0',
@@ -470,9 +473,9 @@ describe('版本插件测试', () => {
     let onBumpVersionHandler: any
 
     beforeEach(() => {
-      versionPlugin(mockApi)
+      versionPlugin(mockContext)
 
-      onBumpVersionHandler = mockApi.onBumpVersion.mock.calls[0][0]
+      onBumpVersionHandler = mockContext.onBumpVersion.mock.calls[0][0]
     })
 
     it('应该更新包版本', async () => {
@@ -493,8 +496,8 @@ describe('版本插件测试', () => {
     })
 
     it('应该更新项目根目录 package.json', async () => {
-      mockApi.appData.projectPkgJsonPath = '/test/project/package.json'
-      mockApi.appData.pkgJsonPaths = ['/test/packages/pkg1/package.json']
+      mockContext.appData.projectPkgJsonPath = '/test/project/package.json'
+      mockContext.appData.pkgJsonPaths = ['/test/packages/pkg1/package.json']
 
       const versionInfo = {
         version: '1.1.0',
@@ -519,8 +522,8 @@ describe('版本插件测试', () => {
     })
 
     it('不应该重复更新相同的 package.json 文件', async () => {
-      mockApi.appData.projectPkgJsonPath = '/test/package.json'
-      mockApi.appData.pkgJsonPaths = ['/test/package.json']
+      mockContext.appData.projectPkgJsonPath = '/test/package.json'
+      mockContext.appData.pkgJsonPaths = ['/test/package.json']
 
       const versionInfo = {
         version: '1.1.0',
@@ -534,15 +537,15 @@ describe('版本插件测试', () => {
     })
 
     it('应该处理多个包的版本更新', async () => {
-      mockApi.appData.pkgs = [
+      mockContext.appData.pkgs = [
         { name: 'pkg1', version: '1.0.0' },
         { name: 'pkg2', version: '1.0.0' },
       ]
-      mockApi.appData.pkgJsonPaths = [
+      mockContext.appData.pkgJsonPaths = [
         '/test/pkg1/package.json',
         '/test/pkg2/package.json',
       ]
-      mockApi.appData.pkgNames = ['pkg1', 'pkg2']
+      mockContext.appData.pkgNames = ['pkg1', 'pkg2']
 
       const versionInfo = {
         version: '1.1.0',
@@ -577,9 +580,10 @@ describe('版本插件测试', () => {
     let onBeforeBumpVersionHandler: any
 
     beforeEach(() => {
-      versionPlugin(mockApi)
+      versionPlugin(mockContext)
 
-      onBeforeBumpVersionHandler = mockApi.onBeforeBumpVersion.mock.calls[0][0]
+      onBeforeBumpVersionHandler =
+        mockContext.onBeforeBumpVersion.mock.calls[0][0]
     })
 
     it('应该检查版本是否已存在', async () => {
@@ -599,7 +603,7 @@ describe('版本插件测试', () => {
     })
 
     it('应该在修改文件前检查所有可发布包的目标版本', async () => {
-      mockApi.appData.validPkgNames = ['pkg1', 'pkg2']
+      mockContext.appData.validPkgNames = ['pkg1', 'pkg2']
 
       await onBeforeBumpVersionHandler({
         version: '1.1.0',
@@ -622,7 +626,7 @@ describe('版本插件测试', () => {
     })
 
     it('当预发布ID不匹配时应该抛出错误', async () => {
-      mockApi.config.npm.prereleaseId = 'alpha'
+      mockContext.config.npm.prereleaseId = 'alpha'
 
       const versionInfo = {
         version: '1.1.0-beta.1',
@@ -636,7 +640,7 @@ describe('版本插件测试', () => {
     })
 
     it('当期望预发布但得到正式版本时应该抛出错误', async () => {
-      mockApi.config.npm.prerelease = true
+      mockContext.config.npm.prerelease = true
 
       const versionInfo = {
         version: '1.1.0',
@@ -650,7 +654,7 @@ describe('版本插件测试', () => {
     })
 
     it('当期望正式版本但得到预发布时应该抛出错误', async () => {
-      mockApi.config.npm.prerelease = false
+      mockContext.config.npm.prerelease = false
 
       const versionInfo = {
         version: '1.1.0-beta.1',
@@ -696,7 +700,7 @@ describe('版本插件测试', () => {
       await expect(
         onBeforeBumpVersionHandler(versionInfo),
       ).resolves.toBeUndefined()
-      expect(mockApi.appData.existingPkgNames).toEqual(['test-package'])
+      expect(mockContext.appData.existingPkgNames).toEqual(['test-package'])
       expect(isGitTagAtHead).toHaveBeenCalledWith('v1.1.0', {
         cwd: '/test/project',
         verbose: false,
@@ -730,9 +734,10 @@ describe('版本插件测试', () => {
     let onAfterBumpVersionHandler: any
 
     beforeEach(() => {
-      versionPlugin(mockApi)
+      versionPlugin(mockContext)
 
-      onAfterBumpVersionHandler = mockApi.onAfterBumpVersion.mock.calls[0][0]
+      onAfterBumpVersionHandler =
+        mockContext.onAfterBumpVersion.mock.calls[0][0]
     })
 
     it('应该更新包锁文件', async () => {
@@ -744,7 +749,7 @@ describe('版本插件测试', () => {
 
       await onAfterBumpVersionHandler(versionInfo)
 
-      expect(mockApi.step).toHaveBeenCalledWith('Updating Lockfile ...')
+      expect(mockContext.step).toHaveBeenCalledWith('Updating Lockfile ...')
       expect(updatePackageLock).toHaveBeenCalledWith('npm', {
         cwd: '/test/project',
         verbose: true,
@@ -752,7 +757,7 @@ describe('版本插件测试', () => {
     })
 
     it('应该使用正确的包管理器', async () => {
-      mockApi.appData.packageManager = 'pnpm'
+      mockContext.appData.packageManager = 'pnpm'
       const versionInfo = {
         version: '1.1.0',
         isPrerelease: false,
@@ -780,7 +785,7 @@ describe('版本插件测试', () => {
 
       await onAfterBumpVersionHandler(versionInfo)
 
-      expect(mockApi.step).not.toHaveBeenCalled()
+      expect(mockContext.step).not.toHaveBeenCalled()
       expect(updatePackageLock).not.toHaveBeenCalled()
     })
 
@@ -806,13 +811,14 @@ describe('版本插件测试', () => {
     let getIncrementVersionHandler: any
 
     beforeEach(() => {
-      versionPlugin(mockApi)
+      versionPlugin(mockContext)
 
-      getIncrementVersionHandler = mockApi.getIncrementVersion.mock.calls[0][0]
+      getIncrementVersionHandler =
+        mockContext.getIncrementVersion.mock.calls[0][0]
     })
 
     it('应该在没有指定版本时提示用户选择', async () => {
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.confirm = false
       ;(prompts as MockedFunction<typeof prompts>).mockResolvedValue({
         value: '1.0.1',
       })
@@ -839,7 +845,7 @@ describe('版本插件测试', () => {
     })
 
     it('应该在确认模式下请求用户确认版本', async () => {
-      mockApi.config.npm.confirm = true
+      mockContext.config.npm.confirm = true
       ;(
         getReleaseVersion as MockedFunction<typeof getReleaseVersion>
       ).mockReturnValue('1.1.0')
@@ -856,7 +862,7 @@ describe('版本插件测试', () => {
     })
 
     it('当禁用确认时应该直接返回版本', async () => {
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.confirm = false
       ;(
         getReleaseVersion as MockedFunction<typeof getReleaseVersion>
       ).mockReturnValue('1.1.0')
@@ -875,15 +881,16 @@ describe('版本插件测试', () => {
     let getIncrementVersionHandler: any
 
     beforeEach(() => {
-      versionPlugin(mockApi)
+      versionPlugin(mockContext)
 
-      getIncrementVersionHandler = mockApi.getIncrementVersion.mock.calls[0][0]
+      getIncrementVersionHandler =
+        mockContext.getIncrementVersion.mock.calls[0][0]
     })
 
     it('应该正确处理预发布配置', async () => {
-      mockApi.config.npm.prerelease = true
-      mockApi.config.npm.prereleaseId = 'alpha'
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.prerelease = true
+      mockContext.config.npm.prereleaseId = 'alpha'
+      mockContext.config.npm.confirm = false
       ;(
         getReleaseVersion as MockedFunction<typeof getReleaseVersion>
       ).mockReturnValue('1.1.0-alpha.1')
@@ -902,8 +909,8 @@ describe('版本插件测试', () => {
     })
 
     it('应该使用默认的预发布 ID', async () => {
-      mockApi.config.npm.prerelease = true
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.prerelease = true
+      mockContext.config.npm.confirm = false
 
       await getIncrementVersionHandler({ releaseTypeOrVersion: 'minor' })
 
@@ -916,12 +923,12 @@ describe('版本插件测试', () => {
     })
 
     it('应该处理已经是金丝雀版本的情况', async () => {
-      mockApi.config.npm.canary = true
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.canary = true
+      mockContext.config.npm.confirm = false
       ;(
         isCanaryVersion as MockedFunction<typeof isCanaryVersion>
       ).mockReturnValue(true)
-      mockApi.appData.pkgs[0].version = '1.0.0-canary.20231112-old123'
+      mockContext.appData.pkgs[0].version = '1.0.0-canary.20231112-old123'
 
       // 当没有提供 releaseTypeOrVersion 且配置为 canary 模式时，会调用 getCanaryVersion
 
@@ -936,13 +943,14 @@ describe('版本插件测试', () => {
     let getIncrementVersionHandler: any
 
     beforeEach(() => {
-      versionPlugin(mockApi)
+      versionPlugin(mockContext)
 
-      getIncrementVersionHandler = mockApi.getIncrementVersion.mock.calls[0][0]
+      getIncrementVersionHandler =
+        mockContext.getIncrementVersion.mock.calls[0][0]
     })
 
     it('应该获取和使用远程版本信息', async () => {
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.confirm = false
       ;(
         getRemoteDistTag as MockedFunction<typeof getRemoteDistTag>
       ).mockResolvedValue({
@@ -965,7 +973,7 @@ describe('版本插件测试', () => {
     })
 
     it('应该处理获取远程版本失败', async () => {
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.confirm = false
       ;(
         getRemoteDistTag as MockedFunction<typeof getRemoteDistTag>
       ).mockRejectedValue(new Error('网络错误'))
@@ -995,16 +1003,16 @@ describe('版本插件测试', () => {
       ]
 
       for (const config of configurations) {
-        mockApi.config.npm = {
-          ...mockApi.config.npm,
+        mockContext.config.npm = {
+          ...mockContext.config.npm,
           ...config,
           confirm: false,
         }
 
-        versionPlugin(mockApi)
+        versionPlugin(mockContext)
 
         const getIncrementVersionHandler =
-          mockApi.getIncrementVersion.mock.calls[0][0]
+          mockContext.getIncrementVersion.mock.calls[0][0]
 
         await expect(
           getIncrementVersionHandler({ releaseTypeOrVersion: 'minor' }),
@@ -1025,27 +1033,27 @@ describe('版本插件测试', () => {
     })
 
     it('应该没有返回值', () => {
-      const result = versionPlugin(mockApi)
+      const result = versionPlugin(mockContext)
       expect(result).toBeUndefined()
     })
   })
 
   describe('版本插件完整工作流', () => {
     it('应该完整执行版本管理流程', async () => {
-      versionPlugin(mockApi)
+      versionPlugin(mockContext)
 
       // 1. 检查版本有效性
 
-      const onCheckHandler = mockApi.onCheck.mock.calls[0][0]
+      const onCheckHandler = mockContext.onCheck.mock.calls[0][0]
 
       await onCheckHandler({ releaseTypeOrVersion: 'minor' })
       expect(isVersionValid).toHaveBeenCalled()
 
       // 2. 获取增量版本
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.confirm = false
 
       const getIncrementVersionHandler =
-        mockApi.getIncrementVersion.mock.calls[0][0]
+        mockContext.getIncrementVersion.mock.calls[0][0]
 
       const version = await getIncrementVersionHandler({
         releaseTypeOrVersion: 'minor',
@@ -1054,7 +1062,7 @@ describe('版本插件测试', () => {
 
       // 3. 更新版本
 
-      const onBumpVersionHandler = mockApi.onBumpVersion.mock.calls[0][0]
+      const onBumpVersionHandler = mockContext.onBumpVersion.mock.calls[0][0]
 
       await onBumpVersionHandler({
         version: '1.1.0',
@@ -1066,7 +1074,7 @@ describe('版本插件测试', () => {
       // 4. 更新锁文件
 
       const onAfterBumpVersionHandler =
-        mockApi.onAfterBumpVersion.mock.calls[0][0]
+        mockContext.onAfterBumpVersion.mock.calls[0][0]
 
       await onAfterBumpVersionHandler({
         version: '1.1.0',
@@ -1077,14 +1085,14 @@ describe('版本插件测试', () => {
     })
 
     it('应该处理错误情况', async () => {
-      versionPlugin(mockApi)
+      versionPlugin(mockContext)
 
       // 测试无效版本错误
       ;(
         isVersionValid as MockedFunction<typeof isVersionValid>
       ).mockReturnValue(false)
 
-      const onCheckHandler = mockApi.onCheck.mock.calls[0][0]
+      const onCheckHandler = mockContext.onCheck.mock.calls[0][0]
 
       await expect(
         onCheckHandler({ releaseTypeOrVersion: 'invalid' }),
@@ -1095,7 +1103,7 @@ describe('版本插件测试', () => {
         updatePackageVersion as MockedFunction<typeof updatePackageVersion>
       ).mockRejectedValue(new Error('更新失败'))
 
-      const onBumpVersionHandler = mockApi.onBumpVersion.mock.calls[0][0]
+      const onBumpVersionHandler = mockContext.onBumpVersion.mock.calls[0][0]
 
       await expect(
         onBumpVersionHandler({
@@ -1112,14 +1120,15 @@ describe('版本插件测试', () => {
     let getIncrementVersionHandler: any
 
     beforeEach(() => {
-      versionPlugin(mockApi)
+      versionPlugin(mockContext)
 
-      getIncrementVersionHandler = mockApi.getIncrementVersion.mock.calls[0][0]
+      getIncrementVersionHandler =
+        mockContext.getIncrementVersion.mock.calls[0][0]
     })
 
     it('应该正确处理不同的远程版本信息显示', async () => {
-      mockApi.config.npm.canary = false
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.canary = false
+      mockContext.config.npm.confirm = false
       ;(
         getRemoteDistTag as MockedFunction<typeof getRemoteDistTag>
       ).mockResolvedValue({
@@ -1152,9 +1161,9 @@ describe('版本插件测试', () => {
     })
 
     it('应该在指定预发布ID时只显示对应的远程版本', async () => {
-      mockApi.config.npm.canary = false
-      mockApi.config.npm.prereleaseId = 'alpha'
-      mockApi.config.npm.confirm = false
+      mockContext.config.npm.canary = false
+      mockContext.config.npm.prereleaseId = 'alpha'
+      mockContext.config.npm.confirm = false
       ;(
         getRemoteDistTag as MockedFunction<typeof getRemoteDistTag>
       ).mockResolvedValue({

@@ -12,7 +12,7 @@ const SPACES_REGEXP = / +/g
 
 /**
  * 解析命令
- * @param command 可执行的命令
+ * @param command - 可执行的命令
  */
 export function parseCommand(command: string): string[] {
   const tokens: string[] = []
@@ -49,8 +49,8 @@ export type RunCommandChildProcess = ExecaChildProcess
 
 /**
  * 运行命令
- * @param command 命令名称
- * @param options 选项
+ * @param command - 命令名称
+ * @param options - 选项
  */
 export function run(
   command: string,
@@ -58,9 +58,9 @@ export function run(
 ): RunCommandChildProcess
 /**
  * 运行命令
- * @param command 命令名称
- * @param args 命令行参数
- * @param options 选项
+ * @param command - 命令名称
+ * @param args - 命令行参数
+ * @param options - 选项
  */
 export function run(
   command: string,
@@ -88,8 +88,8 @@ export function run(
 
 /**
  * 运行命令
- * @param command 命令名称
- * @param options 选项
+ * @param command - 命令名称
+ * @param options - 选项
  */
 export function runCommand(
   command: string,
@@ -101,8 +101,8 @@ export function runCommand(
 
 /**
  * 获取可执行的命令
- * @param target 命令
- * @param dirs 文件夹
+ * @param target - 命令
+ * @param dirs - 文件夹
  */
 export async function getExecutableCommand(
   target: string,

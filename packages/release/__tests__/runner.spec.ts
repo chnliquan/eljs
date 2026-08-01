@@ -1,20 +1,31 @@
-import * as importedModule1 from '@eljs/pluggable'
+import * as importedModule1 from '@eljs/plugin-host'
 import * as importedModule0 from '@eljs/utils'
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  afterAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+} from 'vitest'
 
 /**
  * @file packages/release runner 模块单元测试
- * @description 测试 Runner 类的核心功能
+ * @description 测试 ReleaseRunner 类的核心功能
  */
 
-import { Runner } from '../src/runner'
+import { ReleaseRunner } from '../src/release-runner'
 import type { Config } from '../src/types'
 
 const requiredModule1 = vi.mocked(importedModule1, { deep: true })
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
 
 // 模拟所有依赖
-vi.mock('@eljs/pluggable')
+vi.mock('@eljs/plugin-host', async importOriginal => {
+  const actual = await importOriginal<typeof import('@eljs/plugin-host')>()
+  return { ...actual, PluginHost: vi.fn() }
+})
 vi.mock('@eljs/utils', () => ({
   chalk: {
     cyan: vi.fn((text: string) => text),
@@ -34,7 +45,7 @@ vi.mock('../src/utils')
 // 模拟 console.log
 const mockConsoleLog = vi.spyOn(console, 'log').mockImplementation(() => {})
 
-describe('Runner 类测试', () => {
+describe('ReleaseRunner 类测试', () => {
   afterAll(() => {
     mockConsoleLog.mockRestore()
   })
@@ -44,32 +55,58 @@ describe('Runner 类测试', () => {
 
     // 重新设置基本的模拟
     const { isPathExistsSync, readJsonSync, logger } = requiredModule0
+    const { PluginHost } = requiredModule1
+    ;(PluginHost as unknown as Mock).mockImplementation(function (
+      this: InstanceType<typeof PluginHost>,
+      options: ConstructorParameters<typeof PluginHost>[0],
+    ) {
+      const target = this as unknown as {
+        runHook: ReturnType<typeof vi.fn>
+        constructorOptions: ConstructorParameters<typeof PluginHost>[0]
+        load: ReturnType<typeof vi.fn>
+        userConfig: Config | null
+      }
+      target.constructorOptions = options
+      target.userConfig = null
+      target.load = vi.fn().mockResolvedValue(undefined)
+      target.runHook = vi.fn().mockResolvedValue(undefined)
+    })
     isPathExistsSync.mockReturnValue(true)
     readJsonSync.mockReturnValue({ name: 'it-package', version: '1.0.0' })
     logger.error.mockClear()
     logger.step.mockClear()
   })
 
-  describe('Runner 构造函数', () => {
-    it('应该成功创建 Runner 实例', () => {
-      const runner = new Runner()
+  describe('ReleaseRunner 构造函数', () => {
+    it('应该成功创建 ReleaseRunner 实例', () => {
+      const runner = new ReleaseRunner()
 
-      expect(runner).toBeInstanceOf(Runner)
+      expect(runner).toBeInstanceOf(ReleaseRunner)
       expect(runner.appData).toBeDefined()
+    })
+
+    it('应该拒绝在配置解析前读取最终配置', () => {
+      const runner = new ReleaseRunner()
+
+      expect(() => runner.config).toThrow(
+        expect.objectContaining({
+          code: 'PLUGIN_HOST_INVALID_STATE',
+        }),
+      )
     })
 
     it('应该使用指定的工作目录', () => {
       const cwd = '/custom/path'
-      const runner = new Runner({ cwd })
+      const runner = new ReleaseRunner({ cwd })
 
-      expect(runner).toBeInstanceOf(Runner)
+      expect(runner).toBeInstanceOf(ReleaseRunner)
     })
 
     it('应该正确验证 package.json 路径', () => {
       const { isPathExistsSync } = requiredModule0
       const itPath = '/it/project'
 
-      new Runner({ cwd: itPath })
+      new ReleaseRunner({ cwd: itPath })
 
       expect(isPathExistsSync).toHaveBeenCalledWith('/it/project/package.json')
     })
@@ -78,14 +115,14 @@ describe('Runner 类测试', () => {
       const { isPathExistsSync } = requiredModule0
       isPathExistsSync.mockReturnValue(false)
 
-      expect(() => new Runner()).toThrow()
+      expect(() => new ReleaseRunner()).toThrow()
     })
 
     it('当 package.json 没有 version 字段时应该抛出 AppError', () => {
       const { readJsonSync } = requiredModule0
       readJsonSync.mockReturnValue({ name: 'it' })
 
-      expect(() => new Runner()).toThrow()
+      expect(() => new ReleaseRunner()).toThrow()
     })
 
     it('应该正确设置 appData', () => {
@@ -93,43 +130,45 @@ describe('Runner 类测试', () => {
       const { readJsonSync } = requiredModule0
       readJsonSync.mockReturnValue(mockPkg)
 
-      const runner = new Runner({ cwd: '/it/path' })
+      const runner = new ReleaseRunner({ cwd: '/it/path' })
 
       expect(runner.appData.projectPkg).toEqual(mockPkg)
       expect(runner.appData.projectPkgJsonPath).toBe('/it/path/package.json')
     })
 
-    it('应该正确传递配置到 Pluggable', () => {
-      const { Pluggable } = requiredModule1
+    it('应该正确传递配置到 PluginHost', () => {
+      const { PluginHost } = requiredModule1
       const config: Config = {
         cwd: '/it',
         presets: ['preset1'],
         plugins: ['plugin1'],
       }
 
-      new Runner(config)
+      new ReleaseRunner(config)
 
-      expect(Pluggable).toHaveBeenCalledWith(
+      expect(PluginHost).toHaveBeenCalledWith(
         expect.objectContaining({
           cwd: '/it',
           presets: [expect.stringMatching(/internal/), 'preset1'],
           plugins: ['plugin1'],
           defaultConfigFiles: ['release.config.ts', 'release.config.js'],
         }),
+        expect.any(Object),
       )
     })
 
     it('应该正确处理默认值', () => {
-      const { Pluggable } = requiredModule1
+      const { PluginHost } = requiredModule1
 
-      new Runner()
+      new ReleaseRunner()
 
-      expect(Pluggable).toHaveBeenCalledWith(
+      expect(PluginHost).toHaveBeenCalledWith(
         expect.objectContaining({
           cwd: expect.any(String),
           presets: [expect.stringMatching(/internal/)],
           plugins: [],
         }),
+        expect.any(Object),
       )
     })
 
@@ -139,7 +178,7 @@ describe('Runner 类测试', () => {
 
       validVersions.forEach(version => {
         readJsonSync.mockReturnValue({ name: 'it', version })
-        expect(() => new Runner()).not.toThrow()
+        expect(() => new ReleaseRunner()).not.toThrow()
       })
     })
 
@@ -149,15 +188,15 @@ describe('Runner 类测试', () => {
 
       invalidVersions.forEach(version => {
         readJsonSync.mockReturnValue({ name: 'it', version })
-        expect(() => new Runner()).toThrow()
+        expect(() => new ReleaseRunner()).toThrow()
       })
     })
   })
 
-  describe('Runner step 方法', () => {
+  describe('ReleaseRunner step 方法', () => {
     it('应该调用 logger.step 方法', () => {
       const { logger } = requiredModule0
-      const runner = new Runner()
+      const runner = new ReleaseRunner()
       const message = '测试步骤'
 
       runner.step(message)
@@ -167,7 +206,7 @@ describe('Runner 类测试', () => {
 
     it('应该正确格式化不同类型的消息', () => {
       const { logger } = requiredModule0
-      const runner = new Runner()
+      const runner = new ReleaseRunner()
 
       runner.step('开始发布')
       runner.step('版本检查完成')
@@ -185,7 +224,7 @@ describe('Runner 类测试', () => {
 
     it('应该处理空消息', () => {
       const { logger } = requiredModule0
-      const runner = new Runner()
+      const runner = new ReleaseRunner()
 
       runner.step('')
 
@@ -194,7 +233,7 @@ describe('Runner 类测试', () => {
 
     it('应该处理特殊字符', () => {
       const { logger } = requiredModule0
-      const runner = new Runner()
+      const runner = new ReleaseRunner()
       const message = '发布 v1.0.0 🚀'
 
       runner.step(message)
@@ -204,7 +243,7 @@ describe('Runner 类测试', () => {
 
     it('应该正确添加换行符', () => {
       const { logger } = requiredModule0
-      const runner = new Runner()
+      const runner = new ReleaseRunner()
 
       runner.step('it')
 
@@ -216,7 +255,7 @@ describe('Runner 类测试', () => {
 
     it('应该处理长消息', () => {
       const { logger } = requiredModule0
-      const runner = new Runner()
+      const runner = new ReleaseRunner()
       const longMessage = 'x'.repeat(1000)
 
       runner.step(longMessage)
@@ -225,14 +264,14 @@ describe('Runner 类测试', () => {
     })
   })
 
-  describe('Runner run 方法基础测试', () => {
+  describe('ReleaseRunner run 方法基础测试', () => {
     it('run 方法应该存在', () => {
-      const runner = new Runner()
+      const runner = new ReleaseRunner()
       expect(typeof runner.run).toBe('function')
     })
 
     it('run 方法应该是异步的', () => {
-      const runner = new Runner()
+      const runner = new ReleaseRunner()
       // 由于模拟环境的限制，检查函数是否返回 Promise 即可
       const result = runner.run()
       expect(result).toBeInstanceOf(Promise)
@@ -240,7 +279,7 @@ describe('Runner 类测试', () => {
     })
 
     it('run 方法应该接受不同参数类型', () => {
-      const runner = new Runner()
+      const runner = new ReleaseRunner()
 
       expect(() => {
         runner.run('patch').catch(() => {})
@@ -250,14 +289,14 @@ describe('Runner 类测试', () => {
     })
   })
 
-  describe('Runner 错误处理', () => {
+  describe('ReleaseRunner 错误处理', () => {
     it('应该处理文件系统访问错误', () => {
       const { isPathExistsSync } = requiredModule0
       isPathExistsSync.mockImplementation(() => {
         throw new Error('Permission denied')
       })
 
-      expect(() => new Runner()).toThrow()
+      expect(() => new ReleaseRunner()).toThrow()
     })
 
     it('应该处理 JSON 解析错误', () => {
@@ -266,7 +305,7 @@ describe('Runner 类测试', () => {
         throw new SyntaxError('Malformed JSON')
       })
 
-      expect(() => new Runner()).toThrow()
+      expect(() => new ReleaseRunner()).toThrow()
     })
 
     it('应该正确使用 chalk 来格式化错误消息', () => {
@@ -274,12 +313,12 @@ describe('Runner 类测试', () => {
       isPathExistsSync.mockReturnValue(false)
       chalk.cyan.mockReturnValue('[styled-path]')
 
-      expect(() => new Runner({ cwd: '/it' })).toThrow()
+      expect(() => new ReleaseRunner({ cwd: '/it' })).toThrow()
       expect(chalk.cyan).toHaveBeenCalledWith('/it')
     })
   })
 
-  describe('Runner 配置验证和处理', () => {
+  describe('ReleaseRunner 配置验证和处理', () => {
     it('应该接受各种配置组合', () => {
       const configs = [
         {},
@@ -292,32 +331,34 @@ describe('Runner 类测试', () => {
       ]
 
       configs.forEach(config => {
-        expect(() => new Runner(config)).not.toThrow()
+        expect(() => new ReleaseRunner(config)).not.toThrow()
       })
     })
 
     it('应该正确处理 presets 数组', () => {
-      const { Pluggable } = requiredModule1
+      const { PluginHost } = requiredModule1
 
       // 空数组
-      new Runner({ presets: [] })
-      expect(Pluggable).toHaveBeenLastCalledWith(
+      new ReleaseRunner({ presets: [] })
+      expect(PluginHost).toHaveBeenLastCalledWith(
         expect.objectContaining({
           presets: [expect.stringMatching(/internal/)],
         }),
+        expect.any(Object),
       )
 
       // 单个 preset
-      new Runner({ presets: ['single-preset'] })
-      expect(Pluggable).toHaveBeenLastCalledWith(
+      new ReleaseRunner({ presets: ['single-preset'] })
+      expect(PluginHost).toHaveBeenLastCalledWith(
         expect.objectContaining({
           presets: [expect.stringMatching(/internal/), 'single-preset'],
         }),
+        expect.any(Object),
       )
 
       // 多个 presets
-      new Runner({ presets: ['preset1', 'preset2', 'preset3'] })
-      expect(Pluggable).toHaveBeenLastCalledWith(
+      new ReleaseRunner({ presets: ['preset1', 'preset2', 'preset3'] })
+      expect(PluginHost).toHaveBeenLastCalledWith(
         expect.objectContaining({
           presets: [
             expect.stringMatching(/internal/),
@@ -326,53 +367,52 @@ describe('Runner 类测试', () => {
             'preset3',
           ],
         }),
+        expect.any(Object),
       )
     })
 
     it('应该正确处理 plugins 数组', () => {
-      const { Pluggable } = requiredModule1
+      const { PluginHost } = requiredModule1
 
       // 空数组
-      new Runner({ plugins: [] })
-      expect(Pluggable).toHaveBeenLastCalledWith(
+      new ReleaseRunner({ plugins: [] })
+      expect(PluginHost).toHaveBeenLastCalledWith(
         expect.objectContaining({
           plugins: [],
         }),
+        expect.any(Object),
       )
 
       // 多个 plugins
-      new Runner({ plugins: ['plugin1', 'plugin2'] })
-      expect(Pluggable).toHaveBeenLastCalledWith(
+      new ReleaseRunner({ plugins: ['plugin1', 'plugin2'] })
+      expect(PluginHost).toHaveBeenLastCalledWith(
         expect.objectContaining({
           plugins: ['plugin1', 'plugin2'],
         }),
+        expect.any(Object),
       )
     })
   })
 
-  describe('Runner 属性和方法验证', () => {
+  describe('ReleaseRunner 属性和方法验证', () => {
     it('应该有所有必需的公共属性', () => {
-      const runner = new Runner()
+      const runner = new ReleaseRunner()
 
       expect(runner).toHaveProperty('appData')
       expect(typeof runner.appData).toBe('object')
-      // config 属性在初始化后可能不存在
-      expect(
-        'config' in Object.getOwnPropertyDescriptors(runner) ||
-          runner.config === undefined,
-      ).toBe(true)
+      expect('config' in runner).toBe(true)
     })
 
     it('应该有所有必需的公共方法', () => {
-      const runner = new Runner()
+      const runner = new ReleaseRunner()
 
       expect(typeof runner.step).toBe('function')
       expect(typeof runner.run).toBe('function')
-      expect(typeof runner.applyPlugins).toBe('function')
+      expect(typeof runner.runHook).toBe('function')
     })
 
     it('appData 应该有正确的初始结构', () => {
-      const runner = new Runner()
+      const runner = new ReleaseRunner()
 
       expect(runner.appData).toHaveProperty('projectPkgJsonPath')
       expect(runner.appData).toHaveProperty('projectPkg')
@@ -381,7 +421,7 @@ describe('Runner 类测试', () => {
     })
   })
 
-  describe('Runner 边界条件测试', () => {
+  describe('ReleaseRunner 边界条件测试', () => {
     it('应该处理各种路径格式', () => {
       const paths = [
         '/absolute/path',
@@ -392,7 +432,7 @@ describe('Runner 类测试', () => {
       ]
 
       paths.forEach(path => {
-        expect(() => new Runner({ cwd: path })).not.toThrow()
+        expect(() => new ReleaseRunner({ cwd: path })).not.toThrow()
       })
     })
 
@@ -413,7 +453,7 @@ describe('Runner 类测试', () => {
 
       specialPackages.forEach(pkg => {
         readJsonSync.mockReturnValue(pkg)
-        const runner = new Runner()
+        const runner = new ReleaseRunner()
         expect(runner.appData.projectPkg).toEqual(pkg)
       })
     })
@@ -435,7 +475,7 @@ describe('Runner 类测试', () => {
         },
       }
 
-      expect(() => new Runner(largeConfig)).not.toThrow()
+      expect(() => new ReleaseRunner(largeConfig)).not.toThrow()
     })
   })
 })

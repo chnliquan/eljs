@@ -4,8 +4,8 @@ import parseJson from 'parse-json'
 
 /**
  * 读取文件内容
- * @param file 文件路径
- * @param encoding 文件编码
+ * @param file - 文件路径
+ * @param encoding - 文件编码
  */
 export async function readFile(
   file: string,
@@ -23,8 +23,8 @@ export async function readFile(
 
 /**
  * 读取文件内容
- * @param file 文件路径
- * @param encoding 文件编码
+ * @param file - 文件路径
+ * @param encoding - 文件编码
  */
 export function readFileSync(
   file: string,
@@ -42,7 +42,7 @@ export function readFileSync(
 
 /**
  * 读取 Json 文件
- * @param file 文件路径
+ * @param file - 文件路径
  */
 export async function readJson<T extends object>(file: string): Promise<T> {
   const content = await readFile(file)
@@ -59,7 +59,7 @@ export async function readJson<T extends object>(file: string): Promise<T> {
 
 /**
  * 读取 Json 文件
- * @param file 文件路径
+ * @param file - 文件路径
  */
 
 export function readJsonSync<T extends object>(file: string): T {

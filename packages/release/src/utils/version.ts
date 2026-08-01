@@ -31,8 +31,8 @@ export function isCanaryVersion(version: string): boolean {
 
 /**
  * 版本号是否合法
- * @param version 版本
- * @param releaseType 是否可以是 releaseType
+ * @param version - 版本
+ * @param releaseType - 是否可以是 releaseType
  */
 export function isVersionValid(
   version: string,
@@ -53,7 +53,7 @@ export function isVersionValid(
 
 /**
  * 解析版本
- * @param version 版本
+ * @param version - 版本
  */
 export function parseVersion(version: string) {
   const parsed = semver.parse(version)
@@ -78,9 +78,9 @@ export function parseVersion(version: string) {
 
 /**
  * 版本是否存在
- * @param pkgName 包名
- * @param version 版本
- * @param registry 源仓库
+ * @param pkgName - 包名
+ * @param version - 版本
+ * @param registry - 源仓库
  */
 export async function isVersionExist(
   pkgName: string,
@@ -116,7 +116,7 @@ export async function isVersionExist(
 
 /**
  * 获取稳定版本
- * @param version 版本
+ * @param version - 版本
  */
 export function getStableVersion(version: string) {
   const prerelease = semver.prerelease(version)
@@ -132,9 +132,9 @@ export function getStableVersion(version: string) {
 
 /**
  * 获取基准版本
- * @param localVersion 本地版本
- * @param remoteVersion 远程版本
- * @param distTag npm tag
+ * @param localVersion - 本地版本
+ * @param remoteVersion - 远程版本
+ * @param distTag - npm tag
  */
 export function getReferenceVersion(
   localVersion: string,
@@ -166,7 +166,7 @@ export function getReferenceVersion(
 
 /**
  * 获取最大的版本
- * @param versions 版本
+ * @param versions - 版本
  */
 export function getMaxVersion(...versions: string[]) {
   return versions.reduce((maxVersion: string, version: string) => {
@@ -184,9 +184,9 @@ export function getMaxVersion(...versions: string[]) {
 
 /**
  * 获取发布版本
- * @param referenceVersion 基准版本
- * @param releaseType 发布版本
- * @param prereleaseId 预发布 id
+ * @param referenceVersion - 基准版本
+ * @param releaseType - 发布版本
+ * @param prereleaseId - 预发布 id
  */
 export function getReleaseVersion(
   referenceVersion: string,
@@ -216,8 +216,8 @@ export function getReleaseVersion(
 
 /**
  *
- * @param referenceVersion 基准版本
- * @param cwd 当前工作目录
+ * @param referenceVersion - 基准版本
+ * @param cwd - 当前工作目录
  */
 export async function getCanaryVersion(
   referenceVersion: string,

@@ -2,7 +2,7 @@ import readline from 'node:readline'
 
 /**
  * 暂定输入
- * @param message 展示信息
+ * @param message - 展示信息
  */
 export function pause(message?: string): Promise<void> {
   return new Promise(resolve => {

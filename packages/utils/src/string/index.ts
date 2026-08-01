@@ -1,6 +1,6 @@
 /**
  * 小驼峰格式
- * @param str 字符串
+ * @param str - 字符串
  */
 export function camelCase(str: string): string {
   return str.replace(/[-_\s]+(.)?/g, function (_, c) {
@@ -10,7 +10,7 @@ export function camelCase(str: string): string {
 
 /**
  * 大驼峰格式
- * @param str 字符串
+ * @param str - 字符串
  */
 export function pascalCase(str: string): string {
   const camelCaseStr = str.replace(/[-_\s]+(.)?/g, function (_, c) {
@@ -22,7 +22,7 @@ export function pascalCase(str: string): string {
 
 /**
  * 中划线格式
- * @param str 字符串
+ * @param str - 字符串
  */
 export function kebabCase(str: string): string {
   return str
@@ -34,7 +34,7 @@ export function kebabCase(str: string): string {
 
 /**
  * 去除空白行
- * @param str 字符串
+ * @param str - 字符串
  */
 export function stripBlankLines(str: string): string {
   return str

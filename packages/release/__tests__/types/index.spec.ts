@@ -7,11 +7,11 @@ import { describe, expect, it } from 'vitest'
 import type { PackageJson } from '@eljs/utils'
 
 import type {
-  Api,
   AppData,
   Config,
   DistTag,
   PrereleaseId,
+  ReleasePluginContext,
 } from '../../src/types'
 
 describe('类型定义测试', () => {
@@ -239,15 +239,15 @@ describe('类型定义测试', () => {
     })
   })
 
-  describe('Api 类型', () => {
-    it('Api 类型应该从多个接口继承', () => {
+  describe('ReleasePluginContext 类型', () => {
+    it('ReleasePluginContext 类型应该从多个接口继承', () => {
       // 这个测试主要验证类型定义的正确性
-      // 在实际使用中，Api 类型会包含多个接口的属性
-      const mockApi: Partial<Api> = {
+      // 在实际使用中，ReleasePluginContext 类型会包含多个接口的属性
+      const mockContext: Partial<ReleasePluginContext> = {
         // 来自各个接口的属性
       }
 
-      expect(typeof mockApi).toBe('object')
+      expect(typeof mockContext).toBe('object')
     })
   })
 

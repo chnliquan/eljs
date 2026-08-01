@@ -1,7 +1,7 @@
 import { run, type RunCommandOptions } from '@eljs/utils'
 
 /**
- * 判断 Git 标签是否指向当前提交。
+ * 判断 Git 标签是否指向当前提交
  */
 export async function isGitTagAtHead(
   tagName: string,

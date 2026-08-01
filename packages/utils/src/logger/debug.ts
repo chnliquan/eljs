@@ -22,8 +22,8 @@ type NodeDebugger = Debugger & {
 
 /**
  * 创建调试器
- * @param namespace 命名空间
- * @param options 选项
+ * @param namespace - 命名空间
+ * @param options - 选项
  */
 export function createDebugger(
   namespace: string,

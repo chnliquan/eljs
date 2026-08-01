@@ -42,7 +42,7 @@ export const fileLoadersSync = Object.freeze({
 
 /**
  * 加载 js 文件
- * @param path 文件路径
+ * @param path - 文件路径
  */
 export async function loadJs<T>(path: string): Promise<T> {
   try {
@@ -76,7 +76,7 @@ export async function loadJs<T>(path: string): Promise<T> {
 let importFresh: typeof import('import-fresh')
 /**
  * 加载 js 文件
- * @param path 文件路径
+ * @param path - 文件路径
  */
 export function loadJsSync<T>(path: string): T {
   if (!importFresh) {
@@ -107,7 +107,7 @@ function createTranspiledPath(filePath: string): string {
 
 /**
  * 加载 ts 文件
- * @param path 文件路径
+ * @param path - 文件路径
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function loadTs<T = any>(path: string): Promise<T> {
@@ -148,7 +148,7 @@ export async function loadTs<T = any>(path: string): Promise<T> {
 
 /**
  * 加载 ts 文件
- * @param path 文件路径
+ * @param path - 文件路径
  */
 export function loadTsSync<T>(path: string): T {
   if (!typescript) {
@@ -189,7 +189,7 @@ export function loadTsSync<T>(path: string): T {
 let parseJson: typeof import('parse-json')
 /**
  * 加载 json 文件
- * @param path 文件路径
+ * @param path - 文件路径
  */
 export async function loadJson<T>(path: string): Promise<T> {
   if (!parseJson) {
@@ -209,7 +209,7 @@ export async function loadJson<T>(path: string): Promise<T> {
 
 /**
  * 加载 json 文件
- * @param path 文件路径
+ * @param path - 文件路径
  */
 export function loadJsonSync<T>(path: string): T {
   if (!parseJson) {
@@ -230,7 +230,7 @@ export function loadJsonSync<T>(path: string): T {
 let yaml: typeof import('js-yaml')
 /**
  * 加载 yaml 文件
- * @param path 文件路径
+ * @param path - 文件路径
  */
 export async function loadYaml<T>(path: string): Promise<T> {
   if (!yaml) {
@@ -250,7 +250,7 @@ export async function loadYaml<T>(path: string): Promise<T> {
 
 /**
  * 加载 yaml 文件
- * @param path 文件路径
+ * @param path - 文件路径
  */
 export function loadYamlSync<T>(path: string): T {
   if (!yaml) {
@@ -270,7 +270,7 @@ export function loadYamlSync<T>(path: string): T {
 
 /**
  * 解析 tsconfig 文件
- * @param dir 文件夹
+ * @param dir - 文件夹
  */
 export function resolveTsConfig(dir: string): TranspileOptions {
   const path = typescript.findConfigFile(dir, fileName => {

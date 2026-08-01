@@ -10,11 +10,11 @@ import {
 } from '@eljs/utils'
 import path from 'node:path'
 
-import type { Api } from '../../types'
+import { definePlugin } from '../../define'
 import { AppError } from '../../utils'
 
-export default (api: Api) => {
-  api.modifyAppData(async (memo, { cwd }) => {
+export default definePlugin(context => {
+  context.modifyAppData(async (memo, { cwd }) => {
     const packageRootPaths = await getWorkspaces(cwd)
 
     const pkgJsonPaths: string[] = []
@@ -73,4 +73,4 @@ export default (api: Api) => {
       latestTag,
     }
   })
-}
+})

@@ -85,7 +85,7 @@ export class Cache<T = any> {
 
   /**
    * 创建新的缓存实例
-   * @param options 缓存配置选项，包括自定义函数
+   * @param options - 缓存配置选项，包括自定义函数
    */
   public constructor(options: CacheOptions<T> = {}) {
     this.constructorOptions = options
@@ -115,7 +115,7 @@ export class Cache<T = any> {
 
   /**
    * 通过文件路径获取缓存数据
-   * @param filePath 要获取缓存的文件路径
+   * @param filePath - 要获取缓存的文件路径
    * @returns 缓存的数据，如果未找到或无效则返回 null
    */
   public async get(filePath: string): Promise<T | null> {
@@ -173,8 +173,8 @@ export class Cache<T = any> {
 
   /**
    * 为文件路径设置缓存数据
-   * @param filePath 要缓存数据的文件路径
-   * @param data 要缓存的数据
+   * @param filePath - 要缓存数据的文件路径
+   * @param data - 要缓存的数据
    */
   public async set(filePath: string, data: T): Promise<void> {
     if (!this.options.enabled) {
@@ -211,8 +211,8 @@ export class Cache<T = any> {
 
   /**
    * 通过数据设置缓存（非基于文件）
-   * @param data 要缓存的数据
-   * @param metadata 可选的元数据
+   * @param data - 要缓存的数据
+   * @param metadata - 可选的元数据
    */
   public async setByData(
     data: T,
@@ -250,7 +250,7 @@ export class Cache<T = any> {
 
   /**
    * 通过键获取缓存数据
-   * @param key 缓存键
+   * @param key - 缓存键
    * @returns 缓存的数据，如果未找到或无效则返回 null
    */
   public async getByKey(key: string): Promise<T | null> {
@@ -483,7 +483,7 @@ export class Cache<T = any> {
 
   /**
    * 默认键生成器实现
-   * @param data 要生成键的数据
+   * @param data - 要生成键的数据
    * @returns 生成的缓存键
    */
   private _defaultKeyGenerator(data: T): string {
@@ -529,7 +529,7 @@ export class Cache<T = any> {
 
   /**
    * 为文件路径生成缓存键
-   * @param filePath 文件路径
+   * @param filePath - 文件路径
    * @returns 缓存键
    */
   private _getCacheKey(filePath: string): string {
@@ -537,7 +537,7 @@ export class Cache<T = any> {
   }
 
   /**
-   * Convert an arbitrary logical cache key to a fixed, path-safe filename.
+   * Convert an arbitrary logical cache key to a fixed, path-safe filename
    */
   private _getCacheFilePath(cacheKey: string): string {
     const fileName = crypto.createHash('sha256').update(cacheKey).digest('hex')
@@ -547,7 +547,7 @@ export class Cache<T = any> {
 
   /**
    * Cache cleanup only owns files produced by the current hashed format or the
-   * legacy MD5 file-key format.
+   * legacy MD5 file-key format
    */
   private _isManagedCacheFile(fileName: string): boolean {
     return /^(?:[a-f0-9]{32}|[a-f0-9]{64})\.json$/u.test(fileName)
@@ -555,7 +555,7 @@ export class Cache<T = any> {
 
   /**
    * 计算用于内容验证的文件哈希值
-   * @param filePath 文件路径
+   * @param filePath - 文件路径
    * @returns 文件内容哈希值
    */
   private async _getFileHash(filePath: string): Promise<string> {
@@ -569,9 +569,9 @@ export class Cache<T = any> {
 
   /**
    * 根据当前文件状态验证缓存条目
-   * @param cacheEntry 要验证的缓存条目
-   * @param fileStats 当前文件统计信息
-   * @param filePath 文件路径
+   * @param cacheEntry - 要验证的缓存条目
+   * @param fileStats - 当前文件统计信息
+   * @param filePath - 文件路径
    * @returns 如果缓存有效返回 true
    */
   private async _isCacheValid(
@@ -614,7 +614,7 @@ export class Cache<T = any> {
 
   /**
    * 仅基于时间验证缓存条目
-   * @param cacheEntry 要验证的缓存条目
+   * @param cacheEntry - 要验证的缓存条目
    * @returns 如果未过期返回 true
    */
   private _isTimeValid(cacheEntry: CacheEntry<T>): boolean {
@@ -674,7 +674,7 @@ export class Cache<T = any> {
 
   /**
    * 从磁盘读取缓存文件
-   * @param filePath 缓存文件路径
+   * @param filePath - 缓存文件路径
    * @returns 缓存文件数据或 null
    */
   private async _readCacheFile(filePath: string): Promise<CacheFile<T> | null> {
@@ -695,7 +695,7 @@ export class Cache<T = any> {
 
   /**
    * 从磁盘加载缓存条目
-   * @param cacheKey 缓存键
+   * @param cacheKey - 缓存键
    * @returns 缓存条目或 null
    */
   private async _loadFromDisk(cacheKey: string): Promise<CacheEntry<T> | null> {
@@ -727,8 +727,8 @@ export class Cache<T = any> {
 
   /**
    * 将缓存条目保存到磁盘
-   * @param cacheKey 缓存键
-   * @param cacheEntry 要保存的缓存条目
+   * @param cacheKey - 缓存键
+   * @param cacheEntry - 要保存的缓存条目
    */
   private async _saveToDisk(
     cacheKey: string,
@@ -758,7 +758,7 @@ export class Cache<T = any> {
 
   /**
    * 从磁盘删除缓存文件
-   * @param cacheKey 缓存键
+   * @param cacheKey - 缓存键
    */
   private async _removeFromDisk(cacheKey: string): Promise<void> {
     const filePath = this._getCacheFilePath(cacheKey)

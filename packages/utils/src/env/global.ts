@@ -4,7 +4,7 @@ const cache = new Map()
 
 /**
  * 命令是否全局安装
- * @param bin 全局命令
+ * @param bin - 全局命令
  */
 export function hasGlobalInstallation(bin: string): Promise<boolean> {
   const cacheKey = `has_global_${bin}`

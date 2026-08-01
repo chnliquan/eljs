@@ -7,9 +7,9 @@ import { isPathExists, isPathExistsSync } from './is'
 
 /**
  * 写入文件内容
- * @param path 文件路径
- * @param content 文件内容
- * @param encoding 文件编码
+ * @param path - 文件路径
+ * @param content - 文件内容
+ * @param encoding - 文件编码
  */
 export async function writeFile(
   path: string,
@@ -27,9 +27,9 @@ export async function writeFile(
 
 /**
  * 写入文件内容
- * @param path 文件路径
- * @param content 文件内容
- * @param encoding 文件编码
+ * @param path - 文件路径
+ * @param content - 文件内容
+ * @param encoding - 文件编码
  */
 export function writeFileSync(
   path: string,
@@ -47,9 +47,9 @@ export function writeFileSync(
 
 /**
  * 安全写入文件
- * @param path 文件路径
- * @param content 文件内容
- * @param encoding 文件编码
+ * @param path - 文件路径
+ * @param content - 文件内容
+ * @param encoding - 文件编码
  */
 export async function safeWriteFile(
   path: string,
@@ -73,9 +73,9 @@ export async function safeWriteFile(
 
 /**
  * 安全写入文件
- * @param path 文件路径
- * @param content 文件内容
- * @param encoding 文件编码
+ * @param path - 文件路径
+ * @param content - 文件内容
+ * @param encoding - 文件编码
  */
 export function safeWriteFileSync(
   path: string,
@@ -99,8 +99,8 @@ export function safeWriteFileSync(
 
 /**
  * 写入 Json 文件
- * @param path 文件路径
- * @param content 文件内容
+ * @param path - 文件路径
+ * @param content - 文件内容
  */
 export async function writeJson<T extends object>(
   path: string,
@@ -117,8 +117,8 @@ export async function writeJson<T extends object>(
 
 /**
  * 写入 Json 文件
- * @param path 文件路径
- * @param content 文件内容
+ * @param path - 文件路径
+ * @param content - 文件内容
  */
 export function writeJsonSync<T extends object>(
   path: string,
@@ -135,8 +135,8 @@ export function writeJsonSync<T extends object>(
 
 /**
  * 安全写入 Json 文件
- * @param path 文件路径
- * @param data 文件内容
+ * @param path - 文件路径
+ * @param data - 文件内容
  */
 export async function safeWriteJson<T extends object>(
   path: string,
@@ -159,8 +159,8 @@ export async function safeWriteJson<T extends object>(
 
 /**
  * 安全写入 Json 文件
- * @param file 文件路径
- * @param data 文件内容
+ * @param file - 文件路径
+ * @param data - 文件内容
  */
 export function safeWriteJsonSync<T extends object>(
   path: string,

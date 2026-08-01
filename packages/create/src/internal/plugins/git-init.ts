@@ -1,11 +1,11 @@
 import { hasGit, hasProjectGit, logger, run } from '@eljs/utils'
 
-import type { Api } from '../../types'
+import { definePlugin } from '../../define'
 
-export default async (api: Api) => {
-  api.describe({
+export default definePlugin(async context => {
+  context.describe({
     enable() {
-      return Boolean(api.config.gitInit)
+      return Boolean(context.config.gitInit)
     },
   })
 
@@ -14,19 +14,19 @@ export default async (api: Api) => {
       return false
     }
 
-    if (await hasProjectGit(api.paths.target)) {
+    if (await hasProjectGit(context.paths.target)) {
       return false
     }
 
     // 终端输入 no git
-    if (api.prompts.git === false || api.prompts.git === 'false') {
+    if (context.prompts.git === false || context.prompts.git === 'false') {
       return false
     }
 
     return true
   }
 
-  api.onGenerateDone(
+  context.onGenerateDone(
     async () => {
       const initGit = await shouldInitGit()
 
@@ -35,7 +35,7 @@ export default async (api: Api) => {
         logger.info(`🗃  Initializing git repository ...`)
 
         await run('git', ['init'], {
-          cwd: api.paths.target,
+          cwd: context.paths.target,
           verbose: false,
         })
       }
@@ -44,4 +44,4 @@ export default async (api: Api) => {
       stage: Number.NEGATIVE_INFINITY,
     },
   )
-}
+})

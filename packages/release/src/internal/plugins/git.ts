@@ -14,19 +14,19 @@ import {
 import { EOL } from 'node:os'
 import path from 'node:path'
 
-import type { Api } from '../../types'
+import { definePlugin } from '../../define'
 import { AppError, getChangelog, isGitTagAtHead } from '../../utils'
 
-export default (api: Api) => {
-  api.onCheck(async () => {
-    const { requireClean, requireBranch } = api.config.git
+export default definePlugin(context => {
+  context.onCheck(async () => {
+    const { requireClean, requireBranch } = context.config.git
 
     if (requireClean) {
-      api.step('Checking git ...')
+      context.step('Checking git ...')
 
       if (
         !(await isGitClean({
-          cwd: api.cwd,
+          cwd: context.cwd,
           verbose: true,
         }))
       ) {
@@ -35,7 +35,7 @@ export default (api: Api) => {
 
       if (
         await isGitBehindRemote({
-          cwd: api.cwd,
+          cwd: context.cwd,
           verbose: true,
         })
       ) {
@@ -43,23 +43,23 @@ export default (api: Api) => {
       }
     }
 
-    if (requireBranch && api.appData.branch !== requireBranch) {
+    if (requireBranch && context.appData.branch !== requireBranch) {
       throw new AppError(
-        `Require branch ${requireBranch}\`, but got ${chalk.cyan(api.appData.branch)}.`,
+        `Require branch ${requireBranch}\`, but got ${chalk.cyan(context.appData.branch)}.`,
       )
     }
   })
 
-  api.getChangelog(
+  context.getChangelog(
     async () => {
-      const { changelog, independent } = api.config.git
+      const { changelog, independent } = context.config.git
 
       if (!changelog) {
         return ''
       }
 
       return getChangelog({
-        cwd: api.cwd,
+        cwd: context.cwd,
         independent,
         ...changelog,
       })
@@ -69,15 +69,15 @@ export default (api: Api) => {
     },
   )
 
-  api.onBeforeRelease(async ({ changelog }) => {
-    if (!changelog || !api.config.git.changelog) {
+  context.onBeforeRelease(async ({ changelog }) => {
+    if (!changelog || !context.config.git.changelog) {
       return
     }
 
-    const { filename, placeholder } = api.config.git.changelog
-    const changelogFile = path.join(api.cwd, filename)
+    const { filename, placeholder } = context.config.git.changelog
+    const changelogFile = path.join(context.cwd, filename)
 
-    api.step(`Writing changelog to ${changelogFile} ...`)
+    context.step(`Writing changelog to ${changelogFile} ...`)
 
     if (changelog.indexOf('###') === -1) {
       changelog = changelog.replace(new RegExp(EOL, 'g'), '')
@@ -99,23 +99,24 @@ export default (api: Api) => {
     await writeFile(changelogFile, changelog)
   })
 
-  api.onRelease(
+  context.onRelease(
     async ({ version }) => {
-      const { independent, commit, commitMessage, commitArgs } = api.config.git
-      const { pkgNames } = api.appData
+      const { independent, commit, commitMessage, commitArgs } =
+        context.config.git
+      const { pkgNames } = context.appData
 
       if (!commit) {
         return
       }
 
-      api.step('Committing changes ...')
+      context.step('Committing changes ...')
 
       const commitMsg = commitMessage.replace('${version}', version)
       await gitCommit(
         commitMsg,
         [...normalizeArgs(commitArgs)].filter(Boolean),
         {
-          cwd: api.cwd,
+          cwd: context.cwd,
           verbose: true,
         },
       )
@@ -127,7 +128,7 @@ export default (api: Api) => {
       for (const tagName of tags) {
         try {
           await gitTag(tagName, {
-            cwd: api.cwd,
+            cwd: context.cwd,
             verbose: true,
           })
         } catch (error) {
@@ -139,7 +140,7 @@ export default (api: Api) => {
           if (
             tagExists &&
             (await isGitTagAtHead(tagName, {
-              cwd: api.cwd,
+              cwd: context.cwd,
               verbose: false,
             }))
           ) {
@@ -156,17 +157,17 @@ export default (api: Api) => {
     },
   )
 
-  api.onRelease(
+  context.onRelease(
     async () => {
-      const { commit, push, pushArgs } = api.config.git
+      const { commit, push, pushArgs } = context.config.git
 
       if (!commit || !push) {
         return
       }
 
-      api.step('Pushing release commit and tags ...')
+      context.step('Pushing release commit and tags ...')
       await gitPush([...normalizeArgs(pushArgs)].filter(Boolean), {
-        cwd: api.cwd,
+        cwd: context.cwd,
         verbose: true,
       })
     },
@@ -174,4 +175,4 @@ export default (api: Api) => {
       stage: 10,
     },
   )
-}
+})

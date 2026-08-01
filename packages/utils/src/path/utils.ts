@@ -5,7 +5,7 @@ import { isPathExists, isPathExistsSync } from '../file'
 
 /**
  * 获取存在的路径
- * @param paths 路径数组
+ * @param paths - 路径数组
  */
 export async function tryPaths(paths: string[]): Promise<string | undefined> {
   for (const path of paths) {
@@ -17,7 +17,7 @@ export async function tryPaths(paths: string[]): Promise<string | undefined> {
 
 /**
  * 获取存在的路径
- * @param paths 路径数组
+ * @param paths - 路径数组
  */
 export function tryPathsSync(paths: string[]): string | undefined {
   for (const path of paths) {
@@ -29,7 +29,7 @@ export function tryPathsSync(paths: string[]): string | undefined {
 
 /**
  * 提取代码执行时的文件夹
- * @param stack 栈深度
+ * @param stack - 栈深度
  */
 export function extractCallDir(stack = 2): string {
   const obj = Object.create(null)

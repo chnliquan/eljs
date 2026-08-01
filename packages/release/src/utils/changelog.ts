@@ -12,16 +12,15 @@ export interface GenerateChangelogOptions {
   independent?: boolean
   /**
    * conventional-changelog 预设
-   * @link https://github.com/conventional-changelog/conventional-changelog/blob/master/packages/conventional-changelog/README.md#presets
+   *
+   * {@link https://github.com/conventional-changelog/conventional-changelog/blob/master/packages/conventional-changelog/README.md#presets}
    */
   preset?: string
 }
 
 /**
  * 获取更新日志
- * @param options.cwd 当前工作目录
- * @param options.independent 是否生成独立 tag
- * @param options.preset conventional-changelog 预设
+ * @param options - 更新日志生成选项
  */
 export async function getChangelog(
   options: GenerateChangelogOptions,

@@ -5,52 +5,52 @@ import { pipeline } from 'node:stream/promises'
 import { x as extractTar } from 'tar'
 
 /**
- * HTTP 下载操作的返回值。
+ * HTTP 下载操作的返回值
  *
  * @remarks
  * 为兼容历史公开 API，该对象既可作为 Promise 等待完整响应内容，
- * 也可作为双工流消费下载结果。
+ * 也可作为双工流消费下载结果
  */
 export type DownloadResult = Promise<Buffer> & Duplex
 
 /**
- * 下载资源时使用的选项。
+ * 下载资源时使用的选项
  */
 export interface DownloadOptions {
   /**
-   * 是否将下载内容作为 tar 归档解压到目标目录。
+   * 是否将下载内容作为 tar 归档解压到目标目录
    *
    * @defaultValue false
    */
   extract?: boolean
 
   /**
-   * 不解压时写入目标目录的文件名。
+   * 不解压时写入目标目录的文件名
    *
    * @remarks
-   * 最终只使用文件名部分，避免通过相对路径写出目标目录。
+   * 最终只使用文件名部分，避免通过相对路径写出目标目录
    */
   filename?: string
 
   /**
-   * HTTP 请求头。
+   * HTTP 请求头
    */
   headers?: Headers | Record<string, string> | Array<[string, string]>
 
   /**
-   * 用于主动取消请求的信号。
+   * 用于主动取消请求的信号
    */
   signal?: AbortSignal
 
   /**
-   * 解压时移除的归档路径层级数。
+   * 解压时移除的归档路径层级数
    *
    * @defaultValue 0
    */
   strip?: number
 
   /**
-   * 请求超时时间，单位为毫秒。设置为 `0` 时不启用超时。
+   * 请求超时时间，单位为毫秒。设置为 `0` 时不启用超时
    *
    * @defaultValue 30000
    */
@@ -58,7 +58,7 @@ export interface DownloadOptions {
 }
 
 /**
- * 下载 HTTP(S) 资源并写入目标目录。
+ * 下载 HTTP(S) 资源并写入目标目录
  *
  * @param url - 资源地址
  * @param destination - 写入或解压资源的目标目录
@@ -73,7 +73,7 @@ export default function download(
 ): DownloadResult
 
 /**
- * 下载 HTTP(S) 资源并返回完整响应内容。
+ * 下载 HTTP(S) 资源并返回完整响应内容
  *
  * @param url - 资源地址
  * @param options - 下载选项
@@ -115,7 +115,7 @@ export default function download(
 }
 
 /**
- * 请求资源，并根据参数返回、写入或解压响应内容。
+ * 请求资源，并根据参数返回、写入或解压响应内容
  *
  * @param url - 资源地址
  * @param destination - 可选的目标目录
@@ -182,7 +182,7 @@ async function downloadResource(
 }
 
 /**
- * 根据显式文件名或最终响应地址生成安全的文件名。
+ * 根据显式文件名或最终响应地址生成安全的文件名
  *
  * @param filename - 调用方指定的文件名
  * @param url - 最终响应地址

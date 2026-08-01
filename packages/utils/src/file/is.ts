@@ -4,7 +4,7 @@ import { fstat, fstatSync } from './meta'
 
 /**
  * 是否是文件
- * @param file 文件路径
+ * @param file - 文件路径
  */
 export async function isFile(file: string): Promise<boolean> {
   try {
@@ -17,7 +17,7 @@ export async function isFile(file: string): Promise<boolean> {
 
 /**
  * 是否是文件
- * @param file 文件路径
+ * @param file - 文件路径
  */
 export function isFileSync(file: string): boolean {
   try {
@@ -30,7 +30,7 @@ export function isFileSync(file: string): boolean {
 
 /**
  * 是否是文件夹
- * @param path 文件夹路径
+ * @param path - 文件夹路径
  */
 export async function isDirectory(path: string): Promise<boolean> {
   try {
@@ -43,7 +43,7 @@ export async function isDirectory(path: string): Promise<boolean> {
 
 /**
  * 是否是文件夹
- * @param path 文件夹路径
+ * @param path - 文件夹路径
  */
 export function isDirectorySync(path: string): boolean {
   try {
@@ -56,7 +56,7 @@ export function isDirectorySync(path: string): boolean {
 
 /**
  * 是否是符号链接
- * @param link 链接路径
+ * @param link - 链接路径
  */
 export async function isSymlink(link: string): Promise<boolean> {
   try {
@@ -69,7 +69,7 @@ export async function isSymlink(link: string): Promise<boolean> {
 
 /**
  * 是否是符号链接
- * @param link 链接路径
+ * @param link - 链接路径
  */
 export function isSymlinkSync(link: string): boolean {
   try {
@@ -82,7 +82,7 @@ export function isSymlinkSync(link: string): boolean {
 
 /**
  * 路径是否存在
- * @param file 文件路径
+ * @param file - 文件路径
  */
 export async function isPathExists(file: string): Promise<boolean> {
   try {
@@ -95,7 +95,7 @@ export async function isPathExists(file: string): Promise<boolean> {
 
 /**
  * 路径是否存在
- * @param file 文件路径
+ * @param file - 文件路径
  */
 export function isPathExistsSync(file: string): boolean {
   try {

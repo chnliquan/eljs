@@ -13,9 +13,8 @@ export interface RemoteDistTag {
 
 /**
  * 获取远程 dist tag
- * @param pkgNames 包名
- * @param options.cwd 当前工作目录
- * @param options.registry 仓库源
+ * @param pkgNames - 包名
+ * @param options - Npm 查询选项
  */
 export async function getRemoteDistTag(
   pkgNames: string[],
@@ -51,7 +50,7 @@ export async function getRemoteDistTag(
 
 /**
  * 同步 Cnpm
- * @param pkgNames 包名
+ * @param pkgNames - 包名
  */
 export async function syncCnpm(pkgNames: string[]) {
   const cnpm = resolveBin.sync('cnpm')

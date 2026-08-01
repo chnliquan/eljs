@@ -11,7 +11,7 @@ import {
 } from 'vitest'
 
 import builtInPlugin from '../../../src/internal/plugins/built-in'
-import type { Api } from '../../../src/types'
+import type { CreatePluginContext } from '../../../src/types'
 
 // Mock @eljs/utils
 vi.mock('@eljs/utils', () => ({
@@ -65,18 +65,20 @@ interface MockUtils {
 }
 
 describe('内部插件 built-in', () => {
-  let mockApi: Mocked<Api>
+  let mockContext: Mocked<CreatePluginContext>
   let extendPackageCallback: (pkg: unknown) => unknown
   let installCallback: (...args: unknown[]) => Promise<void>
+  let onStartCallbacks: Array<() => void>
   let onGenerateDoneCallbacks: Array<() => Promise<void>>
   let mockUtils: MockUtils
 
   beforeEach(() => {
+    onStartCallbacks = []
     onGenerateDoneCallbacks = []
     mockUtils = mockedUtils as unknown as MockUtils
 
-    mockApi = {
-      registerMethod: vi.fn((name: string, fn: unknown) => {
+    mockContext = {
+      registerCapability: vi.fn((name: string, fn: unknown) => {
         if (name === 'extendPackage') {
           extendPackageCallback = fn as (pkg: unknown) => unknown
         } else if (name === 'install') {
@@ -85,6 +87,9 @@ describe('内部插件 built-in', () => {
       }),
       onGenerateDone: vi.fn((callback: () => Promise<void>) => {
         onGenerateDoneCallbacks.push(callback)
+      }),
+      onStart: vi.fn((callback: () => void) => {
+        onStartCallbacks.push(callback)
       }),
       appData: {
         // 每次都创建新对象避免状态污染
@@ -99,12 +104,12 @@ describe('内部插件 built-in', () => {
         install: true,
       },
       install: vi.fn(),
-    } as unknown as Mocked<Api>
+    } as unknown as Mocked<CreatePluginContext>
 
     vi.clearAllMocks()
 
     // 确保每次测试都有新的 pkg 对象
-    mockApi.appData.pkg = { name: 'test-package', version: '1.0.0' }
+    mockContext.appData.pkg = { name: 'test-package', version: '1.0.0' }
   })
 
   it('应该是一个函数', () => {
@@ -112,39 +117,42 @@ describe('内部插件 built-in', () => {
   })
 
   it('应该注册 extendPackage 方法', () => {
-    builtInPlugin(mockApi)
+    builtInPlugin(mockContext)
 
-    expect(mockApi.registerMethod).toHaveBeenCalledWith(
+    expect(mockContext.registerCapability).toHaveBeenCalledWith(
       'extendPackage',
       expect.any(Function),
     )
   })
 
   it('应该注册 install 方法', () => {
-    builtInPlugin(mockApi)
+    builtInPlugin(mockContext)
 
-    expect(mockApi.registerMethod).toHaveBeenCalledWith(
+    expect(mockContext.registerCapability).toHaveBeenCalledWith(
       'install',
       expect.any(Function),
     )
   })
 
   it('应该注册 onGenerateDone 钩子', () => {
-    builtInPlugin(mockApi)
+    builtInPlugin(mockContext)
 
-    expect(mockApi.onGenerateDone).toHaveBeenCalledTimes(2)
+    expect(mockContext.onStart).toHaveBeenCalledWith(expect.any(Function), {
+      stage: Number.NEGATIVE_INFINITY,
+    })
+    expect(mockContext.onGenerateDone).toHaveBeenCalledTimes(2)
 
-    // 第一个调用应该是 package.json 生成，stage 为 Number.NEGATIVE_INFINITY
-    expect(mockApi.onGenerateDone).toHaveBeenNthCalledWith(
+    // 第一个调用应该在普通完成钩子之后、安装之前生成 package.json
+    expect(mockContext.onGenerateDone).toHaveBeenNthCalledWith(
       1,
       expect.any(Function),
       {
-        stage: Number.NEGATIVE_INFINITY,
+        stage: Number.MAX_SAFE_INTEGER,
       },
     )
 
     // 第二个调用应该是最终步骤，stage 为 Infinity
-    expect(mockApi.onGenerateDone).toHaveBeenNthCalledWith(
+    expect(mockContext.onGenerateDone).toHaveBeenNthCalledWith(
       2,
       expect.any(Function),
       {
@@ -154,45 +162,66 @@ describe('内部插件 built-in', () => {
   })
 
   describe('extendPackage 方法', () => {
-    it('应该通过对象扩展包配置', () => {
-      builtInPlugin(mockApi)
+    it('应该延迟应用初始化阶段登记的对象扩展', () => {
+      builtInPlugin(mockContext)
 
       const newPkg = { scripts: { test: 'jest' } }
-      const originalPkg = { ...mockApi.appData.pkg }
+      const originalPkg = { ...mockContext.appData.pkg }
 
       extendPackageCallback(newPkg)
+      expect(mockUtils.deepMerge).not.toHaveBeenCalled()
+
+      onStartCallbacks[0]()
 
       expect(mockUtils.deepMerge).toHaveBeenCalledWith(originalPkg, newPkg)
     })
 
-    it('应该通过函数扩展包配置', () => {
-      builtInPlugin(mockApi)
+    it('应该在运行阶段通过函数扩展包配置', () => {
+      builtInPlugin(mockContext)
 
-      const originalPkg = { ...mockApi.appData.pkg }
+      const originalPkg = { ...mockContext.appData.pkg }
       const fn = vi.fn((pkg: PackageJson) => ({
         ...pkg,
         scripts: { test: 'jest' },
       }))
 
       extendPackageCallback(fn)
+      expect(fn).not.toHaveBeenCalled()
+
+      onStartCallbacks[0]()
 
       expect(fn).toHaveBeenCalledWith(originalPkg)
       expect(mockUtils.deepMerge).toHaveBeenCalled()
     })
 
+    it('进入生成阶段后应该即时应用新增扩展', () => {
+      builtInPlugin(mockContext)
+      onStartCallbacks[0]()
+
+      const extension = { description: 'late extension' }
+      const originalPkg = mockContext.appData.pkg
+      extendPackageCallback(extension)
+
+      expect(mockUtils.deepMerge).toHaveBeenCalledWith(originalPkg, extension)
+    })
+
     it('应该处理函数返回 null/undefined 的情况', () => {
-      builtInPlugin(mockApi)
+      builtInPlugin(mockContext)
 
       const fn = vi.fn(() => null)
       extendPackageCallback(fn)
+      onStartCallbacks[0]()
 
-      expect(mockUtils.deepMerge).toHaveBeenCalledWith(mockApi.appData.pkg, {})
+      expect(mockUtils.deepMerge).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'test-package' }),
+        {},
+      )
     })
   })
 
   describe('install 方法', () => {
     it('应该使用默认包管理器调用安装', async () => {
-      builtInPlugin(mockApi)
+      builtInPlugin(mockContext)
 
       await installCallback()
 
@@ -206,7 +235,7 @@ describe('内部插件 built-in', () => {
     })
 
     it('应该处理参数数组', async () => {
-      builtInPlugin(mockApi)
+      builtInPlugin(mockContext)
 
       await installCallback(['react', 'vue'], { silent: true })
 
@@ -219,7 +248,7 @@ describe('内部插件 built-in', () => {
 
     it('应该将参数作为选项对象处理', async () => {
       mockUtils.isObject.mockReturnValue(true)
-      builtInPlugin(mockApi)
+      builtInPlugin(mockContext)
 
       await installCallback({ silent: true })
 
@@ -232,15 +261,16 @@ describe('内部插件 built-in', () => {
 
     it('应该处理没有 packageManager 的情况', async () => {
       // 移除 packageManager 来测试默认值
-      const appDataWithoutPackageManager = { ...mockApi.appData }
+      const appDataWithoutPackageManager = { ...mockContext.appData }
       delete (
         appDataWithoutPackageManager as Partial<
           typeof appDataWithoutPackageManager
         >
       ).packageManager
-      mockApi.appData = appDataWithoutPackageManager as typeof mockApi.appData
+      ;(mockContext as { appData: CreatePluginContext['appData'] }).appData =
+        appDataWithoutPackageManager as typeof mockContext.appData
 
-      builtInPlugin(mockApi)
+      builtInPlugin(mockContext)
 
       await installCallback()
 
@@ -264,7 +294,7 @@ describe('内部插件 built-in', () => {
       mockUtils.isPathExists.mockResolvedValue(true)
       mockUtils.readJson.mockResolvedValue({ description: '现有包' })
 
-      builtInPlugin(mockApi)
+      builtInPlugin(mockContext)
 
       await onGenerateDoneCallbacks[0]()
 
@@ -274,7 +304,7 @@ describe('内部插件 built-in', () => {
       expect(mockUtils.readJson).toHaveBeenCalled()
       expect(mockUtils.deepMerge).toHaveBeenCalledWith(
         { description: '现有包' },
-        mockApi.appData.pkg,
+        mockContext.appData.pkg,
       )
       expect(mockUtils.writeJson).toHaveBeenCalled()
     })
@@ -282,7 +312,7 @@ describe('内部插件 built-in', () => {
     it('应该处理文件不存在时的 package.json 生成', async () => {
       mockUtils.isPathExists.mockResolvedValue(false)
 
-      builtInPlugin(mockApi)
+      builtInPlugin(mockContext)
 
       await onGenerateDoneCallbacks[0]()
 
@@ -294,8 +324,8 @@ describe('内部插件 built-in', () => {
     })
 
     it('当 pkg 为空时应该跳过 package.json 生成', async () => {
-      mockApi.appData.pkg = {}
-      builtInPlugin(mockApi)
+      mockContext.appData.pkg = {}
+      builtInPlugin(mockContext)
 
       await onGenerateDoneCallbacks[0]()
 
@@ -303,23 +333,23 @@ describe('内部插件 built-in', () => {
     })
 
     it('应该在最终钩子中运行安装并显示成功消息', async () => {
-      builtInPlugin(mockApi)
+      builtInPlugin(mockContext)
 
       await onGenerateDoneCallbacks[1]()
 
-      expect(mockApi.install).toHaveBeenCalled()
+      expect(mockContext.install).toHaveBeenCalled()
       expect(mockUtils.logger.ready).toHaveBeenCalledWith(
         '🎉 Created project CYAN_BOLD(test-project) successfully.',
       )
     })
 
     it('当 config.install 为 false 时应该跳过安装', async () => {
-      mockApi.config.install = false
-      builtInPlugin(mockApi)
+      mockContext.config.install = false
+      builtInPlugin(mockContext)
 
       await onGenerateDoneCallbacks[1]()
 
-      expect(mockApi.install).not.toHaveBeenCalled()
+      expect(mockContext.install).not.toHaveBeenCalled()
       expect(mockUtils.logger.ready).toHaveBeenCalledWith(
         '🎉 Created project CYAN_BOLD(test-project) successfully.',
       )

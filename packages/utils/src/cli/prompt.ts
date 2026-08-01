@@ -4,9 +4,9 @@ import { isNull } from '../guards'
 
 /**
  * 确认问询
- * @param message 闻讯信息
- * @param preferNo 是否默认 false
- * @param onCancel 取消回调函数
+ * @param message - 闻讯信息
+ * @param preferNo - 是否默认 false
+ * @param onCancel - 取消回调函数
  */
 export function confirm(
   message: string,
@@ -32,9 +32,9 @@ export function confirm(
 
 /**
  * 选择问询
- * @param message 问询信息
- * @param choices 问询选项
- * @param initial 初始数据
+ * @param message - 问询信息
+ * @param choices - 问询选项
+ * @param initial - 初始数据
  */
 export function select<T extends string = string>(
   message: string,
@@ -58,8 +58,8 @@ export function select<T extends string = string>(
 
 /**
  * 问询
- * @param questions 问题列表
- * @param initials 初始数据
+ * @param questions - 问题列表
+ * @param initials - 初始数据
  */
 export function prompt<T extends string = string>(
   questions: PromptObject<T>[],
@@ -83,8 +83,8 @@ export function prompt<T extends string = string>(
 
 /**
  * 循环问询
- * @param questions 问题列表
- * @param initials 初始数据
+ * @param questions - 问题列表
+ * @param initials - 初始数据
  */
 export function loopPrompt<T extends string = string>(
   questions: PromptObject<T>[],

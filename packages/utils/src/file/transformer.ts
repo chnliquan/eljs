@@ -9,18 +9,18 @@ import type { AnyFunction, NoopFunction } from '../types'
 export interface TransformerOptions<T> {
   /**
    * 文件转换函数
-   * @param input 源代码
-   * @param options 选项
+   * @param input - 源代码
+   * @param options - 选项
    */
   transform: T
   /**
    * 文件后缀名
-   * @default ['.ts']
+   * @defaultValue ['.ts']
    */
   exts?: string[]
   /**
    * 忽略 node_modules
-   * @default true
+   * @defaultValue true
    */
   ignoreNodeModules?: boolean
 }
@@ -42,7 +42,7 @@ export class Transformer<T extends AnyFunction> {
 
   /**
    * 执行文件劫持
-   * @param options 文件转换函数选项
+   * @param options - 文件转换函数选项
    */
 
   public apply(options?: Parameters<T>[1]) {
@@ -65,9 +65,9 @@ export class Transformer<T extends AnyFunction> {
 
   /**
    * 转换文件
-   * @param input 源文件内容
-   * @param filename 源文件名
-   * @param options 文件转换函数选项
+   * @param input - 源文件内容
+   * @param filename - 源文件名
+   * @param options - 文件转换函数选项
    */
   private _transform(
     input: string,

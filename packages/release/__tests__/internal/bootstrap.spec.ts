@@ -22,7 +22,7 @@ import {
 import path from 'node:path'
 
 import bootstrapPlugin from '../../src/internal/plugins/bootstrap'
-import type { Api, AppData } from '../../src/types'
+import type { AppData, ReleasePluginContext } from '../../src/types'
 
 // 模拟依赖
 vi.mock('@eljs/utils', () => ({
@@ -50,13 +50,13 @@ vi.mock('../../src/utils', () => ({
 }))
 
 describe('Bootstrap 插件测试', () => {
-  let mockApi: Partial<Api> & {
-    modifyAppData: MockedFunction<Api['modifyAppData']>
+  let mockContext: Partial<ReleasePluginContext> & {
+    modifyAppData: MockedFunction<ReleasePluginContext['modifyAppData']>
   }
   const mockCwd = '/test/project'
 
   beforeEach(() => {
-    mockApi = {
+    mockContext = {
       modifyAppData: vi.fn(),
     }
 
@@ -83,10 +83,10 @@ describe('Bootstrap 插件测试', () => {
 
   describe('插件注册', () => {
     it('应该注册 modifyAppData 方法', () => {
-      bootstrapPlugin(mockApi as unknown as Api)
+      bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
 
-      expect(mockApi.modifyAppData).toHaveBeenCalledTimes(1)
-      expect(typeof mockApi.modifyAppData.mock.calls[0][0]).toBe('function')
+      expect(mockContext.modifyAppData).toHaveBeenCalledTimes(1)
+      expect(typeof mockContext.modifyAppData.mock.calls[0][0]).toBe('function')
     })
   })
 
@@ -105,8 +105,8 @@ describe('Bootstrap 插件测试', () => {
         mockPackageJson,
       )
 
-      bootstrapPlugin(mockApi as unknown as Api)
-      const modifyAppDataFn = mockApi.modifyAppData.mock.calls[0][0]
+      bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
+      const modifyAppDataFn = mockContext.modifyAppData.mock.calls[0][0]
 
       // 创建部分 AppData 对象进行测试
       const memo = {
@@ -156,8 +156,8 @@ describe('Bootstrap 插件测试', () => {
         .mockResolvedValueOnce(mockPackages[1])
         .mockResolvedValueOnce(mockPackages[2])
 
-      bootstrapPlugin(mockApi as unknown as Api)
-      const modifyAppDataFn = mockApi.modifyAppData.mock.calls[0][0]
+      bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
+      const modifyAppDataFn = mockContext.modifyAppData.mock.calls[0][0]
 
       const memo = { projectPkg: {} }
       const result = await modifyAppDataFn(memo as unknown as AppData, {
@@ -192,8 +192,8 @@ describe('Bootstrap 插件测试', () => {
         private: false,
       })
 
-      bootstrapPlugin(mockApi as unknown as Api)
-      const modifyAppDataFn = mockApi.modifyAppData.mock.calls[0][0]
+      bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
+      const modifyAppDataFn = mockContext.modifyAppData.mock.calls[0][0]
 
       const memo = { projectPkg: {} }
       const result = await modifyAppDataFn(memo as unknown as AppData, {
@@ -225,8 +225,8 @@ describe('Bootstrap 插件测试', () => {
         .mockResolvedValueOnce(mockPackageWithoutName)
         .mockResolvedValueOnce(validPackage)
 
-      bootstrapPlugin(mockApi as unknown as Api)
-      const modifyAppDataFn = mockApi.modifyAppData.mock.calls[0][0]
+      bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
+      const modifyAppDataFn = mockContext.modifyAppData.mock.calls[0][0]
 
       const memo = { projectPkg: {} }
       const result = await modifyAppDataFn(memo as unknown as AppData, {
@@ -262,8 +262,8 @@ describe('Bootstrap 插件测试', () => {
           private: true,
         })
 
-      bootstrapPlugin(mockApi as unknown as Api)
-      const modifyAppDataFn = mockApi.modifyAppData.mock.calls[0][0]
+      bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
+      const modifyAppDataFn = mockContext.modifyAppData.mock.calls[0][0]
 
       const memo = { projectPkg: {} }
       const result = await modifyAppDataFn(memo as unknown as AppData, {
@@ -293,8 +293,8 @@ describe('Bootstrap 插件测试', () => {
         getGitLatestTag as MockedFunction<typeof getGitLatestTag>
       ).mockResolvedValue('v1.2.0')
 
-      bootstrapPlugin(mockApi as unknown as Api)
-      const modifyAppDataFn = mockApi.modifyAppData.mock.calls[0][0]
+      bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
+      const modifyAppDataFn = mockContext.modifyAppData.mock.calls[0][0]
 
       const memo = { projectPkg: {} }
       const result = await modifyAppDataFn(memo as unknown as AppData, {
@@ -317,8 +317,8 @@ describe('Bootstrap 插件测试', () => {
         private: false,
       })
 
-      bootstrapPlugin(mockApi as unknown as Api)
-      const modifyAppDataFn = mockApi.modifyAppData.mock.calls[0][0]
+      bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
+      const modifyAppDataFn = mockContext.modifyAppData.mock.calls[0][0]
 
       const memo = {
         projectPkg: {
@@ -345,8 +345,8 @@ describe('Bootstrap 插件测试', () => {
         private: true, // 只有私有包
       })
 
-      bootstrapPlugin(mockApi as unknown as Api)
-      const modifyAppDataFn = mockApi.modifyAppData.mock.calls[0][0]
+      bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
+      const modifyAppDataFn = mockContext.modifyAppData.mock.calls[0][0]
 
       const memo = { projectPkg: {} }
 
@@ -362,8 +362,8 @@ describe('Bootstrap 插件测试', () => {
         getWorkspaces as MockedFunction<typeof getWorkspaces>
       ).mockResolvedValue([])
 
-      bootstrapPlugin(mockApi as unknown as Api)
-      const modifyAppDataFn = mockApi.modifyAppData.mock.calls[0][0]
+      bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
+      const modifyAppDataFn = mockContext.modifyAppData.mock.calls[0][0]
 
       const memo = { projectPkg: {} }
 
@@ -382,8 +382,8 @@ describe('Bootstrap 插件测试', () => {
         private: false,
       })
 
-      bootstrapPlugin(mockApi as unknown as Api)
-      const modifyAppDataFn = mockApi.modifyAppData.mock.calls[0][0]
+      bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
+      const modifyAppDataFn = mockContext.modifyAppData.mock.calls[0][0]
 
       const memo = {
         existingProperty: 'existing-value',
@@ -407,8 +407,8 @@ describe('Bootstrap 插件测试', () => {
         getWorkspaces as MockedFunction<typeof getWorkspaces>
       ).mockRejectedValue(new Error('获取工作空间失败'))
 
-      bootstrapPlugin(mockApi as unknown as Api)
-      const modifyAppDataFn = mockApi.modifyAppData.mock.calls[0][0]
+      bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
+      const modifyAppDataFn = mockContext.modifyAppData.mock.calls[0][0]
 
       const memo = { projectPkg: {} }
 
@@ -425,8 +425,8 @@ describe('Bootstrap 插件测试', () => {
         new Error('读取 package.json 失败'),
       )
 
-      bootstrapPlugin(mockApi as unknown as Api)
-      const modifyAppDataFn = mockApi.modifyAppData.mock.calls[0][0]
+      bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
+      const modifyAppDataFn = mockContext.modifyAppData.mock.calls[0][0]
 
       const memo = { projectPkg: {} }
 
@@ -448,8 +448,8 @@ describe('Bootstrap 插件测试', () => {
         new Error('获取分支失败'),
       )
 
-      bootstrapPlugin(mockApi as unknown as Api)
-      const modifyAppDataFn = mockApi.modifyAppData.mock.calls[0][0]
+      bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
+      const modifyAppDataFn = mockContext.modifyAppData.mock.calls[0][0]
 
       const memo = { projectPkg: {} }
 
@@ -469,7 +469,9 @@ describe('Bootstrap 插件测试', () => {
     })
 
     it('应该没有返回值', () => {
-      const result = bootstrapPlugin(mockApi as unknown as Api)
+      const result = bootstrapPlugin(
+        mockContext as unknown as ReleasePluginContext,
+      )
       expect(result).toBeUndefined()
     })
   })

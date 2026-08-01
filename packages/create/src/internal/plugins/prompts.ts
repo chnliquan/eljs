@@ -2,12 +2,12 @@ import { prompts } from '@eljs/utils'
 import dayjs from 'dayjs'
 import { execSync } from 'node:child_process'
 
-import type { Api } from '../../types'
+import { definePlugin } from '../../define'
 import { onCancel } from '../../utils'
 import { author, email, getGitHref } from '../utils'
 
-export default (api: Api) => {
-  api.modifyPrompts(async (memo, { questions }) => {
+export default definePlugin(context => {
+  context.modifyPrompts(async (memo, { questions }) => {
     if (!memo.$$isFirstTime) {
       const answers = await prompts(questions, {
         onCancel,
@@ -23,7 +23,7 @@ export default (api: Api) => {
     return memo
   })
 
-  api.modifyPrompts(memo => {
+  context.modifyPrompts(memo => {
     let gitUrl = memo.gitUrl
     let gitHref: string
 
@@ -62,4 +62,4 @@ export default (api: Api) => {
       ...memo,
     }
   })
-}
+})

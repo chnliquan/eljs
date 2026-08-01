@@ -11,7 +11,7 @@ import {
 } from 'vitest'
 import promptsPlugin from '../../../src/internal/plugins/prompts'
 import * as mockedInternalUtils from '../../../src/internal/utils'
-import type { Api } from '../../../src/types'
+import type { CreatePluginContext } from '../../../src/types'
 import * as mockedSrcUtils from '../../../src/utils'
 
 // Mock types
@@ -102,7 +102,7 @@ vi.mock('../../../src/internal/utils', () => ({
 }))
 
 describe('内部插件 prompts', () => {
-  let mockApi: Mocked<Api>
+  let mockContext: Mocked<CreatePluginContext>
   let firstModifyPromptsCallback: (
     memo: PromptMemo,
     context?: PromptContext,
@@ -120,7 +120,7 @@ describe('内部插件 prompts', () => {
     mockSrcUtils = mockedSrcUtils as unknown as MockSrcUtils
     mockInternalUtils = mockedInternalUtils as unknown as MockInternalUtils
 
-    mockApi = {
+    mockContext = {
       modifyPrompts: vi.fn((callback: unknown) => {
         if (callbackIndex === 0) {
           firstModifyPromptsCallback = callback as (
@@ -134,7 +134,7 @@ describe('内部插件 prompts', () => {
         }
         callbackIndex++
       }),
-    } as unknown as Mocked<Api>
+    } as unknown as Mocked<CreatePluginContext>
 
     vi.clearAllMocks()
   })
@@ -144,17 +144,17 @@ describe('内部插件 prompts', () => {
   })
 
   it('应该注册两个 modifyPrompts 回调', () => {
-    promptsPlugin(mockApi)
+    promptsPlugin(mockContext)
 
-    expect(mockApi.modifyPrompts).toHaveBeenCalledTimes(2)
-    expect(mockApi.modifyPrompts).toHaveBeenCalledWith(expect.any(Function))
+    expect(mockContext.modifyPrompts).toHaveBeenCalledTimes(2)
+    expect(mockContext.modifyPrompts).toHaveBeenCalledWith(expect.any(Function))
   })
 
   describe('第一个 modifyPrompts 回调（提示处理）', () => {
     it('不是第一次时应该运行 prompts', async () => {
       mockUtils.prompts.mockResolvedValue({ name: 'test-project' })
 
-      promptsPlugin(mockApi)
+      promptsPlugin(mockContext)
 
       const memo: PromptMemo = {}
       const context: PromptContext = {
@@ -173,7 +173,7 @@ describe('内部插件 prompts', () => {
     })
 
     it('已经是第一次时应该跳过 prompts', async () => {
-      promptsPlugin(mockApi)
+      promptsPlugin(mockContext)
 
       const memo: PromptMemo = { $$isFirstTime: true, existingData: 'value' }
       const context: PromptContext = {
@@ -192,7 +192,7 @@ describe('内部插件 prompts', () => {
         version: '1.0.0',
       })
 
-      promptsPlugin(mockApi)
+      promptsPlugin(mockContext)
 
       const memo: PromptMemo = { existingProp: 'value' }
       const context: PromptContext = { questions: [] }
@@ -210,7 +210,7 @@ describe('内部插件 prompts', () => {
 
   describe('第二个 modifyPrompts 回调（数据处理）', () => {
     it('应该添加默认模板变量', () => {
-      promptsPlugin(mockApi)
+      promptsPlugin(mockContext)
 
       const memo: PromptMemo = {}
       const result = secondModifyPromptsCallback(memo)
@@ -232,7 +232,7 @@ describe('内部插件 prompts', () => {
         'https://github.com/test/repo',
       )
 
-      promptsPlugin(mockApi)
+      promptsPlugin(mockContext)
 
       const memo: PromptMemo = { gitUrl: 'https://github.com/test/repo.git' }
       const result = secondModifyPromptsCallback(memo)
@@ -245,7 +245,7 @@ describe('内部插件 prompts', () => {
     })
 
     it('对于无效的 git URL 应该使用占位符', () => {
-      promptsPlugin(mockApi)
+      promptsPlugin(mockContext)
 
       // invalid-url 不以 git 或 http 开头，所以应该使用占位符
       const memo: PromptMemo = { gitUrl: 'invalid-url' }
@@ -257,7 +257,7 @@ describe('内部插件 prompts', () => {
     })
 
     it('对于空的 git URL 应该使用占位符', () => {
-      promptsPlugin(mockApi)
+      promptsPlugin(mockContext)
 
       const memo: PromptMemo = { gitUrl: '' }
       const result = secondModifyPromptsCallback(memo)
@@ -267,7 +267,7 @@ describe('内部插件 prompts', () => {
     })
 
     it('对于 github 项目应该使用默认 npm registry', () => {
-      promptsPlugin(mockApi)
+      promptsPlugin(mockContext)
 
       const memo: PromptMemo = { gitUrl: 'https://github.com/test/repo.git' }
       const result = secondModifyPromptsCallback(memo)
@@ -281,7 +281,7 @@ describe('内部插件 prompts', () => {
         'https://gitlab.com/test/repo',
       )
 
-      promptsPlugin(mockApi)
+      promptsPlugin(mockContext)
 
       const memo: PromptMemo = { gitUrl: 'https://gitlab.com/test/repo.git' }
       const result = secondModifyPromptsCallback(memo)
@@ -295,7 +295,7 @@ describe('内部插件 prompts', () => {
         throw new Error('npm not found')
       })
 
-      promptsPlugin(mockApi)
+      promptsPlugin(mockContext)
 
       const memo: PromptMemo = { gitUrl: 'https://gitlab.com/test/repo.git' }
 
@@ -304,7 +304,7 @@ describe('内部插件 prompts', () => {
     })
 
     it('应该保留现有的 memo 属性', () => {
-      promptsPlugin(mockApi)
+      promptsPlugin(mockContext)
 
       const memo: PromptMemo = {
         existingProp: 'value',
@@ -317,7 +317,7 @@ describe('内部插件 prompts', () => {
     })
 
     it('应该正确格式化日期', () => {
-      promptsPlugin(mockApi)
+      promptsPlugin(mockContext)
 
       const memo: PromptMemo = {}
       const result = secondModifyPromptsCallback(memo)
@@ -330,7 +330,7 @@ describe('内部插件 prompts', () => {
     it('当 getGitHref 返回 falsy 值时应该使用占位符', () => {
       mockInternalUtils.getGitHref.mockReturnValue('')
 
-      promptsPlugin(mockApi)
+      promptsPlugin(mockContext)
 
       const memo: PromptMemo = { gitUrl: 'https://github.com/test/repo.git' }
       const result = secondModifyPromptsCallback(memo)
@@ -344,6 +344,6 @@ describe('内部插件 prompts', () => {
   })
 
   it('处理 prompts 时不应该抛出异常', () => {
-    expect(() => promptsPlugin(mockApi)).not.toThrow()
+    expect(() => promptsPlugin(mockContext)).not.toThrow()
   })
 })

@@ -13,7 +13,7 @@ export { cache }
 
 /**
  * 获取包管理器
- * @param cwd 当前工作目录
+ * @param cwd - 当前工作目录
  */
 export async function getPackageManager(
   cwd = process.cwd(),
@@ -42,7 +42,7 @@ export async function getPackageManager(
 
 /**
  * 获取 lock 文件类型
- * @param cwd 当前工作目录
+ * @param cwd - 当前工作目录
  */
 async function getTypeofLockFile(
   cwd = process.cwd(),

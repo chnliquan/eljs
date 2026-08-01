@@ -33,9 +33,9 @@ export interface EjsRenderTemplateOptions {
 
 /**
  * 渲染模版
- * @param template 模版内容
- * @param data 模版数据
- * @param options 选项
+ * @param template - 模版内容
+ * @param data - 模版数据
+ * @param options - 选项
  */
 export function renderTemplate(
   template: string,

@@ -10,7 +10,8 @@ import { EOL } from 'node:os'
 import semver, { type ReleaseType } from 'semver'
 
 import { prereleaseTypes } from '../../constants'
-import type { Api, PrereleaseId } from '../../types'
+import { definePlugin } from '../../define'
+import type { PrereleaseId, ReleasePluginContext } from '../../types'
 import {
   AppError,
   getCanaryVersion,
@@ -30,8 +31,8 @@ const { RELEASE_TYPES } = semver
 
 const debug = createDebugger('release:version')
 
-export default (api: Api) => {
-  api.onCheck(async ({ releaseTypeOrVersion }) => {
+export default definePlugin(context => {
+  context.onCheck(async ({ releaseTypeOrVersion }) => {
     if (releaseTypeOrVersion && !isVersionValid(releaseTypeOrVersion, true)) {
       throw new AppError(
         `Invalid semantic version ${chalk.cyan(releaseTypeOrVersion)}.`,
@@ -39,24 +40,24 @@ export default (api: Api) => {
     }
   })
 
-  api.getIncrementVersion(
+  context.getIncrementVersion(
     async ({ releaseTypeOrVersion }) => {
-      const version = await getIncrementVersion(api, releaseTypeOrVersion)
+      const version = await getIncrementVersion(context, releaseTypeOrVersion)
 
-      if (!api.config.npm.confirm) {
+      if (!context.config.npm.confirm) {
         return version
       }
 
-      return confirmVersion(api, version)
+      return confirmVersion(context, version)
     },
     {
       stage: 10,
     },
   )
 
-  api.onBeforeBumpVersion(
+  context.onBeforeBumpVersion(
     async ({ version, isPrerelease, prereleaseId: preid }) => {
-      const { prerelease, prereleaseId } = api.config.npm
+      const { prerelease, prereleaseId } = context.config.npm
 
       if (prereleaseId && prereleaseId !== preid) {
         throw new AppError(
@@ -79,19 +80,19 @@ export default (api: Api) => {
       const existingPkgNames: string[] = []
       const tagChecks = new Map<string, boolean>()
 
-      for (const pkgName of api.appData.validPkgNames) {
-        if (!(await checkVersion(pkgName, version, api.appData.registry))) {
+      for (const pkgName of context.appData.validPkgNames) {
+        if (!(await checkVersion(pkgName, version, context.appData.registry))) {
           continue
         }
 
-        const tagName = api.config.git.independent
+        const tagName = context.config.git.independent
           ? `${pkgName}@${version}`
           : `v${version}`
         const cachedTagCheck = tagChecks.get(tagName)
         const isRetry =
           cachedTagCheck ??
           (await isGitTagAtHead(tagName, {
-            cwd: api.cwd,
+            cwd: context.cwd,
             verbose: false,
           }))
 
@@ -108,7 +109,7 @@ export default (api: Api) => {
         existingPkgNames.push(pkgName)
       }
 
-      api.appData.existingPkgNames = existingPkgNames
+      context.appData.existingPkgNames = existingPkgNames
 
       if (existingPkgNames.length) {
         logger.warn(
@@ -120,9 +121,9 @@ export default (api: Api) => {
     },
   )
 
-  api.onBumpVersion(async ({ version }) => {
+  context.onBumpVersion(async ({ version }) => {
     const { projectPkgJsonPath, projectPkg, pkgNames, pkgJsonPaths, pkgs } =
-      api.appData
+      context.appData
 
     debug?.(pkgNames)
     // update all packages
@@ -136,27 +137,27 @@ export default (api: Api) => {
     }
   })
 
-  api.onAfterBumpVersion(async ({ version }) => {
+  context.onAfterBumpVersion(async ({ version }) => {
     if (isCanaryVersion(version)) {
       return
     }
 
-    api.step('Updating Lockfile ...')
-    await updatePackageLock(api.appData.packageManager, {
-      cwd: api.cwd,
+    context.step('Updating Lockfile ...')
+    await updatePackageLock(context.appData.packageManager, {
+      cwd: context.cwd,
       verbose: true,
     })
   })
-}
+})
 
 async function getIncrementVersion(
-  api: Api,
+  context: ReleasePluginContext,
   releaseTypeOrVersion?: string,
 ): Promise<string> {
-  const { prerelease, prereleaseId, canary } = api.config.npm
-  const { registry, projectPkg, validPkgNames } = api.appData
+  const { prerelease, prereleaseId, canary } = context.config.npm
+  const { registry, projectPkg, validPkgNames } = context.appData
 
-  api.step('Incrementing version ...')
+  context.step('Incrementing version ...')
 
   if (
     releaseTypeOrVersion &&
@@ -172,7 +173,7 @@ async function getIncrementVersion(
     beta: remoteBetaVersion,
     rc: remoteRcVersion,
   } = await getRemoteDistTag(validPkgNames, {
-    cwd: api.cwd,
+    cwd: context.cwd,
     registry,
   })
 
@@ -192,7 +193,7 @@ async function getIncrementVersion(
   }
 
   if (canary) {
-    return getCanaryVersion(referenceVersionMap.latest, api.cwd)
+    return getCanaryVersion(referenceVersionMap.latest, context.cwd)
   } else {
     logger.info(`Local version: ${chalk.cyan(localVersion)}`)
 
@@ -258,7 +259,7 @@ async function getIncrementVersion(
     const releaseType = answer.value
 
     if (releaseType === 'canary') {
-      return getCanaryVersion(referenceVersionMap.latest, api.cwd)
+      return getCanaryVersion(referenceVersionMap.latest, context.cwd)
     }
 
     if (releaseType === 'custom') {
@@ -386,8 +387,11 @@ async function checkVersion(
   return isVersionExist(pkgName, version, registry)
 }
 
-async function confirmVersion(api: Api, version: string): Promise<string> {
-  const { validPkgNames } = api.appData
+async function confirmVersion(
+  context: ReleasePluginContext,
+  version: string,
+): Promise<string> {
+  const { validPkgNames } = context.appData
 
   if (!validPkgNames.length) {
     return version
@@ -414,7 +418,7 @@ async function confirmVersion(api: Api, version: string): Promise<string> {
   if (answer) {
     return version
   } else {
-    const version = await getIncrementVersion(api)
-    return confirmVersion(api, version)
+    const version = await getIncrementVersion(context)
+    return confirmVersion(context, version)
   }
 }

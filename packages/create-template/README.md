@@ -33,7 +33,7 @@ npm install @eljs/create-template -g
 # Create a new project with interactive prompts
 create-template my-project
 
-# Create with specific scene and template
+# Create with a specific scene and template
 create-template my-web-app --scene npm --template template-npm-web
 
 # Force overwrite existing directory

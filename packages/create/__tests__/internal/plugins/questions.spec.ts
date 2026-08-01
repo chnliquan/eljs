@@ -11,7 +11,7 @@ import {
 } from 'vitest'
 import questionsPlugin from '../../../src/internal/plugins/questions'
 import * as mockedInternalUtils from '../../../src/internal/utils'
-import type { Api } from '../../../src/types'
+import type { CreatePluginContext } from '../../../src/types'
 
 // Mock types
 interface QuestionConfig {
@@ -64,7 +64,7 @@ vi.mock('../../../src/internal/utils', () => ({
 }))
 
 describe('内部插件 questions', () => {
-  let mockApi: Mocked<Api>
+  let mockContext: Mocked<CreatePluginContext>
   let describeCallback: DescribeConfig
   let addQuestionsCallbacks: Array<
     () => QuestionConfig[] | SelectQuestionConfig[]
@@ -77,7 +77,7 @@ describe('内部插件 questions', () => {
     mockPath = mockedPath as unknown as MockPath
     mockInternalUtils = mockedInternalUtils as unknown as MockInternalUtils
 
-    mockApi = {
+    mockContext = {
       describe: vi.fn((config: DescribeConfig) => {
         describeCallback = config
       }),
@@ -95,7 +95,7 @@ describe('内部插件 questions', () => {
       paths: {
         target: '/path/to/my-project',
       },
-    } as unknown as Mocked<Api>
+    } as unknown as Mocked<CreatePluginContext>
   })
 
   afterEach(() => {
@@ -107,41 +107,41 @@ describe('内部插件 questions', () => {
   })
 
   it('应该调用 describe 注册插件配置', async () => {
-    await questionsPlugin(mockApi)
+    await questionsPlugin(mockContext)
 
-    expect(mockApi.describe).toHaveBeenCalledTimes(1)
-    expect(mockApi.describe).toHaveBeenCalledWith({
+    expect(mockContext.describe).toHaveBeenCalledTimes(1)
+    expect(mockContext.describe).toHaveBeenCalledWith({
       key: 'defaultQuestions',
       enable: expect.any(Function),
     })
   })
 
   it('应该调用 addQuestions 两次', async () => {
-    await questionsPlugin(mockApi)
+    await questionsPlugin(mockContext)
 
-    expect(mockApi.addQuestions).toHaveBeenCalledTimes(2)
+    expect(mockContext.addQuestions).toHaveBeenCalledTimes(2)
   })
 
   describe('启用条件', () => {
     it('当 defaultQuestions 配置为 true 时应该启用', async () => {
-      mockApi.config.defaultQuestions = true
-      await questionsPlugin(mockApi)
+      mockContext.config.defaultQuestions = true
+      await questionsPlugin(mockContext)
 
       const result = describeCallback.enable()
       expect(result).toBe(true)
     })
 
     it('当 defaultQuestions 配置为 false 时应该禁用', async () => {
-      mockApi.config.defaultQuestions = false
-      await questionsPlugin(mockApi)
+      mockContext.config.defaultQuestions = false
+      await questionsPlugin(mockContext)
 
       const result = describeCallback.enable()
       expect(result).toBe(false)
     })
 
     it('当 defaultQuestions 配置为 undefined 时应该禁用', async () => {
-      mockApi.config.defaultQuestions = undefined as unknown as boolean
-      await questionsPlugin(mockApi)
+      mockContext.config.defaultQuestions = undefined as unknown as boolean
+      await questionsPlugin(mockContext)
 
       const result = describeCallback.enable()
       expect(result).toBe(false)
@@ -150,9 +150,9 @@ describe('内部插件 questions', () => {
 
   describe('第一个 addQuestions 回调（项目信息）', () => {
     it('应该使用负无穷 stage 注册', async () => {
-      await questionsPlugin(mockApi)
+      await questionsPlugin(mockContext)
 
-      expect(mockApi.addQuestions).toHaveBeenNthCalledWith(
+      expect(mockContext.addQuestions).toHaveBeenNthCalledWith(
         1,
         expect.any(Function),
         {
@@ -164,7 +164,7 @@ describe('内部插件 questions', () => {
     it('应该返回项目信息问题', async () => {
       mockPath.basename.mockReturnValue('my-project')
 
-      await questionsPlugin(mockApi)
+      await questionsPlugin(mockContext)
 
       const questions = addQuestionsCallbacks[0]() as QuestionConfig[]
 
@@ -213,8 +213,8 @@ describe('内部插件 questions', () => {
     it('当 projectName 不可用时应该使用 path basename', async () => {
       mockPath.basename.mockReturnValue('fallback-project')
 
-      mockApi.appData.projectName = undefined as unknown as string
-      await questionsPlugin(mockApi)
+      mockContext.appData.projectName = undefined as unknown as string
+      await questionsPlugin(mockContext)
 
       const questions = addQuestionsCallbacks[0]() as QuestionConfig[]
 
@@ -223,7 +223,7 @@ describe('内部插件 questions', () => {
     })
 
     it('应该使用目标路径调用 getGitUrl', async () => {
-      await questionsPlugin(mockApi)
+      await questionsPlugin(mockContext)
       const questions = addQuestionsCallbacks[0]() as QuestionConfig[]
 
       expect(mockInternalUtils.getGitUrl).toHaveBeenCalledWith(
@@ -235,9 +235,9 @@ describe('内部插件 questions', () => {
 
   describe('第二个 addQuestions 回调（包管理器）', () => {
     it('应该使用正无穷 stage 注册', async () => {
-      await questionsPlugin(mockApi)
+      await questionsPlugin(mockContext)
 
-      expect(mockApi.addQuestions).toHaveBeenNthCalledWith(
+      expect(mockContext.addQuestions).toHaveBeenNthCalledWith(
         2,
         expect.any(Function),
         {
@@ -247,7 +247,7 @@ describe('内部插件 questions', () => {
     })
 
     it('应该返回包管理器问题', async () => {
-      await questionsPlugin(mockApi)
+      await questionsPlugin(mockContext)
 
       const questions = addQuestionsCallbacks[1]() as SelectQuestionConfig[]
 
@@ -266,7 +266,7 @@ describe('内部插件 questions', () => {
     })
 
     it('应该将 pnpm 作为默认选择（索引 2）', async () => {
-      await questionsPlugin(mockApi)
+      await questionsPlugin(mockContext)
 
       const questions = addQuestionsCallbacks[1]() as SelectQuestionConfig[]
 
@@ -276,13 +276,14 @@ describe('内部插件 questions', () => {
   })
 
   it('处理问题时不应该抛出异常', async () => {
-    await expect(questionsPlugin(mockApi)).resolves.not.toThrow()
+    await expect(questionsPlugin(mockContext)).resolves.not.toThrow()
   })
 
   it('应该优雅地处理缺失的 appData', async () => {
-    mockApi.appData = {} as Required<Api['appData']>
+    ;(mockContext as { appData: CreatePluginContext['appData'] }).appData =
+      {} as Required<CreatePluginContext['appData']>
 
-    await expect(questionsPlugin(mockApi)).resolves.not.toThrow()
+    await expect(questionsPlugin(mockContext)).resolves.not.toThrow()
 
     const questions = addQuestionsCallbacks[0]() as QuestionConfig[]
     expect(questions[0].initial).toBe('fallback-project') // 应该回退到 basename

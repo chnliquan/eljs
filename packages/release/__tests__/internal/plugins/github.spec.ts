@@ -18,7 +18,11 @@ import newGithubReleaseUrl from 'new-github-release-url'
 import open from 'open'
 
 import githubPlugin from '../../../src/internal/plugins/github'
-import type { Api, Config, PrereleaseId } from '../../../src/types'
+import type {
+  Config,
+  PrereleaseId,
+  ReleasePluginContext,
+} from '../../../src/types'
 
 // 定义测试专用的 Mock API 类型，基于源代码类型
 interface GitHubTestApi {
@@ -58,10 +62,10 @@ vi.mock('new-github-release-url', () => ({ default: vi.fn() }))
 vi.mock('open')
 
 describe('GitHub 插件测试', () => {
-  let mockApi: GitHubTestApi
+  let mockContext: GitHubTestApi
 
   beforeEach(() => {
-    mockApi = {
+    mockContext = {
       describe: vi.fn(),
       onRelease: vi.fn(),
       config: {
@@ -94,12 +98,12 @@ describe('GitHub 插件测试', () => {
 
   describe('插件注册', () => {
     it('应该注册所有必需的钩子方法', () => {
-      githubPlugin(mockApi as unknown as Api)
+      githubPlugin(mockContext as unknown as ReleasePluginContext)
 
-      expect(mockApi.describe).toHaveBeenCalledWith({
+      expect(mockContext.describe).toHaveBeenCalledWith({
         enable: expect.any(Function),
       })
-      expect(mockApi.onRelease).toHaveBeenCalledWith(expect.any(Function), {
+      expect(mockContext.onRelease).toHaveBeenCalledWith(expect.any(Function), {
         stage: 20,
       })
     })
@@ -111,8 +115,8 @@ describe('GitHub 插件测试', () => {
         'https://github.com/user/repo.git',
       )
 
-      githubPlugin(mockApi as unknown as Api)
-      const describeCall = mockApi.describe.mock.calls[0][0]
+      githubPlugin(mockContext as unknown as ReleasePluginContext)
+      const describeCall = mockContext.describe.mock.calls[0][0]
 
       const isEnabled = describeCall.enable({ cwd: '/it/project' })
       expect(isEnabled).toBe(true)
@@ -123,8 +127,8 @@ describe('GitHub 插件测试', () => {
         'https://gitlab.com/user/repo.git',
       )
 
-      githubPlugin(mockApi as unknown as Api)
-      const describeCall = mockApi.describe.mock.calls[0][0]
+      githubPlugin(mockContext as unknown as ReleasePluginContext)
+      const describeCall = mockContext.describe.mock.calls[0][0]
 
       const isEnabled = describeCall.enable({ cwd: '/it/project' })
       expect(isEnabled).toBe(false)
@@ -135,8 +139,9 @@ describe('GitHub 插件测试', () => {
     let onReleaseHandler: OnReleaseHandler
 
     beforeEach(() => {
-      githubPlugin(mockApi as unknown as Api)
-      onReleaseHandler = mockApi.onRelease.mock.calls[0][0] as OnReleaseHandler
+      githubPlugin(mockContext as unknown as ReleasePluginContext)
+      onReleaseHandler = mockContext.onRelease.mock
+        .calls[0][0] as OnReleaseHandler
     })
 
     it('应该创建 GitHub 发布', async () => {
@@ -179,7 +184,7 @@ describe('GitHub 插件测试', () => {
     })
 
     it('当禁用 GitHub 发布时应该跳过', async () => {
-      mockApi.config.github!.release = false
+      mockContext.config.github!.release = false
 
       const versionInfo = {
         version: '1.1.0',
@@ -249,8 +254,9 @@ describe('GitHub 插件测试', () => {
     let onReleaseHandler: OnReleaseHandler
 
     beforeEach(() => {
-      githubPlugin(mockApi as unknown as Api)
-      onReleaseHandler = mockApi.onRelease.mock.calls[0][0] as OnReleaseHandler
+      githubPlugin(mockContext as unknown as ReleasePluginContext)
+      onReleaseHandler = mockContext.onRelease.mock
+        .calls[0][0] as OnReleaseHandler
     })
 
     it('应该处理 getGitUrl 错误', async () => {
@@ -298,22 +304,24 @@ describe('GitHub 插件测试', () => {
     })
 
     it('应该没有返回值', () => {
-      const result = githubPlugin(mockApi as unknown as Api)
+      const result = githubPlugin(
+        mockContext as unknown as ReleasePluginContext,
+      )
       expect(result).toBeUndefined()
     })
   })
 
   describe('GitHub 插件集成测试', () => {
     it('应该完整执行 GitHub 发布流程', async () => {
-      githubPlugin(mockApi as unknown as Api)
+      githubPlugin(mockContext as unknown as ReleasePluginContext)
 
       // 1. 检查插件是否启用
-      const describeCall = mockApi.describe.mock.calls[0][0]
+      const describeCall = mockContext.describe.mock.calls[0][0]
       const isEnabled = describeCall.enable({ cwd: '/it/project' })
       expect(isEnabled).toBe(true)
 
       // 2. 执行发布流程
-      const onReleaseHandler = mockApi.onRelease.mock
+      const onReleaseHandler = mockContext.onRelease.mock
         .calls[0][0] as OnReleaseHandler
       await onReleaseHandler({
         version: '1.1.0',
@@ -329,8 +337,8 @@ describe('GitHub 插件测试', () => {
     })
 
     it('应该处理不同版本类型', async () => {
-      githubPlugin(mockApi as unknown as Api)
-      const onReleaseHandler = mockApi.onRelease.mock
+      githubPlugin(mockContext as unknown as ReleasePluginContext)
+      const onReleaseHandler = mockContext.onRelease.mock
         .calls[0][0] as OnReleaseHandler
 
       // 测试预发布版本

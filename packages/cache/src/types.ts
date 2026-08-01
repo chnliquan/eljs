@@ -5,27 +5,27 @@
 export interface CacheOptions<T> {
   /**
    * 是否启用缓存
-   * @default true
+   * @defaultValue true
    */
   enabled?: boolean
   /**
    * 缓存目录路径
-   * @default os.tmpdir() + '/.eljs-cache'
+   * @defaultValue os.tmpdir() + '/.eljs-cache'
    */
   cacheDir?: string
   /**
    * 缓存存活时间（天数）
-   * @default 7
+   * @defaultValue 7
    */
   ttlDays?: number
   /**
    * 启动时是否自动清理过期文件
-   * @default true
+   * @defaultValue true
    */
   autoCleanup?: boolean
   /**
    * 最大缓存文件数量
-   * @default 1000
+   * @defaultValue 1000
    */
   maxFiles?: number
   /**

@@ -25,7 +25,11 @@ import {
 } from '@eljs/utils'
 
 import gitPlugin from '../../../src/internal/plugins/git'
-import type { Api, Config, PrereleaseId } from '../../../src/types'
+import type {
+  Config,
+  PrereleaseId,
+  ReleasePluginContext,
+} from '../../../src/types'
 import { getChangelog, isGitTagAtHead } from '../../../src/utils'
 
 // 定义测试专用的 Mock API 类型，基于源代码类型但适应测试环境
@@ -136,10 +140,10 @@ vi.mock('../../../src/utils', () => ({
 }))
 
 describe('Git 插件测试', () => {
-  let mockApi: GitTestApi
+  let mockContext: GitTestApi
 
   const getOnReleaseHandler = (): OnReleaseHandler => {
-    const handlers = mockApi.onRelease.mock.calls
+    const handlers = mockContext.onRelease.mock.calls
       .slice(-2)
       .map(call => call[0] as OnReleaseHandler)
 
@@ -151,7 +155,7 @@ describe('Git 插件测试', () => {
   }
 
   beforeEach(() => {
-    mockApi = {
+    mockContext = {
       onCheck: vi.fn(),
       getChangelog: vi.fn(),
       onBeforeRelease: vi.fn(),
@@ -235,21 +239,26 @@ describe('Git 插件测试', () => {
 
   describe('插件注册', () => {
     it('应该注册所有必需的钩子方法', () => {
-      gitPlugin(mockApi as unknown as Api)
+      gitPlugin(mockContext as unknown as ReleasePluginContext)
 
-      expect(mockApi.onCheck).toHaveBeenCalledWith(expect.any(Function))
-      expect(mockApi.getChangelog).toHaveBeenCalledWith(expect.any(Function), {
-        stage: 10,
-      })
-      expect(mockApi.onBeforeRelease).toHaveBeenCalledWith(expect.any(Function))
-      expect(mockApi.onRelease).toHaveBeenNthCalledWith(
+      expect(mockContext.onCheck).toHaveBeenCalledWith(expect.any(Function))
+      expect(mockContext.getChangelog).toHaveBeenCalledWith(
+        expect.any(Function),
+        {
+          stage: 10,
+        },
+      )
+      expect(mockContext.onBeforeRelease).toHaveBeenCalledWith(
+        expect.any(Function),
+      )
+      expect(mockContext.onRelease).toHaveBeenNthCalledWith(
         1,
         expect.any(Function),
         {
           stage: -10,
         },
       )
-      expect(mockApi.onRelease).toHaveBeenNthCalledWith(
+      expect(mockContext.onRelease).toHaveBeenNthCalledWith(
         2,
         expect.any(Function),
         {
@@ -266,8 +275,8 @@ describe('Git 插件测试', () => {
     let onCheckHandler: OnCheckHandler
 
     beforeEach(() => {
-      gitPlugin(mockApi as unknown as Api)
-      onCheckHandler = mockApi.onCheck?.mock.calls[0][0] as OnCheckHandler
+      gitPlugin(mockContext as unknown as ReleasePluginContext)
+      onCheckHandler = mockContext.onCheck?.mock.calls[0][0] as OnCheckHandler
     })
 
     it('应该检查 Git 工作树是否干净', async () => {
@@ -300,8 +309,8 @@ describe('Git 插件测试', () => {
     })
 
     it('应该检查指定分支', async () => {
-      mockApi.config.git!.requireBranch = 'main'
-      mockApi.appData.branch = 'develop'
+      mockContext.config.git!.requireBranch = 'main'
+      mockContext.appData.branch = 'develop'
 
       await expect(
         onCheckHandler({ releaseTypeOrVersion: 'minor' }),
@@ -309,8 +318,8 @@ describe('Git 插件测试', () => {
     })
 
     it('当分支匹配时应该正常通过', async () => {
-      mockApi.config.git!.requireBranch = 'main'
-      mockApi.appData.branch = 'main'
+      mockContext.config.git!.requireBranch = 'main'
+      mockContext.appData.branch = 'main'
 
       await expect(
         onCheckHandler({ releaseTypeOrVersion: 'minor' }),
@@ -318,7 +327,7 @@ describe('Git 插件测试', () => {
     })
 
     it('当不需要检查清洁度时应该跳过检查', async () => {
-      mockApi.config.git!.requireClean = false
+      mockContext.config.git!.requireClean = false
 
       await onCheckHandler({ releaseTypeOrVersion: 'minor' })
 
@@ -335,8 +344,8 @@ describe('Git 插件测试', () => {
     let getChangelogHandler: GetChangelogHandler
 
     beforeEach(() => {
-      gitPlugin(mockApi as unknown as Api)
-      getChangelogHandler = mockApi.getChangelog?.mock
+      gitPlugin(mockContext as unknown as ReleasePluginContext)
+      getChangelogHandler = mockContext.getChangelog?.mock
         .calls[0][0] as GetChangelogHandler
     })
 
@@ -360,7 +369,7 @@ describe('Git 插件测试', () => {
     })
 
     it('应该使用独立模式', async () => {
-      mockApi.config.git!.independent = true
+      mockContext.config.git!.independent = true
 
       const versionInfo = {
         version: '1.1.0',
@@ -380,7 +389,7 @@ describe('Git 插件测试', () => {
     })
 
     it('当禁用变更日志时应该返回空字符串', async () => {
-      mockApi.config.git!.changelog = false
+      mockContext.config.git!.changelog = false
 
       const versionInfo = {
         version: '1.1.0',
@@ -405,8 +414,8 @@ describe('Git 插件测试', () => {
     let onBeforeReleaseHandler: OnBeforeReleaseHandler
 
     beforeEach(() => {
-      gitPlugin(mockApi as unknown as Api)
-      onBeforeReleaseHandler = mockApi.onBeforeRelease?.mock
+      gitPlugin(mockContext as unknown as ReleasePluginContext)
+      onBeforeReleaseHandler = mockContext.onBeforeRelease?.mock
         .calls[0][0] as OnBeforeReleaseHandler
     })
 
@@ -428,7 +437,7 @@ describe('Git 插件测试', () => {
     })
 
     it('当禁用变更日志时不应该更新文件', async () => {
-      mockApi.config.git!.changelog = false
+      mockContext.config.git!.changelog = false
 
       const releaseInfo = {
         version: '1.1.0',
@@ -465,7 +474,7 @@ describe('Git 插件测试', () => {
     })
 
     it('应该使用自定义文件名', async () => {
-      ;(mockApi.config.git!.changelog as { filename: string }).filename =
+      ;(mockContext.config.git!.changelog as { filename: string }).filename =
         'HISTORY.md'
 
       const releaseInfo = {
@@ -488,7 +497,7 @@ describe('Git 插件测试', () => {
     let onReleaseHandler: OnReleaseHandler
 
     beforeEach(() => {
-      gitPlugin(mockApi as unknown as Api)
+      gitPlugin(mockContext as unknown as ReleasePluginContext)
       onReleaseHandler = getOnReleaseHandler()
     })
 
@@ -541,7 +550,7 @@ describe('Git 插件测试', () => {
     })
 
     it('当禁用提交时不应该执行提交', async () => {
-      mockApi.config.git!.commit = false
+      mockContext.config.git!.commit = false
 
       const releaseInfo = {
         version: '1.1.0',
@@ -556,7 +565,7 @@ describe('Git 插件测试', () => {
     })
 
     it('当禁用推送时不应该推送', async () => {
-      mockApi.config.git!.push = false
+      mockContext.config.git!.push = false
 
       const releaseInfo = {
         version: '1.1.0',
@@ -571,7 +580,7 @@ describe('Git 插件测试', () => {
     })
 
     it('应该在独立模式下创建包特定标签', async () => {
-      mockApi.config.git!.independent = true
+      mockContext.config.git!.independent = true
 
       const releaseInfo = {
         version: '1.1.0',
@@ -644,12 +653,12 @@ describe('Git 插件测试', () => {
     let onReleaseHandler: OnReleaseHandler
 
     beforeEach(() => {
-      gitPlugin(mockApi as unknown as Api)
+      gitPlugin(mockContext as unknown as ReleasePluginContext)
       onReleaseHandler = getOnReleaseHandler()
     })
 
     it('应该使用自定义提交参数', async () => {
-      mockApi.config.git!.commitArgs = '--no-verify'
+      mockContext.config.git!.commitArgs = '--no-verify'
 
       const releaseInfo = {
         version: '1.1.0',
@@ -668,7 +677,7 @@ describe('Git 插件测试', () => {
     })
 
     it('应该使用自定义推送参数', async () => {
-      mockApi.config.git!.pushArgs = ['--force', '--tags']
+      mockContext.config.git!.pushArgs = ['--force', '--tags']
 
       const releaseInfo = {
         version: '1.1.0',
@@ -686,8 +695,8 @@ describe('Git 插件测试', () => {
     })
 
     it('应该处理空的命令参数', async () => {
-      mockApi.config.git!.commitArgs = []
-      mockApi.config.git!.pushArgs = []
+      mockContext.config.git!.commitArgs = []
+      mockContext.config.git!.pushArgs = []
 
       const releaseInfo = {
         version: '1.1.0',
@@ -713,7 +722,7 @@ describe('Git 插件测试', () => {
     let onReleaseHandler: OnReleaseHandler
 
     beforeEach(() => {
-      gitPlugin(mockApi as unknown as Api)
+      gitPlugin(mockContext as unknown as ReleasePluginContext)
       onReleaseHandler = getOnReleaseHandler()
     })
 
@@ -754,8 +763,8 @@ describe('Git 插件测试', () => {
     let onBeforeReleaseHandler: OnBeforeReleaseHandler
 
     beforeEach(() => {
-      gitPlugin(mockApi as unknown as Api)
-      onBeforeReleaseHandler = mockApi.onBeforeRelease?.mock
+      gitPlugin(mockContext as unknown as ReleasePluginContext)
+      onBeforeReleaseHandler = mockContext.onBeforeRelease?.mock
         .calls[0][0] as OnBeforeReleaseHandler
     })
 
@@ -787,22 +796,23 @@ describe('Git 插件测试', () => {
     })
 
     it('应该没有返回值', () => {
-      const result = gitPlugin(mockApi as unknown as Api)
+      const result = gitPlugin(mockContext as unknown as ReleasePluginContext)
       expect(result).toBeUndefined()
     })
   })
 
   describe('完整工作流测试', () => {
     it('应该完整执行 Git 插件工作流', async () => {
-      gitPlugin(mockApi as unknown as Api)
+      gitPlugin(mockContext as unknown as ReleasePluginContext)
 
       // 1. 检查 Git 状态
-      const onCheckHandler = mockApi.onCheck?.mock.calls[0][0] as OnCheckHandler
+      const onCheckHandler = mockContext.onCheck?.mock
+        .calls[0][0] as OnCheckHandler
       await onCheckHandler({ releaseTypeOrVersion: 'minor' })
       expect(isGitClean).toHaveBeenCalled()
 
       // 2. 生成变更日志
-      const getChangelogHandler = mockApi.getChangelog?.mock
+      const getChangelogHandler = mockContext.getChangelog?.mock
         .calls[0][0] as GetChangelogHandler
       const changelog = await getChangelogHandler({
         version: '1.1.0',
@@ -815,7 +825,7 @@ describe('Git 插件测试', () => {
       )
 
       // 3. 更新变更日志文件
-      const onBeforeReleaseHandler = mockApi.onBeforeRelease?.mock
+      const onBeforeReleaseHandler = mockContext.onBeforeRelease?.mock
         .calls[0][0] as OnBeforeReleaseHandler
       await onBeforeReleaseHandler({
         version: '1.1.0',
@@ -841,9 +851,9 @@ describe('Git 插件测试', () => {
 
   describe('Git 配置处理验证', () => {
     it('应该正确处理提交消息模板', async () => {
-      mockApi.config.git!.commitMessage = 'release: v${version}'
+      mockContext.config.git!.commitMessage = 'release: v${version}'
 
-      gitPlugin(mockApi as unknown as Api)
+      gitPlugin(mockContext as unknown as ReleasePluginContext)
       const onReleaseHandler = getOnReleaseHandler()
 
       await onReleaseHandler({
@@ -860,10 +870,10 @@ describe('Git 插件测试', () => {
     })
 
     it('应该处理不同类型的参数格式', async () => {
-      mockApi.config.git!.commitArgs = '--no-verify'
-      mockApi.config.git!.pushArgs = '--force'
+      mockContext.config.git!.commitArgs = '--no-verify'
+      mockContext.config.git!.pushArgs = '--force'
 
-      gitPlugin(mockApi as unknown as Api)
+      gitPlugin(mockContext as unknown as ReleasePluginContext)
       const onReleaseHandler = getOnReleaseHandler()
 
       await onReleaseHandler({
@@ -893,9 +903,9 @@ describe('Git 插件测试', () => {
       ]
 
       for (const config of configurations) {
-        mockApi.config.git = { ...mockApi.config.git, ...config }
+        mockContext.config.git = { ...mockContext.config.git, ...config }
 
-        gitPlugin(mockApi as unknown as Api)
+        gitPlugin(mockContext as unknown as ReleasePluginContext)
         const onReleaseHandler = getOnReleaseHandler()
 
         await expect(

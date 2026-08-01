@@ -1,25 +1,26 @@
 import path from 'node:path'
 
-import type { Api } from '../../types'
+import { definePlugin } from '../../define'
 
 import { author, email, getGitUrl } from '../utils'
 
-export default async (api: Api) => {
-  api.describe({
+export default definePlugin(async context => {
+  context.describe({
     key: 'defaultQuestions',
     enable() {
-      return Boolean(api.config.defaultQuestions)
+      return Boolean(context.config.defaultQuestions)
     },
   })
 
-  api.addQuestions(
+  context.addQuestions(
     () => {
       return [
         {
           name: 'name',
           type: 'text',
           message: `项目名称`,
-          initial: api.appData.projectName || path.basename(api.paths.target),
+          initial:
+            context.appData.projectName || path.basename(context.paths.target),
         },
         {
           name: 'description',
@@ -42,7 +43,7 @@ export default async (api: Api) => {
           name: 'gitUrl',
           type: 'text',
           message: `Git 地址`,
-          initial: getGitUrl(api.paths.target),
+          initial: getGitUrl(context.paths.target),
         },
       ]
     },
@@ -51,7 +52,7 @@ export default async (api: Api) => {
     },
   )
 
-  api.addQuestions(
+  context.addQuestions(
     () => {
       return [
         {
@@ -71,4 +72,4 @@ export default async (api: Api) => {
       stage: Number.POSITIVE_INFINITY,
     },
   )
-}
+})

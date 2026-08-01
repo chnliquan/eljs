@@ -13,7 +13,7 @@ import {
 } from 'vitest'
 
 import generatorPlugin from '../../../src/internal/plugins/generator'
-import type { Api } from '../../../src/types'
+import type { CreatePluginContext } from '../../../src/types'
 
 // Mock @eljs/utils
 vi.mock('@eljs/utils', () => ({
@@ -55,7 +55,7 @@ interface MockPath {
 }
 
 describe('内部插件 generator', () => {
-  let mockApi: Mocked<Api>
+  let mockContext: Mocked<CreatePluginContext>
   let resolveCallback: (...paths: string[]) => string
   let copyFileCallback: (
     from: string,
@@ -81,8 +81,8 @@ describe('内部插件 generator', () => {
     mockUtils = mockedUtils as unknown as MockUtils
     mockPath = mockedPath as unknown as MockPath
 
-    mockApi = {
-      registerMethod: vi.fn((name: string, fn: unknown) => {
+    mockContext = {
+      registerCapability: vi.fn((name: string, fn: unknown) => {
         if (name === 'resolve') {
           resolveCallback = fn as (...paths: string[]) => string
         } else if (name === 'copyFile') {
@@ -110,7 +110,7 @@ describe('内部插件 generator', () => {
       paths: {
         target: '/test/project',
       },
-    } as unknown as Mocked<Api>
+    } as unknown as Mocked<CreatePluginContext>
   })
 
   afterEach(() => {
@@ -122,22 +122,22 @@ describe('内部插件 generator', () => {
   })
 
   it('应该注册所有必需的方法', () => {
-    generatorPlugin(mockApi)
+    generatorPlugin(mockContext)
 
-    expect(mockApi.registerMethod).toHaveBeenCalledTimes(4)
-    expect(mockApi.registerMethod).toHaveBeenCalledWith(
+    expect(mockContext.registerCapability).toHaveBeenCalledTimes(4)
+    expect(mockContext.registerCapability).toHaveBeenCalledWith(
       'resolve',
       expect.any(Function),
     )
-    expect(mockApi.registerMethod).toHaveBeenCalledWith(
+    expect(mockContext.registerCapability).toHaveBeenCalledWith(
       'copyFile',
       expect.any(Function),
     )
-    expect(mockApi.registerMethod).toHaveBeenCalledWith(
+    expect(mockContext.registerCapability).toHaveBeenCalledWith(
       'copyTpl',
       expect.any(Function),
     )
-    expect(mockApi.registerMethod).toHaveBeenCalledWith(
+    expect(mockContext.registerCapability).toHaveBeenCalledWith(
       'copyDirectory',
       expect.any(Function),
     )
@@ -145,7 +145,7 @@ describe('内部插件 generator', () => {
 
   describe('resolve 方法', () => {
     it('应该解析相对于目标目录的路径', () => {
-      generatorPlugin(mockApi)
+      generatorPlugin(mockContext)
 
       const result = resolveCallback('src', 'index.ts')
 
@@ -158,7 +158,7 @@ describe('内部插件 generator', () => {
     })
 
     it('应该处理单个路径', () => {
-      generatorPlugin(mockApi)
+      generatorPlugin(mockContext)
 
       const result = resolveCallback('package.json')
 
@@ -170,7 +170,7 @@ describe('内部插件 generator', () => {
     })
 
     it('应该处理空路径', () => {
-      generatorPlugin(mockApi)
+      generatorPlugin(mockContext)
 
       const result = resolveCallback()
 
@@ -181,7 +181,7 @@ describe('内部插件 generator', () => {
 
   describe('copyFile 方法', () => {
     it('应该使用 basedir 选项调用 copyFile', async () => {
-      generatorPlugin(mockApi)
+      generatorPlugin(mockContext)
 
       const options: CopyFileOptions = { mode: 0o755, basedir: '/custom' }
       await copyFileCallback('source.txt', 'dest.txt', options)
@@ -197,7 +197,7 @@ describe('内部插件 generator', () => {
     })
 
     it('应该处理空选项', async () => {
-      generatorPlugin(mockApi)
+      generatorPlugin(mockContext)
 
       await copyFileCallback('source.txt', 'dest.txt', {})
 
@@ -213,7 +213,7 @@ describe('内部插件 generator', () => {
 
   describe('copyTpl 方法', () => {
     it('应该使用 basedir 选项调用 copyTpl', async () => {
-      generatorPlugin(mockApi)
+      generatorPlugin(mockContext)
 
       const data = { name: 'test' }
       const options: CopyFileOptions = {
@@ -235,7 +235,7 @@ describe('内部插件 generator', () => {
     })
 
     it('应该处理空数据和选项', async () => {
-      generatorPlugin(mockApi)
+      generatorPlugin(mockContext)
 
       await copyTplCallback('template.txt', 'output.txt', {}, {})
 
@@ -252,7 +252,7 @@ describe('内部插件 generator', () => {
 
   describe('copyDirectory 方法', () => {
     it('应该使用 basedir 选项调用 copyDirectory', async () => {
-      generatorPlugin(mockApi)
+      generatorPlugin(mockContext)
 
       const data = { version: '1.0.0' }
       const options: CopyFileOptions = {
@@ -274,7 +274,7 @@ describe('内部插件 generator', () => {
     })
 
     it('应该处理空数据和选项', async () => {
-      generatorPlugin(mockApi)
+      generatorPlugin(mockContext)
 
       await copyDirectoryCallback('src', 'dest', {}, {})
 
@@ -290,6 +290,6 @@ describe('内部插件 generator', () => {
   })
 
   it('注册方法时不应该抛出异常', () => {
-    expect(() => generatorPlugin(mockApi)).not.toThrow()
+    expect(() => generatorPlugin(mockContext)).not.toThrow()
   })
 })

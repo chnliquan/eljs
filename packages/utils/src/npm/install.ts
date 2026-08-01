@@ -21,17 +21,13 @@ export interface InstallDepsOptions extends RunCommandOptions {
 
 /**
  * 安装指定依赖
- * @param options.cwd 当前工作目录
- * @param options.dependencies 运行时依赖
- * @param options.devDependencies 开发时依赖
+ * @param options - 依赖安装选项
  */
 export async function installDeps(options?: InstallDepsOptions): Promise<void>
 /**
  * 安装指定依赖
- * @param packageManager 包管理器
- * @param options.cwd 当前工作目录
- * @param options.dependencies 运行时依赖
- * @param options.devDependencies 开发时依赖
+ * @param packageManager - 包管理器
+ * @param options - 依赖安装选项
  */
 export async function installDeps(
   packageManager: PackageManager,
@@ -72,13 +68,13 @@ export async function installDeps(
 
 /**
  * 安装项目依赖
- * @param options 选项
+ * @param options - 选项
  */
 export async function install(options?: RunCommandOptions): Promise<void>
 /**
  * 安装项目依赖
- * @param args 命令行参数
- * @param options 选项
+ * @param args - 命令行参数
+ * @param options - 选项
  */
 export async function install(
   args: string[],
@@ -86,8 +82,8 @@ export async function install(
 ): Promise<void>
 /**
  * 安装项目依赖
- * @param packageManager 包管理器
- * @param options 选项
+ * @param packageManager - 包管理器
+ * @param options - 选项
  */
 export async function install(
   packageManager: PackageManager,
@@ -95,9 +91,9 @@ export async function install(
 ): Promise<void>
 /**
  * 安装项目依赖
- * @param packageManager 包管理器
- * @param args 命令行参数
- * @param options 选项
+ * @param packageManager - 包管理器
+ * @param args - 命令行参数
+ * @param options - 选项
  */
 export async function install(
   packageManager: PackageManager,

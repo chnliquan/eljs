@@ -11,7 +11,7 @@ export async function hasGit(): Promise<boolean> {
 
 /**
  * 项目是否存在 git
- * @param cwd 当前工作目录
+ * @param cwd - 当前工作目录
  */
 export function hasProjectGit(cwd: string): Promise<boolean> {
   return execa('git', ['status'], {

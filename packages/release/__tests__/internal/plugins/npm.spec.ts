@@ -16,7 +16,11 @@ import {
 import { getNpmUser, logger, normalizeArgs, run } from '@eljs/utils'
 
 import npmPlugin from '../../../src/internal/plugins/npm'
-import type { Api, Config, PrereleaseId } from '../../../src/types'
+import type {
+  Config,
+  PrereleaseId,
+  ReleasePluginContext,
+} from '../../../src/types'
 
 // 定义测试专用的 Mock API 类型，基于源代码类型
 interface NpmTestApi {
@@ -94,10 +98,10 @@ vi.mock('../../../src/utils', () => ({
 }))
 
 describe('NPM 插件测试', () => {
-  let mockApi: NpmTestApi
+  let mockContext: NpmTestApi
 
   beforeEach(() => {
-    mockApi = {
+    mockContext = {
       onCheck: vi.fn(),
       onRelease: vi.fn(),
       step: vi.fn(),
@@ -148,10 +152,10 @@ describe('NPM 插件测试', () => {
 
   describe('插件注册', () => {
     it('应该注册所有必需的钩子方法', () => {
-      npmPlugin(mockApi as unknown as Api)
+      npmPlugin(mockContext as unknown as ReleasePluginContext)
 
-      expect(mockApi.onCheck).toHaveBeenCalledWith(expect.any(Function))
-      expect(mockApi.onRelease).toHaveBeenCalledWith(expect.any(Function), {
+      expect(mockContext.onCheck).toHaveBeenCalledWith(expect.any(Function))
+      expect(mockContext.onRelease).toHaveBeenCalledWith(expect.any(Function), {
         stage: 0,
       })
     })
@@ -161,16 +165,16 @@ describe('NPM 插件测试', () => {
     let onCheckHandler: OnCheckHandler
 
     beforeEach(() => {
-      npmPlugin(mockApi as unknown as Api)
-      onCheckHandler = mockApi.onCheck.mock.calls[0][0] as OnCheckHandler
+      npmPlugin(mockContext as unknown as ReleasePluginContext)
+      onCheckHandler = mockContext.onCheck.mock.calls[0][0] as OnCheckHandler
     })
 
     it('应该检查 NPM 包所有者', async () => {
-      mockApi.config.npm!.requireOwner = true
+      mockContext.config.npm!.requireOwner = true
 
       await onCheckHandler({ releaseTypeOrVersion: 'minor' })
 
-      expect(mockApi.step).toHaveBeenCalledWith('Checking npm owner ...')
+      expect(mockContext.step).toHaveBeenCalledWith('Checking npm owner ...')
       expect(getNpmUser).toHaveBeenCalledWith({ cwd: '/test/project' })
       expect(run).toHaveBeenCalledWith('npm', ['owner', 'ls', 'test-package'], {
         cwd: '/test/project',
@@ -205,7 +209,7 @@ describe('NPM 插件测试', () => {
     })
 
     it('当不需要检查所有者时应该跳过', async () => {
-      mockApi.config.npm!.requireOwner = false
+      mockContext.config.npm!.requireOwner = false
 
       await onCheckHandler({ releaseTypeOrVersion: 'minor' })
 
@@ -218,8 +222,9 @@ describe('NPM 插件测试', () => {
     let onReleaseHandler: OnReleaseHandler
 
     beforeEach(() => {
-      npmPlugin(mockApi as unknown as Api)
-      onReleaseHandler = mockApi.onRelease.mock.calls[0][0] as OnReleaseHandler
+      npmPlugin(mockContext as unknown as ReleasePluginContext)
+      onReleaseHandler = mockContext.onRelease.mock
+        .calls[0][0] as OnReleaseHandler
     })
 
     it('应该发布包到 NPM', async () => {
@@ -246,7 +251,7 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该为预发布版本使用 tag', async () => {
-      mockApi.appData.pkgs[0].version = '1.1.0-alpha.1'
+      mockContext.appData.pkgs[0].version = '1.1.0-alpha.1'
       const versionInfo = {
         version: '1.1.0-alpha.1',
         isPrerelease: true,
@@ -266,10 +271,10 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该处理多个包的发布', async () => {
-      mockApi.appData.validPkgNames = ['pkg1', 'pkg2']
-      mockApi.appData.pkgNames = ['pkg1', 'pkg2']
-      mockApi.appData.validPkgRootPaths = ['/test/pkg1', '/test/pkg2']
-      mockApi.appData.pkgs = [
+      mockContext.appData.validPkgNames = ['pkg1', 'pkg2']
+      mockContext.appData.pkgNames = ['pkg1', 'pkg2']
+      mockContext.appData.validPkgRootPaths = ['/test/pkg1', '/test/pkg2']
+      mockContext.appData.pkgs = [
         { name: 'pkg1', version: '1.1.0' },
         { name: 'pkg2', version: '1.1.0' },
       ]
@@ -295,10 +300,10 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该按照 workspace 运行时依赖顺序发布', async () => {
-      mockApi.appData.validPkgNames = ['app', 'core']
-      mockApi.appData.pkgNames = ['app', 'core']
-      mockApi.appData.validPkgRootPaths = ['/test/app', '/test/core']
-      mockApi.appData.pkgs = [
+      mockContext.appData.validPkgNames = ['app', 'core']
+      mockContext.appData.pkgNames = ['app', 'core']
+      mockContext.appData.validPkgRootPaths = ['/test/app', '/test/core']
+      mockContext.appData.pkgs = [
         {
           name: 'app',
           version: '1.1.0',
@@ -329,10 +334,10 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该在发布前拒绝循环运行时依赖', async () => {
-      mockApi.appData.validPkgNames = ['pkg1', 'pkg2']
-      mockApi.appData.pkgNames = ['pkg1', 'pkg2']
-      mockApi.appData.validPkgRootPaths = ['/test/pkg1', '/test/pkg2']
-      mockApi.appData.pkgs = [
+      mockContext.appData.validPkgNames = ['pkg1', 'pkg2']
+      mockContext.appData.pkgNames = ['pkg1', 'pkg2']
+      mockContext.appData.validPkgRootPaths = ['/test/pkg1', '/test/pkg2']
+      mockContext.appData.pkgs = [
         {
           name: 'pkg1',
           version: '1.1.0',
@@ -357,10 +362,10 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该在发布前拒绝依赖私有 workspace 包', async () => {
-      mockApi.appData.validPkgNames = ['public-package']
-      mockApi.appData.pkgNames = ['public-package', 'private-package']
-      mockApi.appData.validPkgRootPaths = ['/test/public-package']
-      mockApi.appData.pkgs = [
+      mockContext.appData.validPkgNames = ['public-package']
+      mockContext.appData.pkgNames = ['public-package', 'private-package']
+      mockContext.appData.validPkgRootPaths = ['/test/public-package']
+      mockContext.appData.pkgs = [
         {
           name: 'public-package',
           version: '1.1.0',
@@ -385,7 +390,7 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该使用自定义发布参数', async () => {
-      mockApi.config.npm!.publishArgs = ['--access', 'public']
+      mockContext.config.npm!.publishArgs = ['--access', 'public']
       const versionInfo = {
         version: '1.1.0',
         isPrerelease: false,
@@ -404,7 +409,7 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该在重试发布时跳过已由版本预检确认的包', async () => {
-      mockApi.appData.existingPkgNames = ['test-package']
+      mockContext.appData.existingPkgNames = ['test-package']
 
       await onReleaseHandler({
         version: '1.1.0',
@@ -439,14 +444,14 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该在首个失败后停止并报告已经发布和尚未发布的包', async () => {
-      mockApi.appData.validPkgNames = ['core', 'app', 'cli']
-      mockApi.appData.pkgNames = ['core', 'app', 'cli']
-      mockApi.appData.validPkgRootPaths = [
+      mockContext.appData.validPkgNames = ['core', 'app', 'cli']
+      mockContext.appData.pkgNames = ['core', 'app', 'cli']
+      mockContext.appData.validPkgRootPaths = [
         '/test/core',
         '/test/app',
         '/test/cli',
       ]
-      mockApi.appData.pkgs = [
+      mockContext.appData.pkgs = [
         { name: 'core', version: '1.1.0' },
         { name: 'app', version: '1.1.0' },
         { name: 'cli', version: '1.1.0' },
@@ -481,17 +486,18 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该没有返回值', () => {
-      const result = npmPlugin(mockApi as unknown as Api)
+      const result = npmPlugin(mockContext as unknown as ReleasePluginContext)
       expect(result).toBeUndefined()
     })
   })
 
   describe('NPM 插件完整功能测试', () => {
     it('应该完整执行 NPM 工作流', async () => {
-      npmPlugin(mockApi as unknown as Api)
+      npmPlugin(mockContext as unknown as ReleasePluginContext)
 
-      const onCheckHandler = mockApi.onCheck.mock.calls[0][0] as OnCheckHandler
-      const onReleaseHandler = mockApi.onRelease.mock
+      const onCheckHandler = mockContext.onCheck.mock
+        .calls[0][0] as OnCheckHandler
+      const onReleaseHandler = mockContext.onRelease.mock
         .calls[0][0] as OnReleaseHandler
 
       // 执行检查阶段
@@ -514,12 +520,12 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该正确处理预发布和正式发布', async () => {
-      npmPlugin(mockApi as unknown as Api)
-      const onReleaseHandler = mockApi.onRelease.mock
+      npmPlugin(mockContext as unknown as ReleasePluginContext)
+      const onReleaseHandler = mockContext.onRelease.mock
         .calls[0][0] as OnReleaseHandler
 
       // 测试正式发布
-      mockApi.appData.pkgs[0].version = '1.0.0'
+      mockContext.appData.pkgs[0].version = '1.0.0'
       await onReleaseHandler({
         version: '1.0.0',
         isPrerelease: false,
@@ -535,7 +541,7 @@ describe('NPM 插件测试', () => {
       vi.clearAllMocks()
 
       // 测试预发布
-      mockApi.appData.pkgs[0].version = '1.1.0-beta.1'
+      mockContext.appData.pkgs[0].version = '1.1.0-beta.1'
       await onReleaseHandler({
         version: '1.1.0-beta.1',
         isPrerelease: true,
@@ -550,12 +556,13 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该处理空的包名列表', async () => {
-      mockApi.appData.validPkgNames = []
-      mockApi.appData.validPkgRootPaths = []
+      mockContext.appData.validPkgNames = []
+      mockContext.appData.validPkgRootPaths = []
 
-      npmPlugin(mockApi as unknown as Api)
-      const onCheckHandler = mockApi.onCheck.mock.calls[0][0] as OnCheckHandler
-      const onReleaseHandler = mockApi.onRelease.mock
+      npmPlugin(mockContext as unknown as ReleasePluginContext)
+      const onCheckHandler = mockContext.onCheck.mock
+        .calls[0][0] as OnCheckHandler
+      const onReleaseHandler = mockContext.onRelease.mock
         .calls[0][0] as OnReleaseHandler
 
       // 检查阶段
@@ -576,8 +583,9 @@ describe('NPM 插件测试', () => {
 
   describe('错误处理和边界情况', () => {
     it('应该处理复杂的所有者列表格式', async () => {
-      npmPlugin(mockApi as unknown as Api)
-      const onCheckHandler = mockApi.onCheck.mock.calls[0][0] as OnCheckHandler
+      npmPlugin(mockContext as unknown as ReleasePluginContext)
+      const onCheckHandler = mockContext.onCheck.mock
+        .calls[0][0] as OnCheckHandler
 
       ;(run as MockedFunction<typeof run>).mockResolvedValue({
         stdout: `test-user <test@example.com>\nadmin <admin@example.com>\nmaintainer <maintainer@example.com>`,
@@ -590,8 +598,9 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该处理 404 错误（包不存在）', async () => {
-      npmPlugin(mockApi as unknown as Api)
-      const onCheckHandler = mockApi.onCheck.mock.calls[0][0] as OnCheckHandler
+      npmPlugin(mockContext as unknown as ReleasePluginContext)
+      const onCheckHandler = mockContext.onCheck.mock
+        .calls[0][0] as OnCheckHandler
 
       const notFoundError = new Error(
         'npm ERR! 404 Not Found - package not found',
@@ -604,8 +613,9 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该处理获取用户信息失败', async () => {
-      npmPlugin(mockApi as unknown as Api)
-      const onCheckHandler = mockApi.onCheck.mock.calls[0][0] as OnCheckHandler
+      npmPlugin(mockContext as unknown as ReleasePluginContext)
+      const onCheckHandler = mockContext.onCheck.mock
+        .calls[0][0] as OnCheckHandler
 
       ;(getNpmUser as MockedFunction<typeof getNpmUser>).mockRejectedValue(
         new Error('无法获取用户信息'),

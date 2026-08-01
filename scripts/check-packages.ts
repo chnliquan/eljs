@@ -325,6 +325,63 @@ try {
     }
   }
 
+  const releaseFixtureRoot = path.join(smokeRoot, 'release-fixture')
+  mkdirSync(releaseFixtureRoot, { recursive: true })
+  writeFileSync(
+    path.join(releaseFixtureRoot, 'package.json'),
+    `${JSON.stringify({ name: 'release-fixture', version: '1.0.0' })}\n`,
+  )
+
+  run(process.execPath, [
+    '--input-type=module',
+    '-e',
+    [
+      "import { ReleaseRunner } from '@eljs/release'",
+      'class SmokeRunner extends ReleaseRunner { smokeLoad() { return this.load() } }',
+      `const runner = new SmokeRunner({ cwd: ${JSON.stringify(releaseFixtureRoot)} })`,
+      'await runner.smokeLoad()',
+      "if (runner.getPluginDiagnostics().length !== 6) throw new Error('Release ESM plugins were not fully loaded')",
+    ].join(';'),
+  ])
+  run(process.execPath, [
+    '-e',
+    [
+      "const { ReleaseRunner } = require('@eljs/release')",
+      'class SmokeRunner extends ReleaseRunner { smokeLoad() { return this.load() } }',
+      `const runner = new SmokeRunner({ cwd: ${JSON.stringify(releaseFixtureRoot)} })`,
+      "runner.smokeLoad().then(() => { if (runner.getPluginDiagnostics().length !== 6) throw new Error('Release CJS plugins were not fully loaded') })",
+    ].join(';'),
+  ])
+
+  const createTemplateRoot = path.join(smokeRoot, 'create-template')
+  mkdirSync(createTemplateRoot, { recursive: true })
+  writeFileSync(
+    path.join(createTemplateRoot, 'package.json'),
+    `${JSON.stringify({ name: 'create-template-fixture' })}\n`,
+  )
+  writeFileSync(
+    path.join(createTemplateRoot, 'create.config.js'),
+    'module.exports = { defaultQuestions: false, gitInit: false, install: false }\n',
+  )
+
+  run(process.execPath, [
+    '--input-type=module',
+    '-e',
+    [
+      "import { ProjectCreator } from '@eljs/create'",
+      `const creator = new ProjectCreator({ cwd: ${JSON.stringify(smokeRoot)}, template: ${JSON.stringify(createTemplateRoot)} })`,
+      "await creator.run('create-esm-output')",
+    ].join(';'),
+  ])
+  run(process.execPath, [
+    '-e',
+    [
+      "const { ProjectCreator } = require('@eljs/create')",
+      `const creator = new ProjectCreator({ cwd: ${JSON.stringify(smokeRoot)}, template: ${JSON.stringify(createTemplateRoot)} })`,
+      "creator.run('create-cjs-output')",
+    ].join(';'),
+  ])
+
   const typeImports = installedPackages
     .map(
       ({ packageJson }, index) =>

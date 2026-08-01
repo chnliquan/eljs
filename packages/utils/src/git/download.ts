@@ -19,8 +19,8 @@ export interface DownloadGitRepositoryOptions {
 
 /**
  * 下载 git 仓库
- * @param url git 地址
- * @param options 选项
+ * @param url - git 地址
+ * @param options - 选项
  */
 export async function downloadGitRepository(
   url: string,

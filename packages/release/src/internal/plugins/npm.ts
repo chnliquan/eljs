@@ -8,7 +8,8 @@ import {
 } from '@eljs/utils'
 import { EOL } from 'node:os'
 
-import type { Api, AppData } from '../../types'
+import { definePlugin } from '../../define'
+import type { AppData } from '../../types'
 import { AppError } from '../../utils'
 
 interface PublishTarget {
@@ -124,22 +125,22 @@ export function getPublishTargets(
   return sorted
 }
 
-export default (api: Api) => {
-  api.onCheck(async () => {
-    const { requireOwner } = api.config.npm
+export default definePlugin(context => {
+  context.onCheck(async () => {
+    const { requireOwner } = context.config.npm
 
     if (requireOwner) {
-      api.step('Checking npm owner ...')
+      context.step('Checking npm owner ...')
 
       const user = await getNpmUser({
-        cwd: api.cwd,
+        cwd: context.cwd,
       })
 
-      for (const pkgName of api.appData.validPkgNames) {
+      for (const pkgName of context.appData.validPkgNames) {
         try {
           const owners = (
             await run('npm', ['owner', 'ls', pkgName], {
-              cwd: api.cwd,
+              cwd: context.cwd,
             })
           ).stdout
             .trim()
@@ -164,14 +165,14 @@ export default (api: Api) => {
     }
   })
 
-  api.onRelease(
+  context.onRelease(
     async ({ version, prereleaseId }) => {
-      const { registry, branch, packageManager } = api.appData
+      const { registry, branch, packageManager } = context.appData
 
-      api.step('Preflighting package manifests ...')
-      const targets = getPublishTargets(api.appData, version)
+      context.step('Preflighting package manifests ...')
+      const targets = getPublishTargets(context.appData, version)
       const existingPkgNames = new Set<string>(
-        api.appData.existingPkgNames ?? [],
+        context.appData.existingPkgNames ?? [],
       )
       const pendingTargets = targets.filter(target => {
         if (!existingPkgNames.has(target.name)) {
@@ -184,7 +185,7 @@ export default (api: Api) => {
         return false
       })
 
-      api.step('Publishing packages in dependency order ...')
+      context.step('Publishing packages in dependency order ...')
       const publishedPackages: string[] = []
 
       for (let index = 0; index < pendingTargets.length; index++) {
@@ -230,7 +231,7 @@ export default (api: Api) => {
       ) {
         const tagArg = prereleaseId ? ['--tag', prereleaseId] : []
         const registryArg = registry ? ['--registry', registry] : []
-        const { requireBranch } = api.config.git
+        const { requireBranch } = context.config.git
         const gitCheckArg = requireBranch
           ? ['--publish-branch', requireBranch]
           : ['master', 'main'].includes(branch)
@@ -242,7 +243,7 @@ export default (api: Api) => {
           ...tagArg,
           ...registryArg,
           ...gitCheckArg,
-          ...normalizeArgs(api.config.npm.publishArgs),
+          ...normalizeArgs(context.config.npm.publishArgs),
         ].filter(Boolean)
 
         await run(packageManager, cliArgs, {
@@ -261,4 +262,4 @@ export default (api: Api) => {
       stage: 0,
     },
   )
-}
+})

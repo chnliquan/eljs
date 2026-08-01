@@ -1,4 +1,4 @@
-import * as importedModule1 from '@eljs/pluggable'
+import * as importedModule1 from '@eljs/plugin-host'
 import * as importedModule0 from '@eljs/utils'
 import {
   afterAll,
@@ -15,12 +15,12 @@ import * as importedModule2 from '../../src/default'
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * @file packages/create runner 模块完整单元测试
- * @description 全面测试 Runner 类的核心功能和类型安全特性，100% 测试覆盖率
+ * @description 全面测试 CreateRunner 类的核心功能和类型安全特性，100% 测试覆盖率
  */
 
-import { Runner } from '../../src/core/runner'
+import { CreateRunner } from '../../src/core/create-runner'
 import {
-  RunnerStageEnum,
+  CreateRunnerStage,
   type AppData,
   type Paths,
   type Prompts,
@@ -31,14 +31,17 @@ const requiredModule0 = vi.mocked(importedModule0, { deep: true })
 const requiredModule2 = vi.mocked(importedModule2, { deep: true })
 
 // 模拟所有依赖
-vi.mock('@eljs/pluggable')
+vi.mock('@eljs/plugin-host', async importOriginal => {
+  const actual = await importOriginal<typeof import('@eljs/plugin-host')>()
+  return { ...actual, PluginHost: vi.fn() }
+})
 vi.mock('@eljs/utils')
 vi.mock('../../src/default')
 
 // 模拟 console.log
 const mockConsoleLog = vi.spyOn(console, 'log').mockImplementation(() => {})
 
-describe('Runner 类完整测试', () => {
+describe('CreateRunner 类完整测试', () => {
   const mockCwd = process.cwd() // 使用真实路径避免验证错误
 
   afterAll(() => {
@@ -56,16 +59,19 @@ describe('Runner 类完整测试', () => {
     }))
     prompts.mockResolvedValue({})
 
-    // 模拟 Pluggable 基类
-    const { Pluggable } = requiredModule1
-    Pluggable.mockImplementation(function (this: any, options: any) {
+    // 模拟 PluginHost 基类
+    const { PluginHost } = requiredModule1
+    ;(PluginHost as unknown as Mock).mockImplementation(function (
+      this: any,
+      options: any,
+    ) {
       this.userConfig = null
       this.constructorOptions = {
         ...options,
         cwd: options.cwd || process.cwd(),
       }
       this.load = vi.fn().mockResolvedValue(undefined)
-      this.applyPlugins = vi
+      this.runHook = vi
         .fn()
         .mockImplementation((name: string, options?: any) => {
           if (name === 'modifyPaths') {
@@ -105,15 +111,15 @@ describe('Runner 类完整测试', () => {
 
   describe('基础功能和方法测试', () => {
     it('应该有 run 方法', () => {
-      const runner = new Runner({ cwd: mockCwd })
+      const runner = new CreateRunner({ cwd: mockCwd })
       expect(typeof runner.run).toBe('function')
       expect(runner.run.length).toBe(2) // target, projectName 两个参数
     })
 
     it('应该正确初始化所有属性', () => {
-      const runner = new Runner({ cwd: mockCwd })
+      const runner = new CreateRunner({ cwd: mockCwd })
 
-      expect(runner.stage).toBe(RunnerStageEnum.Uninitialized)
+      expect(runner.stage).toBe(CreateRunnerStage.Uninitialized)
       expect(typeof runner.paths).toBe('object')
       expect(typeof runner.appData).toBe('object')
       expect(typeof runner.prompts).toBe('object')
@@ -122,16 +128,26 @@ describe('Runner 类完整测试', () => {
       expect(typeof runner.prettierConfig).toBe('object')
     })
 
+    it('应该拒绝在配置解析前读取最终配置', () => {
+      const runner = new CreateRunner({ cwd: mockCwd })
+
+      expect(() => runner.config).toThrow(
+        expect.objectContaining({
+          code: 'PLUGIN_HOST_INVALID_STATE',
+        }),
+      )
+    })
+
     it('应该有继承的方法', () => {
-      const runner = new Runner({ cwd: mockCwd })
+      const runner = new CreateRunner({ cwd: mockCwd })
       expect('load' in runner).toBe(true)
-      expect('applyPlugins' in runner).toBe(true)
+      expect('runHook' in runner).toBe(true)
     })
 
     it('初始属性应该有正确的类型和默认值', () => {
-      const runner = new Runner({ cwd: mockCwd })
+      const runner = new CreateRunner({ cwd: mockCwd })
 
-      expect(runner.stage).toBe(RunnerStageEnum.Uninitialized)
+      expect(runner.stage).toBe(CreateRunnerStage.Uninitialized)
       expect(typeof runner.paths).toBe('object')
       expect(typeof runner.appData).toBe('object')
       expect(typeof runner.prompts).toBe('object')
@@ -149,19 +165,19 @@ describe('Runner 类完整测试', () => {
     })
 
     it('应该有所有必需的公共方法', () => {
-      const runner = new Runner({ cwd: mockCwd })
+      const runner = new CreateRunner({ cwd: mockCwd })
 
       expect(typeof runner.run).toBe('function')
-      expect(typeof (runner as any).applyPlugins).toBe('function')
+      expect(typeof (runner as any).runHook).toBe('function')
     })
   })
 
-  describe('Runner 构造函数测试', () => {
-    it('应该成功创建 Runner 实例', () => {
-      const runner = new Runner({ cwd: '/test' })
+  describe('CreateRunner 构造函数测试', () => {
+    it('应该成功创建 CreateRunner 实例', () => {
+      const runner = new CreateRunner({ cwd: '/test' })
 
-      expect(runner).toBeInstanceOf(Runner)
-      expect(runner.stage).toBe(RunnerStageEnum.Uninitialized)
+      expect(runner).toBeInstanceOf(CreateRunner)
+      expect(runner.stage).toBe(CreateRunnerStage.Uninitialized)
       expect(runner.paths).toEqual({})
       expect(runner.appData).toEqual({})
       expect(runner.prompts).toEqual({})
@@ -170,67 +186,75 @@ describe('Runner 类完整测试', () => {
       expect(runner.prettierConfig).toEqual({})
     })
 
-    it('应该正确传递配置到 Pluggable 基类', () => {
-      const { Pluggable } = requiredModule1
+    it('应该正确传递配置到 PluginHost 基类', () => {
+      const { PluginHost } = requiredModule1
       const config = {
         cwd: '/test/path',
         presets: ['preset1'],
         plugins: ['plugin1'],
       }
 
-      new Runner(config)
+      new CreateRunner(config)
 
-      expect(Pluggable).toHaveBeenCalledWith({
-        cwd: '/test/path',
-        presets: [expect.stringMatching(/internal/), 'preset1'],
-        plugins: ['plugin1'],
-        defaultConfigFiles: ['create.config.ts', 'create.config.js'],
-      })
+      expect(PluginHost).toHaveBeenCalledWith(
+        {
+          cwd: '/test/path',
+          presets: [expect.stringMatching(/internal/), 'preset1'],
+          plugins: ['plugin1'],
+          defaultConfigFiles: ['create.config.ts', 'create.config.js'],
+        },
+        expect.any(Object),
+      )
     })
 
     it('应该正确处理默认配置', () => {
-      const { Pluggable } = requiredModule1
+      const { PluginHost } = requiredModule1
 
-      new Runner({ cwd: '/test' })
+      new CreateRunner({ cwd: '/test' })
 
-      expect(Pluggable).toHaveBeenCalledWith({
-        cwd: '/test',
-        defaultConfigFiles: ['create.config.ts', 'create.config.js'],
-        presets: [expect.stringMatching(/internal/)],
-        plugins: undefined,
-      })
+      expect(PluginHost).toHaveBeenCalledWith(
+        {
+          cwd: '/test',
+          defaultConfigFiles: ['create.config.ts', 'create.config.js'],
+          presets: [expect.stringMatching(/internal/)],
+          plugins: undefined,
+        },
+        expect.any(Object),
+      )
     })
 
     it('应该设置正确的默认配置文件', () => {
-      const { Pluggable } = requiredModule1
+      const { PluginHost } = requiredModule1
 
-      new Runner({ cwd: '/test' })
+      new CreateRunner({ cwd: '/test' })
 
-      expect(Pluggable).toHaveBeenCalledWith(
+      expect(PluginHost).toHaveBeenCalledWith(
         expect.objectContaining({
           defaultConfigFiles: ['create.config.ts', 'create.config.js'],
         }),
+        expect.any(Object),
       )
     })
 
     it('应该将内置 preset 添加到 presets 数组的开头', () => {
-      const { Pluggable } = requiredModule1
+      const { PluginHost } = requiredModule1
 
-      new Runner({ cwd: '/test', presets: ['custom-preset'] })
+      new CreateRunner({ cwd: '/test', presets: ['custom-preset'] })
 
-      expect(Pluggable).toHaveBeenCalledWith(
+      expect(PluginHost).toHaveBeenCalledWith(
         expect.objectContaining({
           presets: [expect.stringMatching(/internal/), 'custom-preset'],
         }),
+        expect.any(Object),
       )
     })
   })
 
-  describe('Runner run 方法核心测试', () => {
-    let runner: Runner
+  describe('CreateRunner run 方法核心测试', () => {
+    let runner: CreateRunner
 
     beforeEach(() => {
-      runner = new Runner({ cwd: '/test' })
+      runner = new CreateRunner({ cwd: '/test' })
     })
 
     it('应该按正确顺序执行所有阶段', async () => {
@@ -242,21 +266,20 @@ describe('Runner 类完整测试', () => {
       // 验证 load 被调用
       expect((runner as any).load).toHaveBeenCalledTimes(1)
 
-      // 验证 applyPlugins 被按正确顺序调用
-      const applyPluginsCalls = ((runner as any).applyPlugins as Mock).mock
-        .calls
+      // 验证 runHook 被按正确顺序调用
+      const runHookCalls = ((runner as any).runHook as Mock).mock.calls
 
-      expect(applyPluginsCalls[0][0]).toBe('modifyPaths')
-      expect(applyPluginsCalls[1][0]).toBe('modifyAppData')
-      expect(applyPluginsCalls[2][0]).toBe('addQuestions')
-      expect(applyPluginsCalls[3][0]).toBe('modifyPrompts')
-      expect(applyPluginsCalls[4][0]).toBe('modifyTsConfig')
-      expect(applyPluginsCalls[5][0]).toBe('modifyJestConfig')
-      expect(applyPluginsCalls[6][0]).toBe('modifyPrettierConfig')
-      expect(applyPluginsCalls[7][0]).toBe('onStart')
-      expect(applyPluginsCalls[8][0]).toBe('onBeforeGenerateFiles')
-      expect(applyPluginsCalls[9][0]).toBe('onGenerateFiles')
-      expect(applyPluginsCalls[10][0]).toBe('onGenerateDone')
+      expect(runHookCalls[0][0]).toBe('modifyPaths')
+      expect(runHookCalls[1][0]).toBe('modifyAppData')
+      expect(runHookCalls[2][0]).toBe('addQuestions')
+      expect(runHookCalls[3][0]).toBe('modifyPrompts')
+      expect(runHookCalls[4][0]).toBe('modifyTsConfig')
+      expect(runHookCalls[5][0]).toBe('modifyJestConfig')
+      expect(runHookCalls[6][0]).toBe('modifyPrettierConfig')
+      expect(runHookCalls[7][0]).toBe('onStart')
+      expect(runHookCalls[8][0]).toBe('onBeforeGenerateFiles')
+      expect(runHookCalls[9][0]).toBe('onGenerateFiles')
+      expect(runHookCalls[10][0]).toBe('onGenerateDone')
     })
 
     it('应该正确设置 modifyPaths 的初始值', async () => {
@@ -265,9 +288,9 @@ describe('Runner 类完整测试', () => {
 
       await runner.run(target, projectName)
 
-      const modifyPathsCall = (
-        (runner as any).applyPlugins as Mock
-      ).mock.calls.find((call: any) => call[0] === 'modifyPaths')
+      const modifyPathsCall = ((runner as any).runHook as Mock).mock.calls.find(
+        (call: any) => call[0] === 'modifyPaths',
+      )
 
       expect(modifyPathsCall?.[1]).toEqual({
         initialValue: {
@@ -287,7 +310,7 @@ describe('Runner 类完整测试', () => {
       await runner.run(target, projectName)
 
       const modifyAppDataCall = (
-        (runner as any).applyPlugins as Mock
+        (runner as any).runHook as Mock
       ).mock.calls.find((call: any) => call[0] === 'modifyAppData')
 
       expect(modifyAppDataCall?.[1]).toEqual({
@@ -309,43 +332,11 @@ describe('Runner 类完整测试', () => {
       const projectName = 'test-project'
 
       // 初始状态
-      expect(runner.stage).toBe(RunnerStageEnum.Uninitialized)
+      expect(runner.stage).toBe(CreateRunnerStage.Uninitialized)
 
       await runner.run(target, projectName)
 
-      // 执行完成后应该处于 OnStart 阶段
-      expect(runner.stage).toBe(RunnerStageEnum.OnStart)
-    })
-
-    it('应该按顺序更新各配置阶段的 stage', async () => {
-      const target = '/test/project'
-      const projectName = 'test-project'
-      const stageChanges: RunnerStageEnum[] = []
-
-      // 监听 stage 变化
-      let originalStage = runner.stage
-      Object.defineProperty(runner, 'stage', {
-        set(value) {
-          if (value !== originalStage) {
-            stageChanges.push(value)
-            originalStage = value
-          }
-        },
-        get() {
-          return originalStage
-        },
-        configurable: true,
-      })
-
-      await runner.run(target, projectName)
-
-      expect(stageChanges).toEqual([
-        RunnerStageEnum.CollectAppData,
-        RunnerStageEnum.CollectTsConfig,
-        RunnerStageEnum.CollectJestConfig,
-        RunnerStageEnum.CollectPrettierConfig,
-        RunnerStageEnum.OnStart,
-      ])
+      expect(runner.stage).toBe(CreateRunnerStage.Completed)
     })
 
     it('应该正确设置 paths 属性', async () => {
@@ -357,7 +348,7 @@ describe('Runner 类完整测试', () => {
         customPath: '/custom',
       }
 
-      ;((runner as any).applyPlugins as Mock).mockImplementation(
+      ;((runner as any).runHook as Mock).mockImplementation(
         (name: string, options?: any) => {
           if (name === 'modifyPaths') {
             return Promise.resolve(expectedPaths)
@@ -383,7 +374,7 @@ describe('Runner 类完整测试', () => {
         customField: 'value',
       }
 
-      ;((runner as any).applyPlugins as Mock).mockImplementation(
+      ;((runner as any).runHook as Mock).mockImplementation(
         (name: string, options?: any) => {
           if (name === 'modifyAppData') {
             return Promise.resolve(expectedAppData)
@@ -406,7 +397,7 @@ describe('Runner 类完整测试', () => {
       ]
       const expectedPrompts = { author: 'John', email: 'john@example.com' }
 
-      ;((runner as any).applyPlugins as Mock).mockImplementation(
+      ;((runner as any).runHook as Mock).mockImplementation(
         (name: string, options?: any) => {
           if (name === 'addQuestions') {
             return Promise.resolve(questions)
@@ -431,7 +422,7 @@ describe('Runner 类完整测试', () => {
       const jestConfig = { testEnvironment: 'node' }
       const prettierConfig = { semi: false }
 
-      ;((runner as any).applyPlugins as Mock).mockImplementation(
+      ;((runner as any).runHook as Mock).mockImplementation(
         (name: string, options?: any) => {
           if (name === 'modifyTsConfig') {
             return Promise.resolve(tsConfig)
@@ -459,7 +450,7 @@ describe('Runner 类完整测试', () => {
       const mockPaths = { cwd: (runner as any).cwd, target }
       const mockPrompts = { author: 'Test Author' }
 
-      ;((runner as any).applyPlugins as Mock).mockImplementation(
+      ;((runner as any).runHook as Mock).mockImplementation(
         (name: string, options?: any) => {
           if (name === 'modifyPaths') {
             return Promise.resolve(mockPaths)
@@ -474,10 +465,10 @@ describe('Runner 类完整测试', () => {
       await runner.run(target, projectName)
 
       const onBeforeGenerateFilesCall = (
-        (runner as any).applyPlugins as Mock
+        (runner as any).runHook as Mock
       ).mock.calls.find((call: any) => call[0] === 'onBeforeGenerateFiles')
       const onGenerateFilesCall = (
-        (runner as any).applyPlugins as Mock
+        (runner as any).runHook as Mock
       ).mock.calls.find((call: any) => call[0] === 'onGenerateFiles')
 
       expect(onBeforeGenerateFilesCall?.[1]).toEqual({
@@ -500,14 +491,12 @@ describe('Runner 类完整测试', () => {
       const projectName = 'test-project'
       const error = new Error('Plugin error')
 
-      ;((runner as any).applyPlugins as Mock).mockImplementation(
-        (name: string) => {
-          if (name === 'modifyAppData') {
-            return Promise.reject(error)
-          }
-          return Promise.resolve({})
-        },
-      )
+      ;((runner as any).runHook as Mock).mockImplementation((name: string) => {
+        if (name === 'modifyAppData') {
+          return Promise.reject(error)
+        }
+        return Promise.resolve({})
+      })
 
       await expect(runner.run(target, projectName)).rejects.toThrow(
         'Plugin error',
@@ -527,7 +516,7 @@ describe('Runner 类完整测试', () => {
     })
   })
 
-  describe('Runner _resolveConfig 私有方法测试', () => {
+  describe('CreateRunner _resolveConfig 私有方法测试', () => {
     it('应该正确合并配置', async () => {
       const { deepMerge } = requiredModule0
       const { defaultConfig } = requiredModule2
@@ -535,7 +524,7 @@ describe('Runner 类完整测试', () => {
       const userConfig = { force: true, customOption: 'value' }
       const constructorOptions = { cwd: '/test', install: false }
 
-      const runner = new Runner(constructorOptions)
+      const runner = new CreateRunner(constructorOptions)
       ;(runner as any).userConfig = userConfig
 
       // 调用 run 来触发 _resolveConfig
@@ -544,11 +533,11 @@ describe('Runner 类完整测试', () => {
       expect(deepMerge).toHaveBeenCalledWith(
         {},
         defaultConfig,
+        userConfig,
         expect.objectContaining({
           cwd: '/test',
           install: false,
         }),
-        userConfig,
       )
     })
 
@@ -557,7 +546,7 @@ describe('Runner 类完整测试', () => {
       const { defaultConfig } = requiredModule2
 
       const constructorOptions = { cwd: '/test' }
-      const runner = new Runner(constructorOptions)
+      const runner = new CreateRunner(constructorOptions)
       ;(runner as any).userConfig = null
 
       await runner.run('/test/target', 'test-project')
@@ -565,10 +554,10 @@ describe('Runner 类完整测试', () => {
       expect(deepMerge).toHaveBeenCalledWith(
         {},
         defaultConfig,
+        {},
         expect.objectContaining({
           cwd: '/test',
         }),
-        {},
       )
     })
 
@@ -585,7 +574,7 @@ describe('Runner 类完整测试', () => {
 
       deepMerge.mockReturnValue(mergedConfig)
 
-      const runner = new Runner({ cwd: '/test' })
+      const runner = new CreateRunner({ cwd: '/test' })
 
       await runner.run('/test/target', 'test-project')
 
@@ -593,7 +582,7 @@ describe('Runner 类完整测试', () => {
     })
 
     it('应该有所有必需的公共属性', async () => {
-      const runner = new Runner({ cwd: '/test' })
+      const runner = new CreateRunner({ cwd: '/test' })
 
       // config 属性只有在 run 之后才会被设置
       await runner.run('/test/target', 'test-project')
@@ -609,10 +598,11 @@ describe('Runner 类完整测试', () => {
     })
   })
 
-  describe('Runner 配置验证和处理', () => {
+  describe('CreateRunner 配置验证和处理', () => {
     it('应该接受各种配置组合', () => {
       const configs = [
         { cwd: '/test' },
+        { cwd: '/test', install: false },
         { cwd: '/test', presets: ['preset1'] },
         { cwd: '/test', plugins: ['plugin1'] },
         {
@@ -623,32 +613,37 @@ describe('Runner 类完整测试', () => {
       ]
 
       configs.forEach(config => {
-        expect(() => new Runner(config)).not.toThrow()
+        expect(() => new CreateRunner(config)).not.toThrow()
       })
     })
 
     it('应该正确处理 presets 数组', () => {
-      const { Pluggable } = requiredModule1
+      const { PluginHost } = requiredModule1
 
       // 空数组
-      new Runner({ cwd: '/test', presets: [] })
-      expect(Pluggable).toHaveBeenLastCalledWith(
+      new CreateRunner({ cwd: '/test', presets: [] })
+      expect(PluginHost).toHaveBeenLastCalledWith(
         expect.objectContaining({
           presets: [expect.stringMatching(/internal/)],
         }),
+        expect.any(Object),
       )
 
       // 单个 preset
-      new Runner({ cwd: '/test', presets: ['single-preset'] })
-      expect(Pluggable).toHaveBeenLastCalledWith(
+      new CreateRunner({ cwd: '/test', presets: ['single-preset'] })
+      expect(PluginHost).toHaveBeenLastCalledWith(
         expect.objectContaining({
           presets: [expect.stringMatching(/internal/), 'single-preset'],
         }),
+        expect.any(Object),
       )
 
       // 多个 presets
-      new Runner({ cwd: '/test', presets: ['preset1', 'preset2', 'preset3'] })
-      expect(Pluggable).toHaveBeenLastCalledWith(
+      new CreateRunner({
+        cwd: '/test',
+        presets: ['preset1', 'preset2', 'preset3'],
+      })
+      expect(PluginHost).toHaveBeenLastCalledWith(
         expect.objectContaining({
           presets: [
             expect.stringMatching(/internal/),
@@ -657,41 +652,45 @@ describe('Runner 类完整测试', () => {
             'preset3',
           ],
         }),
+        expect.any(Object),
       )
     })
 
     it('应该正确处理 plugins 数组', () => {
-      const { Pluggable } = requiredModule1
+      const { PluginHost } = requiredModule1
 
       // undefined plugins
-      new Runner({ cwd: '/test' })
-      expect(Pluggable).toHaveBeenLastCalledWith(
+      new CreateRunner({ cwd: '/test' })
+      expect(PluginHost).toHaveBeenLastCalledWith(
         expect.objectContaining({
           plugins: undefined,
         }),
+        expect.any(Object),
       )
 
       // 空数组
-      new Runner({ cwd: '/test', plugins: [] })
-      expect(Pluggable).toHaveBeenLastCalledWith(
+      new CreateRunner({ cwd: '/test', plugins: [] })
+      expect(PluginHost).toHaveBeenLastCalledWith(
         expect.objectContaining({
           plugins: [],
         }),
+        expect.any(Object),
       )
 
       // 多个 plugins
-      new Runner({ cwd: '/test', plugins: ['plugin1', 'plugin2'] })
-      expect(Pluggable).toHaveBeenLastCalledWith(
+      new CreateRunner({ cwd: '/test', plugins: ['plugin1', 'plugin2'] })
+      expect(PluginHost).toHaveBeenLastCalledWith(
         expect.objectContaining({
           plugins: ['plugin1', 'plugin2'],
         }),
+        expect.any(Object),
       )
     })
   })
 
   describe('类型安全的配置对象管理测试', () => {
     it('应该管理类型安全的 paths 配置', () => {
-      const runner = new Runner({ cwd: mockCwd })
+      const runner = new CreateRunner({ cwd: mockCwd })
 
       interface DetailedPaths extends Paths {
         src: string
@@ -729,7 +728,7 @@ describe('Runner 类完整测试', () => {
     })
 
     it('应该管理类型安全的 appData 配置', () => {
-      const runner = new Runner({ cwd: mockCwd })
+      const runner = new CreateRunner({ cwd: mockCwd })
 
       interface DetailedAppData extends AppData {
         framework: 'react' | 'vue' | 'angular' | 'svelte'
@@ -784,7 +783,7 @@ describe('Runner 类完整测试', () => {
     })
 
     it('应该管理类型安全的 prompts 配置', () => {
-      const runner = new Runner({ cwd: mockCwd })
+      const runner = new CreateRunner({ cwd: mockCwd })
 
       interface DetailedPrompts extends Prompts {
         description: string
@@ -856,16 +855,16 @@ describe('Runner 类完整测试', () => {
     })
   })
 
-  describe('Runner 边界条件测试', () => {
+  describe('CreateRunner 边界条件测试', () => {
     it('应该处理空字符串参数', async () => {
-      const runner = new Runner({ cwd: '/test' })
+      const runner = new CreateRunner({ cwd: '/test' })
 
       await expect(runner.run('', '')).resolves.not.toThrow()
       expect(runner.appData.projectName).toBe('')
     })
 
     it('应该处理特殊字符路径', async () => {
-      const runner = new Runner({ cwd: '/test' })
+      const runner = new CreateRunner({ cwd: '/test' })
       const target = '/test/项目 with spaces & symbols!'
       const projectName = 'project-测试'
 
@@ -876,7 +875,7 @@ describe('Runner 类完整测试', () => {
     })
 
     it('应该处理长路径和项目名', async () => {
-      const runner = new Runner({ cwd: '/test' })
+      const runner = new CreateRunner({ cwd: '/test' })
       const longTarget = '/very/long/path/' + 'a'.repeat(100)
       const longProjectName = 'project-' + 'n'.repeat(100)
 
@@ -887,9 +886,9 @@ describe('Runner 类完整测试', () => {
     })
 
     it('应该处理插件返回 null 或 undefined', async () => {
-      const runner = new Runner({ cwd: '/test' })
+      const runner = new CreateRunner({ cwd: '/test' })
 
-      ;((runner as any).applyPlugins as Mock).mockImplementation(
+      ;((runner as any).runHook as Mock).mockImplementation(
         (name: string, options?: any) => {
           if (name === 'modifyTsConfig') {
             return Promise.resolve(null)
@@ -908,9 +907,9 @@ describe('Runner 类完整测试', () => {
     })
   })
 
-  describe('Runner 性能测试', () => {
+  describe('CreateRunner 性能测试', () => {
     it('应该在合理时间内完成执行', async () => {
-      const runner = new Runner({ cwd: '/test' })
+      const runner = new CreateRunner({ cwd: '/test' })
       const startTime = Date.now()
 
       await runner.run('/test/target', 'test-project')
@@ -922,154 +921,52 @@ describe('Runner 类完整测试', () => {
       expect(duration).toBeLessThan(1000)
     })
 
-    it('应该处理多次并发 run 调用', async () => {
-      const runner = new Runner({ cwd: '/test' })
+    it('应该拒绝并发和重复 run 调用', async () => {
+      const runner = new CreateRunner({ cwd: '/test' })
 
-      const promises = [
-        runner.run('/test/target1', 'project1'),
+      const firstRun = runner.run('/test/target1', 'project1')
+      await expect(
         runner.run('/test/target2', 'project2'),
-        runner.run('/test/target3', 'project3'),
-      ]
+      ).rejects.toMatchObject({
+        code: 'PLUGIN_HOST_INVALID_STATE',
+      })
+      await firstRun
 
-      // 应该都能成功完成，虽然可能会有竞态条件
-      await expect(Promise.all(promises)).resolves.toBeDefined()
+      await expect(
+        runner.run('/test/target3', 'project3'),
+      ).rejects.toMatchObject({
+        code: 'PLUGIN_HOST_INVALID_STATE',
+      })
     })
   })
 
   describe('阶段管理类型安全测试', () => {
-    it('应该支持所有工作流程阶段的类型安全转换', () => {
-      const runner = new Runner({ cwd: mockCwd })
+    it('应该暴露完整且无重复的工作流程阶段', () => {
+      const runner = new CreateRunner({ cwd: mockCwd })
+      const stages = Object.values(CreateRunnerStage)
 
-      // 定义阶段转换的类型
-      const stageTransitions: Array<{
-        from: RunnerStageEnum
-        to: RunnerStageEnum
-        description: string
-      }> = [
-        {
-          from: RunnerStageEnum.Uninitialized,
-          to: RunnerStageEnum.Init,
-          description: '初始化到启动',
-        },
-        {
-          from: RunnerStageEnum.Init,
-          to: RunnerStageEnum.CollectAppData,
-          description: '启动到收集应用数据',
-        },
-        {
-          from: RunnerStageEnum.CollectAppData,
-          to: RunnerStageEnum.CollectTsConfig,
-          description: '收集应用数据到收集TS配置',
-        },
-        {
-          from: RunnerStageEnum.CollectTsConfig,
-          to: RunnerStageEnum.CollectJestConfig,
-          description: '收集TS配置到收集Jest配置',
-        },
-        {
-          from: RunnerStageEnum.CollectJestConfig,
-          to: RunnerStageEnum.CollectPrettierConfig,
-          description: '收集Jest配置到收集Prettier配置',
-        },
-        {
-          from: RunnerStageEnum.CollectPrettierConfig,
-          to: RunnerStageEnum.OnStart,
-          description: '收集Prettier配置到开始执行',
-        },
-      ]
-
-      stageTransitions.forEach(({ from, to }) => {
-        runner.stage = from
-        expect(runner.stage).toBe(from)
-
-        runner.stage = to
-        expect(runner.stage).toBe(to)
-      })
-    })
-
-    it('应该支持阶段相关的配置设置', () => {
-      const runner = new Runner({ cwd: mockCwd })
-
-      // 类型安全的阶段配置映射
-      const stageConfigurations: Record<
-        RunnerStageEnum,
-        {
-          stage: RunnerStageEnum
-          config: Partial<AppData | Paths | Prompts | Record<string, unknown>>
-        }
-      > = {
-        [RunnerStageEnum.Uninitialized]: {
-          stage: RunnerStageEnum.Uninitialized,
-          config: {},
-        },
-        [RunnerStageEnum.Init]: {
-          stage: RunnerStageEnum.Init,
-          config: {},
-        },
-        [RunnerStageEnum.CollectAppData]: {
-          stage: RunnerStageEnum.CollectAppData,
-          config: {
-            scene: 'web' as const,
-            projectName: 'stage-test',
-            packageManager: 'pnpm' as const,
-          },
-        },
-        [RunnerStageEnum.CollectPluginConfig]: {
-          stage: RunnerStageEnum.CollectPluginConfig,
-          config: {},
-        },
-        [RunnerStageEnum.CollectPrompts]: {
-          stage: RunnerStageEnum.CollectPrompts,
-          config: {
-            author: 'Stage Author',
-            email: 'stage@test.com',
-          },
-        },
-        [RunnerStageEnum.CollectTsConfig]: {
-          stage: RunnerStageEnum.CollectTsConfig,
-          config: {
-            compilerOptions: { target: 'es2020' },
-          },
-        },
-        [RunnerStageEnum.CollectJestConfig]: {
-          stage: RunnerStageEnum.CollectJestConfig,
-          config: {
-            testEnvironment: 'node',
-          },
-        },
-        [RunnerStageEnum.CollectPrettierConfig]: {
-          stage: RunnerStageEnum.CollectPrettierConfig,
-          config: {
-            semi: true,
-          },
-        },
-        [RunnerStageEnum.OnStart]: {
-          stage: RunnerStageEnum.OnStart,
-          config: {},
-        },
-      }
-
-      Object.values(stageConfigurations).forEach(({ stage, config }) => {
-        runner.stage = stage
-        expect(runner.stage).toBe(stage)
-
-        if (stage === RunnerStageEnum.CollectAppData && config) {
-          runner.appData = {
-            scene: 'web',
-            cliVersion: '1.3.1',
-            pkg: {},
-            projectName: 'stage-test',
-            packageManager: 'pnpm',
-            ...config,
-          }
-        }
-      })
+      expect(new Set(stages).size).toBe(stages.length)
+      expect(runner.stage).toBe(CreateRunnerStage.Uninitialized)
+      expect(stages).toEqual([
+        'uninitialized',
+        'loadingPlugins',
+        'resolvingConfig',
+        'collectingPaths',
+        'collectingAppData',
+        'collectingPrompts',
+        'collectingTsConfig',
+        'collectingJestConfig',
+        'collectingPrettierConfig',
+        'generatingFiles',
+        'completed',
+        'failed',
+      ])
     })
   })
 
-  describe('Runner 集成测试', () => {
+  describe('CreateRunner 集成测试', () => {
     it('应该完整执行一个典型的项目创建流程', async () => {
-      const runner = new Runner({
+      const runner = new CreateRunner({
         cwd: '/workspace',
         presets: ['@eljs/preset-react'],
         plugins: ['@eljs/plugin-typescript'],
@@ -1131,7 +1028,7 @@ describe('Runner 类完整测试', () => {
         include: ['src'],
       }
 
-      ;((runner as any).applyPlugins as Mock).mockImplementation(
+      ;((runner as any).runHook as Mock).mockImplementation(
         (name: string, options?: any) => {
           switch (name) {
             case 'modifyPaths':
@@ -1157,15 +1054,15 @@ describe('Runner 类完整测试', () => {
       await runner.run('/workspace/my-react-app', 'my-react-app')
 
       // 验证所有阶段都被正确执行
-      expect(runner.stage).toBe(RunnerStageEnum.OnStart)
+      expect(runner.stage).toBe(CreateRunnerStage.Completed)
       expect(runner.paths).toEqual(mockPaths)
       expect(runner.appData).toEqual(mockAppData)
       expect(runner.prompts).toEqual(mockPrompts)
       expect(runner.tsConfig).toEqual(mockTsConfig)
 
       // 验证所有插件钩子都被调用
-      expect((runner as any).applyPlugins).toHaveBeenCalledWith('onStart')
-      expect((runner as any).applyPlugins).toHaveBeenCalledWith(
+      expect((runner as any).runHook).toHaveBeenCalledWith('onStart')
+      expect((runner as any).runHook).toHaveBeenCalledWith(
         'onBeforeGenerateFiles',
         {
           args: {
@@ -1174,22 +1071,17 @@ describe('Runner 类完整测试', () => {
           },
         },
       )
-      expect((runner as any).applyPlugins).toHaveBeenCalledWith(
-        'onGenerateFiles',
-        {
-          args: {
-            prompts: mockPrompts,
-            paths: mockPaths,
-          },
+      expect((runner as any).runHook).toHaveBeenCalledWith('onGenerateFiles', {
+        args: {
+          prompts: mockPrompts,
+          paths: mockPaths,
         },
-      )
-      expect((runner as any).applyPlugins).toHaveBeenCalledWith(
-        'onGenerateDone',
-      )
+      })
+      expect((runner as any).runHook).toHaveBeenCalledWith('onGenerateDone')
     })
 
     it('应该支持企业级应用的完整类型配置', () => {
-      const runner = new Runner({ cwd: mockCwd })
+      const runner = new CreateRunner({ cwd: mockCwd })
 
       interface EnterpriseConfig {
         appData: AppData & {

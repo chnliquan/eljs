@@ -6,7 +6,7 @@ import type {
 import { isFunction } from './basic'
 
 /**
- * 安全获取函数构造器。
+ * 安全获取函数构造器
  *
  * @param fn - 目标函数
  * @returns 函数构造器；无法读取时返回 `null`
@@ -22,7 +22,7 @@ function getFunctionConstructor(
 }
 
 /**
- * 判断目标值是否为异步生成器函数。
+ * 判断目标值是否为异步生成器函数
  *
  * @param target - 目标值
  * @returns 目标值是否为异步生成器函数
@@ -46,7 +46,7 @@ export function isAsyncGeneratorFunction(target: unknown): boolean {
 }
 
 /**
- * 判断目标值是否为生成器函数。
+ * 判断目标值是否为生成器函数
  *
  * @param target - 目标值
  * @returns 目标值是否为生成器函数
@@ -78,7 +78,7 @@ export function isGeneratorFunction(
 }
 
 /**
- * 判断目标值是否为异步函数。
+ * 判断目标值是否为异步函数
  *
  * @param target - 目标值
  * @returns 目标值是否为异步函数

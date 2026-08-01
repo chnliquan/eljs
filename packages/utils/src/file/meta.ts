@@ -3,8 +3,8 @@ import fsp from 'node:fs/promises'
 
 /**
  * 获取文件信息
- * @param file 文件路径
- * @param symlink 是否符号链接
+ * @param file - 文件路径
+ * @param symlink - 是否符号链接
  */
 export async function fstat(
   file: string,
@@ -22,8 +22,8 @@ export async function fstat(
 
 /**
  * 获取文件信息
- * @param file 文件路径
- * @param symlink 是否符号链接
+ * @param file - 文件路径
+ * @param symlink - 是否符号链接
  */
 export function fstatSync(file: string, symlink?: boolean): fs.Stats | boolean {
   try {

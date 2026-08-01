@@ -4,10 +4,15 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import updateNotifier from 'update-notifier'
 
-import { Create } from './core'
+import { ProjectCreator } from './core'
 import { AppError, onCancel } from './utils'
 
-export function cli() {
+/**
+ * 启动 create 命令行程序
+ *
+ * @returns 命令行流程 Promise
+ */
+export function cli(): Promise<void> {
   registerSignalHandler()
 
   return main()
@@ -60,8 +65,15 @@ async function main() {
       debug?.(`template:`, template)
       debug?.(`projectName:`, projectName)
       debug?.(`options:%O`, options)
-      await new Create({
-        ...options,
+      const creatorOptions = { ...options }
+
+      // Commander 会为否定选项注入 true 默认值，只有 false 才表示用户显式覆盖模版配置
+      if (creatorOptions.install !== false) {
+        delete creatorOptions.install
+      }
+
+      await new ProjectCreator({
+        ...creatorOptions,
         template,
       }).run(projectName)
     })

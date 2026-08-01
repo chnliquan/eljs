@@ -53,7 +53,7 @@
 
 - ✅ 处理空项目名称
 - ✅ 处理特殊字符的项目名称
-- ✅ 正确传递所有构造函数选项到 Create 实例
+- ✅ 正确传递所有构造函数选项到 ProjectCreator 实例
 
 ## 技术特点
 
@@ -90,7 +90,7 @@
 
 ### 1. @eljs/create Mock
 
-- Mock Create 类的构造函数和 run 方法
+- Mock ProjectCreator 类的构造函数和 run 方法
 - 确保测试不依赖实际的文件系统操作
 
 ### 2. @eljs/utils Mock

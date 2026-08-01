@@ -2,7 +2,7 @@ import { isArray } from '../guards'
 
 /**
  * 格式化参数
- * @param args 参数
+ * @param args - 参数
  */
 export function normalizeArgs(args?: string | string[]): string[] {
   if (!args) {

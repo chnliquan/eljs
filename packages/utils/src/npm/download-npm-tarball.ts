@@ -4,7 +4,7 @@ import { tmpdir } from '../file'
 import { isObject } from '../guards'
 
 /**
- * 下载并解压 npm tarball 到自动创建的临时目录。
+ * 下载并解压 npm tarball 到自动创建的临时目录
  *
  * @param url - npm tarball 地址
  * @param options - 下载选项
@@ -17,7 +17,7 @@ export async function downloadNpmTarball(
 ): Promise<string>
 
 /**
- * 下载并解压 npm tarball 到指定目录。
+ * 下载并解压 npm tarball 到指定目录
  *
  * @param url - npm tarball 地址
  * @param dest - 解压目标目录

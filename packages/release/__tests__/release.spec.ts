@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  */
 
 import { release } from '../src/release'
-import { Runner } from '../src/runner'
+import { ReleaseRunner } from '../src/release-runner'
 import type { Config } from '../src/types'
 
 describe('发布函数核心测试', () => {
@@ -14,12 +14,12 @@ describe('发布函数核心测试', () => {
   })
 
   describe('release 函数基本功能', () => {
-    it('应该能够创建 Runner 实例并执行发布', async () => {
-      // 不模拟 Runner，而是实际创建它
+    it('应该能够创建 ReleaseRunner 实例并执行发布', async () => {
+      // 不模拟 ReleaseRunner，而是实际创建它
       const mockRun = vi.fn().mockResolvedValue(undefined)
 
-      // 只模拟 Runner 的 run 方法
-      vi.spyOn(Runner.prototype, 'run').mockImplementation(mockRun)
+      // 只模拟 ReleaseRunner 的 run 方法
+      vi.spyOn(ReleaseRunner.prototype, 'run').mockImplementation(mockRun)
 
       await release()
 
@@ -28,7 +28,7 @@ describe('发布函数核心测试', () => {
 
     it('应该使用指定版本调用 run 方法', async () => {
       const mockRun = vi.fn().mockResolvedValue(undefined)
-      vi.spyOn(Runner.prototype, 'run').mockImplementation(mockRun)
+      vi.spyOn(ReleaseRunner.prototype, 'run').mockImplementation(mockRun)
 
       const version = '1.2.3'
       await release(version)
@@ -36,9 +36,9 @@ describe('发布函数核心测试', () => {
       expect(mockRun).toHaveBeenCalledWith(version)
     })
 
-    it('应该使用指定配置创建 Runner 实例', async () => {
+    it('应该使用指定配置创建 ReleaseRunner 实例', async () => {
       const mockRun = vi.fn().mockResolvedValue(undefined)
-      vi.spyOn(Runner.prototype, 'run').mockImplementation(mockRun)
+      vi.spyOn(ReleaseRunner.prototype, 'run').mockImplementation(mockRun)
 
       const options: Config = {
         cwd: process.cwd(), // 使用当前目录，确保 package.json 存在
@@ -57,7 +57,7 @@ describe('发布函数核心测试', () => {
 
     it('应该同时使用版本和配置参数', async () => {
       const mockRun = vi.fn().mockResolvedValue(undefined)
-      vi.spyOn(Runner.prototype, 'run').mockImplementation(mockRun)
+      vi.spyOn(ReleaseRunner.prototype, 'run').mockImplementation(mockRun)
 
       const version = '2.0.0'
       const options: Config = {
@@ -74,14 +74,14 @@ describe('发布函数核心测试', () => {
   })
 
   describe('release 函数错误处理', () => {
-    it('应该正确传播 Runner.run 方法抛出的错误', async () => {
-      const itError = new Error('Runner 执行失败')
-      vi.spyOn(Runner.prototype, 'run').mockRejectedValue(itError)
+    it('应该正确传播 ReleaseRunner.run 方法抛出的错误', async () => {
+      const itError = new Error('ReleaseRunner 执行失败')
+      vi.spyOn(ReleaseRunner.prototype, 'run').mockRejectedValue(itError)
 
-      await expect(release()).rejects.toThrow('Runner 执行失败')
+      await expect(release()).rejects.toThrow('ReleaseRunner 执行失败')
     })
 
-    it('应该正确处理 Runner 构造函数抛出的错误', async () => {
+    it('应该正确处理 ReleaseRunner 构造函数抛出的错误', async () => {
       // 简化这个测试，不去模拟构造函数
       expect(async () => {
         await release(undefined, { cwd: '/non/existent/path' })
@@ -92,7 +92,7 @@ describe('发布函数核心测试', () => {
   describe('release 函数参数传递验证', () => {
     it('当没有传入参数时，应该使用默认值', async () => {
       const mockRun = vi.fn().mockResolvedValue(undefined)
-      vi.spyOn(Runner.prototype, 'run').mockImplementation(mockRun)
+      vi.spyOn(ReleaseRunner.prototype, 'run').mockImplementation(mockRun)
 
       await release()
 
@@ -101,7 +101,7 @@ describe('发布函数核心测试', () => {
 
     it('应该正确处理空字符串版本', async () => {
       const mockRun = vi.fn().mockResolvedValue(undefined)
-      vi.spyOn(Runner.prototype, 'run').mockImplementation(mockRun)
+      vi.spyOn(ReleaseRunner.prototype, 'run').mockImplementation(mockRun)
 
       await release('')
 
@@ -110,7 +110,7 @@ describe('发布函数核心测试', () => {
 
     it('应该正确处理空配置对象', async () => {
       const mockRun = vi.fn().mockResolvedValue(undefined)
-      vi.spyOn(Runner.prototype, 'run').mockImplementation(mockRun)
+      vi.spyOn(ReleaseRunner.prototype, 'run').mockImplementation(mockRun)
 
       await release(undefined, {})
 
@@ -119,7 +119,7 @@ describe('发布函数核心测试', () => {
 
     it('应该支持不同类型的版本字符串', async () => {
       const mockRun = vi.fn().mockResolvedValue(undefined)
-      vi.spyOn(Runner.prototype, 'run').mockImplementation(mockRun)
+      vi.spyOn(ReleaseRunner.prototype, 'run').mockImplementation(mockRun)
 
       const versions = ['1.0.0', 'major', 'minor', 'patch', '1.0.0-alpha.1']
 
@@ -134,19 +134,19 @@ describe('发布函数核心测试', () => {
   describe('release 函数异步行为验证', () => {
     it('应该是异步函数并返回 Promise', () => {
       const mockRun = vi.fn().mockResolvedValue(undefined)
-      vi.spyOn(Runner.prototype, 'run').mockImplementation(mockRun)
+      vi.spyOn(ReleaseRunner.prototype, 'run').mockImplementation(mockRun)
 
       const result = release()
       expect(result).toBeInstanceOf(Promise)
     })
 
-    it('应该等待 Runner.run 方法完成', async () => {
+    it('应该等待 ReleaseRunner.run 方法完成', async () => {
       let runCompleted = false
       const mockRun = vi.fn().mockImplementation(async () => {
         await new Promise(resolve => setTimeout(resolve, 10))
         runCompleted = true
       })
-      vi.spyOn(Runner.prototype, 'run').mockImplementation(mockRun)
+      vi.spyOn(ReleaseRunner.prototype, 'run').mockImplementation(mockRun)
 
       await release()
       expect(runCompleted).toBe(true)

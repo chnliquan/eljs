@@ -1,9 +1,18 @@
-import type { Api, AppData } from '../../types'
+import { definePlugin } from '../../define'
+import type { AppData } from '../../types'
 
-export default (api: Api) => {
-  api.modifyAppData(memo => {
-    memo.packageManager = api.prompts
-      .packageManager as AppData['packageManager']
-    return memo
-  })
-}
+export default definePlugin(context => {
+  context.onStart(
+    () => {
+      const packageManager = context.prompts.packageManager as
+        AppData['packageManager'] | undefined
+
+      if (packageManager) {
+        context.appData.packageManager = packageManager
+      }
+    },
+    {
+      stage: Number.NEGATIVE_INFINITY,
+    },
+  )
+})

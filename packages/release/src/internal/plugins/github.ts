@@ -2,22 +2,22 @@ import { getGitUrl, getGitUrlSync, gitUrlAnalysis } from '@eljs/utils'
 import newGithubReleaseUrl from 'new-github-release-url'
 import open from 'open'
 
-import type { Api } from '../../types'
+import { definePlugin } from '../../define'
 
-export default (api: Api) => {
-  api.describe({
+export default definePlugin(context => {
+  context.describe({
     enable() {
-      return getGitUrlSync(api.cwd).includes('github')
+      return getGitUrlSync(context.cwd).includes('github')
     },
   })
 
-  api.onRelease(
+  context.onRelease(
     async ({ version, isPrerelease, changelog }) => {
-      if (!api.config.github.release || !changelog) {
+      if (!context.config.github.release || !changelog) {
         return
       }
 
-      const gitUrl = await getGitUrl(api.cwd, true)
+      const gitUrl = await getGitUrl(context.cwd, true)
 
       if (!gitUrl) {
         return
@@ -42,4 +42,4 @@ export default (api: Api) => {
       stage: 20,
     },
   )
-}
+})

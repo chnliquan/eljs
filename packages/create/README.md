@@ -34,13 +34,13 @@ npm install @eljs/create -g
 ### CLI Usage (Recommended)
 
 ```bash
-# Create from npm template
+# Create from an npm template
 create my-template my-project
 
-# Create from git repository
+# Create from a git repository
 create https://github.com/user/template.git my-project
 
-# Create from local template
+# Create from a local template
 create ./local-template my-project
 
 # Using npx (no global installation needed)
@@ -50,16 +50,16 @@ npx @eljs/create my-template my-project
 ### Programmatic API Usage
 
 ```typescript
-import { Create, defineConfig } from '@eljs/create'
+import { ProjectCreator, defineConfig } from '@eljs/create'
 
 // Simple project creation
-const create = new Create({
+const creator = new ProjectCreator({
   template: 'my-template',
 })
-await create.run('my-project')
+await creator.run('my-project')
 
 // Create with custom options
-const create = new Create({
+const enterpriseCreator = new ProjectCreator({
   template: {
     type: 'npm',
     value: '@company/enterprise-template',
@@ -68,7 +68,7 @@ const create = new Create({
   force: true,
   cwd: '/workspace',
 })
-await create.run('enterprise-app')
+await enterpriseCreator.run('enterprise-app')
 ```
 
 ## 📖 CLI Reference
@@ -120,7 +120,7 @@ create vue-template my-vue-app --force
 create component-template my-component --merge
 
 # Custom working directory
-create api-template my-api --cwd ./projects
+create context-template my-context --cwd ./projects
 
 # From scoped npm package
 create @company/enterprise-template my-enterprise-app
@@ -134,13 +134,13 @@ create ./templates/custom-template my-custom-app --no-install
 
 ## 📖 API Reference
 
-### `Create` Class
+### `ProjectCreator` Class
 
 Main class for programmatic project creation.
 
 ```typescript
-class Create {
-  constructor(options: CreateOptions)
+class ProjectCreator {
+  constructor(options: ProjectCreatorOptions)
   async run(projectName: string): Promise<void>
 }
 ```
@@ -148,7 +148,7 @@ class Create {
 **Constructor Options:**
 
 ```typescript
-interface CreateOptions {
+interface ProjectCreatorOptions {
   /**
    * Working directory
    * @default process.cwd()
@@ -220,10 +220,10 @@ template generator itself.
 ### API Examples
 
 ```typescript
-import { Create } from '@eljs/create'
+import { ProjectCreator } from '@eljs/create'
 
 // Local template
-const localCreate = new Create({
+const localCreate = new ProjectCreator({
   template: './my-local-template',
   cwd: '/workspace',
   merge: true,
@@ -231,7 +231,7 @@ const localCreate = new Create({
 await localCreate.run('local-project')
 
 // NPM template
-const npmCreate = new Create({
+const npmCreate = new ProjectCreator({
   template: {
     type: 'npm',
     value: '@scope/template-name',
@@ -242,7 +242,7 @@ const npmCreate = new Create({
 await npmCreate.run('npm-project')
 
 // Git template
-const gitCreate = new Create({
+const gitCreate = new ProjectCreator({
   template: {
     type: 'git',
     value: 'https://github.com/user/template.git#main',
@@ -303,38 +303,43 @@ Extend creation functionality with custom plugins and generators:
 
 ```typescript
 // plugins/custom-generator.js
-export default {
-  name: 'custom-generator',
-  async apply(api) {
-    // Add custom prompts
-    api.addQuestions([
-      {
-        type: 'input',
-        name: 'authorName',
-        message: 'What is your name?',
-      },
-      {
-        type: 'select',
-        name: 'framework',
-        message: 'Choose a framework:',
-        choices: ['React', 'Vue', 'Angular'],
-      },
-    ])
+import { definePlugin } from '@eljs/create'
 
-    // Modify package.json
-    api.extendPackage({
-      author: api.prompts.authorName,
-      keywords: [api.prompts.framework.toLowerCase()],
-    })
+export default definePlugin(context => {
+  // Add custom prompts
+  context.addQuestions(() => [
+    {
+      type: 'input',
+      name: 'authorName',
+      message: 'What is your name?',
+    },
+    {
+      type: 'select',
+      name: 'framework',
+      message: 'Choose a framework:',
+      choices: ['React', 'Vue', 'Angular'],
+    },
+  ])
 
-    // Generate files
-    api.onGenerateFiles(() => {
-      if (api.prompts.framework === 'React') {
-        api.copyTpl('templates/react/**', api.paths.target, api.prompts)
-      }
-    })
-  },
-}
+  // Modify package.json
+  // The callback runs after prompts and app data are available.
+  context.extendPackage(pkg => ({
+    ...pkg,
+    author: context.prompts.authorName,
+    keywords: [context.prompts.framework.toLowerCase()],
+  }))
+
+  // Generate files
+  context.onGenerateFiles(() => {
+    if (context.prompts.framework === 'React') {
+      context.copyTpl(
+        'templates/react/**',
+        context.paths.target,
+        context.prompts,
+      )
+    }
+  })
+})
 ```
 
 ### Template Structure
@@ -358,46 +363,47 @@ my-template/
 
 ```typescript
 // generators/index.ts
-export default {
-  name: 'main-generator',
-  async apply(api) {
-    // Extend package.json
-    api.extendPackage(pkg => ({
-      ...pkg,
-      name: api.appData.projectName,
-      version: '1.0.0',
-      scripts: {
-        dev: 'vite',
-        build: 'vite build',
-        test: 'jest',
-      },
-    }))
+import { definePlugin } from '@eljs/create'
 
-    // Copy template files
-    api.onGenerateFiles(() => {
-      api.copyTpl('templates/**', api.paths.target, {
-        ...api.prompts,
-        ...api.appData,
-      })
-    })
+export default definePlugin(context => {
+  // Extend package.json
+  context.extendPackage(pkg => ({
+    ...pkg,
+    name: context.appData.projectName,
+    version: '1.0.0',
+    scripts: {
+      dev: 'vite',
+      build: 'vite build',
+      test: 'jest',
+    },
+  }))
 
-    // Post-generation hooks
-    api.onGenerateDone(() => {
-      console.log(`✅ Project ${api.appData.projectName} created successfully!`)
+  // Copy template files
+  context.onGenerateFiles(() => {
+    context.copyTpl('templates/**', context.paths.target, {
+      ...context.prompts,
+      ...context.appData,
     })
-  },
-}
+  })
+
+  // Post-generation hooks
+  context.onGenerateDone(() => {
+    console.log(
+      `✅ Project ${context.appData.projectName} created successfully!`,
+    )
+  })
+})
 ```
 
 ## 🏗️ Built-in Generators
 
 ### Available Generator Methods
 
-| Method                              | Description             | Example                                         |
-| ----------------------------------- | ----------------------- | ----------------------------------------------- |
-| `api.copyFile(from, to)`            | Copy single file        | `api.copyFile('template.txt', 'output.txt')`    |
-| `api.copyTpl(from, to, data)`       | Copy template with data | `api.copyTpl('src/**', target, prompts)`        |
-| `api.copyDirectory(from, to, data)` | Copy entire directory   | `api.copyDirectory('templates', target)`        |
-| `api.render(template, data)`        | Render template string  | `api.render('Hello {{name}}', {name: 'World'})` |
-| `api.extendPackage(extension)`      | Extend package.json     | `api.extendPackage({scripts: {test: 'jest'}})`  |
-| `api.install(deps, options)`        | Install dependencies    | `api.install(['react', 'react-dom'])`           |
+| Method                                  | Description             | Example                                             |
+| --------------------------------------- | ----------------------- | --------------------------------------------------- |
+| `context.copyFile(from, to)`            | Copy single file        | `context.copyFile('template.txt', 'output.txt')`    |
+| `context.copyTpl(from, to, data)`       | Copy template with data | `context.copyTpl('src/**', target, prompts)`        |
+| `context.copyDirectory(from, to, data)` | Copy entire directory   | `context.copyDirectory('templates', target)`        |
+| `context.render(template, data)`        | Render template string  | `context.render('Hello {{name}}', {name: 'World'})` |
+| `context.extendPackage(extension)`      | Extend package.json     | `context.extendPackage({scripts: {test: 'jest'}})`  |
+| `context.install(deps, options)`        | Install dependencies    | `context.install(['react', 'react-dom'])`           |

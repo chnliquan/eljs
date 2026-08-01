@@ -13,7 +13,7 @@ import {
 } from 'vitest'
 
 import renderPlugin from '../../../src/internal/plugins/render'
-import type { Api } from '../../../src/types'
+import type { CreatePluginContext } from '../../../src/types'
 
 // Mock types
 interface MockUtils {
@@ -47,7 +47,7 @@ vi.mock('node:path', () => ({
 }))
 
 describe('内部插件 render', () => {
-  let mockApi: Mocked<Api>
+  let mockContext: Mocked<CreatePluginContext>
   let renderCallback: (
     path: string,
     data?: Record<string, unknown>,
@@ -60,8 +60,8 @@ describe('内部插件 render', () => {
     mockUtils = mockedUtils as unknown as MockUtils
     mockPath = mockedPath as unknown as MockPath
 
-    mockApi = {
-      registerMethod: vi.fn((name: string, fn: unknown) => {
+    mockContext = {
+      registerCapability: vi.fn((name: string, fn: unknown) => {
         if (name === 'render') {
           renderCallback = fn as (
             path: string,
@@ -76,7 +76,7 @@ describe('内部插件 render', () => {
       paths: {
         target: '/test/project',
       },
-    } as unknown as Mocked<Api>
+    } as unknown as Mocked<CreatePluginContext>
   })
 
   afterEach(() => {
@@ -88,10 +88,10 @@ describe('内部插件 render', () => {
   })
 
   it('应该注册 render 方法', () => {
-    renderPlugin(mockApi)
+    renderPlugin(mockContext)
 
-    expect(mockApi.registerMethod).toHaveBeenCalledTimes(1)
-    expect(mockApi.registerMethod).toHaveBeenCalledWith(
+    expect(mockContext.registerCapability).toHaveBeenCalledTimes(1)
+    expect(mockContext.registerCapability).toHaveBeenCalledWith(
       'render',
       expect.any(Function),
     )
@@ -99,7 +99,7 @@ describe('内部插件 render', () => {
 
   describe('render 方法', () => {
     beforeEach(() => {
-      renderPlugin(mockApi)
+      renderPlugin(mockContext)
       vi.clearAllMocks()
     })
 
@@ -120,7 +120,7 @@ describe('内部插件 render', () => {
       expect(mockUtils.isDirectory).toHaveBeenCalledWith(
         '/caller/dir/templates/src',
       )
-      expect(mockApi.copyDirectory).toHaveBeenCalledWith(
+      expect(mockContext.copyDirectory).toHaveBeenCalledWith(
         '/caller/dir/templates/src',
         '/test/project',
         data,
@@ -158,7 +158,7 @@ describe('内部插件 render', () => {
         '/test/project',
         'component.tsx',
       )
-      expect(mockApi.copyTpl).toHaveBeenCalledWith(
+      expect(mockContext.copyTpl).toHaveBeenCalledWith(
         '/caller/dir/templates/component.tsx.tpl',
         '/test/project/component.tsx',
         data,
@@ -186,7 +186,7 @@ describe('内部插件 render', () => {
       )
       expect(mockPath.basename).toHaveBeenCalledWith('templates/config.json')
       expect(mockPath.join).toHaveBeenCalledWith('/test/project', 'config.json')
-      expect(mockApi.copyFile).toHaveBeenCalledWith(
+      expect(mockContext.copyFile).toHaveBeenCalledWith(
         '/caller/dir/templates/config.json',
         '/test/project/config.json',
         {
@@ -202,7 +202,7 @@ describe('内部插件 render', () => {
 
       await renderCallback('templates/src')
 
-      expect(mockApi.copyDirectory).toHaveBeenCalledWith(
+      expect(mockContext.copyDirectory).toHaveBeenCalledWith(
         '/caller/dir/templates/src',
         '/test/project',
         {},
@@ -219,7 +219,7 @@ describe('内部插件 render', () => {
 
       await renderCallback('templates/file.txt', { name: 'test' })
 
-      expect(mockApi.copyFile).toHaveBeenCalledWith(
+      expect(mockContext.copyFile).toHaveBeenCalledWith(
         '/caller/dir/templates/file.txt',
         '/test/project/file.txt',
         {
@@ -244,7 +244,7 @@ describe('内部插件 render', () => {
       expect(mockPath.basename).toHaveBeenCalledWith(
         'templates/component.vue.tpl',
       )
-      expect(mockApi.copyTpl).toHaveBeenCalledWith(
+      expect(mockContext.copyTpl).toHaveBeenCalledWith(
         '/caller/dir/templates/component.vue.tpl',
         '/test/project/component.vue',
         {},
@@ -258,15 +258,15 @@ describe('内部插件 render', () => {
 
       // 测试 .tpl 文件
       await renderCallback('template.txt.tpl', {})
-      expect(mockApi.copyTpl).toHaveBeenCalled()
-      expect(mockApi.copyFile).not.toHaveBeenCalled()
+      expect(mockContext.copyTpl).toHaveBeenCalled()
+      expect(mockContext.copyFile).not.toHaveBeenCalled()
 
       vi.clearAllMocks()
 
       // 测试常规文件
       await renderCallback('config.json', {})
-      expect(mockApi.copyFile).toHaveBeenCalled()
-      expect(mockApi.copyTpl).not.toHaveBeenCalled()
+      expect(mockContext.copyFile).toHaveBeenCalled()
+      expect(mockContext.copyTpl).not.toHaveBeenCalled()
     })
 
     it('应该正确处理复杂的文件路径', async () => {
@@ -288,6 +288,6 @@ describe('内部插件 render', () => {
   })
 
   it('注册 render 方法时不应该抛出异常', () => {
-    expect(() => renderPlugin(mockApi)).not.toThrow()
+    expect(() => renderPlugin(mockContext)).not.toThrow()
   })
 })

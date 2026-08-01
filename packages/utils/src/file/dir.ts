@@ -9,8 +9,8 @@ import { isPathExists, isPathExistsSync } from './is'
 
 /**
  * 创建文件夹
- * @param path 文件夹路径
- * @param mode 文件夹类型
+ * @param path - 文件夹路径
+ * @param mode - 文件夹类型
  */
 export async function mkdir(
   path: string,
@@ -30,8 +30,8 @@ export async function mkdir(
 
 /**
  * 创建文件夹
- * @param path 文件夹路径
- * @param mode 文件夹类型
+ * @param path - 文件夹路径
+ * @param mode - 文件夹类型
  */
 export function mkdirSync(
   path: string,
@@ -52,13 +52,13 @@ const DEFAULT_TEMP_DIR = '.cli_tmp'
 
 /**
  * 创建临时文件夹
- * @param random 是否随机生成
+ * @param random - 是否随机生成
  */
 export async function tmpdir(random?: boolean): Promise<string>
 /**
  * 创建临时文件夹
- * @param dirname 文件夹名称
- * @param random 是否随机生成
+ * @param dirname - 文件夹名称
+ * @param random - 是否随机生成
  */
 export async function tmpdir(dirname: string, random?: boolean): Promise<string>
 export async function tmpdir(
@@ -104,13 +104,13 @@ export async function tmpdir(
 
 /**
  * 创建临时文件夹
- * @param random 是否随机生成
+ * @param random - 是否随机生成
  */
 export async function tmpdirSync(random?: boolean): Promise<string>
 /**
  * 创建临时文件夹
- * @param dirname 文件夹名称
- * @param random 是否随机生成
+ * @param dirname - 文件夹名称
+ * @param random - 是否随机生成
  */
 export async function tmpdirSync(
   dirname: string,

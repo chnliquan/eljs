@@ -9,8 +9,8 @@ import {
 
 /**
  * 更新 lock 文件
- * @param packageManager 包管理工具
- * @param cwd 当前工作目录
+ * @param packageManager - 包管理工具
+ * @param cwd - 当前工作目录
  */
 export async function updatePackageLock(
   packageManager: PackageManager,
@@ -33,10 +33,10 @@ export async function updatePackageLock(
 
 /**
  * 更新包版本
- * @param pkgJsonPath package.json 路径
- * @param pkg package.json 对象
- * @param version 版本
- * @param pkgNames 包名
+ * @param pkgJsonPath - package.json 路径
+ * @param pkg - package.json 对象
+ * @param version - 版本
+ * @param pkgNames - 包名
  */
 export async function updatePackageVersion(
   pkgJsonPath: string,
@@ -57,10 +57,10 @@ export async function updatePackageVersion(
 
 /**
  * 更新包依赖的版本
- * @param pkg package.json 对象
- * @param type 依赖类型
- * @param version 版本
- * @param pkgNames 包名
+ * @param pkg - package.json 对象
+ * @param type - 依赖类型
+ * @param version - 版本
+ * @param pkgNames - 包名
  */
 export function updatePackageDependencies(
   pkg: PackageJson,

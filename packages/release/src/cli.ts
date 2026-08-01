@@ -1,4 +1,4 @@
-import { createDebugger, readJson, type PackageJson } from '@eljs/utils'
+import { createDebugger, logger, readJson, type PackageJson } from '@eljs/utils'
 import { InvalidArgumentError, program } from 'commander'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -6,16 +6,26 @@ import semver, { type ReleaseType } from 'semver'
 import updateNotifier from 'update-notifier'
 
 import { release } from './release'
-import { onCancel } from './utils'
+import { AppError, onCancel } from './utils'
 
 const { RELEASE_TYPES } = semver
 
-export function cli() {
+/**
+ * 启动 release 命令行程序
+ *
+ * @returns 命令行流程 Promise
+ */
+export function cli(): Promise<void> {
   registerSignalHandler()
 
   return main()
     .then(() => process.exit(0))
-    .catch(() => {
+    .catch(error => {
+      if (error instanceof AppError) {
+        logger.error(error.message)
+      } else {
+        console.error(error)
+      }
       process.exit(1)
     })
 }

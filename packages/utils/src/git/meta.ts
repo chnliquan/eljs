@@ -54,8 +54,8 @@ export interface GitRepository extends GitRemoteRepository {
 
 /**
  * 获取 git 地址
- * @param cwd 当前工作目录
- * @param exact 是否在当前目录下提取
+ * @param cwd - 当前工作目录
+ * @param exact - 是否在当前目录下提取
  */
 export async function getGitUrl(cwd: string, exact?: boolean): Promise<string> {
   const gitDir = exact
@@ -80,8 +80,8 @@ export async function getGitUrl(cwd: string, exact?: boolean): Promise<string> {
 
 /**
  * 获取 git 地址
- * @param cwd 当前工作目录
- * @param exact 是否在当前目录下提取
+ * @param cwd - 当前工作目录
+ * @param exact - 是否在当前目录下提取
  */
 export function getGitUrlSync(cwd: string, exact?: boolean): string {
   const gitDir = exact
@@ -106,7 +106,7 @@ export function getGitUrlSync(cwd: string, exact?: boolean): string {
 
 /**
  * 获取 git 分支
- * @param options 选项
+ * @param options - 选项
  */
 export async function getGitBranch(
   options?: RunCommandOptions,
@@ -120,7 +120,7 @@ export async function getGitBranch(
 
 /**
  * 获取 git 远程分支
- * @param options 选项
+ * @param options - 选项
  */
 export async function getGitUpstreamBranch(
   options?: RunCommandOptions,
@@ -141,15 +141,15 @@ export async function getGitUpstreamBranch(
 
 /**
  * 获取 git commit 哈希值
- * @param options 选项
+ * @param options - 选项
  */
 export async function getGitCommitSha(
   options?: RunCommandOptions,
 ): Promise<string>
 /**
  * 获取 git commit 哈希值
- * @param short 是否截断
- * @param options 选项
+ * @param short - 是否截断
+ * @param options - 选项
  */
 export async function getGitCommitSha(
   short: boolean,
@@ -174,15 +174,15 @@ export async function getGitCommitSha(
 
 /**
  * 获取 git 最新 tag
- * @param options 选项
+ * @param options - 选项
  */
 export async function getGitLatestTag(
   options?: RunCommandOptions,
 ): Promise<string>
 /**
  * 获取 git 最新 tag
- * @param match 匹配模式
- * @param options 选项
+ * @param match - 匹配模式
+ * @param options - 选项
  */
 export async function getGitLatestTag(
   match: string,
@@ -190,9 +190,9 @@ export async function getGitLatestTag(
 ): Promise<string>
 /**
  * 获取 git 最新 tag
- * @param match 匹配模式
- * @param args 命令行参数
- * @param options 选项
+ * @param match - 匹配模式
+ * @param args - 命令行参数
+ * @param options - 选项
  */
 export async function getGitLatestTag(
   match: string,
@@ -239,7 +239,7 @@ export async function getGitLatestTag(
 
 /**
  * 解析 git 地址
- * @param url git 地址
+ * @param url - git 地址
  */
 export function gitUrlAnalysis(url: string): GitRemoteRepository | null {
   if (!url) {
@@ -293,8 +293,8 @@ export function gitUrlAnalysis(url: string): GitRemoteRepository | null {
 
 /**
  * 获取指定目录的 git 仓库信息
- * @param dir 文件目录
- * @param exact 是否在当前目录下提取
+ * @param dir - 文件目录
+ * @param exact - 是否在当前目录下提取
  */
 export async function getGitRepository(
   dir: string,
@@ -347,8 +347,8 @@ export async function getGitRepository(
 
 /**
  * 获取指定目录的 git 仓库信息
- * @param dir 文件目录
- * @param exact 是否在当前目录下提取
+ * @param dir - 文件目录
+ * @param exact - 是否在当前目录下提取
  */
 export function getGitRepositorySync(
   dir: string,
@@ -545,7 +545,7 @@ export function getGitUserSync(): GitUser {
 
 /**
  * 获取工程 git 路径
- * @param dir 文件夹目录
+ * @param dir - 文件夹目录
  */
 export async function getProjectGitDir(
   dir: string,
@@ -570,7 +570,7 @@ export async function getProjectGitDir(
 
 /**
  * 获取工程 git 路径
- * @param dir 文件目录
+ * @param dir - 文件目录
  */
 export function getProjectGitDirSync(dir: string): string | undefined {
   let cur = dir

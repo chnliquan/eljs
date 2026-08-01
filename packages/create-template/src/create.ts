@@ -1,4 +1,4 @@
-import { Create } from '@eljs/create'
+import { ProjectCreator } from '@eljs/create'
 import { prompts } from '@eljs/utils'
 import assert from 'node:assert'
 
@@ -35,6 +35,9 @@ export interface CreateTemplateOptions {
   allowTemplateScripts?: boolean
 }
 
+/**
+ * 通过场景和模版选择创建项目
+ */
 export class CreateTemplate {
   /**
    * 构造函数选项
@@ -45,14 +48,25 @@ export class CreateTemplate {
    */
   public cwd: string
 
+  /**
+   * 创建模版选择器
+   *
+   * @param options - 工作目录和默认场景、模版
+   */
   public constructor(options: CreateTemplateOptions) {
     this.constructorOptions = options
     this.cwd = options.cwd || process.cwd()
   }
 
-  public async run(projectName: string) {
+  /**
+   * 解析模版并运行项目创建流程
+   *
+   * @param projectName - 项目名称
+   * @returns 创建流程结束后兑现的 Promise
+   */
+  public async run(projectName: string): Promise<void> {
     const template = await this._getTemplate()
-    const create = new Create({
+    const create = new ProjectCreator({
       ...this.constructorOptions,
       cwd: this.cwd,
       template,
@@ -60,7 +74,12 @@ export class CreateTemplate {
     await create.run(projectName)
   }
 
-  private async _getTemplate() {
+  /**
+   * 解析交互选择后的远程模版
+   *
+   * @returns 远程模版配置
+   */
+  private async _getTemplate(): Promise<RemoteTemplate> {
     const { scenes, templates } = defaultConfig
     let sceneAnswer = this.constructorOptions.scene as string
     let templateAnswer = this.constructorOptions.template as string
@@ -114,6 +133,12 @@ export class CreateTemplate {
     return template
   }
 
+  /**
+   * 将模版映射转换为 prompts 选项
+   *
+   * @param template - 模版配置映射
+   * @returns prompts 选项集合
+   */
   private _formatTemplate(template: Record<string, RemoteTemplate>) {
     return Object.keys(template).map(key => {
       const title = template[key].description

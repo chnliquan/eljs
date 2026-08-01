@@ -30,7 +30,7 @@ The main package dependency flow is:
 ```text
 utils ─┬─> config
        ├─> cache
-       └─> pluggable ─┬─> create ─> create-template
+       └─> plugin-host ─┬─> create ─> create-template
                       └─> release
 ```
 
@@ -76,6 +76,14 @@ reports or debug logs.
 - Keep package boundaries intact and avoid importing another package's source
   files directly.
 - Add regression tests for behavior changes.
+- When adding or changing public APIs, document exported declarations and
+  public extension points with standard TSDoc. Describe contracts and
+  non-obvious constraints instead of restating names; TypeScript types belong
+  in signatures rather than comments. Do not end TSDoc summaries or tag
+  descriptions with a Chinese or English full stop.
+- Run `pnpm lint` to catch invalid TSDoc syntax. The repository `AGENTS.md`
+  defines documentation guidance for AI-assisted changes; package-specific
+  files may extend it.
 - Use Conventional Commits, preferably with the package name as scope, for
   example `fix(create): validate target path`.
 - Do not edit generated `dist/` output; rebuild it from source.

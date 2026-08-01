@@ -51,7 +51,7 @@
   },
   "dependencies": {
     "@eljs/conventional-changelog-preset": "workspace:*",
-    "@eljs/pluggable": "workspace:*",
+    "@eljs/plugin-host": "workspace:*",
     "@eljs/utils": "workspace:*",
     "@types/resolve-bin": "^0.4.3",
     "@types/semver": "^7.5.8",

@@ -2,7 +2,10 @@ import eslint from '@eslint/js'
 import tseslint from '@typescript-eslint/eslint-plugin'
 import eslintConfigPrettier from 'eslint-config-prettier/flat'
 import checkFile from 'eslint-plugin-check-file'
+import tsdoc from 'eslint-plugin-tsdoc'
 import { defineConfig, globalIgnores } from 'eslint/config'
+
+const packageSourceFiles = ['packages/*/src/**/*.{ts,tsx}']
 
 export default defineConfig([
   globalIgnores([
@@ -76,7 +79,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['packages/*/src/**/*.{ts,tsx}'],
+    files: packageSourceFiles,
     languageOptions: {
       parserOptions: {
         projectService: true,
@@ -88,6 +91,15 @@ export default defineConfig([
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-for-in-array': 'error',
       '@typescript-eslint/no-misused-promises': 'error',
+    },
+  },
+  {
+    files: packageSourceFiles,
+    plugins: {
+      tsdoc,
+    },
+    rules: {
+      'tsdoc/syntax': 'error',
     },
   },
   {

@@ -5,10 +5,10 @@ const localRequire = createRequire(
 )
 
 /**
- * 文件加载器的惰性依赖边界。
+ * 文件加载器的惰性依赖边界
  *
  * 这些依赖只在对应加载器首次使用时才会载入，避免仅导入 utils
- * 就初始化 TypeScript 等体积较大的模块。
+ * 就初始化 TypeScript 等体积较大的模块
  */
 export function loadImportFresh(): typeof import('import-fresh') {
   return localRequire('import-fresh')

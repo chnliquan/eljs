@@ -92,7 +92,7 @@
 
 ### 🐛 Bug Fixes
 
-* **pluggable:** resolve invalid plugin ([285559d](https://github.com/chnliquan/eljs/commit/285559d91e47eb6a0fa4886b73424708ad0d05e8)) 
+* **plugin-host:** resolve invalid plugin ([285559d](https://github.com/chnliquan/eljs/commit/285559d91e47eb6a0fa4886b73424708ad0d05e8))
 
 # [1.1.0](https://github.com/chnliquan/eljs/compare/v1.0.0...v1.1.0) (2025-04-01)
 
@@ -241,7 +241,7 @@
 
 ### ♻ Code Refactoring
 
-* **pluggable:** catch load plugin error ([ffd5b94](https://github.com/chnliquan/eljs/commit/ffd5b942c723ed7ef8a4bb8dc1a846f97bd5ec27)) 
+* **plugin-host:** catch load plugin error ([ffd5b94](https://github.com/chnliquan/eljs/commit/ffd5b942c723ed7ef8a4bb8dc1a846f97bd5ec27))
 
 # [1.0.0-beta.4](https://github.com/chnliquan/eljs/compare/v1.0.0-beta.3...v1.0.0-beta.4) (2025-03-20)
 
@@ -313,7 +313,7 @@
 
 * add define config ([001b57f](https://github.com/chnliquan/eljs/commit/001b57f58debaae62bb25b7ac7c2f7b8360e4fd0))
 * add update notify ([de6f134](https://github.com/chnliquan/eljs/commit/de6f134e416acee3228627d15bfe3ad375c20e49))
-* **pluggable:** support plugin config ([5fbb219](https://github.com/chnliquan/eljs/commit/5fbb21906677584c66401d6ebb2a7aa592fde34e))
+* **plugin-host:** support plugin config ([5fbb219](https://github.com/chnliquan/eljs/commit/5fbb21906677584c66401d6ebb2a7aa592fde34e))
 * **release:** add cli options ([f40a0cd](https://github.com/chnliquan/eljs/commit/f40a0cd4fe1d09fef8fc14e6643c4e9f4ce91b53))
 * **release:** support prerelease ([67f842a](https://github.com/chnliquan/eljs/commit/67f842ab5108c08caee6716d717e930ec98e3304))
 * **utils:** add file loaders ([6233129](https://github.com/chnliquan/eljs/commit/62331298f321c23d8913088dacda5b04e161bcd6))
@@ -328,7 +328,7 @@
 
 ### 🐛 Bug Fixes
 
-* **pluggable:** apply plugin stage ([681b7f4](https://github.com/chnliquan/eljs/commit/681b7f439335abf085bf67a2731b676dc596b96b))
+* **plugin-host:** apply plugin stage ([681b7f4](https://github.com/chnliquan/eljs/commit/681b7f439335abf085bf67a2731b676dc596b96b))
 
 
 
@@ -361,8 +361,8 @@
 
 ### ♻ Code Refactoring
 
-* **create:** abstract pluggable class ([6538190](https://github.com/chnliquan/eljs/commit/65381904537a2a28adf66b952560e3d3fa10fcf4))
-* **pluggable:** api style ([4418c9b](https://github.com/chnliquan/eljs/commit/4418c9b278a444fbdc9cb7d4ceeeaaa928464188))
+* **create:** abstract plugin host class ([6538190](https://github.com/chnliquan/eljs/commit/65381904537a2a28adf66b952560e3d3fa10fcf4))
+* **plugin-host:** api style ([4418c9b](https://github.com/chnliquan/eljs/commit/4418c9b278a444fbdc9cb7d4ceeeaaa928464188))
 * **utils:** standardize sync and async name ([e4e2fbd](https://github.com/chnliquan/eljs/commit/e4e2fbd86061c1939bf10c4db6507126634d8fe8))
 
 

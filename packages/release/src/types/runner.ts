@@ -49,8 +49,8 @@ export interface AppData {
    */
   validPkgNames: string[]
   /**
-   * 当前版本已经发布、且本地发布标签指向 HEAD 的包名。
-   * 仅在恢复一次中断的发布时存在。
+   * 当前版本已经发布、且本地发布标签指向 HEAD 的包名
+   * 仅在恢复一次中断的发布时存在
    */
   existingPkgNames?: string[]
   /**
@@ -62,4 +62,42 @@ export interface AppData {
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [property: string]: any
+}
+
+/**
+ * 发布运行器阶段
+ */
+export enum ReleaseRunnerStage {
+  /**
+   * 尚未运行
+   */
+  Uninitialized = 'uninitialized',
+  /**
+   * 正在加载插件
+   */
+  LoadingPlugins = 'loadingPlugins',
+  /**
+   * 正在解析配置
+   */
+  ResolvingConfig = 'resolvingConfig',
+  /**
+   * 正在准备发布数据并执行检查
+   */
+  Preparing = 'preparing',
+  /**
+   * 正在计算和更新版本
+   */
+  Versioning = 'versioning',
+  /**
+   * 正在执行发布
+   */
+  Releasing = 'releasing',
+  /**
+   * 运行完成
+   */
+  Completed = 'completed',
+  /**
+   * 运行失败
+   */
+  Failed = 'failed',
 }

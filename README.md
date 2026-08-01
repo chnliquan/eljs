@@ -11,7 +11,7 @@ eljs/
 │   ├── conventional-changelog-preset/  # Custom changelog preset for releases
 │   ├── create/                         # Powerful project creation tool
 │   ├── create-template/                # Template creation utilities
-│   ├── pluggable/                      # Plugin system and architecture
+│   ├── plugin-host/                    # Plugin host and extension architecture
 │   ├── release/                        # Automated release management
 │   └── utils/                          # Comprehensive Node.js utilities
 ├── scripts/                            # Build and release automation
@@ -62,12 +62,12 @@ npm install @eljs/config
 
 **Features**: Schema validation, environment variables, configuration merging, TypeScript support
 
-### 🔌 @eljs/pluggable
+### 🔌 @eljs/plugin-host
 
 Extensible plugin system for building modular and customizable applications.
 
 ```bash
-npm install @eljs/pluggable
+npm install @eljs/plugin-host
 ```
 
 **Features**: Hook-based architecture, plugin lifecycle management, dependency injection, type safety

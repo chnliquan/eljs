@@ -1,5 +1,6 @@
 import './require-hook'
-export { Create } from './core'
+export { ProjectCreator } from './core'
 export * from './default'
 export * from './define'
+export { createHookSchema } from './hooks'
 export * from './types'

@@ -1,4 +1,4 @@
-import type { UserConfig } from '@eljs/pluggable'
+import type { UserConfig } from '@eljs/plugin-host'
 
 import type { PrereleaseId } from './npm'
 
@@ -8,7 +8,7 @@ import type { PrereleaseId } from './npm'
 export interface Config extends UserConfig {
   /**
    * Working directory
-   * @default process.cwd()
+   * @defaultValue `process.cwd()`
    */
   cwd?: string
   /**
@@ -17,7 +17,7 @@ export interface Config extends UserConfig {
   git?: {
     /**
      * Whether to require git working tree clean
-     * @default true
+     * @defaultValue `true`
      */
     requireClean?: boolean
     /**
@@ -26,40 +26,41 @@ export interface Config extends UserConfig {
     requireBranch?: string
     /**
      * Changelog config
-     * @default { filename: 'CHANGELOG.md', preset: '@eljs/conventional-changelog-preset' }
+     * @defaultValue `{ filename: 'CHANGELOG.md', preset: '@eljs/conventional-changelog-preset' }`
      */
     changelog?:
       | false
       | {
           /**
            * Changelog file name
-           * @default CHANGELOG.md
+           * @defaultValue `CHANGELOG.md`
            */
           filename?: string
           /**
            * Placeholder for when no changes have been made
-           * @default '**Note:** No changes, only version bump.'
+           * @defaultValue `'**Note:** No changes, only version bump.'`
            */
           placeholder?: string
           /**
            * Preset of conventional-changelog
-           * @link https://github.com/conventional-changelog/conventional-changelog/blob/master/packages/conventional-changelog/README.md#presets
+           *
+           * {@link https://github.com/conventional-changelog/conventional-changelog/blob/master/packages/conventional-changelog/README.md#presets}
            */
           preset?: string
         }
     /**
      * Whether to generate independent git tags
-     * @default false
+     * @defaultValue `false`
      */
     independent?: boolean
     /**
      * Whether to commit changes
-     * @default true
+     * @defaultValue `true`
      */
     commit?: boolean
     /**
      * Commit message
-     * @default "chore: bump version v${version}"
+     * @defaultValue `"chore: bump version v${version}"`
      */
     commitMessage?: string
     /**
@@ -68,12 +69,12 @@ export interface Config extends UserConfig {
     commitArgs?: string[] | string
     /**
      * Whether to push remote
-     * @default true
+     * @defaultValue `true`
      */
     push?: boolean
     /**
      * Git push arguments
-     * @default ['--follow-tags']
+     * @defaultValue `['--follow-tags']`
      */
     pushArgs?: string[] | string
   }
@@ -83,7 +84,7 @@ export interface Config extends UserConfig {
   npm?: {
     /**
      * Whether to require npm owner
-     * @default true
+     * @defaultValue `true`
      */
     requireOwner?: boolean
     /**
@@ -96,12 +97,12 @@ export interface Config extends UserConfig {
     prereleaseId?: PrereleaseId
     /**
      * Whether to use canary version
-     * @default false
+     * @defaultValue `false`
      */
     canary?: boolean
     /**
      * Whether to confirm the increment version
-     * @default true
+     * @defaultValue `true`
      */
     confirm?: boolean
     /**
@@ -115,7 +116,7 @@ export interface Config extends UserConfig {
   github?: {
     /**
      * Whether to create a github release
-     * @default true
+     * @defaultValue `true`
      */
     release?: boolean
   }

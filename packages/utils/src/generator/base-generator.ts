@@ -70,9 +70,9 @@ export class BaseGenerator {
 
   /**
    * 拷贝文件
-   * @param from 源文件路径
-   * @param to 目标文件路径
-   * @param options 选项
+   * @param from - 源文件路径
+   * @param to - 目标文件路径
+   * @param options - 选项
    */
   public copyFileSync(from: string, to: string, options: CopyFileOptions = {}) {
     copyFileSync(from, to, {
@@ -84,9 +84,9 @@ export class BaseGenerator {
 
   /**
    * 拷贝文件
-   * @param from 源文件路径
-   * @param to 目标文件路径
-   * @param options 选项
+   * @param from - 源文件路径
+   * @param to - 目标文件路径
+   * @param options - 选项
    */
   public async copyFile(
     from: string,
@@ -102,10 +102,10 @@ export class BaseGenerator {
 
   /**
    * 拷贝模版
-   * @param from 源文件路径
-   * @param to 目标文件路径
-   * @param data 模版数据
-   * @param options 选项
+   * @param from - 源文件路径
+   * @param to - 目标文件路径
+   * @param data - 模版数据
+   * @param options - 选项
    */
   public copyTplSync(
     from: string,
@@ -122,10 +122,10 @@ export class BaseGenerator {
 
   /**
    * 拷贝模版
-   * @param from 源文件路径
-   * @param to 目标文件路径
-   * @param data 模版数据
-   * @param options 选项
+   * @param from - 源文件路径
+   * @param to - 目标文件路径
+   * @param data - 模版数据
+   * @param options - 选项
    */
   public async copyTpl(
     from: string,
@@ -142,9 +142,9 @@ export class BaseGenerator {
 
   /**
    * 拷贝文件夹
-   * @param from 源文件路径
-   * @param to 目标文件路径
-   * @param options 选项
+   * @param from - 源文件路径
+   * @param to - 目标文件路径
+   * @param options - 选项
    */
   public copyDirectorySync(
     from: string,
@@ -161,9 +161,9 @@ export class BaseGenerator {
 
   /**
    * 拷贝文件夹
-   * @param from 源文件路径
-   * @param to 目标文件路径
-   * @param options 选项
+   * @param from - 源文件路径
+   * @param to - 目标文件路径
+   * @param options - 选项
    */
   public async copyDirectory(
     from: string,
@@ -180,7 +180,7 @@ export class BaseGenerator {
 
   /**
    * 检查文件夹
-   * @param targetDir 目标路径
+   * @param targetDir - 目标路径
    */
   public checkDir(targetDir: string) {
     const files = readdirSync(targetDir).filter(

@@ -75,7 +75,7 @@ import { createDebugger, readJson } from '@eljs/utils'
 import path from 'node:path'
 import updateNotifier from 'update-notifier'
 import { cli } from '../src/cli'
-import { Create } from '../src/core'
+import { ProjectCreator } from '../src/core'
 
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
 
@@ -126,9 +126,9 @@ describe('CLI 命令行接口综合测试', () => {
       fetchInfo: vi.fn(),
     } as unknown as ReturnType<typeof updateNotifier>)
 
-    // Mock Create class
-    ;(Create as MockedClass<typeof Create>).mockImplementation(
-      function Create() {
+    // Mock ProjectCreator class
+    ;(ProjectCreator as MockedClass<typeof ProjectCreator>).mockImplementation(
+      function ProjectCreator() {
         return {
           run: vi.fn().mockResolvedValue(undefined),
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -213,18 +213,19 @@ describe('CLI 命令行接口综合测试', () => {
       actionHandler = actionCall ? actionCall[0] : null
     })
 
-    it('应该正确调用 Create 类', async () => {
+    it('应该正确调用 ProjectCreator 类', async () => {
       await actionHandler('test-template', 'test-project', { cwd: '/test' })
 
-      expect(Create).toHaveBeenCalledWith(
+      expect(ProjectCreator).toHaveBeenCalledWith(
         expect.objectContaining({
           template: 'test-template',
           cwd: '/test',
         }),
       )
 
-      const createInstance = (Create as MockedClass<typeof Create>).mock
-        .results[0].value
+      const createInstance = (
+        ProjectCreator as MockedClass<typeof ProjectCreator>
+      ).mock.results[0].value
       expect(createInstance.run).toHaveBeenCalledWith('test-project')
     })
 
@@ -240,14 +241,15 @@ describe('CLI 命令行接口综合测试', () => {
         vi.clearAllMocks()
         await actionHandler(template, project, {})
 
-        expect(Create).toHaveBeenCalledWith(
+        expect(ProjectCreator).toHaveBeenCalledWith(
           expect.objectContaining({
             template,
           }),
         )
 
-        const createInstance = (Create as MockedClass<typeof Create>).mock
-          .results[0].value
+        const createInstance = (
+          ProjectCreator as MockedClass<typeof ProjectCreator>
+        ).mock.results[0].value
         expect(createInstance.run).toHaveBeenCalledWith(project)
       }
     })
@@ -262,12 +264,22 @@ describe('CLI 命令行接口综合测试', () => {
 
       await actionHandler('options-template', 'options-project', options)
 
-      expect(Create).toHaveBeenCalledWith(
+      expect(ProjectCreator).toHaveBeenCalledWith(
         expect.objectContaining({
           template: 'options-template',
           ...options,
         }),
       )
+    })
+
+    it('应该只把显式的 no-install 选择作为配置覆盖', async () => {
+      await actionHandler('default-template', 'default-project', {
+        install: true,
+      })
+
+      expect(ProjectCreator).toHaveBeenCalledWith({
+        template: 'default-template',
+      })
     })
 
     it('应该记录调试信息', async () => {
@@ -392,8 +404,8 @@ describe('CLI 命令行接口综合测试', () => {
       for (const template of templateInputs) {
         vi.clearAllMocks()
         await actionHandler(template, 'test-project', {})
-        expect(Create).toHaveBeenCalledTimes(1)
-        expect(Create).toHaveBeenCalledWith(
+        expect(ProjectCreator).toHaveBeenCalledTimes(1)
+        expect(ProjectCreator).toHaveBeenCalledWith(
           expect.objectContaining({ template }),
         )
       }
@@ -435,12 +447,13 @@ describe('CLI 命令行接口综合测试', () => {
       // 模拟: create my-template my-project
       await actionHandler('my-template', 'my-project', {})
 
-      expect(Create).toHaveBeenCalledWith({
+      expect(ProjectCreator).toHaveBeenCalledWith({
         template: 'my-template',
       })
 
-      const createInstance = (Create as MockedClass<typeof Create>).mock
-        .results[0].value
+      const createInstance = (
+        ProjectCreator as MockedClass<typeof ProjectCreator>
+      ).mock.results[0].value
       expect(createInstance.run).toHaveBeenCalledWith('my-project')
     })
 
@@ -455,7 +468,7 @@ describe('CLI 命令行接口综合测试', () => {
         cwd: '/workspace',
       })
 
-      expect(Create).toHaveBeenCalledWith({
+      expect(ProjectCreator).toHaveBeenCalledWith({
         template: '@company/template',
         force: true,
         cwd: '/workspace',
@@ -472,7 +485,7 @@ describe('CLI 命令行接口综合测试', () => {
         merge: true,
       })
 
-      expect(Create).toHaveBeenCalledWith({
+      expect(ProjectCreator).toHaveBeenCalledWith({
         template: './local-template',
         merge: true,
       })

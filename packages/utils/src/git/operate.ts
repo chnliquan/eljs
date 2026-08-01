@@ -4,8 +4,8 @@ import { getGitBranch, getGitUpstreamBranch } from './meta'
 
 /**
  * 提交 git 信息
- * @param message 提交信息
- * @param options 选项
+ * @param message - 提交信息
+ * @param options - 选项
  */
 export async function gitCommit(
   message: string,
@@ -13,9 +13,9 @@ export async function gitCommit(
 ): Promise<void>
 /**
  * 提交 git 信息
- * @param message 提交信息
- * @param args 命令行参数
- * @param options 选项
+ * @param message - 提交信息
+ * @param args - 命令行参数
+ * @param options - 选项
  */
 export async function gitCommit(
   message: string,
@@ -56,13 +56,13 @@ export async function gitCommit(
 
 /**
  * 推送 git 到远端
- * @param options 选项
+ * @param options - 选项
  */
 export async function gitPush(options?: RunCommandOptions): Promise<void>
 /**
  * 推送 git 到远端
- * @param args 命令行参数
- * @param options 选项
+ * @param args - 命令行参数
+ * @param options - 选项
  */
 export async function gitPush(
   args: string[],
@@ -108,8 +108,8 @@ export async function gitPush(
 
 /**
  * git tag
- * @param tagName 标签名
- * @param options 选项
+ * @param tagName - 标签名
+ * @param options - 选项
  */
 export async function gitTag(
   tagName: string,
@@ -117,9 +117,9 @@ export async function gitTag(
 ): Promise<void>
 /**
  * git tag
- * @param tagName 标签名
- * @param args 命令行参数
- * @param options 选项
+ * @param tagName - 标签名
+ * @param args - 命令行参数
+ * @param options - 选项
  */
 export async function gitTag(
   tagName: string,

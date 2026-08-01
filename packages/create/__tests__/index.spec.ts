@@ -11,7 +11,7 @@ vi.mock('../src/require-hook', () => ({
 
 // Mock 其他依赖模块
 vi.mock('../src/core', () => ({
-  Create: class MockCreate {
+  ProjectCreator: class MockCreate {
     public options: unknown
     public constructor(options: unknown) {
       this.options = options
@@ -31,6 +31,8 @@ vi.mock('../src/default', () => ({
 
 vi.mock('../src/define', () => ({
   defineConfig: vi.fn((config: unknown) => config),
+  definePlugin: vi.fn((initializer: unknown) => initializer),
+  definePreset: vi.fn((initializer: unknown) => initializer),
 }))
 
 vi.mock('../src/types', () => ({
@@ -64,27 +66,27 @@ describe('入口文件', () => {
     })
   })
 
-  describe('Create 类导出', () => {
-    it('应该正确导出 Create 类', async () => {
-      const { Create } = await import('../src/index')
+  describe('ProjectCreator 类导出', () => {
+    it('应该正确导出 ProjectCreator 类', async () => {
+      const { ProjectCreator } = await import('../src/index')
 
-      expect(Create).toBeDefined()
-      expect(typeof Create).toBe('function')
+      expect(ProjectCreator).toBeDefined()
+      expect(typeof ProjectCreator).toBe('function')
 
-      // 验证 Create 可以被实例化
-      const instance = new Create({
+      // 验证 ProjectCreator 可以被实例化
+      const instance = new ProjectCreator({
         template: 'test-template',
         cwd: process.cwd(),
       })
 
-      expect(instance).toBeInstanceOf(Create)
+      expect(instance).toBeInstanceOf(ProjectCreator)
     })
 
-    it('Create 类应该来自 core 模块', async () => {
-      const { Create } = await import('../src/index')
-      const { Create: CoreCreate } = await import('../src/core')
+    it('ProjectCreator 类应该来自 core 模块', async () => {
+      const { ProjectCreator } = await import('../src/index')
+      const { ProjectCreator: CoreCreate } = await import('../src/core')
 
-      expect(Create).toBe(CoreCreate)
+      expect(ProjectCreator).toBe(CoreCreate)
     })
   })
 
@@ -164,9 +166,11 @@ describe('入口文件', () => {
       expect(moduleExports).toBeDefined()
 
       // 验证主要导出存在
-      expect(moduleExports.Create).toBeDefined()
+      expect(moduleExports.ProjectCreator).toBeDefined()
       expect(moduleExports.defaultConfig).toBeDefined()
       expect(moduleExports.defineConfig).toBeDefined()
+      expect(moduleExports.definePlugin).toBeDefined()
+      expect(moduleExports.definePreset).toBeDefined()
     })
 
     it('types 导出不应该包含运行时值', async () => {
@@ -176,7 +180,13 @@ describe('入口文件', () => {
       const exportKeys = Object.keys(moduleExports)
 
       // 验证只包含预期的运行时导出
-      const expectedRuntimeExports = ['Create', 'defaultConfig', 'defineConfig']
+      const expectedRuntimeExports = [
+        'ProjectCreator',
+        'defaultConfig',
+        'defineConfig',
+        'definePlugin',
+        'definePreset',
+      ]
       const runtimeExports = exportKeys.filter(key =>
         expectedRuntimeExports.includes(key),
       )
@@ -197,14 +207,18 @@ describe('入口文件', () => {
       const moduleExports = await import('../src/index')
 
       // 验证必需的导出存在
-      expect(moduleExports.Create).toBeDefined()
+      expect(moduleExports.ProjectCreator).toBeDefined()
       expect(moduleExports.defaultConfig).toBeDefined()
       expect(moduleExports.defineConfig).toBeDefined()
+      expect(moduleExports.definePlugin).toBeDefined()
+      expect(moduleExports.definePreset).toBeDefined()
 
       // 验证导出的类型
-      expect(typeof moduleExports.Create).toBe('function')
+      expect(typeof moduleExports.ProjectCreator).toBe('function')
       expect(typeof moduleExports.defaultConfig).toBe('object')
       expect(typeof moduleExports.defineConfig).toBe('function')
+      expect(typeof moduleExports.definePlugin).toBe('function')
+      expect(typeof moduleExports.definePreset).toBe('function')
     })
 
     it('不应该有意外的副作用', async () => {
@@ -252,8 +266,8 @@ describe('入口文件', () => {
       expect(import3).toBeDefined()
 
       // 验证导出的引用一致性
-      expect(import1.Create).toBe(import2.Create)
-      expect(import2.Create).toBe(import3.Create)
+      expect(import1.ProjectCreator).toBe(import2.ProjectCreator)
+      expect(import2.ProjectCreator).toBe(import3.ProjectCreator)
 
       expect(import1.defaultConfig).toBe(import2.defaultConfig)
       expect(import2.defaultConfig).toBe(import3.defaultConfig)
@@ -266,10 +280,10 @@ describe('入口文件', () => {
   describe('ESM/CommonJS 兼容性', () => {
     it('模块应该支持 ESM 导入方式', async () => {
       // 测试具名导入
-      const { Create, defaultConfig, defineConfig } =
+      const { ProjectCreator, defaultConfig, defineConfig } =
         await import('../src/index')
 
-      expect(Create).toBeDefined()
+      expect(ProjectCreator).toBeDefined()
       expect(defaultConfig).toBeDefined()
       expect(defineConfig).toBeDefined()
     })
@@ -278,7 +292,7 @@ describe('入口文件', () => {
       // 测试命名空间导入
       const createModule = await import('../src/index')
 
-      expect(createModule.Create).toBeDefined()
+      expect(createModule.ProjectCreator).toBeDefined()
       expect(createModule.defaultConfig).toBeDefined()
       expect(createModule.defineConfig).toBeDefined()
     })
@@ -289,7 +303,7 @@ describe('入口文件', () => {
 
       // 同一个模块的多次导入应该返回相同的引用
       expect(module1 === module2).toBe(true)
-      expect(module1.Create === module2.Create).toBe(true)
+      expect(module1.ProjectCreator === module2.ProjectCreator).toBe(true)
       expect(module1.defaultConfig === module2.defaultConfig).toBe(true)
       expect(module1.defineConfig === module2.defineConfig).toBe(true)
     })
@@ -309,7 +323,7 @@ describe('入口文件', () => {
       const moduleExports = await import('../src/index')
 
       // 基本功能应该正常工作
-      expect(moduleExports.Create).toBeDefined()
+      expect(moduleExports.ProjectCreator).toBeDefined()
       expect(moduleExports.defaultConfig).toBeDefined()
       expect(moduleExports.defineConfig).toBeDefined()
     })
@@ -352,7 +366,7 @@ describe('入口文件', () => {
 
         const moduleExports = await import('../src/index')
 
-        expect(moduleExports.Create).toBeDefined()
+        expect(moduleExports.ProjectCreator).toBeDefined()
         expect(moduleExports.defaultConfig).toBeDefined()
         expect(moduleExports.defineConfig).toBeDefined()
       } finally {
@@ -368,7 +382,7 @@ describe('入口文件', () => {
 
         const moduleExports = await import('../src/index')
 
-        expect(moduleExports.Create).toBeDefined()
+        expect(moduleExports.ProjectCreator).toBeDefined()
         expect(moduleExports.defaultConfig).toBeDefined()
         expect(moduleExports.defineConfig).toBeDefined()
       } finally {
@@ -380,12 +394,12 @@ describe('入口文件', () => {
   describe('TypeScript 集成', () => {
     it('应该提供正确的 TypeScript 类型', async () => {
       // 这个测试主要验证编译时类型，运行时我们检查结构
-      const { Create, defaultConfig, defineConfig } =
+      const { ProjectCreator, defaultConfig, defineConfig } =
         await import('../src/index')
 
-      // 验证 Create 类的基本结构
-      expect(typeof Create).toBe('function')
-      expect(Create.prototype).toBeDefined()
+      // 验证 ProjectCreator 类的基本结构
+      expect(typeof ProjectCreator).toBe('function')
+      expect(ProjectCreator.prototype).toBeDefined()
 
       // 验证 defaultConfig 的结构符合预期
       expect(typeof defaultConfig).toBe('object')
@@ -406,7 +420,7 @@ describe('入口文件', () => {
 
   describe('实际使用场景', () => {
     it('应该支持基本的使用模式', async () => {
-      const { Create, defaultConfig, defineConfig } =
+      const { ProjectCreator, defaultConfig, defineConfig } =
         await import('../src/index')
 
       // 测试 defineConfig 的使用
@@ -418,13 +432,13 @@ describe('入口文件', () => {
       expect(config).toBeDefined()
       expect(config.force).toBe(true)
 
-      // 测试 Create 类的使用
-      const creator = new Create({
+      // 测试 ProjectCreator 类的使用
+      const creator = new ProjectCreator({
         template: 'test-template',
         ...config,
       })
 
-      expect(creator).toBeInstanceOf(Create)
+      expect(creator).toBeInstanceOf(ProjectCreator)
     })
 
     it('应该支持配置覆盖模式', async () => {
@@ -455,7 +469,7 @@ describe('入口文件', () => {
     })
 
     it('应该支持链式使用模式', async () => {
-      const { Create, defineConfig, defaultConfig } =
+      const { ProjectCreator, defineConfig, defaultConfig } =
         await import('../src/index')
 
       // 模拟链式使用
@@ -464,12 +478,12 @@ describe('入口文件', () => {
         template: 'my-template',
       })
 
-      const creator = new Create({
+      const creator = new ProjectCreator({
         template: 'test-template',
         ...config,
       })
 
-      expect(creator).toBeInstanceOf(Create)
+      expect(creator).toBeInstanceOf(ProjectCreator)
       expect(config).toBeDefined()
     })
   })

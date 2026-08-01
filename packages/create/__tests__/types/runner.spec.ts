@@ -2,9 +2,9 @@ import type { PackageJson, PackageManager } from '@eljs/utils'
 import { describe, expect, it } from 'vitest'
 
 import type { AppData, Paths, Prompts } from '../../src/types/runner'
-import { RunnerStageEnum } from '../../src/types/runner'
+import { CreateRunnerStage } from '../../src/types/runner'
 
-describe('Runner 类型', () => {
+describe('CreateRunner 类型', () => {
   describe('Paths 接口', () => {
     it('应该定义必需的路径属性', () => {
       const paths: Paths = {
@@ -190,76 +190,87 @@ describe('Runner 类型', () => {
     })
   })
 
-  describe('RunnerStageEnum', () => {
+  describe('CreateRunnerStage', () => {
     it('应该定义所有预期的阶段', () => {
       const expectedStages = [
         'uninitialized',
-        'init',
-        'collectAppData',
-        'collectPluginConfig',
-        'collectPrompts',
-        'collectTsConfig',
-        'collectJestConfig',
-        'collectPrettierConfig',
-        'onStart',
+        'loadingPlugins',
+        'resolvingConfig',
+        'collectingPaths',
+        'collectingAppData',
+        'collectingPrompts',
+        'collectingTsConfig',
+        'collectingJestConfig',
+        'collectingPrettierConfig',
+        'generatingFiles',
+        'completed',
+        'failed',
       ]
 
       expectedStages.forEach(stage => {
-        expect(Object.values(RunnerStageEnum)).toContain(stage)
+        expect(Object.values(CreateRunnerStage)).toContain(stage)
       })
     })
 
     it('应该有正确的枚举值', () => {
-      expect(RunnerStageEnum.Uninitialized).toBe('uninitialized')
-      expect(RunnerStageEnum.Init).toBe('init')
-      expect(RunnerStageEnum.CollectAppData).toBe('collectAppData')
-      expect(RunnerStageEnum.CollectPluginConfig).toBe('collectPluginConfig')
-      expect(RunnerStageEnum.CollectPrompts).toBe('collectPrompts')
-      expect(RunnerStageEnum.CollectTsConfig).toBe('collectTsConfig')
-      expect(RunnerStageEnum.CollectJestConfig).toBe('collectJestConfig')
-      expect(RunnerStageEnum.CollectPrettierConfig).toBe(
-        'collectPrettierConfig',
+      expect(CreateRunnerStage.Uninitialized).toBe('uninitialized')
+      expect(CreateRunnerStage.LoadingPlugins).toBe('loadingPlugins')
+      expect(CreateRunnerStage.ResolvingConfig).toBe('resolvingConfig')
+      expect(CreateRunnerStage.CollectingPaths).toBe('collectingPaths')
+      expect(CreateRunnerStage.CollectingAppData).toBe('collectingAppData')
+      expect(CreateRunnerStage.CollectingPrompts).toBe('collectingPrompts')
+      expect(CreateRunnerStage.CollectingTsConfig).toBe('collectingTsConfig')
+      expect(CreateRunnerStage.CollectingJestConfig).toBe(
+        'collectingJestConfig',
       )
-      expect(RunnerStageEnum.OnStart).toBe('onStart')
+      expect(CreateRunnerStage.CollectingPrettierConfig).toBe(
+        'collectingPrettierConfig',
+      )
+      expect(CreateRunnerStage.GeneratingFiles).toBe('generatingFiles')
+      expect(CreateRunnerStage.Completed).toBe('completed')
+      expect(CreateRunnerStage.Failed).toBe('failed')
     })
 
     it('应该可以作为类型和值使用', () => {
-      const currentStage: RunnerStageEnum = RunnerStageEnum.Init
-      expect(currentStage).toBe('init')
+      const currentStage: CreateRunnerStage = CreateRunnerStage.LoadingPlugins
+      expect(currentStage).toBe('loadingPlugins')
 
       // 测试可以在接受枚举类型的函数中使用
-      function processStage(stage: RunnerStageEnum): string {
-        if (stage === RunnerStageEnum.Init) {
+      function processStage(stage: CreateRunnerStage): string {
+        if (stage === CreateRunnerStage.LoadingPlugins) {
           return '正在初始化'
-        } else if (stage === RunnerStageEnum.CollectAppData) {
+        } else if (stage === CreateRunnerStage.CollectingAppData) {
           return '正在收集应用数据'
         }
         return '未知阶段'
       }
 
-      expect(processStage(RunnerStageEnum.Init)).toBe('正在初始化')
-      expect(processStage(RunnerStageEnum.CollectAppData)).toBe(
+      expect(processStage(CreateRunnerStage.LoadingPlugins)).toBe('正在初始化')
+      expect(processStage(CreateRunnerStage.CollectingAppData)).toBe(
         '正在收集应用数据',
       )
     })
 
     it('应该有正确数量的枚举值', () => {
-      const enumValues = Object.values(RunnerStageEnum)
-      expect(enumValues).toHaveLength(9)
+      const enumValues = Object.values(CreateRunnerStage)
+      expect(enumValues).toHaveLength(12)
     })
 
     it('应该为工作流程维护枚举顺序', () => {
-      const enumValues = Object.values(RunnerStageEnum)
+      const enumValues = Object.values(CreateRunnerStage)
       const expectedOrder = [
         'uninitialized',
-        'init',
-        'collectAppData',
-        'collectPluginConfig',
-        'collectPrompts',
-        'collectTsConfig',
-        'collectJestConfig',
-        'collectPrettierConfig',
-        'onStart',
+        'loadingPlugins',
+        'resolvingConfig',
+        'collectingPaths',
+        'collectingAppData',
+        'collectingPrompts',
+        'collectingTsConfig',
+        'collectingJestConfig',
+        'collectingPrettierConfig',
+        'generatingFiles',
+        'completed',
+        'failed',
       ]
 
       expect(enumValues).toEqual(expectedOrder)

@@ -62,7 +62,7 @@ export interface Prompts {
    */
   email: string
   /**
-   * git url 地址，git@github.com:chnliquan/eljs.git
+   * git url 地址，`git@github.com:chnliquan/eljs.git`
    */
   gitUrl: string
   /**
@@ -99,14 +99,53 @@ export interface Prompts {
 /**
  * 生成器阶段枚举
  */
-export enum RunnerStageEnum {
+export enum CreateRunnerStage {
+  /**
+   * 尚未运行
+   */
   Uninitialized = 'uninitialized',
-  Init = 'init',
-  CollectAppData = 'collectAppData',
-  CollectPluginConfig = 'collectPluginConfig',
-  CollectPrompts = 'collectPrompts',
-  CollectTsConfig = 'collectTsConfig',
-  CollectJestConfig = 'collectJestConfig',
-  CollectPrettierConfig = 'collectPrettierConfig',
-  OnStart = 'onStart',
+  /**
+   * 正在加载插件
+   */
+  LoadingPlugins = 'loadingPlugins',
+  /**
+   * 正在解析配置
+   */
+  ResolvingConfig = 'resolvingConfig',
+  /**
+   * 正在解析路径
+   */
+  CollectingPaths = 'collectingPaths',
+  /**
+   * 正在收集项目数据
+   */
+  CollectingAppData = 'collectingAppData',
+  /**
+   * 正在收集交互输入
+   */
+  CollectingPrompts = 'collectingPrompts',
+  /**
+   * 正在收集 TypeScript 配置
+   */
+  CollectingTsConfig = 'collectingTsConfig',
+  /**
+   * 正在收集 Jest 配置
+   */
+  CollectingJestConfig = 'collectingJestConfig',
+  /**
+   * 正在收集 Prettier 配置
+   */
+  CollectingPrettierConfig = 'collectingPrettierConfig',
+  /**
+   * 正在生成文件
+   */
+  GeneratingFiles = 'generatingFiles',
+  /**
+   * 运行完成
+   */
+  Completed = 'completed',
+  /**
+   * 运行失败
+   */
+  Failed = 'failed',
 }
