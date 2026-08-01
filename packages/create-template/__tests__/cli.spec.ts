@@ -31,12 +31,18 @@ afterAll(() => {
 })
 
 // 首先进行所有模拟设置
+vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils', () => ({
   chalk: {
     yellow: vi.fn((text: string) => `[yellow]${text}[/yellow]`),
     red: vi.fn((text: string) => `[red]${text}[/red]`),
   },
   createDebugger: vi.fn(() => vi.fn()),
+  logger: {
+    error: vi.fn(),
+    event: vi.fn(),
+  },
   readJson: vi.fn(),
 }))
 
@@ -72,7 +78,17 @@ vi.mock('node:path', async importOriginal => {
 })
 
 vi.mock('update-notifier')
-vi.mock('@eljs/create', () => ({}))
+vi.mock('@eljs/create', () => ({
+  AppError: class AppError extends Error {
+    public readonly code: string
+
+    public constructor(message: string, options?: { code?: string }) {
+      super(message)
+      this.name = 'AppError'
+      this.code = options?.code ?? 'CREATE_ERROR'
+    }
+  },
+}))
 vi.mock('../src/create')
 vi.mock('../src/utils', () => ({
   onCancel: vi.fn(),
@@ -84,7 +100,6 @@ import path from 'node:path'
 import updateNotifier from 'update-notifier'
 import { cli } from '../src/cli'
 import { CreateTemplate } from '../src/create'
-import { onCancel } from '../src/utils'
 
 // 类型定义
 type ActionHandlerFunction = (
@@ -116,6 +131,7 @@ describe('CLI 命令行接口综合测试', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     process.exit = vi.fn() as any
     process.on = vi.fn()
+    process.exitCode = undefined
     process.argv = ['node', 'cli.js']
 
     // Setup mocks
@@ -161,13 +177,14 @@ describe('CLI 命令行接口综合测试', () => {
 
       await cli()
 
-      expect(process.exit).toHaveBeenCalledWith(1)
+      expect(process.exitCode).toBe(1)
     })
 
-    it('应该在成功时退出进程', async () => {
+    it('成功时应该自然结束而不强制退出进程', async () => {
       await cli()
 
-      expect(process.exit).toHaveBeenCalledWith(0)
+      expect(process.exit).not.toHaveBeenCalled()
+      expect(process.exitCode).toBeUndefined()
     })
   })
 
@@ -319,13 +336,8 @@ describe('CLI 命令行接口综合测试', () => {
   })
 
   describe('信号处理验证', () => {
-    it('应该处理 SIGINT 信号', () => {
-      const mockOnCancel = vi.fn()
-      ;(onCancel as MockedFunction<typeof onCancel>).mockImplementation(
-        mockOnCancel,
-      )
-
-      cli()
+    it('应该把首次 SIGINT 转换为 AbortSignal', async () => {
+      const cliPromise = cli()
 
       // 验证 SIGINT 处理器被注册
       expect(process.on).toHaveBeenCalledWith('SIGINT', expect.any(Function))
@@ -337,8 +349,10 @@ describe('CLI 命令行接口综合测试', () => {
 
       if (typeof signalHandler === 'function') {
         signalHandler('SIGINT')
-        expect(onCancel).toHaveBeenCalled()
       }
+
+      await cliPromise
+      expect(process.exitCode).toBe(130)
     })
   })
 
@@ -364,6 +378,19 @@ describe('CLI 命令行接口综合测试', () => {
       if (notifierResult && notifierResult.value) {
         expect(notifierResult.value.notify).toHaveBeenCalled()
       }
+    })
+
+    it('查询版本时不应该加载更新检查', async () => {
+      const originalArgv = process.argv
+      process.argv = [process.execPath, 'create-template', '--version']
+
+      try {
+        await cli()
+      } finally {
+        process.argv = originalArgv
+      }
+
+      expect(updateNotifier).not.toHaveBeenCalled()
     })
 
     it('应该处理不同的包信息', async () => {
@@ -463,7 +490,9 @@ describe('CLI 命令行接口综合测试', () => {
       // 模拟: create-template my-project
       await actionHandler('my-project', {})
 
-      expect(CreateTemplate).toHaveBeenCalledWith({})
+      expect(CreateTemplate).toHaveBeenCalledWith(
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      )
 
       const createInstance = (
         CreateTemplate as MockedClass<typeof CreateTemplate>
@@ -484,12 +513,15 @@ describe('CLI 命令行接口综合测试', () => {
         cwd: '/workspace',
       })
 
-      expect(CreateTemplate).toHaveBeenCalledWith({
-        scene: 'npm',
-        template: 'template-npm-web',
-        force: true,
-        cwd: '/workspace',
-      })
+      expect(CreateTemplate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          scene: 'npm',
+          template: 'template-npm-web',
+          force: true,
+          cwd: '/workspace',
+          signal: expect.any(AbortSignal),
+        }),
+      )
     })
 
     it('应该处理合并模式创建流程', async () => {
@@ -502,9 +534,12 @@ describe('CLI 命令行接口综合测试', () => {
         merge: true,
       })
 
-      expect(CreateTemplate).toHaveBeenCalledWith({
-        merge: true,
-      })
+      expect(CreateTemplate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          merge: true,
+          signal: expect.any(AbortSignal),
+        }),
+      )
     })
   })
 
@@ -533,7 +568,7 @@ describe('CLI 命令行接口综合测试', () => {
 
       await cli()
 
-      expect(process.exit).toHaveBeenCalledWith(1)
+      expect(process.exitCode).toBe(1)
     })
 
     it('应该处理 createDebugger 返回 undefined 的情况', async () => {

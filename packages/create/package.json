@@ -61,14 +61,6 @@
   "devDependencies": {
     "@types/update-notifier": "^6.0.8"
   },
-  "peerDependencies": {
-    "typescript": ">=5.0.0"
-  },
-  "peerDependenciesMeta": {
-    "typescript": {
-      "optional": true
-    }
-  },
   "engines": {
     "node": ">=22.14.0"
   },

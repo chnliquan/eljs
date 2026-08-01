@@ -1,8 +1,5 @@
-import {
-  extractCallDir,
-  isDirectory,
-  type RenderTemplateOptions,
-} from '@eljs/utils'
+import { isDirectory, type RenderTemplateOptions } from '@eljs/utils/file'
+import { extractCallDir } from '@eljs/utils/path'
 import { basename, join, resolve } from 'node:path'
 
 import { definePlugin } from '../../define'

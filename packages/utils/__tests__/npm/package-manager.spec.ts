@@ -7,16 +7,17 @@ import {
   type MockedFunction,
 } from 'vitest'
 import * as importedModule0 from '../../src/env'
-import * as importedModule1 from '../../src/path'
+import * as importedModule1 from '../../src/path/workspace-lock'
 
-import { cache, getPackageManager } from '../../src/npm/package-manager'
+import { getPackageManager } from '../../src/npm/package-manager'
+import { clearPackageManagerCache } from '../../src/npm/package-manager-cache'
 
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
 const requiredModule1 = vi.mocked(importedModule1, { deep: true })
 
 // Mock 依赖项
 vi.mock('../../src/env')
-vi.mock('../../src/path')
+vi.mock('../../src/path/workspace-lock')
 
 describe('Package Manager 工具', () => {
   const mockHasGlobalInstallation =
@@ -44,7 +45,7 @@ describe('Package Manager 工具', () => {
     vi.clearAllMocks()
 
     // 清除模块内部缓存
-    cache.clear()
+    clearPackageManagerCache()
 
     // 设置默认 mock 行为
     mockHasGlobalInstallation.mockResolvedValue(false)
@@ -269,7 +270,7 @@ describe('Package Manager 工具', () => {
   describe('缓存机制', () => {
     it('应该正确处理缓存键', async () => {
       // 清除缓存确保测试的独立性
-      cache.clear()
+      clearPackageManagerCache()
 
       const testDir = '/cache-test'
 

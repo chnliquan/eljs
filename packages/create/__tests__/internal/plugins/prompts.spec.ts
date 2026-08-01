@@ -62,6 +62,7 @@ interface MockInternalUtils {
 }
 
 // Mock @eljs/utils
+vi.mock('@eljs/utils/cli', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils', () => ({
   prompts: vi.fn(),
 }))

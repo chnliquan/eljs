@@ -1,0 +1,14 @@
+{
+  "$schema": "https://turborepo.org/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "inputs": [
+        "package.json",
+        "rslib.config.ts",
+        "src/**",
+        "tsconfig.build.json"
+      ]
+    }
+  }
+}

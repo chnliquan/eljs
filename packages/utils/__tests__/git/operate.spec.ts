@@ -7,10 +7,10 @@ import {
   type MockedFunction,
 } from 'vitest'
 import * as importedModule0 from '../../src/cp'
-import * as importedModule2 from '../../src/git/meta'
+import * as importedModule2 from '../../src/git/refs'
 import * as importedModule1 from '../../src/guards'
 
-import { gitCommit, gitPush, gitTag } from '../../src/git/operate'
+import { gitCommit, gitPush, gitTag } from '../../src/git/operations'
 
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
 const requiredModule2 = vi.mocked(importedModule2, { deep: true })
@@ -19,7 +19,7 @@ const requiredModule1 = vi.mocked(importedModule1, { deep: true })
 // Mock 依赖项
 vi.mock('../../src/cp')
 vi.mock('../../src/guards')
-vi.mock('../../src/git/meta')
+vi.mock('../../src/git/refs')
 
 describe('Git 操作工具', () => {
   const mockRun = requiredModule0.run as MockedFunction<

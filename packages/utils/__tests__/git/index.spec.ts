@@ -13,12 +13,12 @@ import * as importedModule0 from '../../src/env'
 import * as importedModule2 from '../../src/file'
 import * as importedModule3 from '../../src/guards'
 
-import type { ExecaReturnValue } from 'execa'
-import execa from 'execa'
+import { execa, type Result } from 'execa'
 import ini from 'ini'
 import path from 'node:path'
 
 import {
+  cloneGitRepository,
   downloadGitRepository,
   getGitBranch,
   getGitCommitSha,
@@ -57,13 +57,9 @@ describe('Git 工具函数', () => {
       (name: string) => Promise<boolean>
     >
   const mockRun = requiredModule1.run as Mock<
-    (
-      command: string,
-      args?: string[],
-      options?: object,
-    ) => Promise<ExecaReturnValue>
+    (command: string, args?: string[], options?: object) => Promise<Result>
   >
-  const mockIsPathExists = requiredModule2.isPathExists as Mock<
+  const mockIsPathExists = requiredModule2.pathExists as Mock<
     (path: string) => Promise<boolean>
   >
   const mockReadFile = requiredModule2.readFile as Mock<
@@ -72,12 +68,20 @@ describe('Git 工具函数', () => {
   const mockTmpdir = requiredModule2.tmpdir as unknown as Mock<
     () => Promise<string>
   >
+  const mockCreateTempDir = requiredModule2.createTempDir as unknown as Mock<
+    () => Promise<string>
+  >
+  const mockRemove = requiredModule2.remove as Mock<
+    typeof importedModule2.remove
+  >
   const mockIsObject = requiredModule3.isObject as Mock<
     (value: unknown) => boolean
   >
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockRemove.mockResolvedValue(true)
+    mockCreateTempDir.mockImplementation(() => mockTmpdir())
     mockIsObject.mockImplementation(
       value =>
         value !== null && typeof value === 'object' && !Array.isArray(value),
@@ -141,6 +145,32 @@ describe('Git 工具函数', () => {
 
         expect(result).toBe(false)
       })
+
+      it('应该在取消时终止 Git 检查并保留取消原因', async () => {
+        const controller = new AbortController()
+        const cancellation = new Error('cancelled')
+        let rejectChild: (error: Error) => void = () => {}
+        const child = Object.assign(
+          new Promise((_resolve, reject) => {
+            rejectChild = reject
+          }),
+          {
+            kill: vi.fn(() => {
+              rejectChild(new Error('terminated'))
+              return true
+            }),
+          },
+        )
+        mockExeca.mockReturnValue(child as unknown as ReturnType<typeof execa>)
+
+        const result = hasProjectGit('/project/path', {
+          signal: controller.signal,
+        })
+        controller.abort(cancellation)
+
+        await expect(result).rejects.toBe(cancellation)
+        expect(child.kill).toHaveBeenCalledWith('SIGTERM')
+      })
     })
   })
 
@@ -151,7 +181,7 @@ describe('Git 工具函数', () => {
           stdout: '',
           stderr: '',
           exitCode: 0,
-        } as ExecaReturnValue)
+        } as Result)
 
         const result = await isGitClean()
 
@@ -168,7 +198,7 @@ describe('Git 工具函数', () => {
           stdout: ' M file.js\n?? new-file.js',
           stderr: '',
           exitCode: 0,
-        } as ExecaReturnValue)
+        } as Result)
 
         const result = await isGitClean()
 
@@ -191,12 +221,12 @@ describe('Git 工具函数', () => {
             stdout: '',
             stderr: '',
             exitCode: 0,
-          } as ExecaReturnValue) // git fetch
+          } as Result) // git fetch
           .mockResolvedValueOnce({
             stdout: '## main...origin/main [behind 2]',
             stderr: '',
             exitCode: 0,
-          } as ExecaReturnValue) // git status
+          } as Result) // git status
 
         const result = await isGitBehindRemote()
 
@@ -209,12 +239,12 @@ describe('Git 工具函数', () => {
             stdout: '',
             stderr: '',
             exitCode: 0,
-          } as ExecaReturnValue) // git fetch
+          } as Result) // git fetch
           .mockResolvedValueOnce({
             stdout: '## main...origin/main',
             stderr: '',
             exitCode: 0,
-          } as ExecaReturnValue) // git status
+          } as Result) // git status
 
         const result = await isGitBehindRemote()
 
@@ -227,12 +257,12 @@ describe('Git 工具函数', () => {
             stdout: '',
             stderr: '',
             exitCode: 0,
-          } as ExecaReturnValue)
+          } as Result)
           .mockResolvedValueOnce({
             stdout: '## main...origin/main [落后 3]',
             stderr: '',
             exitCode: 0,
-          } as ExecaReturnValue)
+          } as Result)
 
         const result = await isGitBehindRemote()
 
@@ -247,12 +277,12 @@ describe('Git 工具函数', () => {
             stdout: '',
             stderr: '',
             exitCode: 0,
-          } as ExecaReturnValue) // git fetch
+          } as Result) // git fetch
           .mockResolvedValueOnce({
             stdout: '## main...origin/main [ahead 1]',
             stderr: '',
             exitCode: 0,
-          } as ExecaReturnValue) // git status
+          } as Result) // git status
 
         const result = await isGitAheadRemote()
 
@@ -265,12 +295,12 @@ describe('Git 工具函数', () => {
             stdout: '',
             stderr: '',
             exitCode: 0,
-          } as ExecaReturnValue) // git fetch
+          } as Result) // git fetch
           .mockResolvedValueOnce({
             stdout: '## main...origin/main',
             stderr: '',
             exitCode: 0,
-          } as ExecaReturnValue) // git status
+          } as Result) // git status
 
         const result = await isGitAheadRemote()
 
@@ -316,7 +346,7 @@ describe('Git 工具函数', () => {
           stdout: 'main\n',
           stderr: '',
           exitCode: 0,
-        } as ExecaReturnValue)
+        } as Result)
 
         const result = await getGitBranch()
 
@@ -335,7 +365,7 @@ describe('Git 工具函数', () => {
           stdout: 'abc123def456\n',
           stderr: '',
           exitCode: 0,
-        } as ExecaReturnValue)
+        } as Result)
 
         const result = await getGitCommitSha()
 
@@ -352,7 +382,7 @@ describe('Git 工具函数', () => {
           stdout: 'abc123d\n',
           stderr: '',
           exitCode: 0,
-        } as ExecaReturnValue)
+        } as Result)
 
         const result = await getGitCommitSha(true)
 
@@ -494,9 +524,9 @@ describe('Git 工具函数', () => {
           stdout: '',
           stderr: '',
           exitCode: 0,
-        } as ExecaReturnValue)
+        } as Result)
 
-        const result = await downloadGitRepository(
+        const result = await cloneGitRepository(
           'https://github.com/user/repo.git',
         )
 
@@ -504,14 +534,11 @@ describe('Git 工具函数', () => {
         expect(mockRun).toHaveBeenCalledWith(
           'git',
           [
-            'git',
             'clone',
-            'https://github.com/user/repo.git',
-            '-q',
-            '-b',
-            'master',
+            '--quiet',
             '--depth',
             '1',
+            'https://github.com/user/repo.git',
             'package',
           ],
           { cwd: tempDir },
@@ -524,7 +551,7 @@ describe('Git 工具函数', () => {
           stdout: '',
           stderr: '',
           exitCode: 0,
-        } as ExecaReturnValue)
+        } as Result)
 
         const result = await downloadGitRepository(
           'https://github.com/user/repo.git',
@@ -535,17 +562,45 @@ describe('Git 工具函数', () => {
         expect(mockRun).toHaveBeenCalledWith(
           'git',
           [
-            'git',
             'clone',
-            'https://github.com/user/repo.git',
-            '-q',
-            '-b',
-            'develop',
+            '--quiet',
             '--depth',
             '1',
+            '--branch',
+            'develop',
+            'https://github.com/user/repo.git',
             'package',
           ],
           { cwd: customDest },
+        )
+      })
+
+      it('应该解析地址片段并移除 npm 风格协议前缀', async () => {
+        const tempDir = '/tmp/test-dir'
+        mockTmpdir.mockResolvedValue(tempDir)
+        mockRun.mockResolvedValue({
+          stdout: '',
+          stderr: '',
+          exitCode: 0,
+        } as Result)
+
+        await downloadGitRepository(
+          'git+https://github.com/user/repo.git#feature%2Fcreate',
+        )
+
+        expect(mockRun).toHaveBeenCalledWith(
+          'git',
+          [
+            'clone',
+            '--quiet',
+            '--depth',
+            '1',
+            '--branch',
+            'feature/create',
+            'https://github.com/user/repo.git',
+            'package',
+          ],
+          { cwd: tempDir },
         )
       })
 
@@ -559,6 +614,7 @@ describe('Git 工具函数', () => {
         ).rejects.toThrow(
           'Download https://github.com/user/repo.git failed: 网络错误.',
         )
+        expect(mockRemove).toHaveBeenCalledWith(tempDir)
       })
     })
   })
@@ -570,7 +626,7 @@ describe('Git 工具函数', () => {
           stdout: '',
           stderr: '',
           exitCode: 0,
-        } as ExecaReturnValue)
+        } as Result)
 
         await gitCommit('测试提交')
 
@@ -588,7 +644,7 @@ describe('Git 工具函数', () => {
             stdout: '',
             stderr: '',
             exitCode: 0,
-          } as ExecaReturnValue) // git add
+          } as Result) // git add
           .mockRejectedValueOnce(
             new Error('nothing to commit, working tree clean'),
           )
@@ -602,7 +658,7 @@ describe('Git 工具函数', () => {
             stdout: '',
             stderr: '',
             exitCode: 0,
-          } as ExecaReturnValue) // git add
+          } as Result) // git add
           .mockRejectedValueOnce(new Error('权限被拒绝'))
 
         await expect(gitCommit('测试提交')).rejects.toThrow(
@@ -618,12 +674,12 @@ describe('Git 工具函数', () => {
             stdout: 'origin/main',
             stderr: '',
             exitCode: 0,
-          } as ExecaReturnValue) // getGitUpstreamBranch
+          } as Result) // getGitUpstreamBranch
           .mockResolvedValueOnce({
             stdout: '',
             stderr: '',
             exitCode: 0,
-          } as ExecaReturnValue) // git push
+          } as Result) // git push
 
         await gitPush()
 
@@ -637,12 +693,12 @@ describe('Git 工具函数', () => {
             stdout: 'feature-branch',
             stderr: '',
             exitCode: 0,
-          } as ExecaReturnValue) // getGitBranch
+          } as Result) // getGitBranch
           .mockResolvedValueOnce({
             stdout: '',
             stderr: '',
             exitCode: 0,
-          } as ExecaReturnValue) // git push
+          } as Result) // git push
 
         await gitPush()
 
@@ -660,7 +716,7 @@ describe('Git 工具函数', () => {
           stdout: '',
           stderr: '',
           exitCode: 0,
-        } as ExecaReturnValue)
+        } as Result)
 
         await gitTag('v1.0.0')
 

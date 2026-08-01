@@ -4,7 +4,7 @@ import path from 'node:path'
 import { c as createTar } from 'tar'
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
 
-import download from '../../src/http/download'
+import { downloadTo } from '../../src/http/download'
 
 const temporaryPaths: string[] = []
 
@@ -52,7 +52,7 @@ describe('download integration', () => {
       ),
     )
 
-    await download('https://example.com/package.tgz', destination, {
+    await downloadTo('https://example.com/package.tgz', destination, {
       extract: true,
       strip: 1,
     })

@@ -1,4 +1,4 @@
-import type { MaybePromise } from '@eljs/utils'
+import type { MaybePromise } from '@eljs/utils/types'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 import { PluginHostError, PluginHostErrorCode } from '../errors'

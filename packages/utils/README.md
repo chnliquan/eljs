@@ -1,562 +1,225 @@
 # @eljs/utils
 
-A comprehensive collection of Node.js utilities for modern development workflows.
+面向 Node.js 工具链、脚手架和自动化任务的 TypeScript 基础能力包。提供文件系统、子进程、HTTP 下载、Git、包管理器、模板生成、路径、日志与通用类型等能力。
 
 [![NPM Version](https://img.shields.io/npm/v/@eljs/utils.svg)](https://www.npmjs.com/package/@eljs/utils)
-[![NPM Downloads](https://img.shields.io/npm/dm/@eljs/utils.svg)](https://www.npmjs.com/package/@eljs/utils)
 [![License](https://img.shields.io/npm/l/@eljs/utils.svg)](https://github.com/chnliquan/eljs/blob/master/LICENSE)
 
-## ✨ Features
+## 运行要求
 
-- 🔄 **Cross-Platform** - Consistent behavior across different operating systems with platform-aware path handling
-- 🔗 **Dual API Design** - Both async and sync versions for maximum flexibility in different scenarios
-- 🎯 **Comprehensive Toolkit** - All-in-one collection covering file ops, git, npm, logging, and more
-- 🔒 **Type Safety** - Full TypeScript support with proper generics and runtime type guards
+- Node.js `>=22.14.0`
+- 支持 Windows、macOS 和 Linux
+- 同时发布 ESM、CommonJS 与 TypeScript 声明文件
 
-## 📦 Installation
+`sudo()` 依赖系统的 `sudo` 可执行文件，因此不支持 Windows；Windows 调用会得到 `ERR_UNSUPPORTED_PLATFORM`。其他跨平台能力由 CI 在 Windows、macOS 和 Linux 上验证。
+
+## 安装
 
 ```bash
-# Using pnpm (recommended)
 pnpm add @eljs/utils
-
-# Using yarn
-yarn add @eljs/utils
-
-# Using npm
-npm install @eljs/utils -S
 ```
 
-## 🚀 Quick Start
+也可以使用 npm 或 Yarn 安装。
 
-### Basic Import
+## 推荐导入方式
 
-```typescript
-import utils from '@eljs/utils'
+新代码优先从领域子路径导入，只加载当前功能需要的模块：
 
-// Or import specific modules
-import { readFile, logger, run } from '@eljs/utils'
+```ts
+import { readJson, writeJsonAtomic } from '@eljs/utils/file'
+import { run } from '@eljs/utils/cp'
+import { downloadTo } from '@eljs/utils/http'
+import type { PackageJson } from '@eljs/utils/types'
 ```
 
-### Common Use Cases
+根入口继续提供兼容导出：
 
-```typescript
-// File operations
-const config = await utils.readJson('./config.json')
-await utils.writeFile('./output.txt', 'Hello World')
-
-// Git operations
-const branch = await utils.getGitBranch()
-const isClean = await utils.isGitClean()
-
-// Process execution
-const result = await utils.run('npm install')
-
-// Logging
-utils.logger.info('Starting build process')
-utils.logger.success('Build completed')
+```ts
+import { logger, readJson, run } from '@eljs/utils'
 ```
 
-## 📖 API Reference
+第三方库应直接从其所属包导入，不建议通过 `@eljs/utils` 间接使用。
 
-### 🗂️ File System Operations
+## 领域入口
 
-#### File Reading
+| 子路径                      | 主要能力                                      |
+| --------------------------- | --------------------------------------------- |
+| `@eljs/utils/cli`           | 确认、暂停与交互提示                          |
+| `@eljs/utils/cp`            | 命令执行、可执行文件解析、PID 查询与 sudo     |
+| `@eljs/utils/env`           | 全局安装检测与环境能力                        |
+| `@eljs/utils/error`         | `UtilsError` 与稳定错误码                     |
+| `@eljs/utils/file`          | 读写、复制、移动、删除、模板渲染与配置加载    |
+| `@eljs/utils/generator`     | 模板生成器生命周期                            |
+| `@eljs/utils/git`           | Git 元信息、状态和常用操作                    |
+| `@eljs/utils/guards`        | 运行时类型守卫                                |
+| `@eljs/utils/http`          | 有界缓冲下载与流式落盘、解压                  |
+| `@eljs/utils/logger`        | CLI 日志与 debug 适配                         |
+| `@eljs/utils/module`        | Node 模块查找与同步加载                       |
+| `@eljs/utils/npm`           | npm 元数据、包管理器检测、安装和 tarball 下载 |
+| `@eljs/utils/object`        | 对象合并                                      |
+| `@eljs/utils/observability` | 可注入的结构化 logger/observer 类型           |
+| `@eljs/utils/path`          | 跨平台路径和工作区解析                        |
+| `@eljs/utils/promise`       | deferred、重试和计时器                        |
+| `@eljs/utils/string`        | 常用字符串格式转换                            |
+| `@eljs/utils/types`         | 公共 TypeScript 类型                          |
 
-```typescript
-// Read text files
-const content = await readFile('./config.txt')
-const contentSync = readFileSync('./config.txt')
+包只公开上述领域入口，不承诺 `file/loader` 等内部文件路径的兼容性。
 
-// Read JSON files with type safety
+## 常用示例
+
+### 文件与配置
+
+```ts
+import {
+  copyDirectory,
+  loadYaml,
+  readJson,
+  writeJsonAtomic,
+} from '@eljs/utils/file'
+
 interface Config {
-  port: number
-  host: string
+  output: string
 }
 
-const config = await readJson<Config>('./config.json')
-const configSync = readJsonSync<Config>('./config.json')
+const packageJson = await readJson('./package.json')
+const config = await loadYaml<Config>('./project.yaml')
+
+await copyDirectory('./template', config.output, {
+  packageName: packageJson.name,
+})
+await writeJsonAtomic('./generated/meta.json', { generated: true })
 ```
 
-#### File Writing
+`loadTs()`、`loadTsSync()` 与 `resolveTsConfig()` 会按需加载 TypeScript；普通文件工具不会主动加载 TypeScript 编译器。
 
-```typescript
-// Write text files
-await writeFile('./output.txt', 'Hello World')
-writeFileSync('./output.txt', 'Hello World')
+### 子进程
 
-// Safe writing (creates directories if needed)
-await safeWriteFile('./deep/path/file.txt', 'content')
+```ts
+import { findExecutable, run } from '@eljs/utils/cp'
 
-// Write JSON files
-await writeJsonFile('./data.json', { key: 'value' })
-await safe'./path/data.json', { key: 'value' })
-```
+const git = await findExecutable('git')
 
-#### File Operations
+if (!git) {
+  throw new Error('Git is required')
+}
 
-```typescript
-// Copy files and directories
-await copyFile('./source.txt', './destination.txt')
-await copyDirectory('./src', './dist', {}, { overwrite: true })
-
-// Template copying with data interpolation
-await copyTpl('./template.ejs', './output.html', {
-  title: 'My App',
-  version: '1.0.0',
+const result = await run(git, ['status', '--short'], {
+  cwd: process.cwd(),
+  signal: AbortSignal.timeout(30_000),
 })
 
-// Move and remove operations
-await move('./old-path', './new-path')
-await remove('./unwanted-file')
-
-// Directory operations
-await mkdir('./new-directory')
-const tmpDir = await tmpdir() // Creates temporary directory
+console.log(result.stdout)
 ```
 
-#### Path Checking
+命令和参数应分开传递。`runCommandLine()` 只处理空白分隔与反斜杠转义，不是完整的 shell 解析器；不支持 shell 管道、重定向或变量展开。
 
-```typescript
-// Check path types
-const isFileResult = await isFile('./path')
-const isDirResult = await isDirectory('./path')
-const isLinkResult = await isSymlink('./path')
-const existsResult = await isPathExists('./path')
-```
+## API 命名迁移
 
-#### Dynamic Module Loading
+为使函数名直接表达行为，新代码应使用下列名称。旧名称仍保留为废弃兼容别名，本版本不会立即移除：
 
-```typescript
-// Load different file types
-const jsModule = await loadJs<MyModule>('./module.js')
-const tsModule = await loadTs<MyModule>('./module.ts')
-const yamlData = await loadYaml<ConfigType>('./config.yaml')
-```
+| 推荐名称                    | 兼容旧名称              |
+| --------------------------- | ----------------------- |
+| `createTempDir`             | `tmpdir`                |
+| `createTempDirSync`         | `tmpdirSync`            |
+| `statPath` / `statPathSync` | `fstat` / `fstatSync`   |
+| `pathExists`                | `isPathExists`          |
+| `writeFileAtomic`           | `safeWriteFile`         |
+| `writeJsonAtomic`           | `safeWriteJson`         |
+| `copyTemplate`              | `copyTpl`               |
+| `findExecutable`            | `getExecutableCommand`  |
+| `findProcessId`             | `getPid`                |
+| `parseCommandLine`          | `parseCommand`          |
+| `runCommandLine`            | `runCommand`            |
+| `cloneGitRepository`        | `downloadGitRepository` |
+| `parseGitRemoteUrl`         | `gitUrlAnalysis`        |
+| `parsePackageSpecifier`     | `pkgNameAnalysis`       |
+| `findExistingPath`          | `tryPaths`              |
+| `getCallerDirectory`        | `extractCallDir`        |
+| `getWorkspacePackageRoots`  | `getWorkspaces`         |
+| `toPosixPath`               | `winPath`               |
 
-### 📝 Logger
+兼容别名会委托给同一个实现；其中 `tmpdirSync()` 已修正为真正的同步返回值。升级时若旧代码曾对它使用 `await`，删除 `await` 即可。
 
-#### Basic Logging
+### 有界下载与流式解压
 
-```typescript
-import { logger } from '@eljs/utils'
+```ts
+import { download, downloadTo } from '@eljs/utils/http'
 
-// Different log levels
-logger.log('General message')
-logger.info('Information message')
-logger.warn('Warning message')
-logger.error('Error message')
-logger.fatal('Fatal error message')
-
-// Special purpose logging
-logger.event('User logged in')
-logger.wait('Processing...')
-logger.ready('Server is ready')
-
-// Step-based logging
-const step = logger.step('Build')
-step('Compiling TypeScript...')
-step('Bundling assets...')
-
-// Or one-liner
-logger.step('Deploy', 'Uploading to server...')
-```
-
-#### Advanced Logger Usage
-
-```typescript
-// Clear console output
-logger.clear('Starting fresh...')
-
-// Error handling with exit
-logger.printErrorAndExit('Critical error occurred')
-
-// Example: Build process logging
-class BuildService {
-  async build() {
-    const buildStep = logger.step('Build Process')
-
-    try {
-      buildStep('Installing dependencies...')
-      await utils.run('npm install')
-
-      buildStep('Compiling TypeScript...')
-      await utils.run('tsc')
-
-      buildStep('Running tests...')
-      await utils.run('npm test')
-
-      logger.ready('Build completed successfully!')
-    } catch (error) {
-      logger.error(`Build failed: ${error.message}`)
-      throw error
-    }
-  }
-}
-```
-
-### ⚡ Process Management
-
-#### Command Execution
-
-```typescript
-// Simple command execution
-const result = await run('git status')
-const npmList = await run('npm', ['list', '--depth=0'])
-
-// With options
-const output = await runCommand('ls -la', {
-  cwd: './my-directory',
-  env: { NODE_ENV: 'production' },
+// 小响应：返回 Buffer，默认最多 100 MiB
+const manifest = await download('https://example.com/manifest.json', {
+  maxBytes: 1024 * 1024,
 })
 
-// Parse command strings
-const args = parseCommand('npm run build --production')
-// Returns: ['npm', 'run', 'build', '--production']
+// 大文件：直接流入 tar 解压管道，不把完整响应保存在内存中
+await downloadTo('https://example.com/package.tgz', './package', {
+  extract: true,
+  strip: 1,
+  maxBytes: 500 * 1024 * 1024,
+  maxEntries: 20_000,
+  integrity: 'sha512-<base64-digest>',
+  signal: AbortSignal.timeout(30_000),
+})
+
+console.log(manifest.byteLength)
 ```
 
-#### Process Utilities
+`maxBytes: 0` 和 `maxEntries: 0` 表示不限制，只有在上层已经限制资源规模时才建议使用。`integrity` 使用 SRI 格式；不匹配时返回 `ERR_DOWNLOAD_INTEGRITY`。
 
-```typescript
-// Find executable commands
-const gitPath = await getExecutableCommand('git')
-const nodePath = await getExecutableCommand('node', [
-  '/usr/bin',
-  '/usr/local/bin',
-])
+### 结构化错误与观测
 
-// Get process information
-const pid = await getPid('node server.js')
+```ts
+import { run } from '@eljs/utils/cp'
+import { UtilsError } from '@eljs/utils/error'
+import type { UtilsRuntime } from '@eljs/utils/observability'
 
-// Execute with sudo
-await sudo(['npm', 'install', '-g', 'typescript'])
-```
-
-#### Real-World Example
-
-```typescript
-class DeploymentService {
-  async deploy() {
-    logger.info('Starting deployment...')
-
-    // Check if git is clean
-    if (!(await utils.isGitClean())) {
-      throw new Error('Git working tree is not clean')
-    }
-
-    // Build the project
-    await utils.run('npm run build')
-
-    // Deploy to server
-    await utils.run('rsync -av dist/ user@server:/var/www/')
-
-    logger.ready('Deployment completed!')
-  }
-}
-```
-
-### 🌿 Git Integration
-
-#### Repository Information
-
-```typescript
-// Get repository details
-const repo = await getGitRepository('./my-project')
-const url = await getGitUrl('./my-project')
-const branch = await getGitBranch()
-const commit = await getGitCommitSha()
-const tag = await getGitLatestTag()
-
-// Check repository status
-const isClean = await isGitClean()
-const isBehind = await isGitBehindRemote()
-const isAhead = await isGitAheadRemote()
-```
-
-#### Git Operations
-
-```typescript
-// Commit and push
-await gitCommit('feat: add new feature')
-await gitCommit('fix: bug fix', ['--amend'])
-await gitPush()
-await gitTag('v1.0.0')
-
-// Download repositories
-const tempPath = await downloadGitRepository(
-  'https://github.com/user/repo.git',
-  { branch: 'main', depth: 1 },
-)
-```
-
-#### Git Analysis
-
-```typescript
-// Parse git URLs
-const repoInfo = gitUrlAnalysis('https://github.com/user/repo.git')
-// Returns: { host: 'github.com', owner: 'user', name: 'repo' }
-
-// Get git user information
-const user = await getGitUser()
-// Returns: { name: 'John Doe', email: 'john@example.com' }
-```
-
-#### Example: Release Automation
-
-```typescript
-class ReleaseService {
-  async release(version: string) {
-    // Validate git status
-    if (!(await utils.isGitClean())) {
-      throw new Error('Working tree is not clean')
-    }
-
-    // Update version and build
-    await utils.run(`npm version ${version}`)
-    await utils.run('npm run build')
-
-    // Commit and tag
-    await utils.gitCommit(`chore: release v${version}`)
-    await utils.gitTag(`v${version}`)
-
-    // Push to remote
-    await utils.gitPush(['--follow-tags'])
-
-    logger.ready(`Release v${version} completed!`)
-  }
-}
-```
-
-### 📦 Package Management
-
-#### NPM Operations
-
-```typescript
-// Get registry and user information
-const registry = await getNpmRegistry()
-const user = await getNpmUser()
-const prefix = await getNpmPrefix()
-
-// Package information
-const packageInfo = await getNpmPackage('@eljs/utils')
-const specificVersion = await getNpmPackage('@eljs/utils', { version: '1.0.0' })
-
-// Download packages
-const tarballPath = await downloadNpmTarball(
-  'https://registry.npmjs.org/@eljs/utils/-/utils-1.0.0.tgz',
-  './downloads',
-)
-```
-
-#### Package Manager Detection
-
-```typescript
-// Auto-detect package manager
-const packageManager = await getPackageManager()
-// Returns: 'npm' | 'yarn' | 'pnpm' | 'bun'
-
-// Install dependencies with detected package manager
-await installDeps()
-await installDeps('pnpm', { production: true })
-```
-
-#### Package Name Analysis
-
-```typescript
-// Parse package names
-const parsed = pkgNameAnalysis('@scope/package-name')
-// Returns: { scope: 'scope', name: 'package-name', fullName: '@scope/package-name' }
-```
-
-#### Example: Dependency Management
-
-```typescript
-class DependencyService {
-  async updateDependencies() {
-    const packageManager = await utils.getPackageManager()
-
-    logger.info(`Using ${packageManager} to update dependencies...`)
-
-    switch (packageManager) {
-      case 'pnpm':
-        await utils.run('pnpm update')
-        break
-      case 'yarn':
-        await utils.run('yarn upgrade')
-        break
-      default:
-        await utils.run('npm update')
-    }
-
-    logger.ready('Dependencies updated successfully!')
-  }
-}
-```
-
-### 🔗 Object Utilities
-
-#### Deep Merging
-
-```typescript
-// Merge objects deeply
-const config = deepMerge(
-  { server: { port: 3000 } },
-  { server: { host: 'localhost' }, database: { url: 'mongodb://...' } },
-)
-// Result: { server: { port: 3000, host: 'localhost' }, database: { url: 'mongodb://...' } }
-
-// Multiple object merging
-const result = deepMerge(obj1, obj2, obj3, obj4, obj5, obj6)
-```
-
-#### Usage Example
-
-```typescript
-interface Config {
-  server: { host: string; port: number; ssl?: boolean }
-  database: { url: string; poolSize?: number }
-}
-
-const defaultConfig: Config = {
-  server: { host: 'localhost', port: 3000 },
-  database: { url: 'mongodb://localhost', poolSize: 10 },
-}
-
-const userConfig = await utils.readJson<Partial<Config>>('./config.json')
-const finalConfig = utils.deepMerge(defaultConfig, userConfig)
-```
-
-### 📍 Path Resolution
-
-#### Workspace Detection
-
-```typescript
-// Find workspace root
-const workspaceRoot = await getWorkspaceRoot(process.cwd())
-const workspaces = await getWorkspaces('./monorepo-root')
-
-// Package manager specific detection
-const pnpmRoot = await getPnpmWorkspaceRoot('./project')
-const yarnRoot = await getYarnWorkspaceRoot('./project')
-const lernaRoot = await getLernaWorkspaceRoot('./project')
-```
-
-#### Path Utilities
-
-```typescript
-// Convert Windows paths
-const normalizedPath = winPath('C:\\Users\\Documents\\file.txt')
-// Returns: 'C:/Users/Documents/file.txt'
-
-// Find existing paths
-const configPath = await tryPaths([
-  './config.json',
-  './config.js',
-  './config.yaml',
-])
-
-// Extract call directory
-const callerDir = extractCallDir() // Gets directory where function is called
-```
-
-### ⏳ Promise Helpers
-
-#### Deferred Promises
-
-```typescript
-// Create deferred promise
-const deferred = new Deferred<string>()
-
-// Use in async operations
-setTimeout(() => {
-  deferred.resolve('Operation completed')
-}, 1000)
-
-const result = await deferred.promise
-```
-
-#### Retry Logic
-
-```typescript
-// Retry failed operations
-const data = await retry(
-  async () => {
-    const response = await fetch('/api/data')
-    if (!response.ok) throw new Error('Request failed')
-    return response.json()
+const runtime: UtilsRuntime = {
+  logger(entry) {
+    console.log(JSON.stringify(entry))
   },
-  3,
-  1000,
-) // 3 retries with 1000ms delay
-
-// Retry until non-null value
-const config = await retryWithValue(
-  async () => {
-    return await loadConfig() // Returns null on failure
+  observer(event) {
+    metrics.record(event.operation, event.phase, event.durationMs)
   },
-  5,
-  500,
-)
-```
+}
 
-#### Timing Utilities
-
-```typescript
-// Sleep/delay
-await sleep(2000) // Wait 2 seconds
-
-// Timeout wrapper
-const result = await timeout(
-  slowOperation(),
-  5000,
-  'Operation timed out after 5 seconds',
-)
-```
-
-### 🔤 String Manipulation
-
-#### Case Conversion
-
-```typescript
-// Different case formats
-const camel = camelCase('hello-world-example') // 'helloWorldExample'
-const pascal = pascalCase('hello-world-example') // 'HelloWorldExample'
-const kebab = kebabCase('helloWorldExample') // 'hello-world-example'
-
-// Text processing
-const cleanText = stripBlankLines(`
-  Line 1
-  
-  
-  Line 2
-  
-  Line 3
-`) // Removes empty lines
-```
-
-### 🔍 Type Guards
-
-#### Runtime Type Checking
-
-```typescript
-// Type validation
-const isPromiseResult = isPromise(someValue)
-const isGeneratorResult = isGenerator(someFunction)
-const isAsyncResult = isAsyncFunction(someFunction)
-const isESModuleResult = isESModule(someModule)
-```
-
-#### Practical Usage
-
-```typescript
-async function handleValue(value: unknown) {
-  if (utils.isPromise(value)) {
-    return await value
+try {
+  await run('node', ['--version'], { runtime, verbose: true })
+} catch (error) {
+  if (error instanceof UtilsError) {
+    console.error(error.code, error.operation, error.details)
   }
-
-  if (utils.isAsyncFunction(value)) {
-    return await value()
-  }
-
-  return value
+  throw error
 }
 ```
+
+`runtime` 是调用级依赖，不修改全局状态。logger 或 observer 自身抛出的异常会被隔离，不会改变原操作结果。下载和 sudo 已提供稳定错误码；底层第三方异常在尚未归一化时仍可能原样抛出。
+
+## 本地开发
+
+在仓库根目录执行：
+
+```bash
+pnpm install --frozen-lockfile
+pnpm --filter @eljs/utils typecheck
+pnpm exec vitest run packages/utils
+pnpm --filter @eljs/utils build
+```
+
+构建产物位于 `packages/utils/dist`，包含 ESM、CommonJS 和声明文件。提交前还应执行：
+
+```bash
+pnpm exec eslint packages/utils/src packages/utils/__tests__ --max-warnings=0
+pnpm exec prettier --check packages/utils
+```
+
+## 设计约定
+
+- 新的公共 API 必须提供中文 TSDoc 和回归测试
+- 异步 API 完成时代表底层 I/O 或子进程生命周期已经结束
+- Windows 路径不得假设 `/` 或 `:` 为平台分隔符
+- 下载、进程与外部输入边界优先返回带稳定错误码的 `UtilsError`
+- 观测能力保持厂商中立，由具体运行环境注入适配器
+- 新能力通过领域入口公开，避免新增内部文件级导出
+
+## License
+
+[MIT](../../LICENSE)

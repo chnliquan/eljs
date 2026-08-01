@@ -17,9 +17,14 @@ describe('Utils 工具函数测试', () => {
     })
 
     it('应该处理没有扩展名的文件', () => {
-      // addFileExt 函数在没有找到 '.' 时会将扩展名插入到字符串末尾
-      expect(addFileExt('config', 'dev')).toBe('confi.devg')
-      expect(addFileExt('README', 'backup')).toBe('READM.backupE')
+      expect(addFileExt('config', 'dev')).toBe('config.dev')
+      expect(addFileExt('README', 'backup')).toBe('README.backup')
+    })
+
+    it('不应该把父目录中的点当作文件扩展名', () => {
+      expect(addFileExt('/path.with.dot/config', 'dev')).toBe(
+        '/path.with.dot/config.dev',
+      )
     })
 
     it('应该处理复杂文件路径', () => {
@@ -37,7 +42,7 @@ describe('Utils 工具函数测试', () => {
     })
 
     it('应该处理空扩展名', () => {
-      expect(addFileExt('config.ts', '')).toBe('config..ts')
+      expect(addFileExt('config.ts', '')).toBe('config.ts')
     })
 
     it('应该处理特殊字符', () => {

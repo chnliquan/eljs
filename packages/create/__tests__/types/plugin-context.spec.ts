@@ -6,9 +6,16 @@ import type {
 } from '@eljs/utils'
 import { describe, expect, it, vi } from 'vitest'
 
-import type { CreatePluginContext } from '../../src/types/plugin-context'
+import type { Api, CreatePluginContext } from '../../src/types/plugin-context'
 
 describe('CreatePluginContext 类型', () => {
+  it('应该保留 Api 类型兼容别名', () => {
+    const context = {} as CreatePluginContext
+    const legacyContext: Api = context
+
+    expect(legacyContext).toBe(context)
+  })
+
   it('应该具有正确的 CreatePluginContext 类型结构', () => {
     // Test that CreatePluginContext type extends the expected base types
     const mockContext: Partial<CreatePluginContext> = {

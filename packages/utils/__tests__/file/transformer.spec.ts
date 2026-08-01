@@ -500,10 +500,35 @@ describe('文件转换器工具', () => {
       transformer.apply()
       expect(mockAddHook).toHaveBeenCalledTimes(2)
 
-      // 恢复应该调用最后一次的 revert 函数
+      // 重复应用时应先释放旧 Hook，最终再释放当前 Hook
       transformer.revert()
       expect(secondRevert).toHaveBeenCalled()
-      expect(firstRevert).not.toHaveBeenCalled()
+      expect(firstRevert).toHaveBeenCalledTimes(1)
+    })
+
+    it('apply 返回的释放函数应该幂等', () => {
+      const dispose = transformer.apply()
+
+      dispose()
+      dispose()
+
+      expect(mockRevertFunction).toHaveBeenCalledTimes(1)
+    })
+
+    it('旧释放函数不应该移除之后安装的新 Hook', () => {
+      const firstRevert = vi.fn()
+      const secondRevert = vi.fn()
+      mockAddHook
+        .mockReturnValueOnce(firstRevert)
+        .mockReturnValueOnce(secondRevert)
+
+      const disposeFirst = transformer.apply()
+      transformer.apply()
+      disposeFirst()
+      transformer.revert()
+
+      expect(firstRevert).toHaveBeenCalledTimes(1)
+      expect(secondRevert).toHaveBeenCalledTimes(1)
     })
   })
 

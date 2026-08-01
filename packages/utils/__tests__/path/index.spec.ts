@@ -10,19 +10,25 @@ import {
   type MockedFunction,
 } from 'vitest'
 import * as importedModule3 from '../../src/file'
-import * as importedModule4 from '../../src/npm'
+import * as importedModule4 from '../../src/npm/package-manager'
 
 import * as path from 'node:path'
+import { clearWorkspaceCache } from '../../src/path/workspace-cache'
 
 import {
   extractCallDir,
+  findExistingPath,
+  findExistingPathSync,
   getBunWorkspaceRoot,
+  getCallerDirectory,
   getLernaWorkspaceRoot,
   getNpmWorkspaceRoot,
   getPnpmWorkspaceRoot,
+  getWorkspacePackageRoots,
   getWorkspaceRoot,
   getWorkspaces,
   getYarnWorkspaceRoot,
+  toPosixPath,
   tryPaths,
   tryPathsSync,
   winPath,
@@ -39,10 +45,10 @@ vi.mock('find-up')
 vi.mock('glob')
 vi.mock('js-yaml')
 vi.mock('../../src/file')
-vi.mock('../../src/npm')
+vi.mock('../../src/npm/package-manager')
 
 describe('路径工具函数', () => {
-  const mockFindUp = requiredModule0.default as unknown as MockedFunction<
+  const mockFindUp = requiredModule0.findUp as unknown as MockedFunction<
     (
       patterns: string[],
       options: { cwd: string },
@@ -54,13 +60,12 @@ describe('路径工具函数', () => {
   const mockYaml = requiredModule2 as {
     load: MockedFunction<(content: string) => unknown>
   }
-  const mockIsPathExists = requiredModule3.isPathExists as MockedFunction<
+  const mockIsPathExists = requiredModule3.pathExists as MockedFunction<
     (path: string) => Promise<boolean>
   >
-  const mockIsPathExistsSync =
-    requiredModule3.isPathExistsSync as MockedFunction<
-      (path: string) => boolean
-    >
+  const mockIsPathExistsSync = requiredModule3.pathExistsSync as MockedFunction<
+    (path: string) => boolean
+  >
   const mockReadFile = requiredModule3.readFile as MockedFunction<
     (path: string) => Promise<string>
   >
@@ -74,6 +79,19 @@ describe('路径工具函数', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    clearWorkspaceCache()
+  })
+
+  describe('推荐 API 名称', () => {
+    it('应该使用清晰名称完成路径查找和转换', async () => {
+      mockIsPathExists.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+      mockIsPathExistsSync.mockReturnValue(true)
+
+      await expect(findExistingPath(['/no', '/yes'])).resolves.toBe('/yes')
+      expect(findExistingPathSync(['/yes'])).toBe('/yes')
+      expect(toPosixPath('C:\\project\\file.ts')).toBe('C:/project/file.ts')
+      expect(typeof getCallerDirectory()).toBe('string')
+    })
   })
 
   describe('winPath Windows 路径转换', () => {
@@ -293,7 +311,7 @@ describe('路径工具函数', () => {
       mockReadJson.mockResolvedValue({ workspaces: ['packages/*'] })
       mockGlob.sync.mockReturnValue(['packages/app'])
 
-      const result = await getWorkspaces('/project')
+      const result = await getWorkspacePackageRoots('/project')
 
       expect(result).toEqual(['/project/packages/app'])
     })
@@ -399,6 +417,19 @@ describe('路径工具函数', () => {
 
       // 验证缓存有效
       expect(mockGetPackageManager).toHaveBeenCalledTimes(1)
+    })
+
+    it('应该分别缓存相对路径和绝对路径结果', async () => {
+      mockGetPackageManager.mockResolvedValue('npm')
+      mockReadJson.mockResolvedValue({ workspaces: ['packages/*'] })
+      mockGlob.sync.mockReturnValue(['packages/cached'])
+
+      const absolute = await getWorkspaces('/cache-mode')
+      const relative = await getWorkspaces('/cache-mode', true)
+
+      expect(absolute).toEqual(['/cache-mode/packages/cached'])
+      expect(relative).toEqual(['packages/cached'])
+      expect(mockGetPackageManager).toHaveBeenCalledTimes(2)
     })
   })
 

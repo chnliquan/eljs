@@ -12,6 +12,7 @@ const { mockUtils } = vi.hoisted(() => ({
   },
 }))
 
+vi.mock('@eljs/utils/git', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils', () => mockUtils)
 
 describe('内部工具', () => {

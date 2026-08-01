@@ -28,11 +28,13 @@ export class HookExecutor {
    * @param _hooks - Hook 注册表
    * @param _plugins - 插件注册表
    * @param _schema - Hook 运行时契约
+   * @param _signal - 用于在 Hook 边界停止执行的取消信号
    */
   public constructor(
     private readonly _hooks: HookRegistry,
     private readonly _plugins: PluginRegistry,
     private readonly _schema: HookSchema,
+    private readonly _signal?: AbortSignal,
   ) {}
 
   /**
@@ -48,6 +50,8 @@ export class HookExecutor {
     key: string,
     options: LooseHookRunOptions<unknown, unknown> = {},
   ): Promise<unknown> {
+    this._throwIfAborted(key)
+
     if (typeof key !== 'string' || !key.trim()) {
       throw new PluginHostError(
         PluginHostErrorCode.InvalidHook,
@@ -274,14 +278,23 @@ export class HookExecutor {
     key: string,
     fn: () => T | Promise<T>,
   ): Promise<T> {
+    this._throwIfAborted(key)
     const startTime = performance.now()
     let failed = true
 
     try {
       const result = await fn()
+      this._throwIfAborted(key)
       failed = false
       return result
     } catch (error) {
+      if (
+        error instanceof PluginHostError &&
+        error.code === PluginHostErrorCode.OperationAborted
+      ) {
+        throw error
+      }
+
       throw new PluginHostError(
         PluginHostErrorCode.HookExecutionFailed,
         `Run hook \`${key}\` from plugin \`${hook.plugin.key}\` failed: ${
@@ -303,6 +316,25 @@ export class HookExecutor {
         performance.now() - startTime,
         failed,
         HookExecutor._timingSampleLimit,
+      )
+    }
+  }
+
+  /**
+   * 在 Hook 边界将取消信号转换为稳定领域错误
+   *
+   * @param hookKey - 当前 Hook key
+   * @throws {@link PluginHostError} 调用方已经取消时抛出
+   */
+  private _throwIfAborted(hookKey: string): void {
+    if (this._signal?.aborted) {
+      throw new PluginHostError(
+        PluginHostErrorCode.OperationAborted,
+        `Run hook \`${hookKey}\` was aborted.`,
+        {
+          cause: this._signal.reason,
+          details: { hookKey },
+        },
       )
     }
   }

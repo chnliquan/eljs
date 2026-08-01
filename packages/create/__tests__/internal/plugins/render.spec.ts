@@ -28,6 +28,8 @@ interface MockPath {
 }
 
 // Mock @eljs/utils
+vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/path', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils', () => ({
   extractCallDir: vi.fn(() => '/base/dir'),
   isDirectory: vi.fn(),

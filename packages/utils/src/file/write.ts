@@ -3,7 +3,7 @@ import fsp from 'node:fs/promises'
 import { EOL } from 'node:os'
 import { v4 } from 'uuid'
 
-import { isPathExists, isPathExistsSync } from './is'
+import { pathExists, pathExistsSync } from './is'
 
 /**
  * 写入文件内容
@@ -46,12 +46,13 @@ export function writeFileSync(
 }
 
 /**
- * 安全写入文件
+ * 原子写入文件
  * @param path - 文件路径
  * @param content - 文件内容
  * @param encoding - 文件编码
+ * @returns 重命名临时文件完成后结束
  */
-export async function safeWriteFile(
+export async function writeFileAtomic(
   path: string,
   content: string,
   encoding: BufferEncoding = 'utf8',
@@ -63,7 +64,7 @@ export async function safeWriteFile(
     await fsp.rename(tmpFile, path)
   } catch (error) {
     // 如果发生异常, 就将 tmpFile 删除掉
-    if (await isPathExists(tmpFile)) {
+    if (await pathExists(tmpFile)) {
       await fsp.unlink(tmpFile)
     }
 
@@ -72,12 +73,12 @@ export async function safeWriteFile(
 }
 
 /**
- * 安全写入文件
+ * 同步原子写入文件
  * @param path - 文件路径
  * @param content - 文件内容
  * @param encoding - 文件编码
  */
-export function safeWriteFileSync(
+export function writeFileAtomicSync(
   path: string,
   content: string,
   encoding: BufferEncoding = 'utf8',
@@ -89,7 +90,7 @@ export function safeWriteFileSync(
     fs.renameSync(tmpFile, path)
   } catch (error) {
     // 如果发生异常, 就将 tmpFile 删除掉
-    if (isPathExistsSync(tmpFile)) {
+    if (pathExistsSync(tmpFile)) {
       fs.unlinkSync(tmpFile)
     }
 
@@ -134,11 +135,12 @@ export function writeJsonSync<T extends object>(
 }
 
 /**
- * 安全写入 Json 文件
+ * 原子写入 JSON 文件
  * @param path - 文件路径
  * @param data - 文件内容
+ * @returns 重命名临时文件完成后结束
  */
-export async function safeWriteJson<T extends object>(
+export async function writeJsonAtomic<T extends object>(
   path: string,
   data: T,
 ): Promise<void> {
@@ -149,7 +151,7 @@ export async function safeWriteJson<T extends object>(
     await fsp.rename(tmpFile, path)
   } catch (error) {
     // 如果发生异常, 就将 tmpFile 删除掉
-    if (await isPathExists(tmpFile)) {
+    if (await pathExists(tmpFile)) {
       await fsp.unlink(tmpFile)
     }
 
@@ -158,11 +160,11 @@ export async function safeWriteJson<T extends object>(
 }
 
 /**
- * 安全写入 Json 文件
- * @param file - 文件路径
+ * 同步原子写入 JSON 文件
+ * @param path - 文件路径
  * @param data - 文件内容
  */
-export function safeWriteJsonSync<T extends object>(
+export function writeJsonAtomicSync<T extends object>(
   path: string,
   data: T,
 ): void {
@@ -173,10 +175,68 @@ export function safeWriteJsonSync<T extends object>(
     fs.renameSync(tmpFile, path)
   } catch (error) {
     // 如果发生异常, 就将 tmpFile 删除掉
-    if (isPathExistsSync(tmpFile)) {
+    if (pathExistsSync(tmpFile)) {
       fs.unlinkSync(tmpFile)
     }
 
     throw error
   }
+}
+
+/**
+ * 原子写入文件
+ * @param path - 文件路径
+ * @param content - 文件内容
+ * @param encoding - 文件编码
+ * @returns 写入完成后结束
+ * @deprecated 请改用 {@link writeFileAtomic}
+ */
+export function safeWriteFile(
+  path: string,
+  content: string,
+  encoding: BufferEncoding = 'utf8',
+): Promise<void> {
+  return writeFileAtomic(path, content, encoding)
+}
+
+/**
+ * 同步原子写入文件
+ * @param path - 文件路径
+ * @param content - 文件内容
+ * @param encoding - 文件编码
+ * @deprecated 请改用 {@link writeFileAtomicSync}
+ */
+export function safeWriteFileSync(
+  path: string,
+  content: string,
+  encoding: BufferEncoding = 'utf8',
+): void {
+  writeFileAtomicSync(path, content, encoding)
+}
+
+/**
+ * 原子写入 JSON 文件
+ * @param path - 文件路径
+ * @param data - 文件内容
+ * @returns 写入完成后结束
+ * @deprecated 请改用 {@link writeJsonAtomic}
+ */
+export function safeWriteJson<T extends object>(
+  path: string,
+  data: T,
+): Promise<void> {
+  return writeJsonAtomic(path, data)
+}
+
+/**
+ * 同步原子写入 JSON 文件
+ * @param path - 文件路径
+ * @param data - 文件内容
+ * @deprecated 请改用 {@link writeJsonAtomicSync}
+ */
+export function safeWriteJsonSync<T extends object>(
+  path: string,
+  data: T,
+): void {
+  writeJsonAtomicSync(path, data)
 }

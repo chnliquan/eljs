@@ -14,6 +14,12 @@ import builtInPlugin from '../../../src/internal/plugins/built-in'
 import type { CreatePluginContext } from '../../../src/types'
 
 // Mock @eljs/utils
+vi.mock('@eljs/utils/cp', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/guards', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/npm', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/object', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils', () => ({
   chalk: {
     cyan: { bold: (str: string) => `CYAN_BOLD(${str})` },
@@ -276,6 +282,20 @@ describe('内部插件 built-in', () => {
 
       expect(mockUtils.install).toHaveBeenCalledWith('pnpm', [], {
         cwd: '/test/project',
+        stdout: 'inherit',
+      })
+    })
+
+    it('应该默认把创建流程的取消信号传给安装命令', async () => {
+      const controller = new AbortController()
+      mockContext.config.signal = controller.signal
+      builtInPlugin(mockContext)
+
+      await installCallback()
+
+      expect(mockUtils.install).toHaveBeenCalledWith('pnpm', [], {
+        cwd: '/test/project',
+        signal: controller.signal,
         stdout: 'inherit',
       })
     })

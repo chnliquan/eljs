@@ -11,6 +11,10 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: /^@eljs\/([^/]+)\/(.+)$/,
+        replacement: path.join(repoRoot, 'packages/$1/src/$2'),
+      },
+      {
         find: /^@eljs\/(.+)$/,
         replacement: path.join(repoRoot, 'packages/$1/src'),
       },
@@ -46,6 +50,24 @@ export default defineConfig({
         functions: 80,
         lines: 80,
         statements: 80,
+        'packages/create/src/core/project-creator.ts': {
+          branches: 85,
+          functions: 90,
+          lines: 90,
+          statements: 90,
+        },
+        'packages/plugin-host/src/core/**.ts': {
+          branches: 90,
+          functions: 95,
+          lines: 95,
+          statements: 95,
+        },
+        'packages/utils/src/http/**.ts': {
+          branches: 85,
+          functions: 90,
+          lines: 90,
+          statements: 90,
+        },
       },
     },
   },

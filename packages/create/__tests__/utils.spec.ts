@@ -11,6 +11,7 @@ import {
 import { AppError, onCancel } from '../src/utils'
 
 // Mock @eljs/utils
+vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils', () => ({
   logger: {
     event: vi.fn(),
@@ -22,7 +23,6 @@ const mockedEljs = eljsUtils as Mocked<typeof eljsUtils>
 describe('工具函数模块', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.spyOn(process, 'exit').mockImplementation(() => undefined as never)
   })
 
   afterEach(() => {
@@ -88,25 +88,25 @@ describe('工具函数模块', () => {
     })
 
     it('应该调用 logger.event 记录正确的信息', () => {
-      onCancel()
+      expect(() => onCancel()).toThrow(AppError)
 
       expect(mockedEljs.logger.event).toHaveBeenCalledTimes(1)
       expect(mockedEljs.logger.event).toHaveBeenCalledWith('Cancel create')
     })
 
-    it('应该调用 process.exit 并传入退出码 0', () => {
-      onCancel()
-
-      expect(process.exit).toHaveBeenCalledTimes(1)
-      expect(process.exit).toHaveBeenCalledWith(0)
+    it('应该抛出稳定的用户取消错误', () => {
+      expect(() => onCancel()).toThrow(
+        expect.objectContaining({
+          code: 'CREATE_OPERATION_CANCELLED',
+          name: 'AppError',
+        }),
+      )
     })
 
-    it('应该在退出进程前记录日志', () => {
-      // 验证 logger.event 和 process.exit 都被调用
-      onCancel()
+    it('应该在抛出取消错误前记录日志', () => {
+      expect(() => onCancel()).toThrow(AppError)
 
       expect(mockedEljs.logger.event).toHaveBeenCalledWith('Cancel create')
-      expect(process.exit).toHaveBeenCalledWith(0)
     })
   })
 })

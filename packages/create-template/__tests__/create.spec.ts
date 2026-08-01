@@ -7,20 +7,22 @@ import {
   type MockedClass,
   type MockedFunction,
 } from 'vitest'
-import { defaultConfig } from '../src/config'
+import { defaultConfig, type TemplateConfig } from '../src/config'
 import { CreateTemplate, type CreateTemplateOptions } from '../src/create'
 
 // 导入 mock 后的模块
 import { ProjectCreator } from '@eljs/create'
 import { prompts } from '@eljs/utils'
-import assert from 'node:assert'
 
 import { objectToArray, onCancel } from '../src/utils'
 
 // Mock 依赖模块
-vi.mock('@eljs/create')
+vi.mock('@eljs/create', async importOriginal => ({
+  ...(await importOriginal<typeof import('@eljs/create')>()),
+  ProjectCreator: vi.fn(),
+}))
+vi.mock('@eljs/utils/cli', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils')
-vi.mock('node:assert')
 vi.mock('../src/utils')
 
 describe('CreateTemplate 类功能测试', () => {
@@ -30,7 +32,6 @@ describe('CreateTemplate 类功能测试', () => {
     typeof objectToArray
   >
   const mockedOnCancel = onCancel as MockedFunction<typeof onCancel>
-  const mockedAssert = assert as MockedFunction<typeof assert>
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -49,18 +50,6 @@ describe('CreateTemplate 类功能测试', () => {
         value: key,
       })),
     )
-
-    mockedAssert.mockImplementation(
-      (condition: unknown, message?: string | Error) => {
-        if (!condition) {
-          const errorMessage =
-            typeof message === 'string'
-              ? message
-              : message?.message || 'Assertion failed'
-          throw new Error(errorMessage)
-        }
-      },
-    )
   })
 
   describe('构造函数测试', () => {
@@ -76,6 +65,7 @@ describe('CreateTemplate 类功能测试', () => {
       const createTemplate = new CreateTemplate(options)
 
       expect(createTemplate.constructorOptions).toEqual(options)
+      expect(Object.isFrozen(createTemplate.constructorOptions)).toBe(true)
       expect(createTemplate.cwd).toBe('/test/path')
     })
 
@@ -101,6 +91,68 @@ describe('CreateTemplate 类功能测试', () => {
       expect(createTemplate.constructorOptions.force).toBe(true)
       expect(createTemplate.constructorOptions.template).toBeUndefined()
       expect(createTemplate.constructorOptions.merge).toBeUndefined()
+    })
+
+    it('应该校验并深度冻结调用方传入的目录快照', () => {
+      const catalog: TemplateConfig = {
+        scenes: { local: 'Local' },
+        templates: {
+          local: {
+            fixture: {
+              description: 'Fixture Template',
+              type: 'local',
+              value: '/template/original',
+            },
+          },
+        },
+      }
+
+      const createTemplate = new CreateTemplate({ catalog })
+      catalog.templates.local.fixture.value = '/template/changed'
+
+      expect(createTemplate.constructorOptions.catalog).not.toBe(catalog)
+      expect(
+        createTemplate.constructorOptions.catalog?.templates.local.fixture
+          .value,
+      ).toBe('/template/original')
+      expect(
+        Object.isFrozen(
+          createTemplate.constructorOptions.catalog?.templates.local.fixture,
+        ),
+      ).toBe(true)
+    })
+
+    it('应该拒绝场景和模板映射不一致的目录', () => {
+      const catalog = {
+        scenes: { web: 'Web' },
+        templates: { node: {} },
+      }
+
+      expect(
+        () => new CreateTemplate({ catalog: catalog as TemplateConfig }),
+      ).toThrow('Every template scene must contain a template')
+    })
+
+    it('应该拒绝字段无效的模板目录', () => {
+      const catalog = {
+        scenes: { web: 'Web' },
+        templates: {
+          web: {
+            unsafe: {
+              description: '',
+              registry: 'file:///private/npm',
+              type: 'npm',
+              value: '',
+            },
+          },
+        },
+      }
+
+      try {
+        new CreateTemplate({ catalog: catalog as TemplateConfig })
+      } catch (error) {
+        expect(error).toMatchObject({ code: 'CREATE_INVALID_CATALOG' })
+      }
     })
   })
 
@@ -128,34 +180,27 @@ describe('CreateTemplate 类功能测试', () => {
 
       expect(mockedCreate).toHaveBeenCalledWith({
         cwd: '/test/path',
-        scene: 'npm',
-        template: defaultConfig.templates.npm['template-npm-web'],
+        template: {
+          type: 'npm',
+          value: '@eljs/create-plugin-npm-web@0.12.2',
+          registry: 'https://registry.npmjs.org/',
+          trusted: true,
+        },
       })
       expect(mockCreateInstance.run).toHaveBeenCalledWith(projectName)
     })
 
-    it('应该处理获取模板失败的情况', async () => {
-      // 模拟无效的场景
+    it('应该拒绝显式传入的无效场景', async () => {
       createTemplate = new CreateTemplate({
         scene: 'invalid-scene',
         template: 'invalid-template',
       })
 
-      mockedPrompts.mockResolvedValueOnce({ scene: 'npm' })
-      mockedPrompts.mockResolvedValueOnce({ template: 'template-npm-web' })
-      mockedObjectToArray.mockReturnValue([{ title: 'NPM', value: 'npm' }])
-
-      const mockCreateInstance = {
-        run: vi.fn().mockResolvedValue(undefined),
-      }
-      mockedCreate.mockImplementation(function MockCreate() {
-        return mockCreateInstance as never
+      await expect(createTemplate.run(projectName)).rejects.toMatchObject({
+        code: 'CREATE_INVALID_OPTIONS',
+        details: { scene: 'invalid-scene' },
       })
-
-      await createTemplate.run(projectName)
-
-      expect(mockedPrompts).toHaveBeenCalledTimes(2)
-      expect(mockCreateInstance.run).toHaveBeenCalledWith(projectName)
+      expect(mockedPrompts).not.toHaveBeenCalled()
     })
   })
 
@@ -210,35 +255,16 @@ describe('CreateTemplate 类功能测试', () => {
         )
       })
 
-      it('应该提示用户选择场景当提供无效场景时', async () => {
+      it('应该拒绝显式提供的无效场景', async () => {
         const createTemplate = new CreateTemplate({
           scene: 'invalid-scene',
         })
 
-        mockedPrompts.mockResolvedValueOnce({ scene: 'npm' })
-        mockedPrompts.mockResolvedValueOnce({ template: 'template-npm-web' })
-        mockedObjectToArray.mockReturnValueOnce([
-          { title: 'NPM', value: 'npm' },
-        ])
-
-        const mockCreateInstance = {
-          run: vi.fn().mockResolvedValue(undefined),
-        }
-        mockedCreate.mockImplementation(function MockCreate() {
-          return mockCreateInstance as never
+        await expect(createTemplate.run('test-project')).rejects.toMatchObject({
+          code: 'CREATE_INVALID_OPTIONS',
+          details: { scene: 'invalid-scene' },
         })
-
-        await createTemplate.run('test-project')
-
-        expect(mockedPrompts).toHaveBeenCalledWith(
-          {
-            type: 'select',
-            name: 'scene',
-            message: 'Select the application scene',
-            choices: [{ title: 'NPM', value: 'npm' }],
-          },
-          { onCancel: mockedOnCancel },
-        )
+        expect(mockedPrompts).not.toHaveBeenCalled()
       })
     })
 
@@ -292,35 +318,17 @@ describe('CreateTemplate 类功能测试', () => {
         )
       })
 
-      it('应该提示用户选择模板当提供无效模板时', async () => {
+      it('应该拒绝显式提供的无效模板', async () => {
         const createTemplate = new CreateTemplate({
           scene: 'npm',
           template: 'invalid-template',
         })
 
-        mockedPrompts.mockResolvedValueOnce({ template: 'template-npm-web' })
-
-        const mockCreateInstance = {
-          run: vi.fn().mockResolvedValue(undefined),
-        }
-        mockedCreate.mockImplementation(function MockCreate() {
-          return mockCreateInstance as never
+        await expect(createTemplate.run('test-project')).rejects.toMatchObject({
+          code: 'CREATE_INVALID_OPTIONS',
+          details: { scene: 'npm', template: 'invalid-template' },
         })
-
-        await createTemplate.run('test-project')
-
-        expect(mockedPrompts).toHaveBeenCalledWith(
-          {
-            type: 'select',
-            name: 'template',
-            message: 'Select the application template',
-            choices: [
-              { title: 'Web Common Template', value: 'template-npm-web' },
-              { title: 'Node Common Template', value: 'template-npm-node' },
-            ],
-          },
-          { onCancel: mockedOnCancel },
-        )
+        expect(mockedPrompts).not.toHaveBeenCalled()
       })
     })
 
@@ -337,7 +345,7 @@ describe('CreateTemplate 类功能测试', () => {
         ])
 
         await expect(createTemplate.run('test-project')).rejects.toThrow(
-          'Excepted the application template.',
+          'Expected an application template for scene `npm`',
         )
       })
 
@@ -358,7 +366,7 @@ describe('CreateTemplate 类功能测试', () => {
         mockedPrompts.mockResolvedValueOnce({ template: '' })
 
         await expect(createTemplate.run('test-project')).rejects.toThrow(
-          'Excepted the application template.',
+          'Expected an application template for scene `npm`',
         )
       })
 
@@ -368,12 +376,8 @@ describe('CreateTemplate 类功能测试', () => {
           template: 'nonexistent-template',
         })
 
-        // 由于模板不存在于配置中，会触发 prompts 询问
-        // 我们需要模拟用户选择一个不存在的模板
-        mockedPrompts.mockResolvedValueOnce({ template: 'still-nonexistent' })
-
         await expect(createTemplate.run('test-project')).rejects.toThrow(
-          'The selected scene `npm` and template `still-nonexistent` do not corresponding any configuration.',
+          'Unknown application template `nonexistent-template` for scene `npm`',
         )
       })
     })
@@ -466,7 +470,12 @@ describe('CreateTemplate 类功能测试', () => {
         cwd: '/custom/path',
         force: true,
         merge: false,
-        template: defaultConfig.templates.npm['template-npm-web'],
+        template: {
+          type: 'npm',
+          value: '@eljs/create-plugin-npm-web@0.12.2',
+          registry: 'https://registry.npmjs.org/',
+          trusted: true,
+        },
       })
       expect(mockCreateInstance.run).toHaveBeenCalledWith('my-project')
     })
@@ -520,7 +529,7 @@ describe('CreateTemplate 类功能测试', () => {
       expect(mockCreateInstance.run).toHaveBeenCalledWith(specialProjectName)
     })
 
-    it('应该正确传递所有构造函数选项到 ProjectCreator 实例', async () => {
+    it('应该拒绝同时启用 force 与 merge', () => {
       const options: CreateTemplateOptions = {
         cwd: '/complex/path',
         scene: 'npm',
@@ -529,24 +538,14 @@ describe('CreateTemplate 类功能测试', () => {
         merge: true,
       }
 
-      const createTemplate = new CreateTemplate(options)
-
-      const mockCreateInstance = {
-        run: vi.fn().mockResolvedValue(undefined),
+      expect(() => new CreateTemplate(options)).toThrow(
+        '`force` and `merge` cannot be enabled together',
+      )
+      try {
+        new CreateTemplate(options)
+      } catch (error) {
+        expect(error).toMatchObject({ code: 'CREATE_INVALID_OPTIONS' })
       }
-      mockedCreate.mockImplementation(function MockCreate() {
-        return mockCreateInstance as never
-      })
-
-      await createTemplate.run('test-project')
-
-      expect(mockedCreate).toHaveBeenCalledWith({
-        cwd: '/complex/path',
-        scene: 'npm',
-        force: true,
-        merge: true,
-        template: defaultConfig.templates.npm['template-npm-web'],
-      })
     })
   })
 })

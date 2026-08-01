@@ -1,4 +1,4 @@
-import { resolve } from '@eljs/utils'
+import { resolve } from '@eljs/utils/module'
 
 import type {
   PluginDeclaration,

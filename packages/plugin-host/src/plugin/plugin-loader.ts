@@ -1,4 +1,4 @@
-import { fileLoaders, fileLoadersSync } from '@eljs/utils'
+import { fileLoaders, fileLoadersSync } from '@eljs/utils/file'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { extname } from 'node:path'
@@ -7,9 +7,7 @@ import { PluginHostError, PluginHostErrorCode } from '../errors'
 import { isOptionsSchema } from './options-schema'
 import type { PluginInitializer, PluginType } from './types'
 
-const localRequire = createRequire(
-  typeof __filename === 'string' ? __filename : import.meta.url,
-)
+const localRequire = createRequire(import.meta.url)
 let typescript: typeof import('typescript')
 
 /**

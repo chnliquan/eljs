@@ -1,8 +1,9 @@
 /**
- * 解析 windows 系统路径
+ * 将常规路径转换为 POSIX 分隔符形式
  * @param path - 文件路径
+ * @returns 使用 `/` 分隔的路径，Windows 扩展长度路径保持不变
  */
-export function winPath(path: string): string {
+export function toPosixPath(path: string): string {
   const isExtendedLengthPath = /^\\\\\?\\/.test(path)
 
   if (isExtendedLengthPath) {
@@ -10,4 +11,14 @@ export function winPath(path: string): string {
   }
 
   return path.replace(/\\/g, '/')
+}
+
+/**
+ * 将常规路径转换为 POSIX 分隔符形式
+ * @param path - 文件路径
+ * @returns 使用 `/` 分隔的路径，Windows 扩展长度路径保持不变
+ * @deprecated 请改用 {@link toPosixPath}
+ */
+export function winPath(path: string): string {
+  return toPosixPath(path)
 }

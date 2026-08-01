@@ -1,4 +1,4 @@
-import type { MaybePromise } from '@eljs/utils'
+import type { MaybePromise } from '@eljs/utils/types'
 
 import { HookKind, type LooseHookRunOptions } from '../core/types'
 

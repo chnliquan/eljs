@@ -1,6 +1,4 @@
-import fs from 'node:fs'
-
-import { fstat, fstatSync } from './meta'
+import { statPath, statPathSync } from './stat'
 
 /**
  * 是否是文件
@@ -8,8 +6,7 @@ import { fstat, fstatSync } from './meta'
  */
 export async function isFile(file: string): Promise<boolean> {
   try {
-    const stat = (await fstat(file)) as fs.Stats
-    return stat ? stat.isFile() : false
+    return (await statPath(file)).isFile()
   } catch (_) {
     return false
   }
@@ -21,8 +18,7 @@ export async function isFile(file: string): Promise<boolean> {
  */
 export function isFileSync(file: string): boolean {
   try {
-    const stat = fstatSync(file) as fs.Stats
-    return stat ? stat.isFile() : false
+    return statPathSync(file).isFile()
   } catch (_) {
     return false
   }
@@ -34,8 +30,7 @@ export function isFileSync(file: string): boolean {
  */
 export async function isDirectory(path: string): Promise<boolean> {
   try {
-    const stat = (await fstat(path)) as fs.Stats
-    return stat ? stat.isDirectory() : false
+    return (await statPath(path)).isDirectory()
   } catch (_) {
     return false
   }
@@ -47,8 +42,7 @@ export async function isDirectory(path: string): Promise<boolean> {
  */
 export function isDirectorySync(path: string): boolean {
   try {
-    const stat = fstatSync(path) as fs.Stats
-    return stat ? stat.isDirectory() : false
+    return statPathSync(path).isDirectory()
   } catch (_) {
     return false
   }
@@ -60,8 +54,7 @@ export function isDirectorySync(path: string): boolean {
  */
 export async function isSymlink(link: string): Promise<boolean> {
   try {
-    const stat = (await fstat(link, true)) as fs.Stats
-    return stat ? stat.isSymbolicLink() : false
+    return (await statPath(link, true)).isSymbolicLink()
   } catch (_) {
     return false
   }
@@ -73,35 +66,56 @@ export async function isSymlink(link: string): Promise<boolean> {
  */
 export function isSymlinkSync(link: string): boolean {
   try {
-    const stat = fstatSync(link, true) as fs.Stats
-    return stat ? stat.isSymbolicLink() : false
+    return statPathSync(link, true).isSymbolicLink()
   } catch (_) {
     return false
   }
 }
 
 /**
- * 路径是否存在
+ * 判断路径是否存在
  * @param file - 文件路径
+ * @returns 路径存在时返回 `true`
  */
-export async function isPathExists(file: string): Promise<boolean> {
+export async function pathExists(file: string): Promise<boolean> {
   try {
-    const stat = await fstat(file)
-    return Boolean(stat)
+    await statPath(file)
+    return true
   } catch (_) {
     return false
   }
 }
 
 /**
- * 路径是否存在
+ * 同步判断路径是否存在
  * @param file - 文件路径
+ * @returns 路径存在时返回 `true`
+ */
+export function pathExistsSync(file: string): boolean {
+  try {
+    statPathSync(file)
+    return true
+  } catch (_) {
+    return false
+  }
+}
+
+/**
+ * 判断路径是否存在
+ * @param file - 文件路径
+ * @returns 路径存在时返回 `true`
+ * @deprecated 请改用 {@link pathExists}
+ */
+export function isPathExists(file: string): Promise<boolean> {
+  return pathExists(file)
+}
+
+/**
+ * 同步判断路径是否存在
+ * @param file - 文件路径
+ * @returns 路径存在时返回 `true`
+ * @deprecated 请改用 {@link pathExistsSync}
  */
 export function isPathExistsSync(file: string): boolean {
-  try {
-    const stat = fstatSync(file)
-    return Boolean(stat)
-  } catch (_) {
-    return false
-  }
+  return pathExistsSync(file)
 }

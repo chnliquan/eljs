@@ -14,6 +14,10 @@ import { createTempDir } from './setup'
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
 
 // Mock dependencies
+vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/module', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/path', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/string', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils', () => ({
   findUp: {
     sync: vi.fn().mockReturnValue('/mock/package.json'),

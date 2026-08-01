@@ -1,10 +1,7 @@
 import type { PluginContext } from '@eljs/plugin-host'
-import type {
-  CopyFileOptions,
-  PackageJson,
-  RenderTemplateOptions,
-  RunCommandOptions,
-} from '@eljs/utils'
+import type { RunCommandOptions } from '@eljs/utils/cp'
+import type { CopyFileOptions, RenderTemplateOptions } from '@eljs/utils/file'
+import type { PackageJson } from '@eljs/utils/types'
 
 import { createHookSchema, type CreatePluginCapabilities } from '../hooks'
 
@@ -90,6 +87,7 @@ export type CreatePluginContext = Omit<
    * @remarks
    * 插件初始化阶段登记的扩展会在交互输入和应用数据就绪后按登记顺序合并
    * 生成阶段登记的扩展会立即合并，并在依赖安装前写入文件
+   * 数组字段会按登记顺序追加并去重
    *
    * @param partial - 待合并的 `package.json` 字段
    */
@@ -99,6 +97,7 @@ export type CreatePluginContext = Omit<
    *
    * @remarks
    * 转换函数会在交互输入和应用数据就绪后执行，因此可以读取 `context.prompts` 与 `context.appData`
+   * 返回值仍作为部分包配置合并，数组字段会按登记顺序追加并去重
    *
    * @param fn - `package.json` 转换函数
    */
@@ -127,3 +126,14 @@ export type CreatePluginContext = Omit<
   install(args: string[], option?: RunCommandOptions): Promise<void>
   // #endregion
 }
+
+/**
+ * create 插件入口上下文的旧名称
+ *
+ * @remarks
+ * 该别名用于兼容 `@eljs/create@1.3.1` 及更早版本编写的模版插件，新插件应使用
+ * {@link CreatePluginContext}；移除前会保留至少一个主版本迁移周期
+ *
+ * @deprecated 请改用 {@link CreatePluginContext}
+ */
+export type Api = CreatePluginContext

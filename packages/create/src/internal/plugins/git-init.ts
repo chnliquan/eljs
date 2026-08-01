@@ -1,4 +1,6 @@
-import { hasGit, hasProjectGit, logger, run } from '@eljs/utils'
+import { run } from '@eljs/utils/cp'
+import { hasGit, hasProjectGit } from '@eljs/utils/git'
+import { logger } from '@eljs/utils/logger'
 
 import { definePlugin } from '../../define'
 
@@ -10,13 +12,25 @@ export default definePlugin(async context => {
   })
 
   async function shouldInitGit() {
+    throwIfAborted()
+
     if (!(await hasGit())) {
       return false
     }
 
-    if (await hasProjectGit(context.paths.target)) {
+    throwIfAborted()
+
+    const projectHasGit = context.config.signal
+      ? await hasProjectGit(context.paths.target, {
+          signal: context.config.signal,
+        })
+      : await hasProjectGit(context.paths.target)
+
+    if (projectHasGit) {
       return false
     }
+
+    throwIfAborted()
 
     // 终端输入 no git
     if (context.prompts.git === false || context.prompts.git === 'false') {
@@ -36,6 +50,10 @@ export default definePlugin(async context => {
 
         await run('git', ['init'], {
           cwd: context.paths.target,
+          ...(context.config.runtime
+            ? { runtime: context.config.runtime }
+            : {}),
+          ...(context.config.signal ? { signal: context.config.signal } : {}),
           verbose: false,
         })
       }
@@ -44,4 +62,10 @@ export default definePlugin(async context => {
       stage: Number.NEGATIVE_INFINITY,
     },
   )
+
+  function throwIfAborted(): void {
+    if (context.config.signal?.aborted) {
+      throw context.config.signal.reason
+    }
+  }
 })

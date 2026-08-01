@@ -1,4 +1,4 @@
-import type { PackageJson, PackageManager } from '@eljs/utils'
+import type { PackageJson, PackageManager } from '@eljs/utils/types'
 
 /**
  * 项目路径
@@ -19,9 +19,13 @@ export interface Paths {
 }
 
 /**
- * 应用数据
+ * 应用数据及插件扩展字段
+ *
+ * @typeParam Extensions - 插件声明的额外应用数据字段
  */
-export interface AppData {
+export type AppData<
+  Extensions extends Record<string, unknown> = Record<string, unknown>,
+> = {
   /**
    * 场景
    */
@@ -42,17 +46,16 @@ export interface AppData {
    * 包管理器
    */
   packageManager: PackageManager
-  /**
-   * 扩展字段
-   */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [property: string]: any
-}
+} & Extensions
 
 /**
- * 命令行输入
+ * 命令行输入及插件扩展字段
+ *
+ * @typeParam Extensions - 插件声明的额外交互结果字段
  */
-export interface Prompts {
+export type Prompts<
+  Extensions extends Record<string, unknown> = Record<string, unknown>,
+> = {
   /**
    * 项目作者
    */
@@ -89,12 +92,7 @@ export interface Prompts {
    * 创建时使用的文件夹名称
    */
   dirname: string
-  /**
-   * 扩展字段
-   */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [property: string]: any
-}
+} & Extensions
 
 /**
  * 生成器阶段枚举

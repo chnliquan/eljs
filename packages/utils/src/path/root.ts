@@ -1,69 +1,26 @@
-import findUp from 'find-up'
 import { glob } from 'glob'
 import * as yaml from 'js-yaml'
 import path from 'node:path'
 
-import { isPathExists, readFile, readJson } from '../file'
-import { getPackageManager } from '../npm'
+import { pathExists, readFile, readJson } from '../file'
+import { getPackageManager } from '../npm/package-manager'
 import type { PackageJson } from '../types'
+import { workspaceCache } from './workspace-cache'
+import {
+  getBunWorkspaceRoot,
+  getLernaWorkspaceRoot,
+  getNpmWorkspaceRoot,
+  getPnpmWorkspaceRoot,
+  getYarnWorkspaceRoot,
+} from './workspace-lock'
 
-/**
- * 获取 pnpm 工作目录根路径
- * @param cwd - 当前工作目录
- */
-export async function getPnpmWorkspaceRoot(cwd: string): Promise<string> {
-  const yaml = await findUp(['pnpm-lock.yaml', 'pnpm-workspace.yaml'], {
-    cwd,
-  })
-
-  return yaml ? path.dirname(yaml) : ''
-}
-
-/**
- * 获取 yarn 工作目录根路径
- * @param cwd - 当前工作目录
- */
-export async function getYarnWorkspaceRoot(cwd: string): Promise<string> {
-  const lock = await findUp(['yarn.lock'], {
-    cwd,
-  })
-  return lock ? path.dirname(lock) : ''
-}
-
-/**
- * 获取 lerna 工作目录根路径
- * @param cwd - 当前工作目录
- */
-export async function getLernaWorkspaceRoot(cwd: string): Promise<string> {
-  const json = await findUp(['lerna.json'], {
-    cwd,
-  })
-  return json ? path.dirname(json) : ''
-}
-
-/**
- * 获取 npm 工作目录根路径
- * @param cwd - 当前工作目录
- */
-export async function getNpmWorkspaceRoot(cwd: string): Promise<string> {
-  const lock = await findUp(['package-lock.json'], {
-    cwd,
-  })
-  return lock ? path.dirname(lock) : ''
-}
-
-/**
- * 获取 bun 工作目录根路径
- *
- * @param cwd - 当前工作目录
- * @returns 最近的 Bun 锁文件所在目录，未找到时返回空字符串
- */
-export async function getBunWorkspaceRoot(cwd: string): Promise<string> {
-  const lock = await findUp(['bun.lock', 'bun.lockb'], {
-    cwd,
-  })
-  return lock ? path.dirname(lock) : ''
-}
+export {
+  getBunWorkspaceRoot,
+  getLernaWorkspaceRoot,
+  getNpmWorkspaceRoot,
+  getPnpmWorkspaceRoot,
+  getYarnWorkspaceRoot,
+} from './workspace-lock'
 
 /**
  * 获取工作区根目录
@@ -81,32 +38,34 @@ export async function getWorkspaceRoot(cwd: string): Promise<string> {
   )
 }
 
-const cache = new Map()
-
 /**
- * 获取项目工作区
+ * 获取工作区包根目录
  * @param cwd - 当前工作目录
  * @param relative - 是否展示相对路径
+ * @returns 匹配的包根目录列表
  */
-export async function getWorkspaces(
+export async function getWorkspacePackageRoots(
   cwd: string,
   relative = false,
 ): Promise<string[]> {
-  const cacheKey = `pkg_paths_${cwd}`
+  const resolvedCwd = path.resolve(cwd)
+  const cacheKey = `pkg_paths_${resolvedCwd}_${relative ? 'relative' : 'absolute'}`
 
-  if (cache.has(cacheKey)) {
-    return cache.get(cacheKey)
+  const cachedWorkspaces = workspaceCache.get(cacheKey)
+
+  if (cachedWorkspaces) {
+    return cachedWorkspaces
   }
 
-  const packageManager = await getPackageManager(cwd)
+  const packageManager = await getPackageManager(resolvedCwd)
   const packageRootPath: string[] = []
   let workspaces: string[] = []
 
   if (packageManager === 'pnpm') {
     // pnpm
-    const workspacePath = path.resolve(cwd, 'pnpm-workspace.yaml')
+    const workspacePath = path.resolve(resolvedCwd, 'pnpm-workspace.yaml')
 
-    if (await isPathExists(workspacePath)) {
+    if (await pathExists(workspacePath)) {
       workspaces = (
         yaml.load(await readFile(workspacePath)) as {
           packages: string[]
@@ -115,7 +74,7 @@ export async function getWorkspaces(
     }
   } else {
     // yarn | npm | bun
-    const pkgJsonPath = path.resolve(cwd, 'package.json')
+    const pkgJsonPath = path.resolve(resolvedCwd, 'package.json')
     const pkg = await readJson<PackageJson>(pkgJsonPath)
     workspaces = (pkg?.workspaces as string[]) || []
   }
@@ -126,26 +85,42 @@ export async function getWorkspaces(
 
       if (matcher.endsWith('/*')) {
         let rootPath = glob.sync(matcher, {
-          cwd,
+          cwd: resolvedCwd,
           ignore: '*/*.*',
         })
 
         if (!relative) {
           rootPath = rootPath.map(pkgPath => {
-            return `${cwd}/${pkgPath}`
+            return path.join(resolvedCwd, pkgPath)
           })
         }
 
         packageRootPath.push(...rootPath)
-      } else if (await isPathExists(path.resolve(cwd, matcher))) {
-        packageRootPath.push(relative ? matcher : `${cwd}/${matcher}`)
+      } else if (await pathExists(path.resolve(resolvedCwd, matcher))) {
+        packageRootPath.push(
+          relative ? matcher : path.join(resolvedCwd, matcher),
+        )
       }
     }
   } else {
-    packageRootPath.push(cwd)
+    packageRootPath.push(relative ? '.' : resolvedCwd)
   }
 
   // 缓存结果
-  cache.set(cacheKey, packageRootPath)
+  workspaceCache.set(cacheKey, packageRootPath)
   return packageRootPath
+}
+
+/**
+ * 获取工作区包根目录
+ * @param cwd - 当前工作目录
+ * @param relative - 是否展示相对路径
+ * @returns 匹配的包根目录列表
+ * @deprecated 请改用 {@link getWorkspacePackageRoots}
+ */
+export function getWorkspaces(
+  cwd: string,
+  relative = false,
+): Promise<string[]> {
+  return getWorkspacePackageRoots(cwd, relative)
 }

@@ -11,18 +11,23 @@ import * as importedModule0 from '../../src/file'
 import * as importedModule1 from '../../src/guards'
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-import execa from 'execa'
+import { execa } from 'execa'
 import type { ChildProcess } from 'node:child_process'
 import cp from 'node:child_process'
 import { read } from 'read'
 
 import {
+  clearCachedSudoPassword,
+  findExecutable,
+  findProcessId,
   getExecutableCommand,
   getPid,
   normalizeArgs,
   parseCommand,
+  parseCommandLine,
   run,
   runCommand,
+  runCommandLine,
   RunCommandOptions,
   sudo,
   SudoOptions,
@@ -39,11 +44,14 @@ vi.mock('../../src/file')
 vi.mock('../../src/guards')
 vi.mock('../../src/cp/command', async importOriginal => ({
   ...(await importOriginal<typeof import('../../src/cp/command')>()),
+  findExecutable: vi.fn(),
   getExecutableCommand: vi.fn(),
 }))
 
 // 定义类型
 interface MockChildProcess {
+  kill: ReturnType<typeof vi.fn>
+  once: ReturnType<typeof vi.fn>
   stdout: {
     on: MockedFunction<
       (event: string, callback: (chunk: Buffer) => void) => void
@@ -75,9 +83,14 @@ describe('命令处理工具函数', () => {
   const mockGetExecutableCommand = getExecutableCommand as MockedFunction<
     typeof getExecutableCommand
   >
+  const mockFindExecutable = findExecutable as MockedFunction<
+    typeof findExecutable
+  >
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockIsObject.mockReset()
+    mockIsArray.mockReset()
     mockIsObject.mockImplementation(
       (value: unknown): value is Record<string, unknown> =>
         value !== null && typeof value === 'object' && !Array.isArray(value),
@@ -105,7 +118,15 @@ describe('命令处理工具函数', () => {
 
     it('应该处理空字符串', () => {
       const result = parseCommand('')
-      expect(result).toEqual([''])
+      expect(result).toEqual([])
+    })
+
+    it('新名称应该处理制表符和换行符', () => {
+      expect(parseCommandLine('npm\tinstall\npackage')).toEqual([
+        'npm',
+        'install',
+        'package',
+      ])
     })
 
     it('应该处理单个命令', () => {
@@ -205,6 +226,34 @@ describe('命令处理工具函数', () => {
 
       expect(execa).toHaveBeenCalledWith('ls', [], undefined)
     })
+
+    it('应该注入结构化日志和生命周期监控且不传给 execa', async () => {
+      const logger = vi.fn()
+      const observer = vi.fn()
+      const mockProcess = Promise.resolve({ stdout: 'success' })
+      mockExeca.mockReturnValue(mockProcess)
+
+      await run('npm', ['test'], {
+        runtime: { logger, observer },
+        verbose: true,
+      })
+      await Promise.resolve()
+
+      expect(execa).toHaveBeenCalledWith('npm', ['test'], {})
+      expect(logger).toHaveBeenCalledWith(
+        expect.objectContaining({
+          level: 'info',
+          operation: 'cp.run',
+        }),
+      )
+      expect(observer).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ operation: 'cp.run', phase: 'start' }),
+      )
+      expect(observer).toHaveBeenLastCalledWith(
+        expect.objectContaining({ operation: 'cp.run', phase: 'success' }),
+      )
+    })
   })
 
   describe('runCommand 运行命令字符串', () => {
@@ -238,6 +287,22 @@ describe('命令处理工具函数', () => {
       runCommand('ls -la', options)
 
       expect(execa).toHaveBeenCalledWith('ls', ['-la'], options)
+    })
+
+    it('新名称应该解析并运行命令行', () => {
+      const mockProcess = { stdout: 'success' } as unknown as ReturnType<
+        typeof execa
+      >
+      mockExeca.mockReturnValue(mockProcess)
+
+      expect(runCommandLine('npm test')).toBe(mockProcess)
+      expect(execa).toHaveBeenCalledWith('npm', ['test'], undefined)
+    })
+
+    it('应该拒绝空命令行', () => {
+      expect(() => runCommandLine('   ')).toThrow(
+        'Command line must not be empty',
+      )
     })
   })
 
@@ -325,6 +390,14 @@ describe('命令处理工具函数', () => {
   })
 
   describe('getPid 获取进程 ID', () => {
+    it('新名称应该查找进程 ID', async () => {
+      mockExeca.mockResolvedValue({
+        stdout: '1234 node',
+      } as unknown as ReturnType<typeof execa>)
+
+      await expect(findProcessId('node')).resolves.toBe(1234)
+    })
+
     it('应该为找到的进程返回 PID', async () => {
       const mockStdout = '1234 node\n5678 npm\n9999 /usr/bin/node'
       mockExeca.mockResolvedValue({
@@ -375,13 +448,46 @@ describe('命令处理工具函数', () => {
 
       await expect(getPid('node')).rejects.toThrow('ps 命令失败')
     })
+
+    it('应该在 Windows 上解析 tasklist CSV 输出', async () => {
+      const platform = vi
+        .spyOn(process, 'platform', 'get')
+        .mockReturnValue('win32')
+      mockExeca.mockResolvedValue({
+        stdout: '"node.exe","4321","Console","1","12,000 K"\r\n',
+      } as unknown as ReturnType<typeof execa>)
+
+      await expect(getPid('node')).resolves.toBe(4321)
+      expect(execa).toHaveBeenCalledWith(
+        'tasklist',
+        ['/FO', 'CSV', '/NH'],
+        undefined,
+      )
+
+      platform.mockRestore()
+    })
   })
 
   describe('sudo 管理员模式', () => {
     let mockChildProcess: MockChildProcess
 
+    const waitForSpawn = async () => {
+      await vi.waitFor(() => expect(mockSpawn).toHaveBeenCalledTimes(1))
+    }
+
+    const emitChildEvent = (event: string, ...args: unknown[]) => {
+      const callback = mockChildProcess.once.mock.calls.find(
+        call => call[0] === event,
+      )?.[1] as ((...values: unknown[]) => void) | undefined
+
+      callback?.(...args)
+    }
+
     beforeEach(() => {
+      clearCachedSudoPassword()
       mockChildProcess = {
+        kill: vi.fn(),
+        once: vi.fn(),
         stdout: { on: vi.fn() },
         stderr: { on: vi.fn() },
         stdin: { write: vi.fn() },
@@ -390,31 +496,38 @@ describe('命令处理工具函数', () => {
 
       // Mock getExecutableCommand directly
       mockGetExecutableCommand.mockResolvedValue('sudo')
+      mockFindExecutable.mockResolvedValue('sudo')
     })
 
     it('应该使用正确参数生成 sudo', async () => {
       mockIsObject.mockReturnValue(false)
 
-      await sudo(['ls', '-la'])
+      const result = sudo(['ls', '-la'])
+      await waitForSpawn()
 
       expect(mockSpawn).toHaveBeenCalledWith(
         'sudo',
         ['-S', '-p', '#node-sudo-passwd#', 'ls', '-la'],
         { stdio: 'pipe' },
       )
+      emitChildEvent('close', 0, null)
+      await result
     })
 
     it('应该处理仅选项的调用', async () => {
       mockIsObject.mockReturnValue(true)
       const options: SudoOptions = { prompt: '自定义提示' }
 
-      await sudo(options)
+      const result = sudo(options)
+      await waitForSpawn()
 
       expect(mockSpawn).toHaveBeenCalledWith(
         'sudo',
         ['-S', '-p', '#node-sudo-passwd#'],
         { stdio: 'pipe' },
       )
+      emitChildEvent('close', 0, null)
+      await result
     })
 
     it('应该处理 stdout 数据', async () => {
@@ -423,7 +536,8 @@ describe('命令处理工具函数', () => {
         .mockImplementation(() => undefined)
       mockIsObject.mockReturnValue(false)
 
-      await sudo(['echo', 'test'])
+      const result = sudo(['echo', 'test'])
+      await waitForSpawn()
 
       const stdoutCallback = mockChildProcess.stdout.on.mock.calls.find(
         (call: [string, (chunk: Buffer) => void]) => call[0] === 'data',
@@ -432,6 +546,8 @@ describe('命令处理工具函数', () => {
       stdoutCallback!(Buffer.from('测试输出\n'))
 
       expect(mockConsoleLog).toHaveBeenCalledWith('测试输出')
+      emitChildEvent('close', 0, null)
+      await result
       mockConsoleLog.mockRestore()
     })
 
@@ -439,7 +555,8 @@ describe('命令处理工具函数', () => {
       mockIsObject.mockReturnValue(false)
       const options: SudoOptions = { password: 'secret' }
 
-      await sudo(['ls'], options)
+      const result = sudo(['ls'], options)
+      await waitForSpawn()
 
       const stderrCallback = mockChildProcess.stderr.on.mock.calls.find(
         (call: [string, (chunk: Buffer) => void]) => call[0] === 'data',
@@ -448,13 +565,16 @@ describe('命令处理工具函数', () => {
       stderrCallback!(Buffer.from('#node-sudo-passwd#\n'))
 
       expect(mockChildProcess.stdin.write).toHaveBeenCalledWith('secret\n')
+      emitChildEvent('close', 0, null)
+      await result
     })
 
     it('应该在需要时提示输入密码', async () => {
       mockIsObject.mockReturnValue(false)
       mockRead.mockResolvedValue('输入的密码')
 
-      await sudo(['ls'])
+      const result = sudo(['ls'])
+      await waitForSpawn()
 
       const stderrCallback = mockChildProcess.stderr.on.mock.calls.find(
         (call: [string, (chunk: Buffer) => void]) => call[0] === 'data',
@@ -471,6 +591,8 @@ describe('命令处理工具函数', () => {
       await new Promise(setImmediate)
 
       expect(mockChildProcess.stdin.write).toHaveBeenCalledWith('输入的密码\n')
+      emitChildEvent('close', 0, null)
+      await result
     })
 
     it('应该在 cachePassword 为 true 时缓存密码', async () => {
@@ -478,7 +600,8 @@ describe('命令处理工具函数', () => {
       mockRead.mockResolvedValue('缓存的密码')
       const options: SudoOptions = { cachePassword: true }
 
-      await sudo(['ls'], options)
+      const firstResult = sudo(['ls'], options)
+      await waitForSpawn()
 
       const stderrCallback = mockChildProcess.stderr.on.mock.calls.find(
         (call: [string, (chunk: Buffer) => void]) => call[0] === 'data',
@@ -490,13 +613,17 @@ describe('命令处理工具函数', () => {
       await new Promise(setImmediate)
 
       expect(mockRead).toHaveBeenCalledTimes(1)
+      emitChildEvent('close', 0, null)
+      await firstResult
 
       // 重置 mock 以进行第二次调用
       vi.clearAllMocks()
       mockSpawn.mockReturnValue(mockChildProcess as unknown as ChildProcess)
+      mockGetExecutableCommand.mockResolvedValue('sudo')
 
       // 第二次调用应该使用缓存的密码
-      await sudo(['ls'], options)
+      const secondResult = sudo(['ls'], options)
+      await waitForSpawn()
 
       const stderrCallback2 = mockChildProcess.stderr.on.mock.calls.find(
         (call: [string, (chunk: Buffer) => void]) => call[0] === 'data',
@@ -506,6 +633,8 @@ describe('命令处理工具函数', () => {
 
       expect(mockRead).not.toHaveBeenCalled()
       expect(mockChildProcess.stdin.write).toHaveBeenCalledWith('缓存的密码\n')
+      emitChildEvent('close', 0, null)
+      await secondResult
     })
 
     it('应该记录非密码提示的 stderr 消息', async () => {
@@ -514,7 +643,8 @@ describe('命令处理工具函数', () => {
         .mockImplementation(() => undefined)
       mockIsObject.mockReturnValue(false)
 
-      await sudo(['ls'])
+      const result = sudo(['ls'])
+      await waitForSpawn()
 
       const stderrCallback = mockChildProcess.stderr.on.mock.calls.find(
         (call: [string, (chunk: Buffer) => void]) => call[0] === 'data',
@@ -523,7 +653,56 @@ describe('命令处理工具函数', () => {
       stderrCallback!(Buffer.from('权限被拒绝\n'))
 
       expect(mockConsoleLog).toHaveBeenCalledWith('权限被拒绝')
+      emitChildEvent('close', 0, null)
+      await result
       mockConsoleLog.mockRestore()
+    })
+
+    it('应该等待子进程退出并拒绝非零退出码', async () => {
+      mockIsObject.mockReturnValue(false)
+      let completed = false
+      const result = sudo(['false']).finally(() => {
+        completed = true
+      })
+
+      await waitForSpawn()
+      expect(completed).toBe(false)
+
+      emitChildEvent('close', 2, null)
+
+      await expect(result).rejects.toMatchObject({
+        code: 'ERR_PROCESS_EXIT',
+        operation: 'cp.sudo',
+      })
+      expect(completed).toBe(true)
+    })
+
+    it('应该把子进程启动错误转换为结构化错误', async () => {
+      mockIsObject.mockReturnValue(false)
+      const result = sudo(['ls'])
+
+      await waitForSpawn()
+      emitChildEvent('error', new Error('spawn failed'))
+
+      await expect(result).rejects.toMatchObject({
+        code: 'ERR_PROCESS_SPAWN',
+        operation: 'cp.sudo',
+      })
+    })
+
+    it('应该在 Windows 上返回明确的平台错误', async () => {
+      const platform = vi
+        .spyOn(process, 'platform', 'get')
+        .mockReturnValue('win32')
+      mockIsObject.mockReturnValue(false)
+
+      await expect(sudo(['ls'])).rejects.toMatchObject({
+        code: 'ERR_UNSUPPORTED_PLATFORM',
+        operation: 'cp.sudo',
+      })
+      expect(mockSpawn).not.toHaveBeenCalled()
+
+      platform.mockRestore()
     })
   })
 })

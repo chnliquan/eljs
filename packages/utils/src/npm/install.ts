@@ -1,6 +1,4 @@
-import execa from 'execa'
-
-import type { RunCommandOptions } from '../cp'
+import { run, type RunCommandOptions } from '../cp/command'
 import { isArray, isObject } from '../guards'
 import type { PackageManager } from '../types'
 import { getPackageManager } from './package-manager'
@@ -62,7 +60,7 @@ export async function installDeps(
       devStr,
       ...deps,
     ].filter(Boolean) as string[]
-    await execa(packageManager as PackageManager, cliArgs, rest)
+    await run(packageManager as PackageManager, cliArgs, rest)
   }
 }
 
@@ -130,5 +128,5 @@ export async function install(
     ...(args ? (args as string[]) : []),
   ].filter(Boolean)
 
-  await execa(packageManager as PackageManager, cliArgs, options)
+  await run(packageManager as PackageManager, cliArgs, options)
 }

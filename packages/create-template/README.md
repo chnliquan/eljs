@@ -76,10 +76,10 @@ Based on the current configuration, the following scenes and templates are avail
 
 ### NPM Scene
 
-| Template            | Description          | Type | Source                         |
-| ------------------- | -------------------- | ---- | ------------------------------ |
-| `template-npm-web`  | Web Common Template  | npm  | `@eljs/create-plugin-npm-web`  |
-| `template-npm-node` | Node Common Template | npm  | `@eljs/create-plugin-npm-node` |
+| Template            | Description          | Type | Source                                |
+| ------------------- | -------------------- | ---- | ------------------------------------- |
+| `template-npm-web`  | Web Common Template  | npm  | `@eljs/create-plugin-npm-web@0.12.2`  |
+| `template-npm-node` | Node Common Template | npm  | `@eljs/create-plugin-npm-node@0.12.2` |
 
 ## 📋 Usage Examples
 
@@ -121,3 +121,37 @@ create-template new-project --cwd ./workspace
 # Combine multiple options
 create-template my-project --scene npm --template template-npm-web --force --cwd ./projects
 ```
+
+## Programmatic API
+
+```ts
+import { CreateTemplate, type TemplateConfig } from '@eljs/create-template'
+
+const catalog: TemplateConfig = {
+  scenes: { internal: 'Internal' },
+  templates: {
+    internal: {
+      service: {
+        type: 'local',
+        value: '/workspace/templates/service',
+        description: 'Internal service',
+      },
+    },
+  },
+}
+
+const creator = new CreateTemplate({
+  catalog,
+  scene: 'internal',
+  template: 'service',
+  cwd: '/workspace/projects',
+})
+
+await creator.run('orders-service')
+```
+
+The built-in catalog pins official templates to versions tested with the
+current CLI. A custom `catalog` can mix local, npm, and Git templates for
+offline or enterprise workflows. All `ProjectCreator` options, including
+`force`, `merge`, `signal`, and remote-template security controls, are passed
+through.

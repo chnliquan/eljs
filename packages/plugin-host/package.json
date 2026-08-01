@@ -51,18 +51,11 @@
     "@eljs/config": "workspace:*",
     "@eljs/utils": "workspace:*",
     "@standard-schema/spec": "^1.1.0",
-    "tapable": "^2.2.1"
+    "tapable": "^2.2.1",
+    "typescript": "^6.0.3"
   },
   "devDependencies": {
     "zod": "^4.4.3"
-  },
-  "peerDependencies": {
-    "typescript": ">=5.0.0"
-  },
-  "peerDependenciesMeta": {
-    "typescript": {
-      "optional": true
-    }
   },
   "engines": {
     "node": ">=22.14.0"

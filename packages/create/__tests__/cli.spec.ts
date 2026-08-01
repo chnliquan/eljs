@@ -16,6 +16,8 @@ import * as importedModule0 from '../src/cli'
  */
 
 // 首先进行所有模拟设置
+vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils', () => ({
   chalk: {
     yellow: vi.fn((text: string) => `[yellow]${text}[/yellow]`),
@@ -277,9 +279,12 @@ describe('CLI 命令行接口综合测试', () => {
         install: true,
       })
 
-      expect(ProjectCreator).toHaveBeenCalledWith({
-        template: 'default-template',
-      })
+      expect(ProjectCreator).toHaveBeenCalledWith(
+        expect.objectContaining({
+          signal: expect.any(AbortSignal),
+          template: 'default-template',
+        }),
+      )
     })
 
     it('应该记录调试信息', async () => {
@@ -345,6 +350,19 @@ describe('CLI 命令行接口综合测试', () => {
       if (notifierResult && notifierResult.value) {
         expect(notifierResult.value.notify).toHaveBeenCalled()
       }
+    })
+
+    it('查询帮助时不应该加载更新检查', async () => {
+      const originalArgv = process.argv
+      process.argv = [process.execPath, 'create', '--help']
+
+      try {
+        await cli()
+      } finally {
+        process.argv = originalArgv
+      }
+
+      expect(updateNotifier).not.toHaveBeenCalled()
     })
 
     it('应该处理不同的包信息', async () => {
@@ -447,9 +465,12 @@ describe('CLI 命令行接口综合测试', () => {
       // 模拟: create my-template my-project
       await actionHandler('my-template', 'my-project', {})
 
-      expect(ProjectCreator).toHaveBeenCalledWith({
-        template: 'my-template',
-      })
+      expect(ProjectCreator).toHaveBeenCalledWith(
+        expect.objectContaining({
+          signal: expect.any(AbortSignal),
+          template: 'my-template',
+        }),
+      )
 
       const createInstance = (
         ProjectCreator as MockedClass<typeof ProjectCreator>
@@ -468,11 +489,14 @@ describe('CLI 命令行接口综合测试', () => {
         cwd: '/workspace',
       })
 
-      expect(ProjectCreator).toHaveBeenCalledWith({
-        template: '@company/template',
-        force: true,
-        cwd: '/workspace',
-      })
+      expect(ProjectCreator).toHaveBeenCalledWith(
+        expect.objectContaining({
+          template: '@company/template',
+          force: true,
+          cwd: '/workspace',
+          signal: expect.any(AbortSignal),
+        }),
+      )
     })
 
     it('应该处理本地模板创建流程', async () => {
@@ -485,10 +509,13 @@ describe('CLI 命令行接口综合测试', () => {
         merge: true,
       })
 
-      expect(ProjectCreator).toHaveBeenCalledWith({
-        template: './local-template',
-        merge: true,
-      })
+      expect(ProjectCreator).toHaveBeenCalledWith(
+        expect.objectContaining({
+          template: './local-template',
+          merge: true,
+          signal: expect.any(AbortSignal),
+        }),
+      )
     })
   })
 

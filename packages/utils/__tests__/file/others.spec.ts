@@ -38,13 +38,12 @@ vi.mock('mustache')
 describe('文件移动、删除和渲染工具', () => {
   const mockRimraf = rimraf as MockedFunction<typeof rimraf>
   const mockRimrafSync = rimrafSync as MockedFunction<typeof rimrafSync>
-  const mockIsPathExists = requiredModule0.isPathExists as MockedFunction<
+  const mockIsPathExists = requiredModule0.pathExists as MockedFunction<
     (filePath: string) => Promise<boolean>
   >
-  const mockIsPathExistsSync =
-    requiredModule0.isPathExistsSync as MockedFunction<
-      (filePath: string) => boolean
-    >
+  const mockIsPathExistsSync = requiredModule0.pathExistsSync as MockedFunction<
+    (filePath: string) => boolean
+  >
   const mockEjs = vi.mocked(ejs, { deep: true })
   const mockMustache = vi.mocked(Mustache, { deep: true })
 

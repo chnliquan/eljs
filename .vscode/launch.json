@@ -7,10 +7,7 @@
       "request": "launch",
       "name": "Debug Ts File",
       "runtimeExecutable": "tsx",
-      "runtimeArgs": [
-        "--tsconfig",
-        "${workspaceFolder}/packages/utils/tsconfig.json"
-      ],
+      "runtimeArgs": ["--tsconfig", "${workspaceFolder}/tsconfig.base.json"],
       "program": "${file}",
       "windows": {
         "program": "${file}"
@@ -22,13 +19,13 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug Jest File",
+      "name": "Debug Vitest File",
       "runtimeExecutable": "node",
-      "program": "${workspaceFolder}/node_modules/jest/bin/jest.js",
+      "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
       "windows": {
-        "program": "${workspaceFolder}/node_modules/jest/bin/jest.js"
+        "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs"
       },
-      "args": ["${file}", "--runInBand", "--no-cache", "--forceExit"],
+      "args": ["run", "${relativeFile}", "--no-cache"],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]

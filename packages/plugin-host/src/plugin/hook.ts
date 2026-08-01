@@ -1,4 +1,4 @@
-import type { MaybePromiseFunction } from '@eljs/utils'
+import type { MaybePromiseFunction } from '@eljs/utils/types'
 
 import { PluginHostError, PluginHostErrorCode } from '../errors'
 import type { Plugin } from './plugin'

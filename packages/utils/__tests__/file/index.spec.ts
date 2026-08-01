@@ -12,8 +12,10 @@ import {
   isPathExistsSync,
   isSymlink,
   isSymlinkSync,
+  pathExists,
+  pathExistsSync,
 } from '../../src/file/is'
-import { fstat, fstatSync } from '../../src/file/meta'
+import { fstat, fstatSync, statPath, statPathSync } from '../../src/file/stat'
 
 describe('文件工具函数', () => {
   let tempDir: string
@@ -52,6 +54,11 @@ describe('文件工具函数', () => {
   })
 
   describe('fstat 和 fstatSync 文件状态', () => {
+    it('新名称应该返回精确的同步和异步状态', async () => {
+      expect((await statPath(testFile)).isFile()).toBe(true)
+      expect(statPathSync(testDir).isDirectory()).toBe(true)
+    })
+
     describe('fstat 异步文件状态', () => {
       it('应该返回现有文件的文件状态', async () => {
         const stats = await fstat(testFile)
@@ -93,15 +100,15 @@ describe('文件工具函数', () => {
       it('应该返回现有文件的文件状态', () => {
         const stats = fstatSync(testFile)
         expect(stats).toBeInstanceOf(fs.Stats)
-        expect((stats as fs.Stats).isFile()).toBe(true)
-        expect((stats as fs.Stats).isDirectory()).toBe(false)
+        expect(stats.isFile()).toBe(true)
+        expect(stats.isDirectory()).toBe(false)
       })
 
       it('应该返回现有目录的目录状态', () => {
         const stats = fstatSync(testDir)
         expect(stats).toBeInstanceOf(fs.Stats)
-        expect((stats as fs.Stats).isFile()).toBe(false)
-        expect((stats as fs.Stats).isDirectory()).toBe(true)
+        expect(stats.isFile()).toBe(false)
+        expect(stats.isDirectory()).toBe(true)
       })
 
       it('应该为不存在的文件抛出错误', () => {
@@ -112,6 +119,11 @@ describe('文件工具函数', () => {
   })
 
   describe('文件类型检查函数', () => {
+    it('新路径存在名称应该支持同步和异步调用', async () => {
+      await expect(pathExists(testFile)).resolves.toBe(true)
+      expect(pathExistsSync(testDir)).toBe(true)
+    })
+
     describe('isFile 文件检查', () => {
       it('应该对文件返回 true', async () => {
         expect(await isFile(testFile)).toBe(true)

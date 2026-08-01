@@ -44,6 +44,8 @@ const loaderDependencies = vi.hoisted(() => ({
     transpileModule: vi.fn(),
     findConfigFile: vi.fn(),
     readConfigFile: vi.fn(),
+    parseJsonConfigFileContent: vi.fn(),
+    flattenDiagnosticMessageText: vi.fn(),
     sys: {
       fileExists: vi.fn(),
       readFile: vi.fn(),
@@ -104,6 +106,16 @@ describe('文件加载器工具 - 完整测试', () => {
         error?: { messageText: { toString(): string } } | null
       }
     >
+    parseJsonConfigFileContent: MockedFunction<
+      (
+        config: unknown,
+        host: unknown,
+        basePath: string,
+      ) => { options: Record<string, unknown>; errors: unknown[] }
+    >
+    flattenDiagnosticMessageText: MockedFunction<
+      (messageText: unknown, newLine: string) => string
+    >
     sys: {
       fileExists: MockedFunction<(fileName: string) => boolean>
       readFile: MockedFunction<(path: string) => string | undefined>
@@ -126,15 +138,21 @@ describe('文件加载器工具 - 完整测试', () => {
   const mockRemoveSync = requiredModule6.removeSync as MockedFunction<
     (filePath: string) => boolean
   >
-  const mockIsPathExistsSync =
-    requiredModule7.isPathExistsSync as MockedFunction<
-      (filePath: string) => boolean
-    >
+  const mockIsPathExistsSync = requiredModule7.pathExistsSync as MockedFunction<
+    (filePath: string) => boolean
+  >
 
   let tempDir: string
 
   beforeEach(async () => {
     vi.clearAllMocks()
+    mockTypeScript.parseJsonConfigFileContent.mockReturnValue({
+      options: {},
+      errors: [],
+    })
+    mockTypeScript.flattenDiagnosticMessageText.mockImplementation(
+      messageText => String(messageText),
+    )
     tempDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loader-test-'))
   })
 
@@ -501,25 +519,6 @@ describe('文件加载器工具 - 完整测试', () => {
   })
 
   describe('TypeScript 配置解析', () => {
-    // 在测试 resolveTsConfig 前，先确保 TypeScript 模块已初始化
-    beforeEach(() => {
-      // 通过调用 loadTsSync 来初始化 typescript 模块，但不让它执行完整流程
-      mockReadFileSync.mockReturnValue('export const init = true')
-      mockTypeScript.transpileModule.mockReturnValue({
-        outputText: 'exports.init = true',
-      })
-      mockImportFresh.mockReturnValue({ init: true })
-
-      try {
-        loadTsSync('/init.ts') // 这会初始化 typescript 变量
-      } catch (e) {
-        // 忽略任何错误，我们只是想初始化模块
-      }
-
-      // 重置所有 mocks，准备真正的测试
-      vi.clearAllMocks()
-    })
-
     describe('resolveTsConfig', () => {
       it('应该解析存在的 tsconfig 文件', () => {
         const mockConfig = {
@@ -534,6 +533,10 @@ describe('文件加载器工具 - 完整测试', () => {
           config: mockConfig,
           error: null,
         })
+        mockTypeScript.parseJsonConfigFileContent.mockReturnValue({
+          options: mockConfig.compilerOptions,
+          errors: [],
+        })
 
         const result = resolveTsConfig('/project/src')
 
@@ -541,7 +544,9 @@ describe('文件加载器工具 - 完整测试', () => {
           '/project/src',
           expect.any(Function),
         )
-        expect(result).toEqual(mockConfig)
+        expect(result).toEqual({
+          compilerOptions: mockConfig.compilerOptions,
+        })
       })
 
       it('应该在没有 tsconfig 文件时返回空配置', () => {
@@ -562,6 +567,9 @@ describe('文件加载器工具 - 完整测试', () => {
           config: null,
           error: configError,
         })
+        mockTypeScript.flattenDiagnosticMessageText.mockReturnValue(
+          'Config parse error',
+        )
 
         expect(() => resolveTsConfig('/project/src')).toThrow(
           'Resolve file /project/tsconfig.json failed: Config parse error',

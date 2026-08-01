@@ -4,13 +4,9 @@ import {
   getNpmWorkspaceRoot,
   getPnpmWorkspaceRoot,
   getYarnWorkspaceRoot,
-} from '../path'
+} from '../path/workspace-lock'
 import type { PackageManager } from '../types'
-
-const cache = new Map()
-
-// 导出cache以便测试使用
-export { cache }
+import { packageManagerCache } from './package-manager-cache'
 
 /**
  * 获取包管理器
@@ -22,7 +18,7 @@ export { cache }
 export async function getPackageManager(
   cwd = process.cwd(),
 ): Promise<PackageManager> {
-  const type = await getTypeofLockFile(cwd)
+  const type = await detectLockfilePackageManager(cwd)
 
   if (type) {
     return type
@@ -57,13 +53,13 @@ export async function getPackageManager(
  * @throws 当锁文件查找失败时传播原始错误
  * @internal
  */
-async function getTypeofLockFile(
+async function detectLockfilePackageManager(
   cwd = process.cwd(),
 ): Promise<PackageManager | null> {
   const key = `has_lockfile_${cwd}`
 
-  if (cache.has(key)) {
-    return Promise.resolve(cache.get(key))
+  if (packageManagerCache.has(key)) {
+    return Promise.resolve(packageManagerCache.get(key) ?? null)
   }
 
   return Promise.all([
@@ -84,7 +80,7 @@ async function getTypeofLockFile(
       value = 'npm'
     }
 
-    cache.set(key, value)
+    packageManagerCache.set(key, value)
     return value
   })
 }

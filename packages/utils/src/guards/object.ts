@@ -1,4 +1,4 @@
-import { isObject } from './basic'
+import { isObject } from './primitive'
 
 /**
  * 判断目标值是否为普通对象

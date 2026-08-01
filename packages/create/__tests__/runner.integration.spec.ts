@@ -47,10 +47,15 @@ describe('CreateRunner 集成', () => {
     authorName: 'Ender',
     packageManager: 'npm',
   }))
-  context.extendPackage(pkg => ({
-    ...pkg,
+  context.extendPackage({
+    files: ['dist'],
+    keywords: ['template'],
+  })
+  context.extendPackage(() => ({
     name: context.appData.projectName,
     author: context.prompts.authorName,
+    files: ['bin', 'dist'],
+    keywords: ['template', 'cli'],
   }))
   context.onGenerateDone(() => {
     context.extendPackage({ description: 'added on generate done' })
@@ -78,6 +83,8 @@ describe('CreateRunner 集成', () => {
       name: 'review-project',
       author: 'Ender',
       description: 'added on generate done',
+      files: ['dist', 'bin'],
+      keywords: ['template', 'cli'],
     })
     expect(runner.appData.pkg).toMatchObject(packageJson)
     expect(runner.appData.packageManager).toBe('npm')

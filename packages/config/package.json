@@ -1,7 +1,7 @@
 {
   "name": "@eljs/config",
   "version": "1.3.2-alpha.0",
-  "description": "Powerful configuration file loader with type-safe configuration management.",
+  "description": "Configuration file loader with layered merging and runtime validation hooks.",
   "keywords": [
     "eljs",
     "config",
@@ -18,6 +18,7 @@
   },
   "license": "MIT",
   "author": "chnliquan",
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
@@ -43,18 +44,12 @@
     "build": "rslib build",
     "clean": "rimraf dist",
     "dev": "rslib build --watch",
+    "test": "vitest run --config ../../vitest.config.ts packages/config/__tests__",
+    "test:watch": "vitest --config ../../vitest.config.ts packages/config/__tests__",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json"
   },
   "dependencies": {
     "@eljs/utils": "workspace:*"
-  },
-  "peerDependencies": {
-    "typescript": ">=5.0.0"
-  },
-  "peerDependenciesMeta": {
-    "typescript": {
-      "optional": true
-    }
   },
   "engines": {
     "node": ">=22.14.0"

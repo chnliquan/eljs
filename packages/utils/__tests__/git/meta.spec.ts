@@ -15,21 +15,24 @@ import * as importedModule1 from '../../src/guards'
 
 import os from 'node:os'
 
+import { getProjectGitDir, getProjectGitDirSync } from '../../src/git/directory'
 import {
   getGitBranch,
   getGitCommitSha,
   getGitLatestTag,
-  getGitRepository,
-  getGitRepositorySync,
   getGitUpstreamBranch,
+} from '../../src/git/refs'
+import {
   getGitUrl,
   getGitUrlSync,
-  getGitUser,
-  getGitUserSync,
-  getProjectGitDir,
-  getProjectGitDirSync,
   gitUrlAnalysis,
-} from '../../src/git/meta'
+  parseGitRemoteUrl,
+} from '../../src/git/remote'
+import {
+  getGitRepository,
+  getGitRepositorySync,
+} from '../../src/git/repository'
+import { getGitUser, getGitUserSync } from '../../src/git/user'
 
 const requiredModule3 = vi.mocked(importedModule3, { deep: true })
 const requiredModule4 = vi.mocked(importedModule4, { deep: true })
@@ -56,26 +59,24 @@ describe('Git Meta 工具', () => {
   const mockIsObject = requiredModule1.isObject as MockedFunction<
     (value: unknown) => boolean
   >
-  const mockIsPathExists = requiredModule2.isPathExists as MockedFunction<
+  const mockIsPathExists = requiredModule2.pathExists as MockedFunction<
     (path: string) => Promise<boolean>
   >
-  const mockIsPathExistsSync =
-    requiredModule2.isPathExistsSync as MockedFunction<
-      (path: string) => boolean
-    >
+  const mockIsPathExistsSync = requiredModule2.pathExistsSync as MockedFunction<
+    (path: string) => boolean
+  >
   const mockReadFile = requiredModule2.readFile as MockedFunction<
     (path: string) => Promise<string>
   >
   const mockReadFileSync = requiredModule2.readFileSync as MockedFunction<
     (path: string) => string
   >
-  const mockExeca = requiredModule3.default as unknown as MockedFunction<
+  const mockExeca = requiredModule3.execa as unknown as MockedFunction<
     (command: string, args: string[]) => Promise<{ stdout: string }>
-  > & {
-    sync: MockedFunction<
-      (command: string, args: string[]) => { stdout: string }
-    >
-  }
+  >
+  const mockExecaSync = requiredModule3.execaSync as unknown as MockedFunction<
+    (command: string, args: string[]) => { stdout: string }
+  >
   const mockIni = requiredModule4 as {
     parse: MockedFunction<(content: string) => unknown>
   }
@@ -306,6 +307,16 @@ describe('Git Meta 工具', () => {
   })
 
   describe('gitUrlAnalysis', () => {
+    it('新名称应该解析远程仓库地址', () => {
+      expect(parseGitRemoteUrl('git@github.com:eljs/utils.git')).toEqual({
+        name: 'utils',
+        group: 'eljs',
+        href: 'https://github.com/eljs/utils',
+        https: 'https://github.com/eljs/utils.git',
+        ssh: 'git@github.com:eljs/utils.git',
+      })
+    })
+
     it('应该解析SSH格式的Git URL', () => {
       const sshUrl = 'git@github.com:user/repo.git'
 
@@ -922,7 +933,7 @@ describe('Git Meta 工具', () => {
 
     describe('getGitUserSync', () => {
       it('应该同步获取 git 用户信息', () => {
-        mockExeca.sync.mockReturnValue({
+        mockExecaSync.mockReturnValue({
           stdout: 'user.name=Sync User\nuser.email=sync@example.com',
         })
 
@@ -932,11 +943,11 @@ describe('Git Meta 工具', () => {
           name: 'sync',
           email: 'sync@example.com',
         })
-        expect(mockExeca.sync).toHaveBeenCalledWith('git', ['config', '--list'])
+        expect(mockExecaSync).toHaveBeenCalledWith('git', ['config', '--list'])
       })
 
       it('应该在同步模式下回退到 .gitconfig', () => {
-        mockExeca.sync.mockImplementation(() => {
+        mockExecaSync.mockImplementation(() => {
           throw new Error('git command failed')
         })
         mockReadFileSync.mockReturnValue(`
@@ -957,7 +968,7 @@ describe('Git Meta 工具', () => {
       })
 
       it('应该在同步模式下处理所有错误', () => {
-        mockExeca.sync.mockImplementation(() => {
+        mockExecaSync.mockImplementation(() => {
           throw new Error('git failed')
         })
         mockReadFileSync.mockImplementation(() => {

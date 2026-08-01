@@ -18,6 +18,7 @@
   },
   "license": "MIT",
   "author": "chnliquan",
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
@@ -31,6 +32,186 @@
       },
       "default": "./dist/index.js"
     },
+    "./cli": {
+      "import": {
+        "types": "./dist/cli/index.d.ts",
+        "default": "./dist/cli/index.js"
+      },
+      "require": {
+        "types": "./dist/cli/index.d.cts",
+        "default": "./dist/cli/index.cjs"
+      }
+    },
+    "./cp": {
+      "import": {
+        "types": "./dist/cp/index.d.ts",
+        "default": "./dist/cp/index.js"
+      },
+      "require": {
+        "types": "./dist/cp/index.d.cts",
+        "default": "./dist/cp/index.cjs"
+      }
+    },
+    "./env": {
+      "import": {
+        "types": "./dist/env/index.d.ts",
+        "default": "./dist/env/index.js"
+      },
+      "require": {
+        "types": "./dist/env/index.d.cts",
+        "default": "./dist/env/index.cjs"
+      }
+    },
+    "./error": {
+      "import": {
+        "types": "./dist/error/index.d.ts",
+        "default": "./dist/error/index.js"
+      },
+      "require": {
+        "types": "./dist/error/index.d.cts",
+        "default": "./dist/error/index.cjs"
+      }
+    },
+    "./file": {
+      "import": {
+        "types": "./dist/file/index.d.ts",
+        "default": "./dist/file/index.js"
+      },
+      "require": {
+        "types": "./dist/file/index.d.cts",
+        "default": "./dist/file/index.cjs"
+      }
+    },
+    "./generator": {
+      "import": {
+        "types": "./dist/generator/index.d.ts",
+        "default": "./dist/generator/index.js"
+      },
+      "require": {
+        "types": "./dist/generator/index.d.cts",
+        "default": "./dist/generator/index.cjs"
+      }
+    },
+    "./git": {
+      "import": {
+        "types": "./dist/git/index.d.ts",
+        "default": "./dist/git/index.js"
+      },
+      "require": {
+        "types": "./dist/git/index.d.cts",
+        "default": "./dist/git/index.cjs"
+      }
+    },
+    "./guards": {
+      "import": {
+        "types": "./dist/guards/index.d.ts",
+        "default": "./dist/guards/index.js"
+      },
+      "require": {
+        "types": "./dist/guards/index.d.cts",
+        "default": "./dist/guards/index.cjs"
+      }
+    },
+    "./http": {
+      "import": {
+        "types": "./dist/http/index.d.ts",
+        "default": "./dist/http/index.js"
+      },
+      "require": {
+        "types": "./dist/http/index.d.cts",
+        "default": "./dist/http/index.cjs"
+      }
+    },
+    "./logger": {
+      "import": {
+        "types": "./dist/logger/index.d.ts",
+        "default": "./dist/logger/index.js"
+      },
+      "require": {
+        "types": "./dist/logger/index.d.cts",
+        "default": "./dist/logger/index.cjs"
+      }
+    },
+    "./module": {
+      "import": {
+        "types": "./dist/module/index.d.ts",
+        "default": "./dist/module/index.js"
+      },
+      "require": {
+        "types": "./dist/module/index.d.cts",
+        "default": "./dist/module/index.cjs"
+      }
+    },
+    "./npm": {
+      "import": {
+        "types": "./dist/npm/index.d.ts",
+        "default": "./dist/npm/index.js"
+      },
+      "require": {
+        "types": "./dist/npm/index.d.cts",
+        "default": "./dist/npm/index.cjs"
+      }
+    },
+    "./object": {
+      "import": {
+        "types": "./dist/object/index.d.ts",
+        "default": "./dist/object/index.js"
+      },
+      "require": {
+        "types": "./dist/object/index.d.cts",
+        "default": "./dist/object/index.cjs"
+      }
+    },
+    "./observability": {
+      "import": {
+        "types": "./dist/observability/index.d.ts",
+        "default": "./dist/observability/index.js"
+      },
+      "require": {
+        "types": "./dist/observability/index.d.cts",
+        "default": "./dist/observability/index.cjs"
+      }
+    },
+    "./path": {
+      "import": {
+        "types": "./dist/path/index.d.ts",
+        "default": "./dist/path/index.js"
+      },
+      "require": {
+        "types": "./dist/path/index.d.cts",
+        "default": "./dist/path/index.cjs"
+      }
+    },
+    "./promise": {
+      "import": {
+        "types": "./dist/promise/index.d.ts",
+        "default": "./dist/promise/index.js"
+      },
+      "require": {
+        "types": "./dist/promise/index.d.cts",
+        "default": "./dist/promise/index.cjs"
+      }
+    },
+    "./string": {
+      "import": {
+        "types": "./dist/string/index.d.ts",
+        "default": "./dist/string/index.js"
+      },
+      "require": {
+        "types": "./dist/string/index.d.cts",
+        "default": "./dist/string/index.cjs"
+      }
+    },
+    "./types": {
+      "import": {
+        "types": "./dist/types/index.d.ts",
+        "default": "./dist/types/index.js"
+      },
+      "require": {
+        "types": "./dist/types/index.d.cts",
+        "default": "./dist/types/index.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "main": "./dist/index.cjs",
@@ -40,6 +221,7 @@
     "dist"
   ],
   "scripts": {
+    "benchmark:import": "node scripts/benchmark-import.mjs",
     "build": "rslib build",
     "clean": "rimraf dist",
     "dev": "rslib build --watch",
@@ -50,41 +232,33 @@
     "@types/ejs": "^3.1.5",
     "@types/ini": "^4.1.1",
     "@types/mustache": "^4.2.6",
-    "@types/parse-json": "^4.0.2",
     "@types/prompts": "^2.4.9",
     "@types/resolve": "^1.20.6",
     "@types/which": "^3.0.4",
-    "chalk": "^4.1.2",
+    "chalk": "^6.0.0",
     "debug": "^4.4.1",
     "deepmerge": "^4.3.1",
     "ejs": "^6.0.1",
-    "execa": "^5.1.1",
-    "find-up": "^5.0.0",
+    "execa": "^10.0.1",
+    "find-up": "^8.0.0",
     "glob": "^13.0.6",
     "import-fresh": "^3.3.1",
     "ini": "^6.0.0",
     "js-yaml": "^5.2.2",
     "mkdirp": "^3.0.1",
     "mustache": "^4.2.0",
-    "parse-json": "^5.2.0",
+    "parse-json": "^8.3.0",
     "pirates": "^4.0.7",
     "prompts": "^2.4.2",
     "read": "^5.0.1",
     "resolve": "^1.22.10",
     "rimraf": "^6.0.1",
-    "strip-ansi": "^6.0.1",
+    "strip-ansi": "^7.2.0",
     "tar": "^7.5.22",
+    "typescript": "^6.0.3",
     "urllib": "^4.9.0",
-    "uuid": "^11.1.0",
+    "uuid": "^14.0.1",
     "which": "^6.0.1"
-  },
-  "peerDependencies": {
-    "typescript": ">=5.0.0"
-  },
-  "peerDependenciesMeta": {
-    "typescript": {
-      "optional": true
-    }
   },
   "engines": {
     "node": ">=22.14.0"

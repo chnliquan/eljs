@@ -3,6 +3,15 @@ import * as npmModule from '../../src/npm'
 
 describe('NPM 工具函数', () => {
   describe('pkgNameAnalysis 包名解析', () => {
+    it('新名称应该解析包标识', () => {
+      expect(npmModule.parsePackageSpecifier('@eljs/utils@next')).toEqual({
+        name: '@eljs/utils',
+        version: 'next',
+        scope: '@eljs',
+        unscopedName: 'utils',
+      })
+    })
+
     it('应该正确解析包名', () => {
       expect(npmModule.pkgNameAnalysis('@eljs/utils@1.0.0')).toEqual({
         name: '@eljs/utils',

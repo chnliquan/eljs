@@ -13,16 +13,28 @@ import {
  */
 
 // 模拟外部依赖
+vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils', () => ({
   logger: {
     event: vi.fn(),
   },
 }))
 
+vi.mock('@eljs/create', () => ({
+  AppError: class AppError extends Error {
+    public readonly code: string
+
+    public constructor(message: string, options?: { code?: string }) {
+      super(message)
+      this.name = 'AppError'
+      this.code = options?.code ?? 'CREATE_ERROR'
+    }
+  },
+}))
+
 describe('utils 模块测试', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.spyOn(process, 'exit').mockImplementation(() => undefined as never)
   })
 
   afterEach(() => {
@@ -146,31 +158,31 @@ describe('utils 模块测试', () => {
       const { logger } = await import('@eljs/utils')
       const { onCancel } = await import('../src/utils')
 
-      onCancel()
+      expect(() => onCancel()).toThrow(
+        expect.objectContaining({ code: 'CREATE_OPERATION_CANCELLED' }),
+      )
 
       expect(logger.event).toHaveBeenCalledWith('Cancel create template')
     })
 
-    it('应该调用 process.exit(0) 退出进程', async () => {
+    it('应该抛出取消错误而不是直接退出进程', async () => {
       const { onCancel } = await import('../src/utils')
 
-      onCancel()
-
-      expect(process.exit).toHaveBeenCalledWith(0)
+      expect(() => onCancel()).toThrow(
+        expect.objectContaining({ code: 'CREATE_OPERATION_CANCELLED' }),
+      )
     })
 
-    it('应该按正确的顺序执行日志记录和进程退出', async () => {
+    it('应该先记录日志再抛出取消错误', async () => {
       const { logger } = await import('@eljs/utils')
       const { onCancel } = await import('../src/utils')
 
-      onCancel()
+      expect(() => onCancel()).toThrow()
 
-      // 验证调用顺序：先记录日志，再退出进程
       expect(logger.event).toHaveBeenCalled()
-      expect(process.exit).toHaveBeenCalled()
     })
 
-    it('应该在任何情况下都执行退出操作', async () => {
+    it('日志失败时应该传播原始日志异常', async () => {
       const { logger } = await import('@eljs/utils')
       const { onCancel } = await import('../src/utils')
 
@@ -181,11 +193,7 @@ describe('utils 模块测试', () => {
         },
       )
 
-      // onCancel 仍然应该正常执行
       expect(() => onCancel()).toThrow('Logger error')
-
-      // 但在实际实现中，应该确保 process.exit 总是被调用
-      // 这里我们验证函数的健壮性
       expect(logger.event).toHaveBeenCalled()
     })
   })

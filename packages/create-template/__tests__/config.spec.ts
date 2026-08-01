@@ -86,7 +86,7 @@ describe('config 模块测试', () => {
 
       expect(webTemplate.type).toBe('npm')
       expect(webTemplate.description).toBe('Web Common Template')
-      expect(webTemplate.value).toBe('@eljs/create-plugin-npm-web')
+      expect(webTemplate.value).toBe('@eljs/create-plugin-npm-web@0.12.2')
       expect(webTemplate.registry).toBe('https://registry.npmjs.org/')
     })
 
@@ -95,7 +95,7 @@ describe('config 模块测试', () => {
 
       expect(nodeTemplate.type).toBe('npm')
       expect(nodeTemplate.description).toBe('Node Common Template')
-      expect(nodeTemplate.value).toBe('@eljs/create-plugin-npm-node')
+      expect(nodeTemplate.value).toBe('@eljs/create-plugin-npm-node@0.12.2')
       expect(nodeTemplate.registry).toBe('https://registry.npmjs.org/')
     })
 
@@ -199,9 +199,7 @@ describe('config 模块测试', () => {
 
           if (template.type === 'npm') {
             // npm 包名应该符合规范
-            expect(template.value).toMatch(
-              /^[@a-z0-9]([a-z0-9-]*[a-z0-9])?([/][a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/,
-            )
+            expect(template.value).toMatch(/^@eljs\/[a-z0-9-]+@\d+\.\d+\.\d+$/)
 
             // 当前配置中的包都以 @eljs/ 开头
             expect(template.value).toMatch(/^@eljs\//)

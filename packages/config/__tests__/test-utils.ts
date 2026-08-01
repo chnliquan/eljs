@@ -117,25 +117,3 @@ export function cleanupDir(dir: string): void {
     // 忽略清理错误
   }
 }
-
-/**
- * 设置文件权限（用于权限测试）
- */
-export function setFilePermissions(filePath: string, mode: number): void {
-  try {
-    fs.chmodSync(filePath, mode)
-  } catch {
-    // 在某些系统上可能无法设置权限
-  }
-}
-
-/**
- * 检查文件是否存在
- */
-export function fileExists(filePath: string): boolean {
-  try {
-    return fs.existsSync(filePath)
-  } catch {
-    return false
-  }
-}

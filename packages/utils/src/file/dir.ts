@@ -1,11 +1,11 @@
 import { mkdirp, mkdirpSync } from 'mkdirp'
+import { mkdtemp, mkdtempSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import util from 'node:util'
 
 import { PLATFORM } from '../constants'
 import { isBoolean } from '../guards'
-import { isPathExists, isPathExistsSync } from './is'
+import { pathExists, pathExistsSync } from './is'
 
 /**
  * 创建文件夹
@@ -16,7 +16,7 @@ export async function mkdir(
   path: string,
   mode?: number | string,
 ): Promise<string | void | undefined> {
-  if (!(await isPathExists(path))) {
+  if (!(await pathExists(path))) {
     try {
       const dir = await mkdirp(path, mode)
       return dir
@@ -37,7 +37,7 @@ export function mkdirSync(
   path: string,
   mode?: number | string,
 ): string | void | undefined {
-  if (!isPathExistsSync(path)) {
+  if (!pathExistsSync(path)) {
     try {
       return mkdirpSync(path, mode)
     } catch (error) {
@@ -53,15 +53,20 @@ const DEFAULT_TEMP_DIR = '.cli_tmp'
 /**
  * 创建临时文件夹
  * @param random - 是否随机生成
+ * @returns 临时文件夹路径
  */
-export async function tmpdir(random?: boolean): Promise<string>
+export async function createTempDir(random?: boolean): Promise<string>
 /**
  * 创建临时文件夹
  * @param dirname - 文件夹名称
  * @param random - 是否随机生成
+ * @returns 临时文件夹路径
  */
-export async function tmpdir(dirname: string, random?: boolean): Promise<string>
-export async function tmpdir(
+export async function createTempDir(
+  dirname: string,
+  random?: boolean,
+): Promise<string>
+export async function createTempDir(
   dirname?: string | boolean,
   random?: boolean,
 ): Promise<string> {
@@ -70,89 +75,130 @@ export async function tmpdir(
     dirname = ''
   }
 
-  let tmpdir: string
+  let tempDir: string
 
   if (process.platform === PLATFORM.WIN) {
-    tmpdir = os.tmpdir()
+    tempDir = os.tmpdir()
   } else {
-    tmpdir = path.join(
+    tempDir = path.join(
       process.env.HOME || os.homedir(),
       dirname || DEFAULT_TEMP_DIR,
     )
 
     try {
-      await mkdir(tmpdir)
+      await mkdir(tempDir)
     } catch (_) {
-      tmpdir = os.tmpdir()
+      tempDir = os.tmpdir()
     }
   }
 
   if (random) {
-    const name = util.format(
-      'tmp-%s-%s',
-      Date.now(),
-      Math.ceil(Math.random() * 1000),
-    )
+    // mkdtemp 由操作系统原子创建私有目录，避免可预测名称被抢占或并发复用
+    return new Promise<string>((resolve, reject) => {
+      mkdtemp(path.join(tempDir, 'tmp-'), (error, directory) => {
+        if (error) {
+          reject(error)
+          return
+        }
 
-    tmpdir = path.join(tmpdir, name)
-    await mkdir(tmpdir)
-    return tmpdir
+        resolve(directory)
+      })
+    })
   }
 
-  return tmpdir
+  return tempDir
+}
+
+/**
+ * 同步创建临时文件夹
+ * @param random - 是否随机生成
+ * @returns 临时文件夹路径
+ */
+export function createTempDirSync(random?: boolean): string
+/**
+ * 同步创建临时文件夹
+ * @param dirname - 文件夹名称
+ * @param random - 是否随机生成
+ * @returns 临时文件夹路径
+ */
+export function createTempDirSync(dirname: string, random?: boolean): string
+export function createTempDirSync(
+  dirname?: string | boolean,
+  random?: boolean,
+): string {
+  if (isBoolean(dirname)) {
+    random = dirname
+    dirname = ''
+  }
+
+  let tempDir: string
+
+  if (process.platform === PLATFORM.WIN) {
+    tempDir = os.tmpdir()
+  } else {
+    tempDir = path.join(
+      process.env.HOME || os.homedir(),
+      dirname || DEFAULT_TEMP_DIR,
+    )
+
+    try {
+      mkdirSync(tempDir)
+    } catch (_) {
+      tempDir = os.tmpdir()
+    }
+  }
+
+  if (random) {
+    return mkdtempSync(path.join(tempDir, 'tmp-'))
+  }
+
+  return tempDir
 }
 
 /**
  * 创建临时文件夹
  * @param random - 是否随机生成
+ * @returns 临时文件夹路径
+ * @deprecated 请改用 {@link createTempDir}
  */
-export async function tmpdirSync(random?: boolean): Promise<string>
+export function tmpdir(random?: boolean): Promise<string>
 /**
  * 创建临时文件夹
  * @param dirname - 文件夹名称
  * @param random - 是否随机生成
+ * @returns 临时文件夹路径
+ * @deprecated 请改用 {@link createTempDir}
  */
-export async function tmpdirSync(
-  dirname: string,
-  random?: boolean,
-): Promise<string>
-export async function tmpdirSync(
+export function tmpdir(dirname: string, random?: boolean): Promise<string>
+export function tmpdir(
   dirname?: string | boolean,
   random?: boolean,
 ): Promise<string> {
-  if (isBoolean(dirname)) {
-    random = dirname
-    dirname = ''
-  }
+  return isBoolean(dirname)
+    ? createTempDir(dirname)
+    : createTempDir(dirname ?? '', random)
+}
 
-  let tmpdir: string
-
-  if (process.platform === PLATFORM.WIN) {
-    tmpdir = os.tmpdir()
-  } else {
-    tmpdir = path.join(
-      process.env.HOME || os.homedir(),
-      dirname || DEFAULT_TEMP_DIR,
-    )
-
-    try {
-      mkdirSync(tmpdir)
-    } catch (_) {
-      tmpdir = os.tmpdir()
-    }
-  }
-
-  if (random) {
-    const name = util.format(
-      'tmp-%s-%s',
-      Date.now(),
-      Math.ceil(Math.random() * 1000),
-    )
-
-    tmpdir = path.join(tmpdir, name)
-    mkdirSync(tmpdir)
-    return tmpdir
-  }
-
-  return tmpdir
+/**
+ * 同步创建临时文件夹
+ * @param random - 是否随机生成
+ * @returns 临时文件夹路径
+ * @deprecated 请改用 {@link createTempDirSync}
+ */
+export function tmpdirSync(random?: boolean): string
+/**
+ * 同步创建临时文件夹
+ * @param dirname - 文件夹名称
+ * @param random - 是否随机生成
+ * @returns 临时文件夹路径
+ * @deprecated 请改用 {@link createTempDirSync}
+ */
+export function tmpdirSync(dirname: string, random?: boolean): string
+export function tmpdirSync(
+  dirname?: string | boolean,
+  random?: boolean,
+): string {
+  return isBoolean(dirname)
+    ? createTempDirSync(dirname)
+    : createTempDirSync(dirname ?? '', random)
 }

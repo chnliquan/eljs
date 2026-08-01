@@ -143,6 +143,38 @@ function getRootExport(packageJson: PackageManifest): ExportTarget | undefined {
   return packageJson.exports?.['.']
 }
 
+/**
+ * 展开无需模式匹配即可由消费者直接导入的公开入口
+ *
+ * @remarks
+ * `package.json` 与通配符导出不适合通用运行时烟测，其他入口必须分别验证 ESM、
+ * 可用的 CommonJS 条件以及 TypeScript 声明解析
+ *
+ * @param packageJson - 已安装 tarball 的包清单
+ * @returns 包名或完整子路径与对应条件导出目标
+ */
+function getPublicExportSpecifiers(
+  packageJson: PackageManifest,
+): Array<{ specifier: string; target: ExportTarget | undefined }> {
+  const entries = Object.entries(packageJson.exports ?? {})
+
+  if (entries.length === 0) {
+    return [{ specifier: packageJson.name, target: undefined }]
+  }
+
+  return entries
+    .filter(
+      ([subpath]) => subpath !== './package.json' && !subpath.includes('*'),
+    )
+    .map(([subpath, target]) => ({
+      specifier:
+        subpath === '.'
+          ? packageJson.name
+          : `${packageJson.name}/${subpath.replace(/^\.\//, '')}`,
+      target,
+    }))
+}
+
 mkdirSync(tarballsRoot, { recursive: true })
 
 try {
@@ -304,18 +336,22 @@ try {
   })
 
   for (const { installedRoot, packageJson } of installedPackages) {
-    if (supportsRequire(packageJson)) {
+    for (const { specifier, target } of getPublicExportSpecifiers(
+      packageJson,
+    )) {
+      if (
+        hasExportCondition(target, 'require') ||
+        (specifier === packageJson.name && supportsRequire(packageJson))
+      ) {
+        run(process.execPath, ['-e', `require(${JSON.stringify(specifier)})`])
+      }
+
       run(process.execPath, [
+        '--input-type=module',
         '-e',
-        `require(${JSON.stringify(packageJson.name)})`,
+        `await import(${JSON.stringify(specifier)})`,
       ])
     }
-
-    run(process.execPath, [
-      '--input-type=module',
-      '-e',
-      `await import(${JSON.stringify(packageJson.name)})`,
-    ])
 
     for (const binPath of Object.values(packageJson.bin || {})) {
       run(process.execPath, [
@@ -383,17 +419,28 @@ try {
   ])
 
   const typeImports = installedPackages
+    .flatMap(({ packageJson }) =>
+      getPublicExportSpecifiers(packageJson).map(({ specifier }) => specifier),
+    )
     .map(
-      ({ packageJson }, index) =>
-        `import * as package${index} from ${JSON.stringify(packageJson.name)}\nvoid package${index}`,
+      (specifier, index) =>
+        `import * as package${index} from ${JSON.stringify(specifier)}\nvoid package${index}`,
     )
     .join('\n')
 
   const requireTypeImports = installedPackages
-    .filter(({ packageJson }) => supportsRequire(packageJson))
+    .flatMap(({ packageJson }) =>
+      getPublicExportSpecifiers(packageJson)
+        .filter(
+          ({ specifier, target }) =>
+            hasExportCondition(target, 'require') ||
+            (specifier === packageJson.name && supportsRequire(packageJson)),
+        )
+        .map(({ specifier }) => specifier),
+    )
     .map(
-      ({ packageJson }, index) =>
-        `import package${index} = require(${JSON.stringify(packageJson.name)})\nvoid package${index}`,
+      (specifier, index) =>
+        `import package${index} = require(${JSON.stringify(specifier)})\nvoid package${index}`,
     )
     .join('\n')
 

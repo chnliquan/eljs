@@ -9,7 +9,7 @@ import {
 import * as importedModule0 from '../../src/file'
 import * as importedModule1 from '../../src/guards'
 
-import download, { type DownloadOptions } from '../../src/http/download'
+import { downloadTo, type DownloadOptions } from '../../src/http/download'
 import { downloadNpmTarball } from '../../src/npm/download-npm-tarball'
 
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
@@ -21,9 +21,12 @@ vi.mock('../../src/file')
 vi.mock('../../src/guards')
 
 describe('NPM Download 工具', () => {
-  const mockDownload = download as MockedFunction<typeof download>
-  const mockTmpdir = requiredModule0.tmpdir as unknown as MockedFunction<
+  const mockDownloadTo = downloadTo as MockedFunction<typeof downloadTo>
+  const mockTmpdir = requiredModule0.createTempDir as unknown as MockedFunction<
     (random?: boolean) => Promise<string>
+  >
+  const mockRemove = requiredModule0.remove as MockedFunction<
+    typeof importedModule0.remove
   >
   const mockIsObject = requiredModule1.isObject as MockedFunction<
     (value: unknown) => boolean
@@ -31,8 +34,9 @@ describe('NPM Download 工具', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mockDownload.mockResolvedValue(Buffer.from('downloaded'))
+    mockDownloadTo.mockResolvedValue(undefined)
     mockTmpdir.mockResolvedValue('/tmp/random-dir')
+    mockRemove.mockResolvedValue(true)
     mockIsObject.mockReturnValue(false)
   })
 
@@ -43,11 +47,13 @@ describe('NPM Download 工具', () => {
 
       const result = await downloadNpmTarball(url, dest)
 
-      expect(mockDownload).toHaveBeenCalledWith(url, dest, {
-        extract: true,
-        strip: 1,
-        headers: { accept: 'application/tgz' },
-      })
+      expect(mockDownloadTo).toHaveBeenCalledWith(
+        url,
+        dest,
+        expect.objectContaining({ extract: true, strip: 1 }),
+      )
+      const headers = mockDownloadTo.mock.calls[0][2]?.headers as Headers
+      expect(headers.get('accept')).toBe('application/tgz')
       expect(result).toBe(dest)
     })
 
@@ -57,7 +63,7 @@ describe('NPM Download 工具', () => {
       const result = await downloadNpmTarball(url)
 
       expect(mockTmpdir).toHaveBeenCalledWith(true)
-      expect(mockDownload).toHaveBeenCalledWith(
+      expect(mockDownloadTo).toHaveBeenCalledWith(
         url,
         '/tmp/random-dir',
         expect.any(Object),
@@ -74,7 +80,7 @@ describe('NPM Download 工具', () => {
       const result = await downloadNpmTarball(url, options)
 
       expect(mockTmpdir).toHaveBeenCalledWith(true)
-      expect(mockDownload).toHaveBeenCalledWith(
+      expect(mockDownloadTo).toHaveBeenCalledWith(
         url,
         '/tmp/random-dir',
         expect.objectContaining({
@@ -87,11 +93,24 @@ describe('NPM Download 工具', () => {
     })
 
     it('应该处理下载失败', async () => {
-      mockDownload.mockRejectedValue(new Error('Network timeout'))
+      mockDownloadTo.mockRejectedValue(new Error('Network timeout'))
 
       await expect(
         downloadNpmTarball('https://fail.com/package.tgz'),
       ).rejects.toThrow(/Download .* failed.*Network timeout/)
+      expect(mockRemove).toHaveBeenCalledWith('/tmp/random-dir')
+    })
+
+    it('下载到调用方指定目录失败时不应该删除该目录', async () => {
+      mockDownloadTo.mockRejectedValue(new Error('Network timeout'))
+
+      await expect(
+        downloadNpmTarball(
+          'https://fail.com/package.tgz',
+          '/custom/destination',
+        ),
+      ).rejects.toThrow('Network timeout')
+      expect(mockRemove).not.toHaveBeenCalled()
     })
 
     it('应该处理临时目录创建失败', async () => {
@@ -114,7 +133,7 @@ describe('NPM Download 工具', () => {
 
     it('应该处理错误消息格式', async () => {
       const originalError = new Error('Download failed: 404')
-      mockDownload.mockRejectedValue(originalError)
+      mockDownloadTo.mockRejectedValue(originalError)
 
       try {
         await downloadNpmTarball('https://fail.com/package.tgz')
@@ -132,7 +151,7 @@ describe('NPM Download 工具', () => {
       await downloadNpmTarball('https://example.com/pkg.tgz')
 
       expect(mockTmpdir).toHaveBeenCalledWith(true)
-      expect(mockDownload).toHaveBeenCalledWith(
+      expect(mockDownloadTo).toHaveBeenCalledWith(
         'https://example.com/pkg.tgz',
         '/tmp/random-dir',
         expect.any(Object),
@@ -143,7 +162,7 @@ describe('NPM Download 工具', () => {
       await downloadNpmTarball('https://example.com/pkg.tgz', '/dest')
 
       expect(mockTmpdir).not.toHaveBeenCalled()
-      expect(mockDownload).toHaveBeenCalledWith(
+      expect(mockDownloadTo).toHaveBeenCalledWith(
         'https://example.com/pkg.tgz',
         '/dest',
         expect.any(Object),
@@ -155,7 +174,7 @@ describe('NPM Download 工具', () => {
         timeout: 8000,
       })
 
-      expect(mockDownload).toHaveBeenCalledWith(
+      expect(mockDownloadTo).toHaveBeenCalledWith(
         'https://example.com/pkg.tgz',
         '/dest',
         expect.objectContaining({
@@ -181,13 +200,16 @@ describe('NPM Download 工具', () => {
 
       await downloadNpmTarball('https://test.com/pkg.tgz', '/test', options)
 
-      expect(mockDownload).toHaveBeenCalledWith(
+      expect(mockDownloadTo).toHaveBeenCalledWith(
         'https://test.com/pkg.tgz',
         '/test',
         expect.objectContaining({
           timeout: 15000,
         }),
       )
+      const headers = mockDownloadTo.mock.calls[0][2]?.headers as Headers
+      expect(headers.get('accept')).toBe('application/tgz')
+      expect(headers.get('custom')).toBe('header')
     })
   })
 })

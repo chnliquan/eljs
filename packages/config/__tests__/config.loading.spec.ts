@@ -158,7 +158,7 @@ describe('ConfigManager 文件加载测试', () => {
 
       const result = ConfigManager.getConfigSync([configFile])
 
-      expect(result).toEqual(config)
+      expect(result).toEqual({ default: config })
     })
 
     it('应该同步处理不存在的配置文件', () => {

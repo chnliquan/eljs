@@ -54,13 +54,13 @@ npx @eljs/release
 
 ### ⚙️ @eljs/config
 
-Advanced configuration management with schema validation and environment support.
+Layered Node.js configuration loading with optional runtime validation.
 
 ```bash
 npm install @eljs/config
 ```
 
-**Features**: Schema validation, environment variables, configuration merging, TypeScript support
+**Features**: Optional validation hooks, environment suffix layering, structured errors, TypeScript support
 
 ### 🔌 @eljs/plugin-host
 

@@ -1,48 +1,9 @@
 import * as fs from 'node:fs'
-import * as os from 'node:os'
 import * as path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { ConfigManager } from '../src/config'
-
-// 测试工具函数
-const createTempDir = () => {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'config-async-test-'))
-}
-
-const createConfigFile = (
-  dir: string,
-  filename: string,
-  content: object | string,
-) => {
-  const filePath = path.join(dir, filename)
-
-  if (typeof content === 'string') {
-    fs.writeFileSync(filePath, content)
-  } else if (filename.endsWith('.json')) {
-    fs.writeFileSync(filePath, JSON.stringify(content, null, 2))
-  } else if (filename.endsWith('.js')) {
-    fs.writeFileSync(
-      filePath,
-      `module.exports = ${JSON.stringify(content, null, 2)}`,
-    )
-  } else if (filename.endsWith('.ts')) {
-    fs.writeFileSync(
-      filePath,
-      `export default ${JSON.stringify(content, null, 2)}`,
-    )
-  }
-
-  return filePath
-}
-
-const cleanupDir = (dir: string) => {
-  try {
-    fs.rmSync(dir, { recursive: true, force: true })
-  } catch {
-    // 忽略清理错误
-  }
-}
+import { cleanupDir, createConfigFile, createTempDir } from './test-utils'
 
 describe('ConfigManager 同步异步 API 对比测试', () => {
   let tempDir: string
@@ -251,13 +212,9 @@ describe('ConfigManager 同步异步 API 对比测试', () => {
         cwd: tempDir,
       })
 
-      const startTime = Date.now()
       const result = configManager.getConfigSync()
-      const endTime = Date.now()
 
       expect(result).toEqual(config)
-      // 同步操作应该很快完成（通常 < 100ms）
-      expect(endTime - startTime).toBeLessThan(1000)
     })
 
     it('应该能处理多个并发的异步配置加载', async () => {

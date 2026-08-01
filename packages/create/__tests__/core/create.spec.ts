@@ -1,4 +1,10 @@
 import * as eljsUtils from '@eljs/utils'
+import * as cliUtils from '@eljs/utils/cli'
+import * as fileUtils from '@eljs/utils/file'
+import * as guardUtils from '@eljs/utils/guards'
+import * as loggerUtils from '@eljs/utils/logger'
+import * as moduleUtils from '@eljs/utils/module'
+import * as pathUtils from '@eljs/utils/path'
 import path from 'node:path'
 import {
   afterAll,
@@ -20,13 +26,40 @@ import { TemplateDownloader } from '../../src/core/template-downloader'
 import type { RemoteTemplate } from '../../src/types'
 import { AppError } from '../../src/utils'
 
+const { mockCp } = vi.hoisted(() => ({ mockCp: vi.fn() }))
+const loggerMocks = vi.hoisted(() => ({
+  chalk: { cyan: vi.fn((text: string) => `cyan(${text})`) },
+  createDebugger: vi.fn(() => vi.fn()),
+  logger: {
+    clear: vi.fn(),
+    event: vi.fn(),
+    warn: vi.fn(),
+  },
+}))
+
 // Mock all dependencies for functional tests
-vi.mock('@eljs/utils')
+vi.mock('@eljs/utils/cli')
+vi.mock('@eljs/utils/file')
+vi.mock('@eljs/utils/guards')
+vi.mock('@eljs/utils/logger', () => loggerMocks)
+vi.mock('@eljs/utils/module')
+vi.mock('@eljs/utils/path')
 vi.mock('../../src/core/template-downloader')
 vi.mock('../../src/core/create-runner')
 vi.mock('node:path')
+vi.mock('node:fs/promises', async importOriginal => ({
+  ...(await importOriginal<typeof import('node:fs/promises')>()),
+  cp: mockCp,
+}))
 
-const mockedEljs = eljsUtils as Mocked<typeof eljsUtils>
+const mockedEljs = {
+  ...vi.mocked(cliUtils, { deep: true }),
+  ...vi.mocked(fileUtils, { deep: true }),
+  ...vi.mocked(guardUtils, { deep: true }),
+  ...vi.mocked(loggerUtils, { deep: true }),
+  ...vi.mocked(moduleUtils, { deep: true }),
+  ...vi.mocked(pathUtils, { deep: true }),
+} as unknown as Mocked<typeof eljsUtils>
 const MockedDownload = TemplateDownloader as MockedClass<
   typeof TemplateDownloader
 >
@@ -53,6 +86,7 @@ describe('ProjectCreator 类完整测试', () => {
     mockedEljs.isPathExists.mockResolvedValue(false)
     mockedEljs.isDirectory.mockResolvedValue(true)
     mockedEljs.mkdir.mockResolvedValue(undefined)
+    mockedEljs.move.mockResolvedValue(undefined)
     mockedEljs.remove.mockResolvedValue(true)
     mockedEljs.tryPaths.mockResolvedValue('/mock/config')
     mockedEljs.findUp.mockResolvedValue('/mock/template/root')
@@ -63,20 +97,12 @@ describe('ProjectCreator 类完整测试', () => {
     mockedEljs.isString.mockImplementation(
       (value): value is string => typeof value === 'string',
     )
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(mockedEljs as any).logger = {
-      clear: vi.fn(),
-      event: vi.fn(),
-      warn: vi.fn(),
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(mockedEljs as any).chalk = {
-      cyan: vi.fn((text: string) => `cyan(${text})`),
-    }
+    loggerMocks.chalk.cyan.mockImplementation((text: string) => `cyan(${text})`)
     mockedEljs.prompts.mockResolvedValue({
       action: 'overwrite',
       confirmed: true,
     })
+    mockCp.mockResolvedValue(undefined)
 
     mockedPath.resolve.mockImplementation((...paths) => {
       let lastAbsoluteIndex = 0
@@ -99,6 +125,15 @@ describe('ProjectCreator 类完整测试', () => {
       return to.startsWith(prefix) ? to.slice(prefix.length) : '../outside'
     })
     mockedPath.isAbsolute.mockImplementation(value => value.startsWith('/'))
+    mockedPath.dirname.mockImplementation(value => {
+      const normalized = value.replace(/\/+$/u, '') || '/'
+      const separatorIndex = normalized.lastIndexOf('/')
+      return separatorIndex <= 0 ? '/' : normalized.slice(0, separatorIndex)
+    })
+    mockedPath.basename.mockImplementation(value => {
+      const normalized = value.replace(/\/+$/u, '')
+      return normalized.slice(normalized.lastIndexOf('/') + 1)
+    })
 
     // Mock TemplateDownloader class
     MockedDownload.prototype.download = vi
@@ -253,7 +288,7 @@ describe('ProjectCreator 类完整测试', () => {
       expect(MockedDownload).toHaveBeenCalled()
     })
 
-    it('应该在 force 模式下删除现有目录', async () => {
+    it('应该在 force 模式下备份并在成功后删除原目录', async () => {
       mockedEljs.isPathExists.mockResolvedValue(true)
 
       const create = new ProjectCreator({
@@ -263,11 +298,15 @@ describe('ProjectCreator 类完整测试', () => {
 
       await create.run('existing-project')
 
-      expect(mockedEljs.remove).toHaveBeenCalledWith(
+      expect(mockedEljs.move).toHaveBeenCalledWith(
         '/mock/cwd/existing-project',
+        expect.stringMatching(/^\/mock\/cwd\/\.eljs-backup-/u),
       )
       expect(mockedEljs.mkdir).toHaveBeenCalledWith(
         '/mock/cwd/existing-project',
+      )
+      expect(mockedEljs.remove).toHaveBeenCalledWith(
+        expect.stringMatching(/^\/mock\/cwd\/\.eljs-backup-/u),
       )
     })
 
@@ -317,10 +356,53 @@ describe('ProjectCreator 类完整测试', () => {
 
     it('应该在找不到配置文件和生成器文件时抛出错误', async () => {
       mockedEljs.tryPaths.mockResolvedValue(undefined)
+      mockedEljs.isPathExists.mockResolvedValue(true)
+
+      const create = new ProjectCreator({
+        template: 'test-template',
+        force: true,
+      })
+
+      await expect(create.run('test-project')).rejects.toThrow(AppError)
+      expect(mockedEljs.move).not.toHaveBeenCalled()
+      expect(mockedEljs.remove).not.toHaveBeenCalledWith(
+        '/mock/cwd/test-project',
+      )
+    })
+
+    it('应该在覆盖生成失败时恢复原目录', async () => {
+      mockedEljs.isPathExists.mockResolvedValue(true)
+      MockedRunner.prototype.run.mockRejectedValue(new Error('Generate failed'))
+
+      const create = new ProjectCreator({
+        template: 'test-template',
+        force: true,
+      })
+
+      await expect(create.run('existing-project')).rejects.toThrow(
+        'Generate failed',
+      )
+
+      const backupPath = mockedEljs.move.mock.calls[0][1]
+      expect(mockedEljs.move).toHaveBeenNthCalledWith(
+        2,
+        backupPath,
+        '/mock/cwd/existing-project',
+        true,
+      )
+    })
+
+    it('应该清理生成失败的新目标目录', async () => {
+      mockedEljs.isPathExists
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true)
+        .mockResolvedValue(false)
+      MockedRunner.prototype.run.mockRejectedValue(new Error('Generate failed'))
 
       const create = new ProjectCreator({ template: 'test-template' })
 
-      await expect(create.run('test-project')).rejects.toThrow(AppError)
+      await expect(create.run('new-project')).rejects.toThrow('Generate failed')
+      expect(mockedEljs.remove).toHaveBeenCalledWith('/mock/cwd/new-project')
     })
 
     it('应该创建 CreateRunner 实例并执行', async () => {
@@ -395,6 +477,20 @@ describe('ProjectCreator 类完整测试', () => {
       await expect(create.run('test-project')).rejects.toThrow(AppError)
     })
 
+    it('应该拒绝位于本地模版内部的目标目录', async () => {
+      const create = new ProjectCreator({
+        cwd: '/mock/cwd/template',
+        template: '/mock/cwd/template',
+        force: true,
+      })
+
+      await expect(create.run('nested-project')).rejects.toThrow(
+        'must not overlap',
+      )
+      expect(mockedEljs.move).not.toHaveBeenCalled()
+      expect(mockedEljs.mkdir).not.toHaveBeenCalled()
+    })
+
     it('应该解析 node_modules 中的模板', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ;(mockedEljs.resolve as any).sync.mockReturnValue(
@@ -429,8 +525,26 @@ describe('ProjectCreator 类完整测试', () => {
       await create.run('test-project')
 
       expect(MockedDownload).toHaveBeenCalledWith({
+        cwd: '/mock/cwd',
         type: 'npm',
         value: 'non-existent-npm-package',
+      })
+    })
+
+    it.each([
+      'https://github.com/user/template.git#main',
+      'git+https://github.com/user/template.git#main',
+      'ssh://git@github.com/user/template.git',
+      'git@github.com:user/template.git',
+    ])('应该把 Git 地址字符串识别为远程 Git 模版 %s', async template => {
+      const create = new ProjectCreator({ template })
+
+      await create.run('test-project')
+
+      expect(MockedDownload).toHaveBeenCalledWith({
+        cwd: '/mock/cwd',
+        type: 'git',
+        value: template,
       })
     })
 
@@ -444,7 +558,10 @@ describe('ProjectCreator 类完整测试', () => {
       const create = new ProjectCreator({ template })
       await create.run('test-project')
 
-      expect(MockedDownload).toHaveBeenCalledWith(template)
+      expect(MockedDownload).toHaveBeenCalledWith({
+        ...template,
+        cwd: '/mock/cwd',
+      })
     })
 
     it('应该处理 git 类型远程模板', async () => {
@@ -456,7 +573,10 @@ describe('ProjectCreator 类完整测试', () => {
       const create = new ProjectCreator({ template })
       await create.run('test-project')
 
-      expect(MockedDownload).toHaveBeenCalledWith(template)
+      expect(MockedDownload).toHaveBeenCalledWith({
+        ...template,
+        cwd: '/mock/cwd',
+      })
     })
   })
 
@@ -481,12 +601,30 @@ describe('ProjectCreator 类完整测试', () => {
       )
     })
 
+    it('应该清理 Git 下载器拥有的父级临时目录', async () => {
+      mockedEljs.isPathExists
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true)
+
+      const create = new ProjectCreator({
+        template: {
+          trusted: true,
+          type: 'git',
+          value: 'https://github.com/user/template.git',
+        },
+      })
+      await create.run('test-project')
+
+      expect(mockedEljs.remove).toHaveBeenCalledWith('/mock/downloaded')
+    })
+
     it('应该确保即使出错也会执行清理', async () => {
       MockedRunner.prototype.run.mockRejectedValue(
         new Error('CreateRunner failed'),
       )
       mockedEljs.isPathExists
         .mockResolvedValueOnce(false) // target dir
+        .mockResolvedValueOnce(true) // partially generated target
         .mockResolvedValueOnce(true) // template exists for cleanup
 
       const create = new ProjectCreator({ template: 'test-template' })
@@ -497,6 +635,32 @@ describe('ProjectCreator 类完整测试', () => {
       expect(mockedEljs.remove).toHaveBeenCalledWith(
         '/mock/downloaded/template',
       )
+    })
+
+    it('应该在创建和远程清理都失败时保留两个错误', async () => {
+      const generationError = new Error('CreateRunner failed')
+      const cleanupError = new Error('Cleanup failed')
+      MockedRunner.prototype.run.mockRejectedValue(generationError)
+      mockedEljs.isPathExists
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(true)
+      mockedEljs.remove
+        .mockResolvedValueOnce(true)
+        .mockRejectedValueOnce(cleanupError)
+
+      const create = new ProjectCreator({ template: 'test-template' })
+
+      try {
+        await create.run('test-project')
+      } catch (error) {
+        expect(error).toMatchObject({ code: 'CREATE_CLEANUP_FAILED' })
+        expect((error as Error).cause).toBeInstanceOf(AggregateError)
+        expect(((error as Error).cause as AggregateError).errors).toEqual([
+          generationError,
+          cleanupError,
+        ])
+      }
     })
   })
 
@@ -636,7 +800,7 @@ describe('ProjectCreator 类完整测试', () => {
       })
     })
 
-    it('应该处理配置验证', () => {
+    it('应该拒绝同时启用 force 和 merge', () => {
       const fullConfig: ProjectCreatorOptions = {
         cwd: '/full/config',
         template: {
@@ -648,10 +812,9 @@ describe('ProjectCreator 类完整测试', () => {
         merge: true,
       }
 
-      const create = new ProjectCreator(fullConfig)
-      expect(create.constructorOptions.cwd).toBe('/full/config')
-      expect(create.constructorOptions.force).toBe(true)
-      expect(create.constructorOptions.merge).toBe(true)
+      expect(() => new ProjectCreator(fullConfig)).toThrow(
+        expect.objectContaining({ code: 'CREATE_INVALID_OPTIONS' }),
+      )
     })
   })
 

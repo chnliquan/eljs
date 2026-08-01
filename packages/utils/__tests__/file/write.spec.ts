@@ -21,8 +21,12 @@ import {
   safeWriteJson,
   safeWriteJsonSync,
   writeFile,
+  writeFileAtomic,
+  writeFileAtomicSync,
   writeFileSync,
   writeJson,
+  writeJsonAtomic,
+  writeJsonAtomicSync,
   writeJsonSync,
 } from '../../src/file/write'
 
@@ -32,13 +36,12 @@ const requiredModule0 = vi.mocked(importedModule0, { deep: true })
 vi.mock('../../src/file/is')
 
 describe('文件写入工具', () => {
-  const mockIsPathExists = requiredModule0.isPathExists as MockedFunction<
+  const mockIsPathExists = requiredModule0.pathExists as MockedFunction<
     (filePath: string) => Promise<boolean>
   >
-  const mockIsPathExistsSync =
-    requiredModule0.isPathExistsSync as MockedFunction<
-      (filePath: string) => boolean
-    >
+  const mockIsPathExistsSync = requiredModule0.pathExistsSync as MockedFunction<
+    (filePath: string) => boolean
+  >
 
   let tempDir: string
   let testFile: string
@@ -198,6 +201,11 @@ describe('文件写入工具', () => {
   })
 
   describe('safeWriteFile 安全文件写入', () => {
+    it('新名称应该原子写入文件', async () => {
+      await writeFileAtomic(testFile, 'atomic')
+      expect(await fsp.readFile(testFile, 'utf8')).toBe('atomic')
+    })
+
     beforeEach(() => {
       mockIsPathExists.mockResolvedValue(false)
     })
@@ -233,6 +241,11 @@ describe('文件写入工具', () => {
   })
 
   describe('safeWriteFileSync 同步安全文件写入', () => {
+    it('新名称应该同步原子写入文件', () => {
+      writeFileAtomicSync(testFile, 'atomic-sync')
+      expect(fs.readFileSync(testFile, 'utf8')).toBe('atomic-sync')
+    })
+
     beforeEach(() => {
       mockIsPathExistsSync.mockReturnValue(false)
     })
@@ -257,6 +270,13 @@ describe('文件写入工具', () => {
   })
 
   describe('safeWriteJson 安全JSON写入', () => {
+    it('新名称应该原子写入 JSON', async () => {
+      await writeJsonAtomic(testJsonFile, { mode: 'atomic' })
+      expect(JSON.parse(await fsp.readFile(testJsonFile, 'utf8'))).toEqual({
+        mode: 'atomic',
+      })
+    })
+
     beforeEach(() => {
       mockIsPathExists.mockResolvedValue(false)
     })
@@ -287,6 +307,13 @@ describe('文件写入工具', () => {
   })
 
   describe('safeWriteJsonSync 同步安全JSON写入', () => {
+    it('新名称应该同步原子写入 JSON', () => {
+      writeJsonAtomicSync(testJsonFile, { mode: 'atomic-sync' })
+      expect(JSON.parse(fs.readFileSync(testJsonFile, 'utf8'))).toEqual({
+        mode: 'atomic-sync',
+      })
+    })
+
     beforeEach(() => {
       mockIsPathExistsSync.mockReturnValue(false)
     })

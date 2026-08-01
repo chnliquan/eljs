@@ -1,2 +1,2 @@
-export { default as download } from './download'
+export { default as download, downloadTo } from './download'
 export type { DownloadOptions, DownloadResult } from './download'

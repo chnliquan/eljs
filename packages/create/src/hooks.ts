@@ -4,9 +4,9 @@ import {
   defineHooks,
   defineModifyHook,
 } from '@eljs/plugin-host'
-import type { prompts, RequiredRecursive } from '@eljs/utils'
+import type { prompts } from '@eljs/utils/cli'
 
-import type { Config } from './types/config'
+import type { ResolvedConfig } from './types/config'
 import type { AppData, Paths, Prompts } from './types/runner'
 
 /**
@@ -45,7 +45,7 @@ export interface CreatePluginCapabilities {
    * @remarks
    * 仅在插件初始化完成且配置解析后可读取
    */
-  readonly config: RequiredRecursive<Config>
+  readonly config: ResolvedConfig
   /**
    * 当前应用数据
    */

@@ -41,6 +41,7 @@ vi.mock('@eljs/config', () => ({
 }))
 
 // Mock utils with simple implementations
+vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils', () => ({
   findUp: {
     sync: vi.fn().mockReturnValue('/mock/package.json'),

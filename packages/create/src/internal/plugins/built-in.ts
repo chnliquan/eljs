@@ -1,15 +1,10 @@
-import {
-  chalk,
-  deepMerge,
-  install,
-  isObject,
-  isPathExists,
-  logger,
-  readJson,
-  writeJson,
-  type PackageJson,
-  type RunCommandOptions,
-} from '@eljs/utils'
+import type { RunCommandOptions } from '@eljs/utils/cp'
+import { isPathExists, readJson, writeJson } from '@eljs/utils/file'
+import { isObject } from '@eljs/utils/guards'
+import { chalk, logger } from '@eljs/utils/logger'
+import { install } from '@eljs/utils/npm'
+import { deepMerge } from '@eljs/utils/object'
+import type { PackageJson } from '@eljs/utils/types'
 import { join } from 'node:path'
 
 import { definePlugin } from '../../define'
@@ -36,7 +31,7 @@ export default definePlugin(context => {
         const extension = packageExtensions.shift() as PackageExtension
         const toMerged =
           (typeof extension === 'function' ? extension(pkg) : extension) ?? {}
-        pkg = deepMerge(pkg, toMerged)
+        pkg = mergePackageJson(pkg, toMerged)
         context.appData.pkg = pkg
       }
     } finally {
@@ -67,7 +62,9 @@ export default definePlugin(context => {
 
       await install(packageManager, (args || []) as string[], {
         cwd: context.paths.target,
+        ...(context.config.runtime ? { runtime: context.config.runtime } : {}),
         stdout: 'inherit',
+        ...(context.config.signal ? { signal: context.config.signal } : {}),
         ...options,
       })
     },
@@ -92,7 +89,7 @@ export default definePlugin(context => {
 
       if (await isPathExists(pkgJsonPath)) {
         const origin = await readJson(pkgJsonPath)
-        pkg = deepMerge(origin, pkg)
+        pkg = mergePackageJson(origin, pkg)
       }
 
       if (Object.keys(pkg).length === 0) {
@@ -127,3 +124,46 @@ export default definePlugin(context => {
     },
   )
 })
+
+/**
+ * 按插件登记顺序合并 package.json，并对所有基础类型数组稳定去重
+ *
+ * @remarks
+ * package.json 中的 `files`、`keywords`、`workspaces` 以及 lint-staged 命令数组
+ * 都采用追加语义；稳定去重既保留先注册插件的顺序，也避免后续插件返回当前包快照时
+ * 重复已有元素
+ *
+ * @param sources - 按生命周期顺序排列的包清单片段
+ * @returns 合并且规范化数组后的新包清单
+ */
+function mergePackageJson(...sources: PackageJson[]): PackageJson {
+  return dedupePackageJsonArrays(deepMerge(...sources)) as PackageJson
+}
+
+/**
+ * 递归复制 package.json 值并稳定去重字符串、数字、布尔值和空值数组
+ *
+ * @param value - 深度合并后的 JSON 兼容值
+ * @returns 数组完成稳定去重的新值
+ */
+function dedupePackageJsonArrays(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    const items = value.map(dedupePackageJsonArrays)
+    const canDedupeByValue = items.every(
+      item => item === null || typeof item !== 'object',
+    )
+
+    return canDedupeByValue ? [...new Set(items)] : items
+  }
+
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        dedupePackageJsonArrays(item),
+      ]),
+    )
+  }
+
+  return value
+}

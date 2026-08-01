@@ -1,6 +1,6 @@
 import type { Answers, PromptObject } from 'prompts'
 
-import { isDirectorySync, isPathExistsSync, mkdirSync } from '../file'
+import { isDirectorySync, mkdirSync, pathExistsSync } from '../file'
 import { isFunction } from '../guards'
 import { BaseGenerator } from './base-generator'
 
@@ -35,13 +35,16 @@ export interface GeneratorOptions {
   onGeneratorDone?: Generator['onGeneratorDone']
 }
 
+/**
+ * 生成完成回调接收的最终上下文
+ */
 interface GeneratorDoneCtx {
   /**
    * 源文件路径
    */
   src: string
   /**
-   * 木笔文件路径
+   * 目标文件路径
    */
   dest: string
   /**
@@ -88,7 +91,7 @@ export class Generator extends BaseGenerator {
     renderTemplateOptions,
     onGeneratorDone,
   }: GeneratorOptions) {
-    super(basedir || dest, renderTemplateOptions)
+    super(basedir ?? dest, renderTemplateOptions)
     this.src = src
     this.dest = dest
     this.data = data || {}
@@ -96,8 +99,17 @@ export class Generator extends BaseGenerator {
     this.onGeneratorDone = onGeneratorDone
   }
 
-  public async run() {
-    await super.run()
+  /**
+   * 执行生成流程，并只在实际完成写入后调用完成回调
+   *
+   * @returns 是否完成写入
+   */
+  public async run(): Promise<boolean> {
+    const completed = await super.run()
+
+    if (!completed) {
+      return false
+    }
 
     if (this.onGeneratorDone) {
       await this.onGeneratorDone({
@@ -106,27 +118,24 @@ export class Generator extends BaseGenerator {
         data: this._data,
       })
     }
+
+    return true
   }
 
   public prompting() {
     return this.questions || []
   }
 
-  public async writing() {
+  /**
+   * 解析动态路径和模板数据并写入目标
+   *
+   * @returns 用户拒绝覆盖目录时返回 `false`，否则返回 `true`
+   */
+  public async writing(): Promise<boolean> {
     if (isFunction(this.dest)) {
       this._dest = this.dest(this.prompts)
     } else {
       this._dest = this.dest
-    }
-
-    if (!isPathExistsSync(this._dest)) {
-      mkdirSync(this._dest)
-    } else {
-      const overwrite = await this.checkDir(this._dest)
-
-      if (!overwrite) {
-        return
-      }
     }
 
     if (isFunction(this.src)) {
@@ -145,15 +154,28 @@ export class Generator extends BaseGenerator {
       ...this.prompts,
       ...this._data,
     }
+    this._data = data
 
     if (isDirectorySync(this._src)) {
+      if (!pathExistsSync(this._dest)) {
+        mkdirSync(this._dest)
+      } else {
+        const overwrite = await this.checkDir(this._dest)
+
+        if (!overwrite) {
+          return false
+        }
+      }
+
       await this.copyDirectory(this._src, this._dest, data)
     } else {
       if (this._src.endsWith('.tpl')) {
         await this.copyTpl(this._src, this._dest, data)
       } else {
-        await this.copyFile(this._src, this._dest, data)
+        await this.copyFile(this._src, this._dest, { data })
       }
     }
+
+    return true
   }
 }

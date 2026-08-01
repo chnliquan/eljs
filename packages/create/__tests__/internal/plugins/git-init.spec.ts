@@ -15,7 +15,9 @@ import type { CreatePluginContext } from '../../../src/types'
 // Mock types
 interface MockUtils {
   hasGit: MockedFunction<() => Promise<boolean>>
-  hasProjectGit: MockedFunction<(path: string) => Promise<boolean>>
+  hasProjectGit: MockedFunction<
+    (path: string, options?: { signal?: AbortSignal }) => Promise<boolean>
+  >
   logger: {
     info: MockedFunction<(message: string) => void>
   }
@@ -23,7 +25,7 @@ interface MockUtils {
     (
       command: string,
       args: string[],
-      options?: { cwd?: string; verbose?: boolean },
+      options?: { cwd?: string; signal?: AbortSignal; verbose?: boolean },
     ) => Promise<void>
   >
 }
@@ -33,6 +35,9 @@ interface DescribeConfig {
 }
 
 // Mock @eljs/utils
+vi.mock('@eljs/utils/cp', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/git', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils', () => ({
   hasGit: vi.fn(),
   hasProjectGit: vi.fn(),
@@ -143,6 +148,23 @@ describe('内部插件 git-init', () => {
       )
       expect(mockUtils.run).toHaveBeenCalledWith('git', ['init'], {
         cwd: '/test/project',
+        verbose: false,
+      })
+    })
+
+    it('应该把创建流程的取消信号传给 Git 子进程', async () => {
+      const controller = new AbortController()
+      mockContext.config.signal = controller.signal
+      await gitInitPlugin(mockContext)
+
+      await onGenerateDoneCallback()
+
+      expect(mockUtils.hasProjectGit).toHaveBeenCalledWith('/test/project', {
+        signal: controller.signal,
+      })
+      expect(mockUtils.run).toHaveBeenCalledWith('git', ['init'], {
+        cwd: '/test/project',
+        signal: controller.signal,
         verbose: false,
       })
     })

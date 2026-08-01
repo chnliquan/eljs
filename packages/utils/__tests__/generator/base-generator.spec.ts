@@ -46,7 +46,7 @@ describe('BaseGenerator 基础生成器', () => {
   const mockCopyFileSync = requiredModule1.copyFileSync as MockedFunction<
     (from: string, to: string, options?: CopyFileOptions) => void
   >
-  const mockCopyTpl = requiredModule1.copyTpl as MockedFunction<
+  const mockCopyTpl = requiredModule1.copyTemplate as MockedFunction<
     (
       from: string,
       to: string,
@@ -54,7 +54,7 @@ describe('BaseGenerator 基础生成器', () => {
       options?: CopyFileOptions,
     ) => Promise<void>
   >
-  const mockCopyTplSync = requiredModule1.copyTplSync as MockedFunction<
+  const mockCopyTplSync = requiredModule1.copyTemplateSync as MockedFunction<
     (
       from: string,
       to: string,

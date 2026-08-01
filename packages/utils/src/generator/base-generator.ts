@@ -9,8 +9,8 @@ import {
   copyDirectorySync,
   copyFile,
   copyFileSync,
-  copyTpl,
-  copyTplSync,
+  copyTemplate,
+  copyTemplateSync,
   type CopyFileOptions,
   type RenderTemplateOptions,
 } from '../file'
@@ -47,7 +47,12 @@ export class BaseGenerator {
     this.renderTemplateOptions = renderTemplateOptions
   }
 
-  public async run() {
+  /**
+   * 执行问询和写入生命周期
+   *
+   * @returns 写入完成时返回 `true`，子类取消写入时返回 `false`
+   */
+  public async run(): Promise<boolean> {
     const questions = this.prompting()
     this.prompts = await prompts(questions)
 
@@ -57,15 +62,20 @@ export class BaseGenerator {
       this._basedir = this.basedir
     }
 
-    await this.writing()
+    return (await this.writing()) !== false
   }
 
   public prompting(): PromptObject<string> | Array<PromptObject<string>> {
     return []
   }
 
-  public async writing() {
-    // ...
+  /**
+   * 执行生成器写入阶段
+   *
+   * @returns 返回 `false` 可阻止后续完成回调
+   */
+  public async writing(): Promise<boolean | void> {
+    return undefined
   }
 
   /**
@@ -113,7 +123,7 @@ export class BaseGenerator {
     data: object,
     options: CopyFileOptions = {},
   ) {
-    copyTplSync(from, to, data, {
+    copyTemplateSync(from, to, data, {
       ...options,
       renderOptions: this.renderTemplateOptions,
       basedir: this._basedir,
@@ -133,7 +143,7 @@ export class BaseGenerator {
     data: object,
     options: CopyFileOptions = {},
   ) {
-    await copyTpl(from, to, data, {
+    await copyTemplate(from, to, data, {
       ...options,
       renderOptions: this.renderTemplateOptions,
       basedir: this._basedir,

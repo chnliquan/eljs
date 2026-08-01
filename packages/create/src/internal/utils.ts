@@ -2,7 +2,7 @@ import {
   getGitUserSync,
   gitUrlAnalysis,
   getGitUrlSync as gitUrlSync,
-} from '@eljs/utils'
+} from '@eljs/utils/git'
 
 const account = getGitUserSync()
 

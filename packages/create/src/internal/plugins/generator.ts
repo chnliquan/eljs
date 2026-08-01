@@ -3,7 +3,7 @@ import {
   copyFile,
   copyTpl,
   type CopyFileOptions,
-} from '@eljs/utils'
+} from '@eljs/utils/file'
 import { resolve } from 'node:path'
 
 import { definePlugin } from '../../define'

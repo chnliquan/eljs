@@ -1,11 +1,12 @@
-import { createDebugger, logger, readJson, type PackageJson } from '@eljs/utils'
+import { readJson } from '@eljs/utils/file'
+import { createDebugger, logger } from '@eljs/utils/logger'
+import type { PackageJson } from '@eljs/utils/types'
 import { program } from 'commander'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import updateNotifier from 'update-notifier'
 
 import { ProjectCreator } from './core'
-import { AppError, onCancel } from './utils'
+import { AppError } from './utils'
 
 /**
  * 启动 create 命令行程序
@@ -13,31 +14,63 @@ import { AppError, onCancel } from './utils'
  * @returns 命令行流程 Promise
  */
 export function cli(): Promise<void> {
-  registerSignalHandler()
+  const controller = new AbortController()
+  const disposeSignalHandlers = registerSignalHandlers(controller)
 
-  return main()
-    .then(() => process.exit(0))
+  return main(controller.signal)
+    .then(() => {
+      if (controller.signal.aborted) {
+        throw controller.signal.reason
+      }
+    })
     .catch(error => {
-      if (error instanceof AppError) {
+      if (isCancellation(error) || controller.signal.aborted) {
+        process.exitCode = 130
+      } else if (error instanceof AppError) {
         logger.error(error.message)
+        process.exitCode = 1
       } else {
         console.error(error)
+        process.exitCode = 1
       }
-      process.exit(1)
     })
+    .finally(disposeSignalHandlers)
 }
 
-function registerSignalHandler() {
-  if (!process.listeners('SIGINT').includes(handleSigint)) {
-    process.on('SIGINT', handleSigint)
+function registerSignalHandlers(controller: AbortController): () => void {
+  const handleSignal = (signal: NodeJS.Signals) => {
+    if (!controller.signal.aborted) {
+      logger.event(`Cancelling create after ${signal}`)
+      controller.abort(
+        new AppError(`Create operation received ${signal}`, {
+          code: 'CREATE_OPERATION_CANCELLED',
+          details: { signal },
+        }),
+      )
+      return
+    }
+
+    process.exit(130)
+  }
+
+  process.on('SIGINT', handleSignal)
+  process.on('SIGTERM', handleSignal)
+
+  return () => {
+    process.off('SIGINT', handleSignal)
+    process.off('SIGTERM', handleSignal)
   }
 }
 
-function handleSigint() {
-  onCancel()
+function isCancellation(error: unknown): boolean {
+  return (
+    error instanceof AppError &&
+    (error.code === 'CREATE_OPERATION_ABORTED' ||
+      error.code === 'CREATE_OPERATION_CANCELLED')
+  )
 }
 
-async function main() {
+async function main(signal: AbortSignal) {
   const debug = createDebugger('create:cli')
   const packageJsonPath =
     typeof __dirname === 'string'
@@ -45,7 +78,10 @@ async function main() {
       : fileURLToPath(new URL('../package.json', import.meta.url))
   const pkg = await readJson<Required<PackageJson>>(packageJsonPath)
 
-  updateNotifier({ pkg }).notify()
+  if (shouldCheckForUpdates(process.argv)) {
+    const { default: updateNotifier } = await import('update-notifier')
+    updateNotifier({ pkg }).notify()
+  }
 
   program
     .name('create')
@@ -74,10 +110,27 @@ async function main() {
 
       await new ProjectCreator({
         ...creatorOptions,
+        signal,
         template,
       }).run(projectName)
     })
 
   program.showHelpAfterError()
   await program.parseAsync(process.argv)
+}
+
+/**
+ * 判断当前命令是否需要加载更新检查依赖
+ *
+ * @remarks
+ * 帮助和版本查询是本地只读快路径，不应为网络更新提示增加启动成本
+ *
+ * @param argv - Node 进程参数
+ * @returns 普通创建命令返回 `true`
+ * @internal
+ */
+function shouldCheckForUpdates(argv: readonly string[]): boolean {
+  return !argv.some(argument =>
+    ['-h', '--help', '-v', '--version'].includes(argument),
+  )
 }

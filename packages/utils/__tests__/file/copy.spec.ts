@@ -21,6 +21,8 @@ import {
   copyDirectorySync,
   copyFile,
   copyFileSync,
+  copyTemplate,
+  copyTemplateSync,
   copyTpl,
   copyTplSync,
   type CopyFileOptions,
@@ -205,6 +207,15 @@ describe('文件复制工具 - Mock 测试', () => {
   })
 
   describe('copyTpl 模板复制', () => {
+    it('新名称应该复制并渲染模板', async () => {
+      await copyTemplate('/template.tpl', '/output.txt.tpl', { name: 'new' })
+
+      expect(mockWriteFile).toHaveBeenCalledWith(
+        '/output.txt',
+        'Template new content',
+      )
+    })
+
     it('应该读取模板并渲染内容', async () => {
       const data = { name: 'World', project: 'Test' }
 
@@ -269,6 +280,15 @@ describe('文件复制工具 - Mock 测试', () => {
   })
 
   describe('copyTplSync 同步模板复制', () => {
+    it('新名称应该同步复制并渲染模板', () => {
+      copyTemplateSync('/template.tpl', '/output.txt.tpl', { name: 'new' })
+
+      expect(mockWriteFileSync).toHaveBeenCalledWith(
+        '/output.txt',
+        'Sync new content',
+      )
+    })
+
     it('应该同步读取和渲染模板', () => {
       const data = { name: 'SyncTest' }
 
@@ -349,6 +369,22 @@ describe('文件复制工具 - Mock 测试', () => {
       })
       expect(mockIsDirectorySync).toHaveBeenCalledTimes(2)
     })
+
+    it('应该把模板数据和复制选项分别传给同步模板复制', () => {
+      const data = { name: 'DirectoryTemplate' }
+      const renderOptions = { type: 'mustache' as const }
+      mockGlobSync.mockReturnValue(['template.tpl'])
+
+      copyDirectorySync('/sync-source', '/sync-target', data, {
+        renderOptions,
+      })
+
+      expect(mockRenderTemplate).toHaveBeenCalledWith(
+        'Sync {{name}} content',
+        data,
+        renderOptions,
+      )
+    })
   })
 
   describe('文件前缀转换测试', () => {
@@ -374,6 +410,14 @@ describe('文件复制工具 - Mock 测试', () => {
       expect(mockFsp.copyFile).toHaveBeenCalledWith(
         '/source.txt',
         '/dir/.hidden',
+        undefined,
+      )
+
+      // Windows 路径分隔符同样需要转换
+      await copyFile('/source.txt', 'C:\\dir\\-gitignore')
+      expect(mockFsp.copyFile).toHaveBeenCalledWith(
+        '/source.txt',
+        'C:\\dir\\.gitignore',
         undefined,
       )
 

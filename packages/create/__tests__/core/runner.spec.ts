@@ -1,5 +1,5 @@
 import * as importedModule1 from '@eljs/plugin-host'
-import * as importedModule0 from '@eljs/utils'
+import * as importedObjectModule from '@eljs/utils/object'
 import {
   afterAll,
   beforeEach,
@@ -27,7 +27,7 @@ import {
 } from '../../src/types'
 
 const requiredModule1 = vi.mocked(importedModule1, { deep: true })
-const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+const requiredObjectModule = vi.mocked(importedObjectModule, { deep: true })
 const requiredModule2 = vi.mocked(importedModule2, { deep: true })
 
 // 模拟所有依赖
@@ -35,7 +35,7 @@ vi.mock('@eljs/plugin-host', async importOriginal => {
   const actual = await importOriginal<typeof import('@eljs/plugin-host')>()
   return { ...actual, PluginHost: vi.fn() }
 })
-vi.mock('@eljs/utils')
+vi.mock('@eljs/utils/object')
 vi.mock('../../src/default')
 
 // 模拟 console.log
@@ -52,12 +52,11 @@ describe('CreateRunner 类完整测试', () => {
     vi.clearAllMocks()
 
     // 重新设置基本的模拟
-    const { deepMerge, prompts } = requiredModule0
+    const { deepMerge } = requiredObjectModule
     deepMerge.mockImplementation((target: any, ...sources: any[]) => ({
       ...target,
       ...sources.reduce((acc, source) => ({ ...acc, ...source }), {}),
     }))
-    prompts.mockResolvedValue({})
 
     // 模拟 PluginHost 基类
     const { PluginHost } = requiredModule1
@@ -518,7 +517,7 @@ describe('CreateRunner 类完整测试', () => {
 
   describe('CreateRunner _resolveConfig 私有方法测试', () => {
     it('应该正确合并配置', async () => {
-      const { deepMerge } = requiredModule0
+      const { deepMerge } = requiredObjectModule
       const { defaultConfig } = requiredModule2
 
       const userConfig = { force: true, customOption: 'value' }
@@ -542,7 +541,7 @@ describe('CreateRunner 类完整测试', () => {
     })
 
     it('应该处理空的用户配置', async () => {
-      const { deepMerge } = requiredModule0
+      const { deepMerge } = requiredObjectModule
       const { defaultConfig } = requiredModule2
 
       const constructorOptions = { cwd: '/test' }
@@ -562,7 +561,7 @@ describe('CreateRunner 类完整测试', () => {
     })
 
     it('应该将合并结果分配给 config 属性', async () => {
-      const { deepMerge } = requiredModule0
+      const { deepMerge } = requiredObjectModule
       const mergedConfig = {
         cwd: '/test',
         force: true,
@@ -579,6 +578,39 @@ describe('CreateRunner 类完整测试', () => {
       await runner.run('/test/target', 'test-project')
 
       expect(runner.config).toEqual(mergedConfig)
+    })
+
+    it('应该保留 AbortSignal 实例而不是深合并其内部状态', async () => {
+      const controller = new AbortController()
+      const runner = new CreateRunner({
+        cwd: '/test',
+        signal: controller.signal,
+      })
+
+      await runner.run('/test/target', 'test-project')
+
+      expect(runner.config.signal).toBe(controller.signal)
+      expect(requiredObjectModule.deepMerge).toHaveBeenCalledWith(
+        {},
+        requiredModule2.defaultConfig,
+        {},
+        expect.not.objectContaining({ signal: expect.anything() }),
+      )
+    })
+
+    it('应该保留运行时适配器实例而不是深合并函数引用', async () => {
+      const runtime = { observer: vi.fn() }
+      const runner = new CreateRunner({ cwd: '/test', runtime })
+
+      await runner.run('/test/target', 'test-project')
+
+      expect(runner.config.runtime).toBe(runtime)
+      expect(requiredObjectModule.deepMerge).toHaveBeenCalledWith(
+        {},
+        requiredModule2.defaultConfig,
+        {},
+        expect.not.objectContaining({ runtime: expect.anything() }),
+      )
     })
 
     it('应该有所有必需的公共属性', async () => {
@@ -1142,7 +1174,9 @@ describe('CreateRunner 类完整测试', () => {
       runner.paths = enterpriseConfig.paths
 
       expect(runner.appData.organization).toBe('Enterprise Corp')
-      expect(runner.appData.security.level).toBe('strict')
+      expect(runner.appData.security).toEqual(
+        expect.objectContaining({ level: 'strict' }),
+      )
       expect(runner.appData.compliance).toContain('GDPR')
       expect(runner.paths.artifacts).toBe('/enterprise/app/artifacts')
     })

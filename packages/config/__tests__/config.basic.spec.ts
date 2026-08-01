@@ -44,16 +44,31 @@ describe('ConfigManager 基础功能测试', () => {
       expect(configManager.constructorOptions.cwd).toBeUndefined()
     })
 
-    it('应该保存配置选项的引用', () => {
+    it('应该保存配置选项的只读副本', () => {
+      const defaultConfigFiles = ['config.ts', 'config.js']
+      const defaultConfigExts = ['dev', 'staging']
       const options: ConfigManagerOptions = {
-        defaultConfigFiles: ['config.ts', 'config.js'],
-        defaultConfigExts: ['dev', 'staging'],
+        defaultConfigFiles,
+        defaultConfigExts,
         cwd: '/custom/path',
       }
 
       const configManager = new ConfigManager(options)
 
-      expect(configManager.constructorOptions).toBe(options)
+      expect(configManager.constructorOptions).not.toBe(options)
+      expect(configManager.constructorOptions).toEqual(options)
+
+      defaultConfigFiles.push('config.json')
+      defaultConfigExts.push('prod')
+
+      expect(configManager.constructorOptions.defaultConfigFiles).toEqual([
+        'config.ts',
+        'config.js',
+      ])
+      expect(configManager.constructorOptions.defaultConfigExts).toEqual([
+        'dev',
+        'staging',
+      ])
     })
   })
 
@@ -85,6 +100,19 @@ describe('ConfigManager 基础功能测试', () => {
       const result = await ConfigManager.getMainConfigFile(configFiles, tempDir)
 
       expect(result).toBe(path.join(tempDir, 'config.ts'))
+    })
+
+    it('应该保持绝对候选路径并忽略 cwd', async () => {
+      const absoluteFile = createConfigFile(tempDir, 'config.js', {
+        test: true,
+      })
+
+      const result = await ConfigManager.getMainConfigFile(
+        [absoluteFile],
+        path.join(tempDir, 'other'),
+      )
+
+      expect(result).toBe(absoluteFile)
     })
 
     it('应该使用默认的 cwd', async () => {
@@ -132,6 +160,19 @@ describe('ConfigManager 基础功能测试', () => {
       const result = ConfigManager.getMainConfigFileSync(configFiles, tempDir)
 
       expect(result).toBe(path.join(tempDir, 'config.ts'))
+    })
+
+    it('应该同步保持绝对候选路径并忽略 cwd', () => {
+      const absoluteFile = createConfigFile(tempDir, 'config.js', {
+        test: true,
+      })
+
+      const result = ConfigManager.getMainConfigFileSync(
+        [absoluteFile],
+        path.join(tempDir, 'other'),
+      )
+
+      expect(result).toBe(absoluteFile)
     })
 
     it('应该使用默认的 cwd', () => {
@@ -226,6 +267,21 @@ describe('ConfigManager 基础功能测试', () => {
       const result = await configManager.getConfig()
 
       expect(result).toEqual(config)
+      expect(configManager.mainConfigFile).toBe(path.join(tempDir, 'config.js'))
+    })
+
+    it('应该使用相对 cwd 加载配置文件', async () => {
+      const config = { relative: true }
+      createConfigFile(tempDir, 'config.js', config)
+      const relativeCwd = path.relative(process.cwd(), tempDir)
+
+      const configManager = new ConfigManager({
+        defaultConfigFiles: ['config.js'],
+        cwd: relativeCwd,
+      })
+
+      await expect(configManager.getConfig()).resolves.toEqual(config)
+      expect(configManager.mainConfigFile).toBe(path.join(tempDir, 'config.js'))
     })
 
     it('应该处理没有扩展配置的情况', async () => {
@@ -291,6 +347,21 @@ describe('ConfigManager 基础功能测试', () => {
       const result = configManager.getConfigSync()
 
       expect(result).toEqual(config)
+      expect(configManager.mainConfigFile).toBe(path.join(tempDir, 'config.js'))
+    })
+
+    it('应该使用相对 cwd 同步加载配置文件', () => {
+      const config = { relative: true }
+      createConfigFile(tempDir, 'config.js', config)
+      const relativeCwd = path.relative(process.cwd(), tempDir)
+
+      const configManager = new ConfigManager({
+        defaultConfigFiles: ['config.js'],
+        cwd: relativeCwd,
+      })
+
+      expect(configManager.getConfigSync()).toEqual(config)
+      expect(configManager.mainConfigFile).toBe(path.join(tempDir, 'config.js'))
     })
 
     it('应该同步处理没有扩展配置的情况', () => {

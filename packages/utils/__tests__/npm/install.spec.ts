@@ -10,7 +10,7 @@ import {
 import * as importedModule0 from '../../src/guards'
 import * as importedModule1 from '../../src/npm/package-manager'
 
-import execa from 'execa'
+import { execa } from 'execa'
 
 import {
   install,

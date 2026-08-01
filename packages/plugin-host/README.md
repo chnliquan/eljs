@@ -253,6 +253,10 @@ interface PluginHostOptions {
    */
   cwd: string
   /**
+   * Stop plugin loading and hook execution at lifecycle boundaries
+   */
+  signal?: AbortSignal
+  /**
    * Preset declarations
    */
   presets?: readonly PluginDeclaration[]
@@ -277,6 +281,10 @@ interface PluginHostOptions {
 type PluginDeclaration<Options = Record<string, unknown>> =
   string | readonly [string, Options]
 ```
+
+An aborted signal produces `PluginHostErrorCode.OperationAborted`. The host
+checks cancellation before and after plugin initializers and individual hooks,
+so an in-flight callback is allowed to settle but no later callback starts.
 
 ### Hook Schema
 

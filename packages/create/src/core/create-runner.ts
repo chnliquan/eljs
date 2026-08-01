@@ -4,22 +4,23 @@ import {
   PluginHostErrorCode,
   type PluginHostOptions,
 } from '@eljs/plugin-host'
-import { deepMerge, type RequiredRecursive } from '@eljs/utils'
+import { deepMerge } from '@eljs/utils/object'
 import { createRequire } from 'node:module'
 
 import { defaultConfig } from '../default'
 import { createHookSchema, type CreatePluginCapabilities } from '../hooks'
 import { resolveInternalModule } from '../internal'
+import { installRequireHook } from '../require-hook'
 import {
   CreateRunnerStage,
   type AppData,
   type Config,
   type Paths,
   type Prompts,
+  type ResolvedConfig,
 } from '../types'
 
-const currentModulePath =
-  typeof __filename === 'string' ? __filename : import.meta.url
+const currentModulePath = import.meta.url
 const localRequire = createRequire(currentModulePath)
 
 /**
@@ -45,7 +46,7 @@ export class CreateRunner extends PluginHost<
   /**
    * 已解析的最终配置
    */
-  private _config: RequiredRecursive<Config> | null = null
+  private _config: ResolvedConfig | null = null
   /**
    * 当前项目创建阶段
    */
@@ -94,7 +95,7 @@ export class CreateRunner extends PluginHost<
    * @throws {@link PluginHostError}
    * 当配置尚未解析时抛出
    */
-  public get config(): RequiredRecursive<Config> {
+  public get config(): ResolvedConfig {
     if (!this._config) {
       throw new PluginHostError(
         PluginHostErrorCode.InvalidState,
@@ -141,6 +142,8 @@ export class CreateRunner extends PluginHost<
         { details: { stage: this._stage } },
       )
     }
+
+    const disposeRequireHook = installRequireHook()
 
     try {
       this._stage = CreateRunnerStage.LoadingPlugins
@@ -222,6 +225,8 @@ export class CreateRunner extends PluginHost<
     } catch (error) {
       this._stage = CreateRunnerStage.Failed
       throw error
+    } finally {
+      disposeRequireHook()
     }
   }
 
@@ -231,12 +236,28 @@ export class CreateRunner extends PluginHost<
    * @returns 配置解析完成后兑现的 Promise
    */
   private async _resolveConfig(): Promise<void> {
-    this._config = deepMerge(
+    const {
+      runtime: constructorRuntime,
+      signal: constructorSignal,
+      ...constructorOptions
+    } = this.constructorOptions
+    const {
+      runtime: userRuntime,
+      signal: userSignal,
+      ...userConfig
+    } = this.userConfig || {}
+    const config = deepMerge(
       {},
       defaultConfig,
-      this.userConfig || {},
-      this.constructorOptions,
-    ) as RequiredRecursive<Config>
+      userConfig,
+      constructorOptions,
+    ) as ResolvedConfig
+
+    // AbortSignal 依赖原型和内部状态，不能交给通用深合并器克隆
+    config.signal = constructorSignal || userSignal
+    // 运行时适配器包含函数引用，保持调用方注入实例以确保事件送达同一接收端
+    config.runtime = constructorRuntime || userRuntime
+    this._config = config
   }
 
   /**

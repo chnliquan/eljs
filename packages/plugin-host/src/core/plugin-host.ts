@@ -1,19 +1,17 @@
 import { ConfigManager } from '@eljs/config'
-import { isDirectorySync } from '@eljs/utils'
-import type { StandardSchemaV1 } from '@standard-schema/spec'
+import { isDirectorySync } from '@eljs/utils/file'
 import { resolve as resolvePath } from 'node:path'
 
 import { PluginHostError, PluginHostErrorCode } from '../errors'
 import type { Hook } from '../plugin/hook'
 import type {
-  HookRegistrationApi,
   HookRunArguments,
   HookRunResult,
   HookSchema,
   LooseHookSchema,
 } from '../plugin/hook-schema'
 import { Plugin } from '../plugin/plugin'
-import { PluginApi, type PluginApiHostContext } from '../plugin/plugin-api'
+import type { PluginApiHostContext } from '../plugin/plugin-api'
 import {
   resolvePluginDeclarations,
   resolvePresetsAndPlugins,
@@ -22,33 +20,25 @@ import {
   PluginKind,
   type PluginDiagnostics,
   type PluginInitializationResult,
-  type PluginInitializer,
   type ResolvedPluginInitializationResult,
 } from '../plugin/types'
 import { HookExecutor } from '../runtime/hook-executor'
 import { HookRegistry } from '../runtime/hook-registry'
 import { PluginRegistry } from '../runtime/plugin-registry'
 import {
+  createPluginContext,
+  PLUGIN_API_RESERVED_PROPERTY_NAMES,
+  type PluginContext,
+} from './plugin-context'
+import { parsePluginOptions } from './plugin-options'
+import {
   HookKind,
   PluginHostState,
   type LooseHookRunOptions,
   type PluginHostOptions,
-  type PluginOrigin,
   type ResolvedPlugin,
   type UserConfig,
 } from './types'
-
-const PLUGIN_API_RESERVED_PROPERTY_NAMES = (() => {
-  const names = new Set<string>()
-  let prototype: object | null = PluginApi.prototype
-
-  while (prototype) {
-    Object.getOwnPropertyNames(prototype).forEach(name => names.add(name))
-    prototype = Object.getPrototypeOf(prototype) as object | null
-  }
-
-  return names
-})()
 
 /**
  * 在 TypeScript 5.0 至 5.3 中兼容内置 `NoInfer` 的延迟推导类型
@@ -58,20 +48,7 @@ const PLUGIN_API_RESERVED_PROPERTY_NAMES = (() => {
  */
 type NoInferCompat<Value> = [Value][Value extends unknown ? 0 : never]
 
-/**
- * 合并核心插件 API、Schema 注册 API 和 Runner 扩展能力
- *
- * @remarks
- * 运行时上下文保持可扩展以接收后续注册的 capability，但插件不能赋值、
- * 重定义、删除上下文属性，也不能冻结对象或替换其原型
- *
- * @typeParam Schema - Runner 的 Hook Schema
- * @typeParam Extensions - Runner 显式暴露给插件的能力
- */
-export type PluginContext<
-  Schema extends HookSchema,
-  Extensions extends object = Record<string, unknown>,
-> = PluginApi & HookRegistrationApi<Schema> & Extensions
+export type { PluginContext } from './plugin-context'
 
 /**
  * 持有插件生命周期并提供解析、初始化、Hook 注册与执行能力
@@ -228,6 +205,7 @@ export abstract class PluginHost<
       this._hooks,
       this._plugins,
       this._hookSchema,
+      this.constructorOptions.signal,
     )
 
     const getCwd = () => this.cwd
@@ -259,6 +237,8 @@ export abstract class PluginHost<
    * 当实例已加载、加载失败或插件声明无效时抛出
    */
   protected async load(): Promise<void> {
+    this._throwIfAborted('load')
+
     if (this._state !== PluginHostState.Uninitialized) {
       throw new PluginHostError(
         PluginHostErrorCode.InvalidState,
@@ -270,6 +250,7 @@ export abstract class PluginHost<
 
     try {
       await this._load()
+      this._throwIfAborted('load')
       this._state = PluginHostState.Ready
     } catch (error) {
       this._failureDiagnostics = this._plugins.getDiagnostics()
@@ -283,6 +264,7 @@ export abstract class PluginHost<
    * 执行配置加载、preset 初始化和 plugin 初始化流程
    */
   private async _load(): Promise<void> {
+    this._throwIfAborted('load-config')
     const configManager = new ConfigManager({
       defaultConfigFiles: [
         ...(this.constructorOptions.defaultConfigFiles || []),
@@ -293,6 +275,7 @@ export abstract class PluginHost<
       cwd: this.cwd,
     })
     this.userConfig = (await configManager.getConfig()) as Config
+    this._throwIfAborted('load-config')
 
     const constructorPresets = this.constructorOptions.presets || []
     const userPresets = this.userConfig?.presets || []
@@ -311,6 +294,7 @@ export abstract class PluginHost<
     // 预设返回的插件集合
     const pluginsFromPresets: ResolvedPlugin[] = []
     while (presets.length) {
+      this._throwIfAborted('initialize-preset')
       await this._initializePreset(
         presets.shift() as ResolvedPlugin,
         presets,
@@ -324,6 +308,7 @@ export abstract class PluginHost<
     this._state = PluginHostState.LoadingPlugins
 
     while (plugins.length) {
+      this._throwIfAborted('initialize-plugin')
       await this._initializePlugin(
         plugins.shift() as ResolvedPlugin,
         [],
@@ -363,176 +348,16 @@ export abstract class PluginHost<
     remainingPresets: ResolvedPlugin[] = [],
     remainingPlugins: ResolvedPlugin[] = [],
   ): PluginContext<Schema, Extensions> {
-    const extensions = this.getPluginContextExtensions(plugin)
-    const extensionType =
-      extensions === null
-        ? 'null'
-        : Array.isArray(extensions)
-          ? 'array'
-          : typeof extensions
-    const extensionPrototype =
-      extensionType === 'object' ? Object.getPrototypeOf(extensions) : undefined
-    const extensionKeys =
-      extensionType === 'object' ? Reflect.ownKeys(extensions) : []
-    const hasUnsupportedKeys = extensionKeys.some(key => {
-      if (typeof key !== 'string') {
-        return true
-      }
-
-      return !Object.getOwnPropertyDescriptor(extensions, key)?.enumerable
-    })
-
-    if (
-      extensionType !== 'object' ||
-      (extensionPrototype !== Object.prototype &&
-        extensionPrototype !== null) ||
-      hasUnsupportedKeys
-    ) {
-      throw new PluginHostError(
-        PluginHostErrorCode.InvalidOptions,
-        `getPluginContextExtensions() must return a plain object containing only own enumerable string properties.`,
-        {
-          details: {
-            extensionType,
-            pluginId: plugin.id,
-            unsupportedKeys: extensionKeys
-              .filter(key => {
-                if (typeof key !== 'string') {
-                  return true
-                }
-                return !Object.getOwnPropertyDescriptor(extensions, key)
-                  ?.enumerable
-              })
-              .map(String),
-          },
-        },
-      )
-    }
-
-    const extensionRecord = extensions as Record<string, unknown>
-    const extensionNames = Object.keys(extensions)
-    const invalidExtensionName = extensionNames.find(
-      name => !name.trim() || name !== name.trim(),
-    )
-
-    if (invalidExtensionName !== undefined) {
-      throw new PluginHostError(
-        PluginHostErrorCode.InvalidOptions,
-        `Plugin context extension names must be non-empty trimmed strings.`,
-        {
-          details: {
-            extensionName: invalidExtensionName,
-            pluginId: plugin.id,
-          },
-        },
-      )
-    }
-
-    const hookNames = Object.keys(this._hookSchema)
-    const conflictingExtensionName = extensionNames.find(
-      name =>
-        PLUGIN_API_RESERVED_PROPERTY_NAMES.has(name) ||
-        hookNames.includes(name) ||
-        this._plugins.hasCapability(name),
-    )
-
-    if (conflictingExtensionName) {
-      throw new PluginHostError(
-        PluginHostErrorCode.ApiNameConflict,
-        `getPluginContextExtensions() failed, property \`${conflictingExtensionName}\` conflicts with a reserved Plugin API name.`,
-        {
-          details: {
-            extensionName: conflictingExtensionName,
-            pluginId: plugin.id,
-          },
-        },
-      )
-    }
-
-    extensionNames.forEach(name => this._pluginContextExtensionNames.add(name))
-    const pluginApi = new PluginApi(this._pluginApiHost, plugin, {
+    return createPluginContext({
+      extensions: this.getPluginContextExtensions(plugin),
+      hookSchema: this._hookSchema,
+      plugin,
+      pluginApiHost: this._pluginApiHost,
+      pluginContextExtensionNames: this._pluginContextExtensionNames,
+      pluginRegistry: this._plugins,
       remainingPlugins,
       remainingPresets,
-      reservedMethodNames: [...hookNames, ...this._pluginContextExtensionNames],
     })
-    const hookRegistrations = Object.fromEntries(
-      hookNames.map(name => [
-        name,
-        (
-          fn: Hook['fn'],
-          options: Omit<
-            Hook['constructorOptions'],
-            'plugin' | 'key' | 'fn'
-          > = {},
-        ) => pluginApi.register(name, fn, options),
-      ]),
-    ) as Record<string, unknown>
-    const boundExtensionFunctions = new Map<string, unknown>()
-
-    for (const name of extensionNames) {
-      const descriptor = Object.getOwnPropertyDescriptor(extensions, name)
-      if (
-        descriptor &&
-        'value' in descriptor &&
-        typeof descriptor.value === 'function'
-      ) {
-        boundExtensionFunctions.set(name, descriptor.value.bind(extensions))
-      }
-    }
-
-    const hasDynamicProperty = (name: string): boolean =>
-      Object.hasOwn(extensionRecord, name) ||
-      Object.hasOwn(hookRegistrations, name) ||
-      this._plugins.hasCapability(name)
-
-    const getDynamicProperty = (name: string): unknown => {
-      if (Object.hasOwn(extensionRecord, name)) {
-        return boundExtensionFunctions.has(name)
-          ? boundExtensionFunctions.get(name)
-          : Reflect.get(extensionRecord, name, extensions)
-      }
-
-      if (Object.hasOwn(hookRegistrations, name)) {
-        return hookRegistrations[name]
-      }
-
-      return this._plugins.getCapability(name)
-    }
-
-    return new Proxy(pluginApi, {
-      get: (target, prop, receiver) =>
-        typeof prop === 'string' && hasDynamicProperty(prop)
-          ? getDynamicProperty(prop)
-          : Reflect.get(target, prop, receiver),
-      getOwnPropertyDescriptor: (target, prop) => {
-        if (typeof prop === 'string' && hasDynamicProperty(prop)) {
-          return {
-            configurable: true,
-            enumerable: true,
-            value: getDynamicProperty(prop),
-            writable: false,
-          }
-        }
-
-        return Reflect.getOwnPropertyDescriptor(target, prop)
-      },
-      has: (target, prop) =>
-        (typeof prop === 'string' && hasDynamicProperty(prop)) ||
-        Reflect.has(target, prop),
-      ownKeys: target => [
-        ...new Set([
-          ...Reflect.ownKeys(target),
-          ...extensionNames,
-          ...hookNames,
-          ...this._plugins.getCapabilityNames(),
-        ]),
-      ],
-      defineProperty: () => false,
-      deleteProperty: () => false,
-      preventExtensions: () => false,
-      set: () => false,
-      setPrototypeOf: () => false,
-    }) as PluginContext<Schema, Extensions>
   }
 
   /**
@@ -649,7 +474,7 @@ export abstract class PluginHost<
     try {
       try {
         const initialize = await plugin.loadInitializer()
-        const parsedPluginOptions = await this._parsePluginOptions(
+        const parsedPluginOptions = await parsePluginOptions(
           plugin,
           initialize,
           pluginOptions,
@@ -769,71 +594,6 @@ export abstract class PluginHost<
     }
   }
 
-  private async _parsePluginOptions(
-    plugin: Plugin,
-    initialize: PluginInitializer<unknown>,
-    pluginOptions: unknown,
-    origin?: PluginOrigin,
-  ): Promise<unknown> {
-    const { optionsSchema } = initialize
-    if (!optionsSchema) {
-      return pluginOptions
-    }
-
-    let result: StandardSchemaV1.Result<unknown>
-    try {
-      result = await optionsSchema['~standard'].validate(pluginOptions)
-    } catch (error) {
-      throw new PluginHostError(
-        PluginHostErrorCode.InvalidPluginOptions,
-        `Validate ${plugin.type} \`${plugin.key}\` options failed: ${(error as Error).message}`,
-        {
-          cause: error,
-          details: {
-            origin,
-            pluginId: plugin.id,
-            pluginKey: plugin.key,
-            pluginPath: plugin.path,
-            pluginType: plugin.type,
-          },
-        },
-      )
-    }
-
-    if (result.issues) {
-      const issueSummary = result.issues
-        .map(issue => {
-          const path = (issue.path || []).map(segment =>
-            String(
-              typeof segment === 'object' && segment !== null
-                ? segment.key
-                : segment,
-            ),
-          )
-          const location = ['options', ...path].join('.')
-          return `${location}: ${issue.message}`
-        })
-        .join('; ')
-
-      throw new PluginHostError(
-        PluginHostErrorCode.InvalidPluginOptions,
-        `Invalid options for ${plugin.type} \`${plugin.key}\`${issueSummary ? `: ${issueSummary}` : '.'}`,
-        {
-          details: {
-            issues: result.issues,
-            origin,
-            pluginId: plugin.id,
-            pluginKey: plugin.key,
-            pluginPath: plugin.path,
-            pluginType: plugin.type,
-          },
-        },
-      )
-    }
-
-    return result.value
-  }
-
   /**
    * 创建插件来源追踪所需的元数据快照
    *
@@ -870,6 +630,27 @@ export abstract class PluginHost<
     return (await this._hookExecutor.run(key, options)) as HookRunResult<
       Schema[Key]
     >
+  }
+
+  /**
+   * 在异步生命周期边界将取消信号转换为稳定领域错误
+   *
+   * @param operation - 当前插件宿主操作
+   * @throws {@link PluginHostError} 调用方已经取消时抛出
+   */
+  private _throwIfAborted(operation: string): void {
+    const signal = this.constructorOptions.signal
+
+    if (signal?.aborted) {
+      throw new PluginHostError(
+        PluginHostErrorCode.OperationAborted,
+        `PluginHost operation \`${operation}\` was aborted.`,
+        {
+          cause: signal.reason,
+          details: { operation },
+        },
+      )
+    }
   }
 
   /**

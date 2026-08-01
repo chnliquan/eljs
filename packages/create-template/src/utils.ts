@@ -1,4 +1,5 @@
-import { logger } from '@eljs/utils'
+import { AppError } from '@eljs/create'
+import { logger } from '@eljs/utils/logger'
 
 /**
  *  将对象转换成数组
@@ -16,9 +17,13 @@ export function objectToArray(obj: Record<string, unknown>, toNumber = false) {
 }
 
 /**
- * 用户取消
+ * 将模版交互取消转换为可由 CLI 或 API 调用方处理的领域错误
+ *
+ * @throws {@link AppError} 始终抛出用户取消错误
  */
-export function onCancel() {
+export function onCancel(): never {
   logger.event('Cancel create template')
-  process.exit(0)
+  throw new AppError('Create template operation was cancelled by the user', {
+    code: 'CREATE_OPERATION_CANCELLED',
+  })
 }

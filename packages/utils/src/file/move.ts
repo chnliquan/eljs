@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 
-import { isPathExists, isPathExistsSync } from './is'
+import { pathExists, pathExistsSync } from './is'
 import { remove, removeSync } from './remove'
 
 /**
@@ -21,7 +21,7 @@ export async function move(
     return
   }
 
-  if (await isPathExists(to)) {
+  if (await pathExists(to)) {
     throw new Error(`The dest ${to} already exists.`)
   } else {
     await fsp.rename(from, to)
@@ -41,7 +41,7 @@ export function moveSync(from: string, to: string, overwrite?: boolean): void {
     return
   }
 
-  if (isPathExistsSync(to)) {
+  if (pathExistsSync(to)) {
     throw new Error(`The dest ${to} already exists.`)
   } else {
     fs.renameSync(from, to)

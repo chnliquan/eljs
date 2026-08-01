@@ -1,11 +1,8 @@
-import {
-  camelCase,
-  findUp,
-  isPathExistsSync,
-  readJsonSync,
-  winPath,
-  type PackageJson,
-} from '@eljs/utils'
+import { isPathExistsSync, readJsonSync } from '@eljs/utils/file'
+import { findUp } from '@eljs/utils/module'
+import { winPath } from '@eljs/utils/path'
+import { camelCase } from '@eljs/utils/string'
+import type { PackageJson } from '@eljs/utils/types'
 import { createHash } from 'node:crypto'
 import {
   basename,

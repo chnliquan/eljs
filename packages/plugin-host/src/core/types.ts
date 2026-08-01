@@ -1,3 +1,5 @@
+import type { UtilsRuntime } from '@eljs/utils/observability'
+
 import type { Plugin } from '../plugin/plugin'
 
 /**
@@ -8,6 +10,14 @@ export interface PluginHostOptions {
    * 工作目录
    */
   cwd: string
+  /**
+   * 用于在插件或 Hook 边界停止后续工作的取消信号
+   */
+  signal?: AbortSignal
+  /**
+   * 供上层工具向插件能力传递的日志与监控适配器
+   */
+  runtime?: UtilsRuntime
   /**
    * 预设声明集合
    */

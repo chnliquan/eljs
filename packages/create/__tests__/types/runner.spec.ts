@@ -1,4 +1,4 @@
-import type { PackageJson, PackageManager } from '@eljs/utils'
+import type { PackageJson, PackageManager } from '@eljs/utils/types'
 import { describe, expect, it } from 'vitest'
 
 import type { AppData, Paths, Prompts } from '../../src/types/runner'
@@ -108,6 +108,19 @@ describe('CreateRunner 类型', () => {
       expect(appData.customObject).toEqual({ nested: 'value' })
       expect(appData.customArray).toEqual([1, 2, 3])
     })
+
+    it('应该允许通过泛型精确约束扩展字段', () => {
+      const appData: AppData<{ deploymentRegion: string }> = {
+        scene: 'node',
+        cliVersion: '1.0.0',
+        pkg: { name: 'test' },
+        projectName: 'test',
+        packageManager: 'pnpm',
+        deploymentRegion: 'cn-north-1',
+      }
+
+      expect(appData.deploymentRegion).toBe('cn-north-1')
+    })
   })
 
   describe('Prompts 接口', () => {
@@ -164,6 +177,23 @@ describe('CreateRunner 类型', () => {
         routing: true,
         stateManagement: false,
       })
+    })
+
+    it('应该允许通过泛型精确约束扩展输入', () => {
+      const prompts: Prompts<{ framework: 'react' | 'vue' }> = {
+        author: 'Jane Smith',
+        email: 'jane@example.com',
+        gitUrl: 'git@github.com:jane/project.git',
+        gitHref: 'https://github.com/jane/project',
+        registry: 'https://registry.npmjs.org',
+        year: '2024',
+        date: '2024-02-20',
+        dateTime: '2024-02-20 10:15:30',
+        dirname: 'jane-project',
+        framework: 'react',
+      }
+
+      expect(prompts.framework).toBe('react')
     })
 
     it('应该验证日期和时间字符串格式', () => {

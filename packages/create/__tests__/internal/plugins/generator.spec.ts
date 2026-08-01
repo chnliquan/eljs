@@ -16,6 +16,7 @@ import generatorPlugin from '../../../src/internal/plugins/generator'
 import type { CreatePluginContext } from '../../../src/types'
 
 // Mock @eljs/utils
+vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils', () => ({
   copyDirectory: vi.fn(),
   copyFile: vi.fn(),

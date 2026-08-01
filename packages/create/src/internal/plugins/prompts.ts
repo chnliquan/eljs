@@ -1,4 +1,4 @@
-import { prompts } from '@eljs/utils'
+import { prompts } from '@eljs/utils/cli'
 import dayjs from 'dayjs'
 import { execSync } from 'node:child_process'
 

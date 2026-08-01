@@ -1,17 +1,17 @@
+import { prompts } from '@eljs/utils/cli'
 import {
-  chalk,
-  createDebugger,
-  findUp,
   isDirectory,
   isPathExists,
-  isString,
-  logger,
   mkdir,
-  prompts,
+  move,
   remove,
-  resolve,
-  tryPaths,
-} from '@eljs/utils'
+} from '@eljs/utils/file'
+import { isString } from '@eljs/utils/guards'
+import { chalk, createDebugger, logger } from '@eljs/utils/logger'
+import { findUp, resolve } from '@eljs/utils/module'
+import { tryPaths } from '@eljs/utils/path'
+import { randomUUID } from 'node:crypto'
+import { cp, realpath } from 'node:fs/promises'
 import path, { join } from 'node:path'
 
 import type { Config, RemoteTemplate } from '../types'
@@ -29,7 +29,7 @@ const debug = createDebugger('create:class')
  */
 export interface ProjectCreatorOptions extends Omit<Config, 'template'> {
   /**
-   * Local template path or remote template
+   * 本地模版路径或远程模版来源
    */
   template: string | RemoteTemplate
 }
@@ -74,6 +74,13 @@ export class ProjectCreator {
    * @param options - 工作目录、模版和生成行为
    */
   public constructor(options: ProjectCreatorOptions) {
+    if (options.force && options.merge) {
+      throw new AppError('`force` and `merge` cannot be enabled together', {
+        code: 'CREATE_INVALID_OPTIONS',
+        details: { force: true, merge: true },
+      })
+    }
+
     const { cwd = process.cwd(), template } = options
 
     const templateSnapshot = isString(template)
@@ -96,63 +103,160 @@ export class ProjectCreator {
    * 当项目名称、模版或目标目录无效时抛出
    */
   public async run(projectName: string): Promise<void> {
+    let runFailure: { error: unknown } | undefined
+
     try {
-      const targetDir = this._resolveTargetDir(projectName)
+      await this._runProject(projectName)
+    } catch (error) {
+      runFailure = { error }
+    }
 
-      debug?.(`targetDir:`, targetDir)
-      debug?.(`projectName:`, projectName)
+    let cleanupFailure: { cleanupRootPath: string; error: unknown } | undefined
+    if (
+      !this._isLocal &&
+      this._templateRootPath &&
+      (await isPathExists(this._templateRootPath))
+    ) {
+      const cleanupRootPath =
+        !isString(this._template) && this._template.type === 'git'
+          ? path.dirname(this._templateRootPath)
+          : this._templateRootPath
 
-      const shouldContinue = await this._resolveTemplate()
-      if (!shouldContinue) {
-        return
+      try {
+        await remove(cleanupRootPath)
+      } catch (error) {
+        cleanupFailure = { cleanupRootPath, error }
       }
-      const templateRootPath = this._getTemplateRootPath()
+    }
 
-      if ((await isPathExists(targetDir)) && !this.constructorOptions.merge) {
-        if (this.constructorOptions.force) {
-          await remove(targetDir)
-        } else {
-          logger.clear()
-          const { action } = await prompts([
-            {
-              name: 'action',
-              type: 'select',
-              message: `Target directory ${chalk.cyan(targetDir)} already exists, pick an action:`,
-              choices: [
-                { title: 'Overwrite', value: 'overwrite' },
-                { title: 'Merge', value: 'merge' },
-                { title: 'Cancel', value: false },
-              ],
-            },
-          ])
-
-          if (!action) {
-            return
-          } else if (action === 'overwrite') {
-            logger.event(`Removing ${chalk.cyan(targetDir)} ...`)
-            await remove(targetDir)
-          }
-        }
-      }
-
-      await mkdir(targetDir)
-      debug?.(`templateRootPath`, templateRootPath)
-
-      const configFile = await tryPaths([
-        join(templateRootPath, 'create.config.ts'),
-        join(templateRootPath, 'create.config.js'),
-      ])
-
-      const generatorFile = await tryPaths([
-        join(templateRootPath, 'generators/index.ts'),
-        join(templateRootPath, 'generators/index.js'),
-      ])
-
-      if (!generatorFile && !configFile) {
+    if (cleanupFailure) {
+      if (runFailure) {
         throw new AppError(
-          `Invalid template ${chalk.cyan(templateRootPath)}, missing \`create.config.ts\` or \`generators/index.ts\`.`,
+          'Project creation failed and remote template cleanup also failed',
+          {
+            cause: new AggregateError([runFailure.error, cleanupFailure.error]),
+            code: 'CREATE_CLEANUP_FAILED',
+            details: { cleanupRootPath: cleanupFailure.cleanupRootPath },
+          },
         )
       }
+
+      throw new AppError(
+        `Project was created, but remote template cleanup failed: ${(cleanupFailure.error as Error).message}`,
+        {
+          cause: cleanupFailure.error,
+          code: 'CREATE_CLEANUP_FAILED',
+          details: { cleanupRootPath: cleanupFailure.cleanupRootPath },
+        },
+      )
+    }
+
+    if (runFailure) {
+      throw runFailure.error
+    }
+  }
+
+  /**
+   * 执行创建事务主体，由 `run` 统一处理远程模版清理与错误聚合
+   *
+   * @param projectName - 项目名称
+   * @returns 创建事务主体完成后兑现的 Promise
+   * @internal
+   */
+  private async _runProject(projectName: string): Promise<void> {
+    this._throwIfAborted('resolve-target')
+    const targetDir = await this._resolveTargetDir(projectName)
+
+    debug?.(`targetDir:`, targetDir)
+    debug?.(`projectName:`, projectName)
+
+    const shouldContinue = await this._resolveTemplate()
+    if (!shouldContinue) {
+      return
+    }
+    this._throwIfAborted('validate-template')
+    const templateRootPath = this._getTemplateRootPath()
+
+    if (this._isLocal) {
+      await assertPathsDoNotOverlap(templateRootPath, targetDir)
+    }
+
+    const configFile = await tryPaths([
+      join(templateRootPath, 'create.config.ts'),
+      join(templateRootPath, 'create.config.js'),
+    ])
+
+    const generatorFile = await tryPaths([
+      join(templateRootPath, 'generators/index.ts'),
+      join(templateRootPath, 'generators/index.js'),
+    ])
+
+    if (!generatorFile && !configFile) {
+      throw new AppError(
+        `Invalid template ${chalk.cyan(templateRootPath)}, missing \`create.config.ts\` or \`generators/index.ts\`.`,
+        {
+          code: 'CREATE_INVALID_TEMPLATE',
+          details: { templateRootPath },
+        },
+      )
+    }
+
+    const targetExists = await isPathExists(targetDir)
+    let shouldOverwrite = false
+
+    if (targetExists && !this.constructorOptions.merge) {
+      if (this.constructorOptions.force) {
+        shouldOverwrite = true
+      } else {
+        logger.clear()
+        const { action } = await prompts([
+          {
+            name: 'action',
+            type: 'select',
+            message: `Target directory ${chalk.cyan(targetDir)} already exists, pick an action:`,
+            choices: [
+              { title: 'Overwrite', value: 'overwrite' },
+              { title: 'Merge', value: 'merge' },
+              { title: 'Cancel', value: false },
+            ],
+          },
+        ])
+
+        if (!action) {
+          return
+        } else if (action === 'overwrite') {
+          shouldOverwrite = true
+        }
+      }
+    }
+
+    let backupPath: string | undefined
+    const shouldMergeExisting = Boolean(
+      targetExists && this.constructorOptions.merge,
+    )
+    const ownsTarget = !targetExists || shouldOverwrite || shouldMergeExisting
+
+    if (shouldOverwrite || shouldMergeExisting) {
+      this._throwIfAborted('backup-target')
+      backupPath = join(this.cwd, `.eljs-backup-${randomUUID()}`)
+      logger.event(`Backing up ${chalk.cyan(targetDir)} ...`)
+      await move(targetDir, backupPath)
+    }
+
+    try {
+      this._throwIfAborted('generate-project')
+      if (shouldMergeExisting && backupPath) {
+        // 在原目录副本上执行 merge，失败时可直接丢弃副本并恢复原目录
+        await cp(backupPath, targetDir, {
+          recursive: true,
+          force: true,
+          preserveTimestamps: true,
+          verbatimSymlinks: true,
+        })
+      } else {
+        await mkdir(targetDir)
+      }
+      debug?.(`templateRootPath`, templateRootPath)
 
       const {
         cwd: _cwd,
@@ -167,22 +271,49 @@ export class ProjectCreator {
       })
 
       await runner.run(targetDir, projectName)
-    } finally {
-      if (
-        !this._isLocal &&
-        this._templateRootPath &&
-        (await isPathExists(this._templateRootPath))
-      ) {
-        await remove(this._templateRootPath)
+      this._throwIfAborted('commit-target')
+
+      if (backupPath) {
+        await remove(backupPath)
+        backupPath = undefined
       }
+    } catch (error) {
+      try {
+        if (backupPath) {
+          await move(backupPath, targetDir, true)
+          backupPath = undefined
+        } else if (ownsTarget && (await isPathExists(targetDir))) {
+          await remove(targetDir)
+        }
+      } catch (recoveryError) {
+        throw new AppError(
+          `Create project failed and target recovery also failed${backupPath ? `; the original target is preserved at ${chalk.cyan(backupPath)}` : ''}: ${(recoveryError as Error).message}`,
+          {
+            cause: new AggregateError(
+              [error, recoveryError],
+              'Project creation and target recovery both failed',
+            ),
+            code: 'CREATE_RECOVERY_FAILED',
+            details: { backupPath, targetDir },
+          },
+        )
+      }
+
+      throw error
     }
   }
 
   /**
-   * Resolve the project target and ensure destructive operations cannot escape
-   * the configured working directory
+   * 解析项目目标并确保写入操作不会逃逸工作目录
+   *
+   * @remarks
+   * 对尚不存在的路径解析最近存在父目录的真实位置，从而识别父目录中的符号链接
+   *
+   * @param projectName - 相对工作目录的项目名称
+   * @returns 通过边界校验的目标绝对路径
+   * @throws {@link AppError} 项目名为空、指向工作目录本身或解析到工作目录外时抛出
    */
-  private _resolveTargetDir(projectName: string): string {
+  private async _resolveTargetDir(projectName: string): Promise<string> {
     const cwd = path.resolve(this.cwd)
     const targetDir = path.resolve(cwd, projectName)
     const relativeTarget = path.relative(cwd, targetDir)
@@ -196,6 +327,30 @@ export class ProjectCreator {
     ) {
       throw new AppError(
         `Invalid project name ${chalk.cyan(projectName)}: target directory must be inside ${chalk.cyan(cwd)}.`,
+        {
+          code: 'CREATE_INVALID_PROJECT_NAME',
+          details: { cwd, projectName, targetDir },
+        },
+      )
+    }
+
+    const [canonicalCwd, canonicalTarget] = await Promise.all([
+      resolveProspectiveCanonicalPath(cwd),
+      resolveProspectiveCanonicalPath(targetDir),
+    ])
+
+    if (!isSameOrDescendant(canonicalCwd, canonicalTarget)) {
+      throw new AppError(
+        `Invalid project name ${chalk.cyan(projectName)}: resolved target directory must be inside ${chalk.cyan(canonicalCwd)}.`,
+        {
+          code: 'CREATE_INVALID_PROJECT_NAME',
+          details: {
+            canonicalCwd,
+            canonicalTarget,
+            projectName,
+            targetDir,
+          },
+        },
       )
     }
 
@@ -206,6 +361,8 @@ export class ProjectCreator {
    * 解析模版
    */
   private async _resolveTemplate(): Promise<boolean> {
+    this._throwIfAborted('resolve-template')
+
     if (isString(this._template)) {
       // 处理本地模版
       if (this._template.startsWith('.') || path.isAbsolute(this._template)) {
@@ -214,6 +371,10 @@ export class ProjectCreator {
         if (!(await isDirectory(templateRootPath))) {
           throw new AppError(
             `Invalid local template ${chalk.cyan(this._template)}.`,
+            {
+              code: 'CREATE_INVALID_TEMPLATE',
+              details: { template: this._template, templateRootPath },
+            },
           )
         }
 
@@ -222,31 +383,38 @@ export class ProjectCreator {
         return true
       }
 
-      // 处理 node_modules
-      try {
-        const cwd = resolve.sync(this._template, {
-          basedir: this.cwd,
-        })
-
-        this._templateRootPath = (await findUp(
-          async directory => {
-            const exist = await isPathExists(
-              path.join(directory, 'package.json'),
-            )
-            if (exist) {
-              return directory
-            }
-
-            return
-          },
-          { cwd, type: 'directory' },
-        )) as string
-        this._isLocal = true
-        return true
-      } catch (_) {
+      if (isGitTemplateSource(this._template)) {
         this._template = {
-          type: 'npm',
+          type: 'git',
           value: this._template,
+        }
+      } else {
+        // 处理 node_modules
+        try {
+          const cwd = resolve.sync(this._template, {
+            basedir: this.cwd,
+          })
+
+          this._templateRootPath = (await findUp(
+            async directory => {
+              const exist = await isPathExists(
+                path.join(directory, 'package.json'),
+              )
+              if (exist) {
+                return directory
+              }
+
+              return
+            },
+            { cwd, type: 'directory' },
+          )) as string
+          this._isLocal = true
+          return true
+        } catch (_) {
+          this._template = {
+            type: 'npm',
+            value: this._template,
+          }
         }
       }
     }
@@ -265,9 +433,20 @@ export class ProjectCreator {
       if (confirmed !== true) {
         return false
       }
+
+      this._throwIfAborted('confirm-template')
     }
 
-    const downloadOptions: TemplateDownloadOptions = { ...this._template }
+    const downloadOptions: TemplateDownloadOptions = {
+      ...this._template,
+      cwd: this.cwd,
+      ...(this.constructorOptions.runtime
+        ? { runtime: this.constructorOptions.runtime }
+        : {}),
+      ...(this.constructorOptions.signal
+        ? { signal: this.constructorOptions.signal }
+        : {}),
+    }
     if (this.constructorOptions.allowTemplateScripts !== undefined) {
       downloadOptions.allowScripts =
         this.constructorOptions.allowTemplateScripts
@@ -275,6 +454,7 @@ export class ProjectCreator {
 
     const download = new TemplateDownloader(downloadOptions)
     this._templateRootPath = await download.download()
+    this._throwIfAborted('download-template')
     return true
   }
 
@@ -287,9 +467,139 @@ export class ProjectCreator {
    */
   private _getTemplateRootPath(): string {
     if (!this._templateRootPath) {
-      throw new AppError(`Template root path has not been resolved.`)
+      throw new AppError(`Template root path has not been resolved.`, {
+        code: 'CREATE_INVALID_TEMPLATE',
+      })
     }
 
     return this._templateRootPath
   }
+
+  /**
+   * 在创建流程边界将取消信号转换为应用错误
+   *
+   * @param operation - 当前创建操作
+   * @throws {@link AppError} 调用方已经取消时抛出
+   */
+  private _throwIfAborted(operation: string): void {
+    const signal = this.constructorOptions.signal
+
+    if (signal?.aborted) {
+      throw new AppError(`Create operation \`${operation}\` was aborted.`, {
+        cause: signal.reason,
+        code: 'CREATE_OPERATION_ABORTED',
+        details: { operation },
+      })
+    }
+  }
+}
+
+/**
+ * 判断字符串模版是否应按 Git 仓库解析
+ *
+ * @remarks
+ * URL 和 SCP 风格地址优先于 Node 模块解析，避免把 Git 地址误当成 npm 包名；
+ * 普通包名仍交给本地模块解析并在失败后回退到 npm 下载
+ *
+ * @param source - CLI 或 API 传入的字符串模版声明
+ * @returns 是否为支持的 Git 仓库地址
+ */
+function isGitTemplateSource(source: string): boolean {
+  return (
+    /^(?:git\+)?(?:https?|ssh|git):\/\//iu.test(source) ||
+    /^[\w.-]+@[\w.-]+:.+/u.test(source)
+  )
+}
+
+/**
+ * 拒绝本地模版与目标目录相同或相互嵌套
+ *
+ * @remarks
+ * 覆盖和生成流程会移动或写入目标目录；若两个路径重叠，生成过程可能移动模版
+ * 自身或在递归拷贝时不断读取刚生成的文件。对已存在路径优先使用真实路径以识别
+ * 符号链接指向的重叠位置
+ *
+ * @param templateRootPath - 本地模版根目录
+ * @param targetDir - 项目输出目录
+ * @throws {@link AppError} 两个目录相同或任一目录包含另一个目录时抛出
+ */
+async function assertPathsDoNotOverlap(
+  templateRootPath: string,
+  targetDir: string,
+): Promise<void> {
+  const [templatePath, targetPath] = await Promise.all([
+    resolveCanonicalPath(templateRootPath),
+    resolveCanonicalPath(targetDir),
+  ])
+
+  if (
+    isSameOrDescendant(templatePath, targetPath) ||
+    isSameOrDescendant(targetPath, templatePath)
+  ) {
+    throw new AppError(
+      `Local template ${chalk.cyan(templateRootPath)} and target ${chalk.cyan(targetDir)} must not overlap.`,
+      {
+        code: 'CREATE_INVALID_TEMPLATE',
+        details: { targetDir, templateRootPath },
+      },
+    )
+  }
+}
+
+/**
+ * 解析路径的真实位置，并为尚未创建的目标保留词法绝对路径
+ *
+ * @param candidate - 待解析路径
+ * @returns 能解析符号链接时的真实路径，否则返回词法绝对路径
+ */
+async function resolveCanonicalPath(candidate: string): Promise<string> {
+  return resolveProspectiveCanonicalPath(candidate)
+}
+
+/**
+ * 通过最近存在的父目录解析尚未创建路径的真实位置
+ *
+ * @remarks
+ * 只对完整路径调用 `realpath` 会在末级尚不存在时回退到词法路径，从而遗漏父目录
+ * 中的符号链接；逐级回溯可以在写入前识别该类路径逃逸
+ *
+ * @param candidate - 已存在或即将创建的路径
+ * @returns 解析符号链接后的预期绝对路径
+ */
+async function resolveProspectiveCanonicalPath(
+  candidate: string,
+): Promise<string> {
+  let current = path.resolve(candidate)
+  const missingSegments: string[] = []
+
+  while (true) {
+    try {
+      const existingPath = await realpath(current)
+      return path.resolve(existingPath, ...missingSegments.reverse())
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code
+      if (code !== 'ENOENT' && code !== 'ENOTDIR') {
+        throw error
+      }
+
+      const parent = path.dirname(current)
+      if (parent === current) {
+        return path.resolve(candidate)
+      }
+
+      missingSegments.push(path.basename(current))
+      current = parent
+    }
+  }
+}
+
+function isSameOrDescendant(parent: string, candidate: string): boolean {
+  const relativePath = path.relative(parent, candidate)
+
+  return (
+    !relativePath ||
+    (!relativePath.startsWith(`..${path.sep}`) &&
+      relativePath !== '..' &&
+      !path.isAbsolute(relativePath))
+  )
 }

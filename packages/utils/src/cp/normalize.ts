@@ -1,4 +1,5 @@
 import { isArray } from '../guards'
+import { parseCommandLine } from './command-line'
 
 /**
  * 格式化参数
@@ -13,5 +14,5 @@ export function normalizeArgs(args?: string | string[]): string[] {
     return args
   }
 
-  return args.split(' ')
+  return parseCommandLine(args)
 }

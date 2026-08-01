@@ -3,6 +3,10 @@
  */
 export enum PluginHostErrorCode {
   /**
+   * 调用方主动取消插件宿主操作
+   */
+  OperationAborted = 'PLUGIN_HOST_OPERATION_ABORTED',
+  /**
    * 构造或调用参数无效
    */
   InvalidOptions = 'PLUGIN_HOST_INVALID_OPTIONS',

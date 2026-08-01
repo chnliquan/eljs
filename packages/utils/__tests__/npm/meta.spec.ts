@@ -10,26 +10,26 @@ import {
 } from 'vitest'
 import * as importedModule0 from '../../src/cp'
 import * as importedModule1 from '../../src/guards'
+import * as importedModule2 from '../../src/npm/request-config'
 
-import urllib from 'urllib'
+import urllib, { ProxyAgent } from 'urllib'
 import which from 'which'
 
-import {
-  getNpmPackage,
-  getNpmPrefix,
-  getNpmRegistry,
-  getNpmUser,
-  pkgNameAnalysis,
-} from '../../src/npm/meta'
+import { getNpmPrefix } from '../../src/npm/global-prefix'
+import { getNpmPackage } from '../../src/npm/package-metadata'
+import { pkgNameAnalysis } from '../../src/npm/package-specifier'
+import { getNpmRegistry, getNpmUser } from '../../src/npm/registry-cli'
 
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
 const requiredModule1 = vi.mocked(importedModule1, { deep: true })
+const requiredModule2 = vi.mocked(importedModule2, { deep: true })
 
 // Mock 依赖项
 vi.mock('urllib')
 vi.mock('which')
 vi.mock('../../src/cp')
 vi.mock('../../src/guards')
+vi.mock('../../src/npm/request-config')
 
 describe('NPM Meta 工具', () => {
   const mockUrllib = urllib as Mocked<typeof urllib>
@@ -44,11 +44,13 @@ describe('NPM Meta 工具', () => {
   const mockIsString = requiredModule1.isString as MockedFunction<
     (value: unknown) => boolean
   >
+  const mockGetNpmRequestConfig = requiredModule2.getNpmRequestConfig
 
   beforeEach(() => {
     vi.clearAllMocks()
     delete process.env.GLOBAL_PREFIX
     mockIsString.mockReturnValue(false)
+    mockGetNpmRequestConfig.mockResolvedValue({})
     mockRun.mockResolvedValue({ stdout: 'https://registry.npmjs.org/' })
   })
 
@@ -141,6 +143,7 @@ describe('NPM Meta 工具', () => {
       mockRun.mockResolvedValue({ stdout: 'https://registry.npmjs.org/' })
       mockUrllib.request.mockResolvedValue({
         data: mockPackageData,
+        status: 200,
       } as unknown as Awaited<ReturnType<typeof urllib.request>>)
     })
 
@@ -183,8 +186,38 @@ describe('NPM Meta 工具', () => {
     it('应该处理 scoped 包名', async () => {
       await getNpmPackage('@types/node')
 
+      expect(mockRun).toHaveBeenCalledWith(
+        'npm',
+        ['config', 'get', '@types:registry'],
+        { cwd: undefined },
+      )
       expect(mockUrllib.request).toHaveBeenCalledWith(
         'https://registry.npmjs.org/@types%2Fnode',
+        { timeout: 10000, dataType: 'json' },
+      )
+    })
+
+    it('应该在 scoped registry 未配置时回退到默认 registry', async () => {
+      mockRun
+        .mockResolvedValueOnce({ stdout: 'undefined\n' })
+        .mockResolvedValueOnce({ stdout: 'https://registry.example.com/' })
+
+      await getNpmPackage('@scope/package')
+
+      expect(mockRun).toHaveBeenNthCalledWith(
+        1,
+        'npm',
+        ['config', 'get', '@scope:registry'],
+        { cwd: undefined },
+      )
+      expect(mockRun).toHaveBeenNthCalledWith(
+        2,
+        'npm',
+        ['config', 'get', 'registry'],
+        { cwd: undefined },
+      )
+      expect(mockUrllib.request).toHaveBeenCalledWith(
+        'https://registry.example.com/@scope%2Fpackage',
         { timeout: 10000, dataType: 'json' },
       )
     })
@@ -198,9 +231,31 @@ describe('NPM Meta 工具', () => {
       )
     })
 
+    it('应该仅把目标 registry 的认证请求头传给客户端', async () => {
+      mockGetNpmRequestConfig.mockResolvedValue({
+        headers: { authorization: 'Bearer private-token' },
+      })
+
+      await getNpmPackage('private-package')
+
+      expect(mockGetNpmRequestConfig).toHaveBeenCalledWith(
+        'https://registry.npmjs.org/private-package',
+        undefined,
+      )
+      expect(mockUrllib.request).toHaveBeenCalledWith(
+        'https://registry.npmjs.org/private-package',
+        {
+          dataType: 'json',
+          headers: { authorization: 'Bearer private-token' },
+          timeout: 10000,
+        },
+      )
+    })
+
     it('应该在包不存在时返回 null', async () => {
       mockUrllib.request.mockResolvedValue({
         data: { error: 'Not found' },
+        status: 404,
       } as unknown as Awaited<ReturnType<typeof urllib.request>>)
 
       const result = await getNpmPackage('nonexistent-package')
@@ -208,23 +263,54 @@ describe('NPM Meta 工具', () => {
       expect(result).toBeNull()
     })
 
-    it('应该在数据为字符串时返回 null', async () => {
+    it('应该拒绝成功状态下的无效响应结构', async () => {
       mockUrllib.request.mockResolvedValue({
         data: 'Not Found',
+        status: 200,
       } as unknown as Awaited<ReturnType<typeof urllib.request>>)
       mockIsString.mockReturnValue(true)
 
-      const result = await getNpmPackage('string-response')
-
-      expect(result).toBeNull()
+      await expect(getNpmPackage('string-response')).rejects.toMatchObject({
+        code: 'ERR_NPM_REGISTRY_RESPONSE',
+        operation: 'npm.getPackage',
+      })
     })
 
-    it('应该在请求失败时返回 null', async () => {
+    it('应该保留 registry HTTP 状态错误', async () => {
+      mockUrllib.request.mockResolvedValue({
+        data: { error: 'Unauthorized' },
+        status: 401,
+      } as unknown as Awaited<ReturnType<typeof urllib.request>>)
+
+      await expect(getNpmPackage('private-package')).rejects.toMatchObject({
+        code: 'ERR_NPM_REGISTRY_HTTP_STATUS',
+        details: { packageName: 'private-package', status: 401 },
+      })
+    })
+
+    it('应该在请求失败时抛出稳定错误', async () => {
       mockUrllib.request.mockRejectedValue(new Error('Network error'))
 
-      const result = await getNpmPackage('network-fail-package')
+      await expect(getNpmPackage('network-fail-package')).rejects.toMatchObject(
+        {
+          code: 'ERR_NPM_REGISTRY_REQUEST',
+          operation: 'npm.getPackage',
+        },
+      )
+    })
 
-      expect(result).toBeNull()
+    it('应该在请求结束后关闭代理调度器', async () => {
+      const close = vi.fn().mockResolvedValue(undefined)
+      vi.mocked(ProxyAgent).mockImplementation(function MockProxyAgent() {
+        return { close }
+      } as unknown as typeof ProxyAgent)
+      mockGetNpmRequestConfig.mockResolvedValue({
+        proxy: 'http://proxy.example.com:8080',
+      })
+
+      await getNpmPackage('proxied-package')
+
+      expect(close).toHaveBeenCalledOnce()
     })
   })
 

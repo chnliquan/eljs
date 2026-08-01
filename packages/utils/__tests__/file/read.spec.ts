@@ -21,7 +21,7 @@ import {
 } from '../../src/file/read'
 
 // Mock 依赖项
-vi.mock('parse-json')
+vi.mock('parse-json', () => ({ default: vi.fn() }))
 
 describe('文件读取工具', () => {
   const mockParseJson = parseJson as MockedFunction<typeof parseJson>

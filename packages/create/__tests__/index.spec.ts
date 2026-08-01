@@ -1,13 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 /**
  * @file packages/create/src/index.ts 的单元测试
- * @description 测试主入口文件的导出功能和模块副作用
+ * @description 测试主入口文件的导出功能
  */
-
-// Mock require-hook 模块以避免副作用
-vi.mock('../src/require-hook', () => ({
-  hookPropertyMap: new Map(),
-}))
 
 // Mock 其他依赖模块
 vi.mock('../src/core', () => ({
@@ -45,24 +40,11 @@ describe('入口文件', () => {
     vi.clearAllMocks()
   })
 
-  describe('模块导入和副作用', () => {
-    it('应该正确导入 require-hook 模块并触发副作用', async () => {
-      // 重新导入模块以确保副作用被触发
+  describe('模块导入', () => {
+    it('应该无全局解析副作用地导入入口模块', async () => {
       const indexModule = await import('../src/index')
 
-      // 验证模块被成功导入
       expect(indexModule).toBeDefined()
-
-      // 验证 require-hook 模块的 mock 被调用
-      expect(vi.isMockFunction).toBeDefined()
-    })
-
-    it('require-hook 模块应该在其他导出之前被导入', async () => {
-      // 这个测试确保 import './require-hook' 在文件顶部执行
-      const moduleContent = await import('../src/index')
-
-      // 如果没有抛出错误，说明 require-hook 正确地在最开始被导入
-      expect(moduleContent).toBeDefined()
     })
   })
 
@@ -318,8 +300,7 @@ describe('入口文件', () => {
       }).not.toThrow()
     })
 
-    it('应该正确处理 require-hook 的模块解析', async () => {
-      // 验证 require-hook 不会干扰正常的模块导入
+    it('应该保持正常的模块解析', async () => {
       const moduleExports = await import('../src/index')
 
       // 基本功能应该正常工作

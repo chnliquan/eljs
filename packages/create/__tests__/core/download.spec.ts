@@ -1,9 +1,12 @@
 import {
   downloadGitRepository,
   downloadNpmTarball,
+  findUp,
   getNpmPackage,
+  getNpmRequestConfig,
   pkgNameAnalysis,
   readJson,
+  remove,
   run,
   type PackageJson,
 } from '@eljs/utils'
@@ -26,15 +29,24 @@ import {
 import type { RemoteTemplate } from '../../src/types'
 
 // Mock external dependencies
+vi.mock('@eljs/utils/cp', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/git', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/module', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/npm', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils', () => ({
   chalk: {
     cyan: vi.fn((text: string) => text),
   },
   downloadGitRepository: vi.fn(),
   downloadNpmTarball: vi.fn(),
+  findUp: vi.fn(),
   getNpmPackage: vi.fn(),
+  getNpmRequestConfig: vi.fn(),
   pkgNameAnalysis: vi.fn(),
   readJson: vi.fn(),
+  remove: vi.fn(),
   run: vi.fn(),
 }))
 vi.mock('ora')
@@ -45,6 +57,9 @@ describe('TemplateDownloader 类测试', () => {
   const mockGetNpmPackage = getNpmPackage as MockedFunction<
     typeof getNpmPackage
   >
+  const mockGetNpmRequestConfig = getNpmRequestConfig as MockedFunction<
+    typeof getNpmRequestConfig
+  >
   const mockPkgNameAnalysis = pkgNameAnalysis as MockedFunction<
     typeof pkgNameAnalysis
   >
@@ -54,7 +69,9 @@ describe('TemplateDownloader 类测试', () => {
   const mockDownloadGitRepository = downloadGitRepository as MockedFunction<
     typeof downloadGitRepository
   >
+  const mockFindUp = findUp as MockedFunction<typeof findUp>
   const mockReadJson = readJson as MockedFunction<typeof readJson>
+  const mockRemove = remove as MockedFunction<typeof remove>
   const mockRun = run as MockedFunction<typeof run>
   const mockOra = ora as MockedFunction<typeof ora>
 
@@ -87,6 +104,7 @@ describe('TemplateDownloader 类测试', () => {
       }
       return `${dir}/${file}`
     })
+    vi.mocked(path.dirname).mockReturnValue('/tmp/download')
 
     // Default successful mocks
     mockPkgNameAnalysis.mockReturnValue({
@@ -99,12 +117,18 @@ describe('TemplateDownloader 类测试', () => {
     mockGetNpmPackage.mockResolvedValue({
       name: mockPackageName,
       version: mockVersion,
-      dist: { tarball: mockTarball },
+      dist: { integrity: 'sha512-template-integrity', tarball: mockTarball },
     } as unknown as Awaited<ReturnType<typeof getNpmPackage>>)
+    mockGetNpmRequestConfig.mockResolvedValue({
+      headers: { authorization: 'Bearer template-token' },
+      proxy: 'http://proxy.example.com:8080',
+    })
 
     mockDownloadNpmTarball.mockResolvedValue(mockDownloadPath)
     mockDownloadGitRepository.mockResolvedValue(mockDownloadPath)
+    mockFindUp.mockResolvedValue(undefined)
     mockReadJson.mockResolvedValue({})
+    mockRemove.mockResolvedValue(true)
     mockRun.mockResolvedValue({} as unknown as Awaited<ReturnType<typeof run>>)
   })
 
@@ -189,7 +213,18 @@ describe('TemplateDownloader 类测试', () => {
           version: mockVersion,
           registry: undefined,
         })
-        expect(mockDownloadNpmTarball).toHaveBeenCalledWith(mockTarball)
+        expect(mockGetNpmRequestConfig).toHaveBeenCalledWith(
+          mockTarball,
+          mockCwd,
+        )
+        expect(mockDownloadNpmTarball).toHaveBeenCalledWith(mockTarball, {
+          headers: { authorization: 'Bearer template-token' },
+          integrity: 'sha512-template-integrity',
+          maxBytes: 104_857_600,
+          maxEntries: 20_000,
+          maxUnpackedBytes: 524_288_000,
+          proxy: 'http://proxy.example.com:8080',
+        })
       })
 
       it('应该使用自定义registry下载npm包', async () => {
@@ -429,6 +464,28 @@ describe('TemplateDownloader 类测试', () => {
         )
       })
 
+      it('应该把调用方项目的 npmrc 作为模板安装用户配置', async () => {
+        mockReadJson.mockResolvedValue(mockPackageJson)
+        mockFindUp.mockResolvedValue('/test/cwd/.npmrc')
+        const download = new TemplateDownloader({
+          cwd: mockCwd,
+          type: 'npm',
+          value: mockPackageName,
+        })
+
+        await download.download()
+
+        expect(mockFindUp).toHaveBeenCalledWith('.npmrc', { cwd: mockCwd })
+        expect(mockRun).toHaveBeenCalledWith(
+          'npm',
+          ['install', '--omit=dev', '--ignore-scripts'],
+          {
+            cwd: mockDownloadPath,
+            env: { NPM_CONFIG_USERCONFIG: '/test/cwd/.npmrc' },
+          },
+        )
+      })
+
       it('应该处理安装失败', async () => {
         mockReadJson.mockResolvedValue(mockPackageJson)
         const installError = new Error('Installation failed')
@@ -442,6 +499,7 @@ describe('TemplateDownloader 类测试', () => {
 
         await expect(download.download()).rejects.toThrow('Installation failed')
         expect(mockSpinner.fail).toHaveBeenCalled()
+        expect(mockRemove).toHaveBeenCalledWith(mockDownloadPath)
       })
 
       it('应该为git仓库安装依赖', async () => {
@@ -546,6 +604,7 @@ describe('TemplateDownloader 类测试', () => {
         const download = new TemplateDownloader(options)
 
         await expect(download.download()).rejects.toThrow('File read error')
+        expect(mockRemove).toHaveBeenCalledWith(mockDownloadPath)
       })
     })
   })
@@ -582,7 +641,14 @@ describe('TemplateDownloader 类测试', () => {
         version: mockVersion,
         registry: 'https://registry.npmjs.org',
       })
-      expect(mockDownloadNpmTarball).toHaveBeenCalledWith(mockTarball)
+      expect(mockDownloadNpmTarball).toHaveBeenCalledWith(
+        mockTarball,
+        expect.objectContaining({
+          integrity: 'sha512-template-integrity',
+          maxBytes: 104_857_600,
+          maxEntries: 20_000,
+        }),
+      )
       expect(mockReadJson).toHaveBeenCalledWith(
         path.join(mockDownloadPath, './package.json'),
       )
@@ -623,7 +689,14 @@ describe('TemplateDownloader 类测试', () => {
       const result = await download.download()
 
       expect(result).toBe(mockDownloadPath)
-      expect(mockDownloadNpmTarball).toHaveBeenCalledWith(mockTarball)
+      expect(mockDownloadNpmTarball).toHaveBeenCalledWith(
+        mockTarball,
+        expect.objectContaining({
+          integrity: 'sha512-template-integrity',
+          maxBytes: 104_857_600,
+          maxEntries: 20_000,
+        }),
+      )
       expect(mockRun).not.toHaveBeenCalled()
     })
   })

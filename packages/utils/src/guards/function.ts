@@ -3,7 +3,7 @@ import type {
   AnyConstructorFunction,
   AnyFunction,
 } from '../types'
-import { isFunction } from './basic'
+import { isFunction } from './primitive'
 
 /**
  * 安全获取函数构造器

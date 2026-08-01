@@ -36,8 +36,7 @@ import {
 import { ReleaseLock } from './internal/release-lock'
 import { AppError, parseVersion } from './utils'
 
-const currentModulePath =
-  typeof __filename === 'string' ? __filename : import.meta.url
+const currentModulePath = import.meta.url
 const localRequire = createRequire(currentModulePath)
 const debug = createDebugger('release:config')
 

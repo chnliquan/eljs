@@ -71,6 +71,8 @@ const enterpriseCreator = new ProjectCreator({
 await enterpriseCreator.run('enterprise-app')
 ```
 
+`force` 使用可恢复事务：现有目录会先移动到同级临时备份，只有生成完整成功后才删除；下载、插件或文件生成失败时会恢复原目录。`merge` 保留现有目录并合并生成结果。
+
 ## 📖 CLI Reference
 
 ### Commands
@@ -125,7 +127,7 @@ create context-template my-context --cwd ./projects
 # From scoped npm package
 create @company/enterprise-template my-enterprise-app
 
-# From git repository with branch
+# From a Git repository branch or tag
 create https://github.com/templates/fullstack.git#main my-fullstack-app
 
 # Local template with custom options
@@ -178,6 +180,10 @@ interface ProjectCreatorOptions {
    * @default false
    */
   allowTemplateScripts?: boolean
+  /**
+   * Cancel downloading, plugin execution, and generation at safe boundaries
+   */
+  signal?: AbortSignal
 }
 ```
 
@@ -217,6 +223,12 @@ Template dependency lifecycle scripts are disabled by default with
 explicitly with `--allow-template-scripts`. This option does not sandbox the
 template generator itself.
 
+NPM downloads inherit project and user `.npmrc` authentication, proxy, and
+`no-proxy` settings. Credentials are matched to the target host and path and are
+not forwarded to an unrelated tarball host. Tarballs are streamed with a 100 MiB
+download limit, a 20,000-entry extraction limit, and registry-provided integrity
+verification.
+
 ### API Examples
 
 ```typescript
@@ -249,6 +261,16 @@ const gitCreate = new ProjectCreator({
   },
 })
 await gitCreate.run('git-project')
+
+// Cancellable creation
+const controller = new AbortController()
+const cancellableCreate = new ProjectCreator({
+  template: './my-local-template',
+  signal: controller.signal,
+})
+
+process.once('SIGINT', () => controller.abort())
+await cancellableCreate.run('cancellable-project')
 ```
 
 ## ⚙️ Configuration

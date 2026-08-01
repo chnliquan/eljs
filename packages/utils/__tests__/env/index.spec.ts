@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 
-import type { ExecaReturnValue } from 'execa'
-import execa from 'execa'
+import { execa, type Result } from 'execa'
 
 import * as envModule from '../../src/env'
 import { hasGlobalInstallation } from '../../src/env'
@@ -47,7 +46,7 @@ describe('环境工具函数', () => {
         shortMessage: '',
         message: '',
         all: '1.2.3',
-      } as unknown as ExecaReturnValue
+      } as unknown as Result
 
       mockExeca.mockResolvedValue(
         mockResult as unknown as ReturnType<typeof execa>,
@@ -60,7 +59,7 @@ describe('环境工具函数', () => {
     })
 
     it('应该在版本号格式正确时返回 true', async () => {
-      const mockResult: Partial<ExecaReturnValue> = {
+      const mockResult: Partial<Result> = {
         stdout: 'v10.15.3',
         stderr: '',
       }
@@ -76,7 +75,7 @@ describe('环境工具函数', () => {
     })
 
     it('应该在输出不包含版本号时返回 false', async () => {
-      const mockResult: Partial<ExecaReturnValue> = {
+      const mockResult: Partial<Result> = {
         stdout: 'no version here',
         stderr: '',
       }
@@ -101,7 +100,7 @@ describe('环境工具函数', () => {
     })
 
     it('应该缓存成功的结果', async () => {
-      const mockResult: Partial<ExecaReturnValue> = {
+      const mockResult: Partial<Result> = {
         stdout: '2.0.0',
       }
 
@@ -121,7 +120,7 @@ describe('环境工具函数', () => {
     })
 
     it('应该缓存版本号不匹配的结果', async () => {
-      const mockResult: Partial<ExecaReturnValue> = {
+      const mockResult: Partial<Result> = {
         stdout: 'no version here',
       }
 
@@ -155,8 +154,8 @@ describe('环境工具函数', () => {
     })
 
     it('应该为不同的命令使用不同的缓存', async () => {
-      const mockResult1: Partial<ExecaReturnValue> = { stdout: '1.0.0' }
-      const mockResult2: Partial<ExecaReturnValue> = { stdout: '2.0.0' }
+      const mockResult1: Partial<Result> = { stdout: '1.0.0' }
+      const mockResult2: Partial<Result> = { stdout: '2.0.0' }
 
       mockExeca
         .mockResolvedValueOnce(
@@ -191,7 +190,7 @@ describe('环境工具函数', () => {
       ]
 
       for (const testCase of testCases) {
-        const mockResult: Partial<ExecaReturnValue> = {
+        const mockResult: Partial<Result> = {
           stdout: testCase.output,
         }
         mockExeca.mockResolvedValue(
@@ -203,7 +202,7 @@ describe('环境工具函数', () => {
     })
 
     it('应该处理空的 stdout', async () => {
-      const mockResult: Partial<ExecaReturnValue> = {
+      const mockResult: Partial<Result> = {
         stdout: '',
         stderr: '',
       }
@@ -218,7 +217,7 @@ describe('环境工具函数', () => {
     })
 
     it('应该处理包含多行的 stdout', async () => {
-      const mockResult: Partial<ExecaReturnValue> = {
+      const mockResult: Partial<Result> = {
         stdout: `Some header info
 v1.2.3
 Some footer info`,

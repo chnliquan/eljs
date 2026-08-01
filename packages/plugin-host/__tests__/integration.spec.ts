@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -33,6 +33,60 @@ describe('插件宿主集成', () => {
 
   afterEach(async () => {
     await rm(cwd, { recursive: true, force: true })
+  })
+
+  it('应该在预先取消时停止加载且不进入部分初始化状态', async () => {
+    const controller = new AbortController()
+    controller.abort(new Error('caller cancelled'))
+    const host = new TestPluginHost({ cwd, signal: controller.signal })
+
+    await expect(host.testLoad()).rejects.toMatchObject({
+      cause: expect.objectContaining({ message: 'caller cancelled' }),
+      code: PluginHostErrorCode.OperationAborted,
+    })
+    expect(host.state).toBe(PluginHostState.Uninitialized)
+  })
+
+  it('应该在 Hook 边界停止后续插件执行', async () => {
+    const controller = new AbortController()
+    const abortingPlugin = path.join(cwd, 'aborting-plugin.cjs')
+    const laterPlugin = path.join(cwd, 'later-plugin.cjs')
+    const markerPath = path.join(cwd, 'later-hook-ran.txt')
+    await Promise.all([
+      writeFile(
+        abortingPlugin,
+        [
+          'module.exports = (context, options) => {',
+          "  context.register('onStep', () => options.controller.abort())",
+          '}',
+        ].join('\n'),
+      ),
+      writeFile(
+        laterPlugin,
+        [
+          "const fs = require('node:fs')",
+          'module.exports = (context, options) => {',
+          "  context.register('onStep', () => fs.writeFileSync(options.markerPath, 'ran'))",
+          '}',
+        ].join('\n'),
+      ),
+    ])
+    const host = new TestPluginHost({
+      cwd,
+      signal: controller.signal,
+      plugins: [
+        [abortingPlugin, { controller }],
+        [laterPlugin, { markerPath }],
+      ],
+    })
+
+    await host.testLoad()
+    await expect(host.runHook('onStep')).rejects.toMatchObject({
+      code: PluginHostErrorCode.OperationAborted,
+    })
+    await expect(readFile(markerPath, 'utf8')).rejects.toMatchObject({
+      code: 'ENOENT',
+    })
   })
 
   it('应该加载真实的 ESM、CommonJS 和 TypeScript 插件', async () => {

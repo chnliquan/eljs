@@ -29,10 +29,9 @@ vi.mock('../../src/guards')
 
 describe('Generator 生成器', () => {
   const mockPrompts = prompts as MockedFunction<typeof prompts>
-  const mockIsPathExistsSync =
-    requiredModule0.isPathExistsSync as MockedFunction<
-      (filePath: string) => boolean
-    >
+  const mockIsPathExistsSync = requiredModule0.pathExistsSync as MockedFunction<
+    (filePath: string) => boolean
+  >
   const mockMkdirSync = requiredModule0.mkdirSync as MockedFunction<
     (dirPath: string) => void
   >
@@ -47,7 +46,7 @@ describe('Generator 生成器', () => {
       options?: unknown,
     ) => Promise<void>
   >
-  const mockCopyTpl = requiredModule0.copyTpl as unknown as MockedFunction<
+  const mockCopyTpl = requiredModule0.copyTemplate as unknown as MockedFunction<
     (
       from: string,
       to: string,
@@ -145,7 +144,7 @@ describe('Generator 生成器', () => {
       expect(onDone).toHaveBeenCalledWith({
         src: '/template', // 字符串形式直接使用
         dest: '/output', // 字符串形式直接使用
-        data: { version: '1.0.0' }, // 静态数据，不包含 prompts（因为在 _data 中）
+        data: { name: 'TestProject', version: '1.0.0' },
       })
     })
   })
@@ -160,7 +159,12 @@ describe('Generator 生成器', () => {
       const generator = new Generator(options)
       await generator.writing()
 
-      expect(mockMkdirSync).toHaveBeenCalledWith('/output')
+      expect(mockMkdirSync).not.toHaveBeenCalled()
+      expect(mockCopyFile).toHaveBeenCalledWith(
+        '/template',
+        '/output',
+        expect.objectContaining({ data: {} }),
+      )
     })
 
     it('应该处理函数 dest', async () => {
@@ -177,7 +181,12 @@ describe('Generator 生成器', () => {
       await generator.writing()
 
       expect(destFn).toHaveBeenCalledWith({ name: 'test' })
-      expect(mockMkdirSync).toHaveBeenCalledWith('/computed/output')
+      expect(mockMkdirSync).not.toHaveBeenCalled()
+      expect(mockCopyFile).toHaveBeenCalledWith(
+        '/template',
+        '/computed/output',
+        expect.objectContaining({ data: { name: 'test' } }),
+      )
     })
 
     it('应该根据源类型选择复制方法', async () => {
@@ -238,8 +247,25 @@ describe('Generator 生成器', () => {
       expect(generator.copyFile).toHaveBeenCalledWith(
         '/template.txt',
         '/output.txt',
-        { dynamic: 'prompt', static: 'data' },
+        { data: { dynamic: 'prompt', static: 'data' } },
       )
+    })
+
+    it('用户取消覆盖目录时不应继续复制或触发完成回调', async () => {
+      mockIsDirectorySync.mockReturnValue(true)
+      mockIsPathExistsSync.mockReturnValue(true)
+      const onDone = vi.fn()
+      const generator = new Generator({
+        src: '/template-dir',
+        dest: '/existing-output',
+        onGeneratorDone: onDone,
+      })
+      generator.checkDir = vi.fn().mockResolvedValue(false)
+
+      await expect(generator.run()).resolves.toBe(false)
+
+      expect(mockCopyDirectory).not.toHaveBeenCalled()
+      expect(onDone).not.toHaveBeenCalled()
     })
   })
 

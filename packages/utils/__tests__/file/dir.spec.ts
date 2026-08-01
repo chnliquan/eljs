@@ -11,11 +11,19 @@ import * as importedModule0 from '../../src/file/is'
 import * as importedModule1 from '../../src/guards'
 
 import { mkdirp, mkdirpSync } from 'mkdirp'
+import { mkdirSync as fsMkdirSync } from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 
-import { mkdir, mkdirSync, tmpdir, tmpdirSync } from '../../src/file/dir'
+import {
+  createTempDir,
+  createTempDirSync,
+  mkdir,
+  mkdirSync,
+  tmpdir,
+  tmpdirSync,
+} from '../../src/file/dir'
 
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
 const requiredModule1 = vi.mocked(importedModule1, { deep: true })
@@ -28,13 +36,12 @@ vi.mock('../../src/guards')
 describe('目录操作工具', () => {
   const mockMkdirp = mkdirp as MockedFunction<typeof mkdirp>
   const mockMkdirpSync = mkdirpSync as MockedFunction<typeof mkdirpSync>
-  const mockIsPathExists = requiredModule0.isPathExists as MockedFunction<
+  const mockIsPathExists = requiredModule0.pathExists as MockedFunction<
     (filePath: string) => Promise<boolean>
   >
-  const mockIsPathExistsSync =
-    requiredModule0.isPathExistsSync as MockedFunction<
-      (filePath: string) => boolean
-    >
+  const mockIsPathExistsSync = requiredModule0.pathExistsSync as MockedFunction<
+    (filePath: string) => boolean
+  >
   const mockIsBoolean = requiredModule1.isBoolean as MockedFunction<
     (value: unknown) => value is boolean
   >
@@ -146,7 +153,7 @@ describe('目录操作工具', () => {
       mockIsBoolean.mockReturnValue(false)
       mockMkdirp.mockResolvedValue(undefined)
 
-      const result = await tmpdir()
+      const result = await createTempDir()
 
       expect(result).toBe(path.join('/home/user', '.cli_tmp'))
     })
@@ -157,7 +164,7 @@ describe('目录操作工具', () => {
         writable: true,
       })
 
-      const result = await tmpdir()
+      const result = await createTempDir()
 
       expect(result).toBe(os.tmpdir())
     })
@@ -167,30 +174,25 @@ describe('目录操作工具', () => {
       mockIsBoolean.mockReturnValue(false)
       mockMkdirp.mockResolvedValue(undefined)
 
-      const result = await tmpdir('custom-tmp')
+      const result = await createTempDir('custom-tmp')
 
       expect(result).toBe(path.join('/home/user', 'custom-tmp'))
     })
 
     it('应该在随机模式下创建随机目录', async () => {
-      process.env.HOME = '/home/user'
+      process.env.HOME = tempDir
       mockIsBoolean.mockReturnValue(true)
-      mockMkdirp.mockResolvedValue(undefined)
+      mockMkdirp.mockImplementation(async directory => {
+        await fsp.mkdir(String(directory), { recursive: true })
+        return String(directory)
+      })
 
-      // Mock Math.random and Date.now for predictable results
-      const mockRandom = vi.spyOn(Math, 'random').mockReturnValue(0.5)
-      const mockDateNow = vi.spyOn(Date, 'now').mockReturnValue(1234567890)
+      const first = await createTempDir(true)
+      const second = await createTempDir(true)
 
-      const result = await tmpdir(true)
-
-      expect(result).toMatch(/\/home\/user\/\.cli_tmp\/tmp-1234567890-500$/)
-      expect(mockMkdirp).toHaveBeenCalledWith(
-        expect.stringMatching(/tmp-1234567890-500$/),
-        undefined,
-      )
-
-      mockRandom.mockRestore()
-      mockDateNow.mockRestore()
+      expect(first).toMatch(/\.cli_tmp\/tmp-[\w-]{6}$/u)
+      expect(second).toMatch(/\.cli_tmp\/tmp-[\w-]{6}$/u)
+      expect(first).not.toBe(second)
     })
 
     it('应该在用户目录创建失败时回退到系统临时目录', async () => {
@@ -198,27 +200,22 @@ describe('目录操作工具', () => {
       mockIsBoolean.mockReturnValue(false)
       mockMkdirp.mockRejectedValueOnce(new Error('Permission denied'))
 
-      const result = await tmpdir()
+      const result = await createTempDir()
 
       expect(result).toBe(os.tmpdir())
     })
 
     it('应该处理布尔参数作为第一个参数', async () => {
+      process.env.HOME = tempDir
       mockIsBoolean.mockReturnValue(true)
-      mockMkdirp.mockResolvedValue(undefined)
+      mockMkdirp.mockImplementation(async directory => {
+        await fsp.mkdir(String(directory), { recursive: true })
+        return String(directory)
+      })
 
-      const mockRandom = vi.spyOn(Math, 'random').mockReturnValue(0.123)
-      const mockDateNow = vi.spyOn(Date, 'now').mockReturnValue(9876543210)
+      const result = await createTempDir(true)
 
-      await tmpdir(true)
-
-      expect(mockMkdirp).toHaveBeenCalledWith(
-        expect.stringMatching(/tmp-9876543210-123$/),
-        undefined,
-      )
-
-      mockRandom.mockRestore()
-      mockDateNow.mockRestore()
+      expect(result).toMatch(/\.cli_tmp\/tmp-[\w-]{6}$/u)
     })
   })
 
@@ -231,46 +228,73 @@ describe('目录操作工具', () => {
       })
     })
 
-    it('应该同步创建临时目录', async () => {
+    it('应该同步创建临时目录', () => {
       process.env.HOME = '/home/user'
       mockIsBoolean.mockReturnValue(false)
       mockMkdirpSync.mockReturnValue(undefined)
 
-      const result = await tmpdirSync()
+      const result = createTempDirSync()
 
       expect(result).toBe(path.join('/home/user', '.cli_tmp'))
+      expect(result).not.toBeInstanceOf(Promise)
     })
 
-    it('应该在随机模式下同步创建随机目录', async () => {
-      process.env.HOME = '/home/user'
+    it('应该在随机模式下同步创建随机目录', () => {
+      process.env.HOME = tempDir
       mockIsBoolean.mockReturnValue(true)
-      mockMkdirpSync.mockReturnValue(undefined)
+      mockMkdirpSync.mockImplementation(directory => {
+        fsMkdirSync(String(directory), { recursive: true })
+        return String(directory)
+      })
 
-      const mockRandom = vi.spyOn(Math, 'random').mockReturnValue(0.789)
-      const mockDateNow = vi.spyOn(Date, 'now').mockReturnValue(5555555555)
+      const result = createTempDirSync(true)
 
-      const result = await tmpdirSync(true)
-
-      expect(result).toMatch(/\/home\/user\/\.cli_tmp\/tmp-5555555555-789$/)
-
-      mockRandom.mockRestore()
-      mockDateNow.mockRestore()
+      expect(result).toMatch(/\.cli_tmp\/tmp-[\w-]{6}$/u)
     })
 
-    it('应该在同步创建失败时回退到系统临时目录', async () => {
+    it('应该在同步创建失败时回退到系统临时目录', () => {
       process.env.HOME = '/home/user'
       mockIsBoolean.mockReturnValue(false)
       mockMkdirpSync.mockImplementation(() => {
         throw new Error('Permission denied')
       })
 
-      const result = await tmpdirSync()
+      const result = createTempDirSync()
 
       expect(result).toBe(os.tmpdir())
     })
   })
 
+  describe('兼容别名', () => {
+    it('旧异步名称仍委托给临时目录实现', async () => {
+      Object.defineProperty(process, 'platform', {
+        value: 'win32',
+        writable: true,
+      })
+
+      await expect(tmpdir()).resolves.toBe(os.tmpdir())
+    })
+
+    it('旧同步名称保持同步返回值', () => {
+      Object.defineProperty(process, 'platform', {
+        value: 'win32',
+        writable: true,
+      })
+
+      const result = tmpdirSync()
+      expect(result).toBe(os.tmpdir())
+      expect(result).not.toBeInstanceOf(Promise)
+    })
+  })
+
   describe('边界情况和平台兼容性', () => {
+    beforeEach(() => {
+      Object.defineProperty(process, 'platform', {
+        value: 'linux',
+        writable: true,
+      })
+    })
+
     it('应该处理缺少HOME环境变量的情况', async () => {
       delete process.env.HOME
       mockIsBoolean.mockReturnValue(false)
