@@ -134,8 +134,38 @@ export default definePlugin<MyPluginOptions, MyPluginContext>(
 ```
 
 `definePlugin()` and `definePreset()` are identity helpers: they add contextual typing without
-wrapping runtime behavior. Use the singular `definePreset()` because each call defines one preset,
-even when that preset returns multiple nested declarations.
+wrapping runtime behavior when called with a function. Plugins that need runtime option validation
+can use the object form with any Standard Schema-compatible validator. Zod is the recommended
+implementation for eljs plugins:
+
+```bash
+pnpm add zod
+```
+
+```ts
+import { definePlugin } from '@eljs/plugin-host'
+import { z } from 'zod'
+
+export default definePlugin({
+  optionsSchema: z.object({
+    outputDir: z.string().default('dist'),
+    minify: z.boolean().default(true),
+  }),
+  initialize(context: MyPluginContext, options) {
+    // `options` contains the parsed output, including defaults and transforms.
+    context.onStart(() => {
+      console.log(`Building into ${options.outputDir}`)
+    })
+  },
+})
+```
+
+The Schema validates the second item of a plugin declaration before initialization. Its input type
+describes user configuration, while its output type describes the initializer's `options`
+parameter. A Schema must accept `undefined` when the declaration may omit options. Valibot, ArkType,
+Yup, and other Standard Schema-compatible validators can be used without adapters. Use the singular
+`definePreset()` because each call defines one preset, even when that preset returns multiple nested
+declarations.
 
 ```ts
 import { definePreset } from '@eljs/plugin-host'

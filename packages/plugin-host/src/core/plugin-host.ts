@@ -1,5 +1,6 @@
 import { ConfigManager } from '@eljs/config'
 import { isDirectorySync } from '@eljs/utils'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { resolve as resolvePath } from 'node:path'
 
 import { PluginHostError, PluginHostErrorCode } from '../errors'
@@ -21,6 +22,7 @@ import {
   PluginKind,
   type PluginDiagnostics,
   type PluginInitializationResult,
+  type PluginInitializer,
   type ResolvedPluginInitializationResult,
 } from '../plugin/types'
 import { HookExecutor } from '../runtime/hook-executor'
@@ -31,6 +33,7 @@ import {
   PluginHostState,
   type LooseHookRunOptions,
   type PluginHostOptions,
+  type PluginOrigin,
   type ResolvedPlugin,
   type UserConfig,
 } from './types'
@@ -637,13 +640,19 @@ export abstract class PluginHost<
 
     try {
       try {
+        const initialize = await plugin.loadInitializer()
+        const parsedPluginOptions = await this._parsePluginOptions(
+          plugin,
+          initialize,
+          pluginOptions,
+          origin,
+        )
         const pluginContext = this._createPluginContext(
           plugin,
           remainingPresets,
           remainingPlugins || [],
         )
-        const initialize = await plugin.loadInitializer()
-        pluginResult = await initialize(pluginContext, pluginOptions)
+        pluginResult = await initialize(pluginContext, parsedPluginOptions)
       } catch (error) {
         if (error instanceof PluginHostError) {
           throw error
@@ -750,6 +759,71 @@ export abstract class PluginHost<
         initializationFailed,
       )
     }
+  }
+
+  private async _parsePluginOptions(
+    plugin: Plugin,
+    initialize: PluginInitializer<unknown>,
+    pluginOptions: unknown,
+    origin?: PluginOrigin,
+  ): Promise<unknown> {
+    const { optionsSchema } = initialize
+    if (!optionsSchema) {
+      return pluginOptions
+    }
+
+    let result: StandardSchemaV1.Result<unknown>
+    try {
+      result = await optionsSchema['~standard'].validate(pluginOptions)
+    } catch (error) {
+      throw new PluginHostError(
+        PluginHostErrorCode.InvalidPluginOptions,
+        `Validate ${plugin.type} \`${plugin.key}\` options failed: ${(error as Error).message}`,
+        {
+          cause: error,
+          details: {
+            origin,
+            pluginId: plugin.id,
+            pluginKey: plugin.key,
+            pluginPath: plugin.path,
+            pluginType: plugin.type,
+          },
+        },
+      )
+    }
+
+    if (result.issues) {
+      const issueSummary = result.issues
+        .map(issue => {
+          const path = (issue.path || []).map(segment =>
+            String(
+              typeof segment === 'object' && segment !== null
+                ? segment.key
+                : segment,
+            ),
+          )
+          const location = ['options', ...path].join('.')
+          return `${location}: ${issue.message}`
+        })
+        .join('; ')
+
+      throw new PluginHostError(
+        PluginHostErrorCode.InvalidPluginOptions,
+        `Invalid options for ${plugin.type} \`${plugin.key}\`${issueSummary ? `: ${issueSummary}` : '.'}`,
+        {
+          details: {
+            issues: result.issues,
+            origin,
+            pluginId: plugin.id,
+            pluginKey: plugin.key,
+            pluginPath: plugin.path,
+            pluginType: plugin.type,
+          },
+        },
+      )
+    }
+
+    return result.value
   }
 
   /**

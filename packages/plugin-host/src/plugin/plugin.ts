@@ -218,7 +218,7 @@ export class Plugin {
    * @throws {@link PluginHostError}
    * 当模块无法加载或没有导出初始化函数时抛出
    */
-  public async loadInitializer(): Promise<PluginInitializer> {
+  public async loadInitializer(): Promise<PluginInitializer<unknown>> {
     return loadPluginInitializer(this.path, this.type)
   }
 

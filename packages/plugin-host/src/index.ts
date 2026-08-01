@@ -1,3 +1,4 @@
+export type { StandardSchemaV1 } from '@standard-schema/spec'
 export { PluginHost, type PluginContext } from './core/plugin-host'
 export {
   HookKind,
@@ -14,7 +15,15 @@ export {
   PluginHostErrorCode,
   type PluginHostErrorOptions,
 } from './errors'
-export { definePlugin, definePreset } from './plugin/define'
+export {
+  definePlugin,
+  definePreset,
+  type InferInitializerOptionsInput,
+  type InferInitializerOptionsOutput,
+  type InitializerWithOptionsSchema,
+  type PluginDefinition,
+  type PresetDefinition,
+} from './plugin/define'
 export { Hook, type HookOptions } from './plugin/hook'
 export {
   defineAddHook,

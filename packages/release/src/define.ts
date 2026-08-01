@@ -1,6 +1,14 @@
 import type { MaybePromise } from '@eljs/utils'
 
-import type { PluginInitializationResult } from '@eljs/plugin-host'
+import {
+  definePlugin as defineHostPlugin,
+  definePreset as defineHostPreset,
+  type InitializerWithOptionsSchema,
+  type PluginDefinition,
+  type PluginInitializationResult,
+  type PresetDefinition,
+  type StandardSchemaV1,
+} from '@eljs/plugin-host'
 import type {
   Config,
   ReleasePluginContext,
@@ -21,7 +29,8 @@ export function defineConfig(config: Config): Config {
  * 定义能够获得完整 release 上下文类型的插件初始化器
  *
  * @remarks
- * 该函数只返回原始函数，不包装运行时行为
+ * 函数形式会原样返回初始化器，对象形式允许通过 `optionsSchema` 同时声明
+ * Schema 输入与输出类型、运行时校验及初始化器接收的解析结果类型
  *
  * @typeParam Options - 插件声明元组第二项携带的选项类型
  * @typeParam Result - 插件初始化器的同步或异步返回类型
@@ -36,8 +45,21 @@ export function definePlugin<
     context: ReleasePluginContext,
     options?: Options,
   ) => Result = (context: ReleasePluginContext, options?: Options) => Result,
->(initializer: Initializer): Initializer {
-  return initializer
+>(initializer: Initializer): Initializer
+/**
+ * 定义带有运行时参数契约的 release 插件初始化器
+ *
+ * @param definition - 参数 Schema 与 release 插件初始化器
+ * @returns 附加只读参数 Schema 的插件初始化器
+ */
+export function definePlugin<
+  Schema extends StandardSchemaV1,
+  Result extends MaybePromise<void> = MaybePromise<void>,
+>(
+  definition: PluginDefinition<Schema, ReleasePluginContext, Result>,
+): InitializerWithOptionsSchema<Schema, ReleasePluginContext, Result>
+export function definePlugin(input: unknown): unknown {
+  return (defineHostPlugin as (definition: unknown) => unknown)(input)
 }
 
 /**
@@ -45,7 +67,8 @@ export function definePlugin<
  *
  * @remarks
  * 单个 preset 可以返回多项嵌套 preset 和 plugin 声明
- * 该函数只返回原始函数，不包装运行时行为
+ * 函数形式会原样返回初始化器，对象形式允许通过 `optionsSchema` 同时声明
+ * Schema 输入与输出类型、运行时校验及初始化器接收的解析结果类型
  *
  * @typeParam Options - preset 声明元组第二项携带的选项类型
  * @typeParam Result - preset 初始化器的同步或异步返回类型
@@ -61,6 +84,20 @@ export function definePreset<
     context: ReleasePresetContext,
     options?: Options,
   ) => Result = (context: ReleasePresetContext, options?: Options) => Result,
->(initializer: Initializer): Initializer {
-  return initializer
+>(initializer: Initializer): Initializer
+/**
+ * 定义带有运行时参数契约的 release preset 初始化器
+ *
+ * @param definition - 参数 Schema 与 release preset 初始化器
+ * @returns 附加只读参数 Schema 的 preset 初始化器
+ */
+export function definePreset<
+  Schema extends StandardSchemaV1,
+  Result extends MaybePromise<PluginInitializationResult | void> =
+    MaybePromise<PluginInitializationResult | void>,
+>(
+  definition: PresetDefinition<Schema, ReleasePresetContext, Result>,
+): InitializerWithOptionsSchema<Schema, ReleasePresetContext, Result>
+export function definePreset(input: unknown): unknown {
+  return (defineHostPreset as (definition: unknown) => unknown)(input)
 }

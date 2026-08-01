@@ -161,6 +161,20 @@ describe('插件', () => {
         'Load `plugin` failed in /mock/plugin/index.js, expected function, but got `not a function`.',
       )
     })
+
+    it('should reject an invalid options schema attached to the initializer', async () => {
+      const mockInitializer = vi.fn()
+      Object.defineProperty(mockInitializer, 'optionsSchema', {
+        value: {},
+      })
+      fileLoaders['.js'].mockResolvedValue({ default: mockInitializer })
+
+      const plugin = new Plugin(validOptions)
+
+      await expect(plugin.loadInitializer()).rejects.toMatchObject({
+        code: PluginHostErrorCode.InvalidPluginExport,
+      })
+    })
   })
 
   describe('configure method', () => {

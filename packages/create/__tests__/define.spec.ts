@@ -42,6 +42,19 @@ describe('defineConfig', () => {
   })
 
   describe('类型安全性', () => {
+    it('应该在编译期拒绝无效配置类型', () => {
+      const verify = () => {
+        // @ts-expect-error force 必须是 boolean
+        defineConfig({ force: 'true' })
+        // @ts-expect-error 远程模板类型只支持 npm 或 git
+        defineConfig({ template: { type: 'http', value: 'template' } })
+        // @ts-expect-error plugins 只接受插件声明
+        defineConfig({ plugins: [1] })
+      }
+
+      expect(verify).toBeTypeOf('function')
+    })
+
     it('应该保持输入对象的类型和属性', () => {
       const config: Config = {
         cwd: '/custom/path',

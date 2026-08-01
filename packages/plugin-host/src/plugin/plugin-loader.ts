@@ -4,6 +4,7 @@ import { createRequire } from 'node:module'
 import { extname } from 'node:path'
 
 import { PluginHostError, PluginHostErrorCode } from '../errors'
+import { isOptionsSchema } from './options-schema'
 import type { PluginInitializer, PluginType } from './types'
 
 const localRequire = createRequire(
@@ -78,7 +79,7 @@ function loadTypeScriptPlugin(path: string): unknown {
 export async function loadPluginInitializer(
   path: string,
   type: PluginType,
-): Promise<PluginInitializer> {
+): Promise<PluginInitializer<unknown>> {
   const extension = extname(path)
   const loader =
     extension === '.ts' || extension === '.cts'
@@ -95,7 +96,7 @@ export async function loadPluginInitializer(
 
   try {
     const content = (await loader(path)) as {
-      default?: PluginInitializer
+      default?: PluginInitializer<unknown>
     }
     const initializer = content?.default ?? content
 
@@ -109,7 +110,18 @@ export async function loadPluginInitializer(
       )
     }
 
-    return initializer as PluginInitializer
+    if (
+      initializer.optionsSchema !== undefined &&
+      !isOptionsSchema(initializer.optionsSchema)
+    ) {
+      throw new PluginHostError(
+        PluginHostErrorCode.InvalidPluginExport,
+        `Load \`${type}\` failed in ${path}, optionsSchema must implement Standard Schema V1.`,
+        { details: { path, pluginType: type } },
+      )
+    }
+
+    return initializer as PluginInitializer<unknown>
   } catch (error) {
     if (error instanceof PluginHostError) {
       throw error

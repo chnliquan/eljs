@@ -27,6 +27,10 @@ export enum PluginHostErrorCode {
    */
   InvalidPluginDeclaration = 'PLUGIN_HOST_INVALID_PLUGIN_DECLARATION',
   /**
+   * 插件或 preset 声明参数未通过 Schema 校验
+   */
+  InvalidPluginOptions = 'PLUGIN_HOST_INVALID_PLUGIN_OPTIONS',
+  /**
    * 插件 ID 或 key 重复
    */
   DuplicatePlugin = 'PLUGIN_HOST_DUPLICATE_PLUGIN',

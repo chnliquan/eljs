@@ -81,6 +81,19 @@ describe('配置定义函数测试', () => {
       expect(result.github?.release).toBe(true)
     })
 
+    it('应该在编译期拒绝无效配置类型', () => {
+      const verify = () => {
+        // @ts-expect-error requireClean 必须是 boolean
+        defineConfig({ git: { requireClean: 'true' } })
+        // @ts-expect-error prereleaseId 必须是受支持的预发布标识
+        defineConfig({ npm: { prereleaseId: 'preview' } })
+        // @ts-expect-error presets 只接受插件声明
+        defineConfig({ presets: [1] })
+      }
+
+      expect(verify).toBeTypeOf('function')
+    })
+
     it('应该支持禁用 changelog', () => {
       const config: Config = {
         git: {

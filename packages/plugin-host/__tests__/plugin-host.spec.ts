@@ -1,10 +1,12 @@
 import type { MaybePromiseFunction } from '@eljs/utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { z } from 'zod'
 import type { PluginContext } from '../src/core/plugin-host'
 import { PluginHost } from '../src/core/plugin-host'
 import type { PluginHostOptions } from '../src/core/types'
 import { HookKind, PluginHostState } from '../src/core/types'
 import { PluginHostErrorCode } from '../src/errors'
+import { definePlugin } from '../src/plugin/define'
 import type { Hook } from '../src/plugin/hook'
 import type { LooseHookSchema } from '../src/plugin/hook-schema'
 import { Plugin } from '../src/plugin/plugin'
@@ -597,6 +599,121 @@ describe('插件宿主', () => {
       await host.testLoad()
 
       expect(host.state).toBe(PluginHostState.Ready)
+    })
+
+    it('应该使用 Zod 在初始化前解析参数并传入 Schema 输出', async () => {
+      const initialize = vi.fn()
+      definePlugin({
+        optionsSchema: z.object({
+          count: z.string().transform(Number),
+          enabled: z.boolean().default(true),
+        }),
+        initialize,
+      })
+      const plugin = createTestPlugin(mockCwd, 'schema-plugin', {
+        initializer: initialize,
+      })
+      vi.mocked(pluginResolver.resolvePresetsAndPlugins).mockReturnValue({
+        presets: [],
+        plugins: [[plugin, { count: '2' }]],
+      })
+
+      await host.testLoad()
+
+      expect(initialize).toHaveBeenCalledWith(expect.any(Object), {
+        count: 2,
+        enabled: true,
+      })
+    })
+
+    it('Zod 参数校验失败时应该阻止初始化并保留结构化问题', async () => {
+      const initialize = vi.fn()
+      definePlugin({
+        optionsSchema: z.object({ count: z.number() }),
+        initialize,
+      })
+      const plugin = createTestPlugin(mockCwd, 'invalid-options-plugin', {
+        initializer: initialize,
+      })
+      vi.mocked(pluginResolver.resolvePresetsAndPlugins).mockReturnValue({
+        presets: [],
+        plugins: [[plugin, { count: 'invalid' }]],
+      })
+
+      await expect(host.testLoad()).rejects.toMatchObject({
+        code: PluginHostErrorCode.InvalidPluginOptions,
+        details: {
+          issues: [
+            {
+              path: ['count'],
+            },
+          ],
+          pluginId: 'invalid-options-plugin',
+        },
+        message: expect.stringContaining('options.count:'),
+      })
+      expect(initialize).not.toHaveBeenCalled()
+      expect(host.state).toBe(PluginHostState.Failed)
+    })
+
+    it('应该拒绝省略必填的插件参数', async () => {
+      const initialize = vi.fn()
+      definePlugin({
+        optionsSchema: z.object({ count: z.number() }),
+        initialize,
+      })
+      const plugin = createTestPlugin(mockCwd, 'required-options-plugin', {
+        initializer: initialize,
+      })
+      vi.mocked(pluginResolver.resolvePresetsAndPlugins).mockReturnValue({
+        presets: [],
+        plugins: [[plugin, undefined]],
+      })
+
+      await expect(host.testLoad()).rejects.toMatchObject({
+        code: PluginHostErrorCode.InvalidPluginOptions,
+        details: {
+          issues: [{ path: [] }],
+          pluginId: 'required-options-plugin',
+        },
+      })
+      expect(initialize).not.toHaveBeenCalled()
+      expect(host.state).toBe(PluginHostState.Failed)
+    })
+
+    it('校验器异常时应该保留 cause 并阻止初始化', async () => {
+      const validationError = new Error('schema crashed')
+      const initialize = vi.fn()
+      const validate = vi.fn().mockRejectedValue(validationError)
+      definePlugin({
+        optionsSchema: {
+          '~standard': {
+            validate,
+            vendor: 'test',
+            version: 1,
+          },
+        },
+        initialize,
+      })
+      const plugin = createTestPlugin(mockCwd, 'throwing-schema-plugin', {
+        initializer: initialize,
+      })
+      vi.mocked(pluginResolver.resolvePresetsAndPlugins).mockReturnValue({
+        presets: [],
+        plugins: [[plugin, { count: 1 }]],
+      })
+
+      await expect(host.testLoad()).rejects.toMatchObject({
+        cause: validationError,
+        code: PluginHostErrorCode.InvalidPluginOptions,
+        details: {
+          pluginId: 'throwing-schema-plugin',
+        },
+        message: expect.stringContaining('schema crashed'),
+      })
+      expect(validate).toHaveBeenCalledWith({ count: 1 })
+      expect(initialize).not.toHaveBeenCalled()
+      expect(host.state).toBe(PluginHostState.Failed)
     })
 
     it('应该拒绝第二次加载', async () => {

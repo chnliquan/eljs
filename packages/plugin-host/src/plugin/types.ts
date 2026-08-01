@@ -1,4 +1,5 @@
 import type { MaybePromise } from '@eljs/utils'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 import type { PluginDeclaration, ResolvedPlugin } from '../core/types'
 import type { PluginApi } from './plugin-api'
@@ -45,6 +46,15 @@ export interface PluginInitializer<
   Options = Record<string, unknown>,
   Context extends PluginApi = PluginApi,
 > {
+  /**
+   * 插件声明元组第二项使用的参数 Schema
+   *
+   * @remarks
+   * 通过对象形式的 `definePlugin` 或 `definePreset` 定义时由辅助函数附加
+   * 宿主会在初始化器执行前完成校验，并把 Schema 输出传给 `options`
+   */
+  readonly optionsSchema?: StandardSchemaV1
+
   /**
    * 初始化插件
    *
