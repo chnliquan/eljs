@@ -20,7 +20,7 @@ vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils', () => ({
   copyDirectory: vi.fn(),
   copyFile: vi.fn(),
-  copyTpl: vi.fn(),
+  copyTemplate: vi.fn(),
 }))
 
 // Mock node:path
@@ -41,7 +41,7 @@ interface MockUtils {
   copyFile: MockedFunction<
     (from: string, to: string, options: CopyFileOptions) => Promise<void>
   >
-  copyTpl: MockedFunction<
+  copyTemplate: MockedFunction<
     (
       from: string,
       to: string,
@@ -223,7 +223,7 @@ describe('内部插件 generator', () => {
       }
       await copyTplCallback('template.txt', 'output.txt', data, options)
 
-      expect(mockUtils.copyTpl).toHaveBeenCalledWith(
+      expect(mockUtils.copyTemplate).toHaveBeenCalledWith(
         'template.txt',
         'output.txt',
         data,
@@ -240,7 +240,7 @@ describe('内部插件 generator', () => {
 
       await copyTplCallback('template.txt', 'output.txt', {}, {})
 
-      expect(mockUtils.copyTpl).toHaveBeenCalledWith(
+      expect(mockUtils.copyTemplate).toHaveBeenCalledWith(
         'template.txt',
         'output.txt',
         {},

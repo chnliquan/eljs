@@ -1,4 +1,5 @@
-import { getGitUrl, getGitUrlSync, gitUrlAnalysis, logger } from '@eljs/utils'
+import { getGitUrl, getGitUrlSync, parseGitRemoteUrl } from '@eljs/utils/git'
+import { logger } from '@eljs/utils/logger'
 import newGithubReleaseUrl from 'new-github-release-url'
 import open from 'open'
 
@@ -63,8 +64,11 @@ export default definePlugin(context => {
         return
       }
 
+      const publishablePackageNames = context.appData.workspacePackages
+        .filter(({ manifest }) => !manifest.private)
+        .map(({ manifest }) => manifest.name)
       const tags = context.config.git.independent
-        ? context.appData.validPkgNames.map(pkgName => `${pkgName}@${version}`)
+        ? publishablePackageNames.map(pkgName => `${pkgName}@${version}`)
         : [`v${version}`]
 
       for (const tag of tags) {
@@ -196,7 +200,7 @@ async function createGithubApiError(
 }
 
 function getGithubRepository(gitUrl: string): GithubRepository | undefined {
-  const href = gitUrlAnalysis(gitUrl)?.href
+  const href = parseGitRemoteUrl(gitUrl)?.href
 
   if (!href) {
     return undefined

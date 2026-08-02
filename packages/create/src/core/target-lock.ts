@@ -1,16 +1,18 @@
-import { isPathExists, move, remove } from '@eljs/utils/file'
+import { move, pathExists, remove } from '@eljs/utils/file'
 import { createHash, randomUUID } from 'node:crypto'
-import { open, readFile, writeFile, type FileHandle } from 'node:fs/promises'
+import { open, readFile, rename, type FileHandle } from 'node:fs/promises'
 import { hostname } from 'node:os'
 import path from 'node:path'
 
 import { AppError } from '../errors'
+import { resolveProspectiveCanonicalPath } from './canonical-path'
 
 /**
  * 持久化到目标锁文件的恢复信息
  *
  * @remarks
- * `backupPath` 只允许指向工作目录直属的 `.eljs-backup-*` 路径，避免篡改锁文件后移动任意目录
+ * `targetDir` 持久化为规范物理路径；`backupPath` 只允许解析到工作目录直属的
+ * `.eljs-backup-*` 路径，避免路径别名或锁文件篡改导致移动任意目录
  *
  * @internal
  */
@@ -31,8 +33,11 @@ interface TargetLockMetadata {
  * @internal
  */
 export interface TargetLock {
+  /** 锁文件的规范绝对路径 */
   readonly path: string
+  /** 解析符号链接后的工作目录 */
   readonly cwd: string
+  /** 当前所有者持久化的恢复元数据 */
   readonly metadata: TargetLockMetadata
 }
 
@@ -40,7 +45,7 @@ export interface TargetLock {
  * 独占目标目录，并在发现已退出进程遗留的锁时恢复原目录
  *
  * @param cwd - 创建流程的工作目录
- * @param targetDir - 规范化后的目标目录
+ * @param targetDir - 目标目录；获取锁前会转换为规范物理路径
  * @returns 当前进程持有的目标锁
  * @throws {@link AppError} 目标正由其他进程处理或遗留状态无法安全恢复时抛出
  * @internal
@@ -49,14 +54,18 @@ export async function acquireTargetLock(
   cwd: string,
   targetDir: string,
 ): Promise<TargetLock> {
-  const lockPath = getTargetLockPath(cwd, targetDir)
+  const [canonicalCwd, canonicalTargetDir] = await Promise.all([
+    resolveProspectiveCanonicalPath(cwd),
+    resolveProspectiveCanonicalPath(targetDir),
+  ])
+  const lockPath = getTargetLockPath(canonicalCwd, canonicalTargetDir)
   const metadata: TargetLockMetadata = {
     version: 1,
     ownerId: randomUUID(),
     pid: process.pid,
     hostname: hostname(),
-    targetDir,
-    targetExisted: await isPathExists(targetDir),
+    targetDir: canonicalTargetDir,
+    targetExisted: await pathExists(canonicalTargetDir),
     createdAt: new Date().toISOString(),
   }
 
@@ -68,17 +77,22 @@ export async function acquireTargetLock(
       throw error
     }
 
-    const existing = await readTargetLock(lockPath, targetDir)
+    const existing = await readTargetLock(lockPath, canonicalTargetDir)
     if (isOwnerRunning(existing)) {
       throw new AppError(`Target directory is already being created`, {
         code: 'CREATE_TARGET_LOCKED',
-        details: { lockPath, ownerPid: existing.pid, targetDir },
+        details: {
+          lockPath,
+          ownerPid: existing.pid,
+          targetDir: canonicalTargetDir,
+        },
       })
     }
 
-    await recoverAbandonedTarget(cwd, existing)
+    await recoverAbandonedTarget(canonicalCwd, existing)
+    await remove(getTargetLockUpdatePath(lockPath, existing.ownerId))
     await remove(lockPath)
-    return acquireTargetLock(cwd, targetDir)
+    return acquireTargetLock(canonicalCwd, canonicalTargetDir)
   }
 
   try {
@@ -96,7 +110,7 @@ export async function acquireTargetLock(
     throw error
   }
 
-  return { path: lockPath, cwd, metadata }
+  return { path: lockPath, cwd: canonicalCwd, metadata }
 }
 
 /**
@@ -111,11 +125,44 @@ export async function updateTargetLockBackup(
   lock: TargetLock,
   backupPath: string | undefined,
 ): Promise<void> {
-  lock.metadata.backupPath = backupPath
-  await writeFile(lock.path, JSON.stringify(lock.metadata), {
-    encoding: 'utf8',
-    mode: 0o600,
-  })
+  const current = await readTargetLock(lock.path, lock.metadata.targetDir)
+  if (current.ownerId !== lock.metadata.ownerId) {
+    throw new AppError('Target lock ownership changed before update', {
+      code: 'CREATE_TARGET_LOCKED',
+      details: { lockPath: lock.path, targetDir: lock.metadata.targetDir },
+    })
+  }
+
+  const nextMetadata: TargetLockMetadata = {
+    ...lock.metadata,
+    backupPath,
+  }
+  const updatePath = getTargetLockUpdatePath(lock.path, lock.metadata.ownerId)
+  let handle: FileHandle | undefined
+
+  try {
+    handle = await open(updatePath, 'wx', 0o600)
+    await handle.writeFile(JSON.stringify(nextMetadata))
+    await handle.sync()
+    await handle.close()
+    handle = undefined
+
+    const latest = await readTargetLock(lock.path, lock.metadata.targetDir)
+    if (latest.ownerId !== lock.metadata.ownerId) {
+      throw new AppError('Target lock ownership changed before update', {
+        code: 'CREATE_TARGET_LOCKED',
+        details: { lockPath: lock.path, targetDir: lock.metadata.targetDir },
+      })
+    }
+
+    // 同目录 rename 只会暴露完整的新旧版本，进程退出不会留下半份恢复元数据
+    await rename(updatePath, lock.path)
+    lock.metadata.backupPath = backupPath
+  } catch (error) {
+    await handle?.close().catch(() => undefined)
+    await remove(updatePath).catch(() => undefined)
+    throw error
+  }
 }
 
 /**
@@ -127,7 +174,7 @@ export async function updateTargetLockBackup(
  * @internal
  */
 export async function releaseTargetLock(lock: TargetLock): Promise<void> {
-  if (!(await isPathExists(lock.path))) {
+  if (!(await pathExists(lock.path))) {
     return
   }
 
@@ -174,7 +221,7 @@ async function recoverAbandonedTarget(
   const { backupPath, targetDir, targetExisted } = metadata
 
   if (backupPath) {
-    const resolvedBackup = path.resolve(backupPath)
+    const resolvedBackup = await resolveProspectiveCanonicalPath(backupPath)
     if (
       path.dirname(resolvedBackup) !== path.resolve(cwd) ||
       !/^\.eljs-backup-[\da-f-]+$/u.test(path.basename(resolvedBackup))
@@ -185,13 +232,13 @@ async function recoverAbandonedTarget(
       })
     }
 
-    if (await isPathExists(resolvedBackup)) {
+    if (await pathExists(resolvedBackup)) {
       await move(resolvedBackup, targetDir, true)
       return
     }
   }
 
-  const targetExists = await isPathExists(targetDir)
+  const targetExists = await pathExists(targetDir)
   if (!targetExisted && targetExists) {
     await remove(targetDir)
   } else if (targetExisted && !targetExists) {
@@ -205,6 +252,17 @@ async function recoverAbandonedTarget(
 function getTargetLockPath(cwd: string, targetDir: string): string {
   const targetHash = createHash('sha256').update(targetDir).digest('hex')
   return path.join(path.resolve(cwd), `.eljs-create-${targetHash}.lock`)
+}
+
+/**
+ * 为锁元数据原子更新生成与锁文件同目录的稳定临时路径
+ *
+ * @param lockPath - 当前锁文件路径
+ * @param ownerId - 当前锁所有者的随机标识
+ * @returns 仅由当前所有者使用的临时文件路径
+ */
+function getTargetLockUpdatePath(lockPath: string, ownerId: string): string {
+  return `${lockPath}.${ownerId}.tmp`
 }
 
 function isOwnerRunning(metadata: TargetLockMetadata): boolean {

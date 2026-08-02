@@ -7,7 +7,7 @@ const { mockUtils } = vi.hoisted(() => ({
       name: 'Test Author',
       email: 'test@example.com',
     })),
-    gitUrlAnalysis: vi.fn(),
+    parseGitRemoteUrl: vi.fn(),
     getGitUrlSync: vi.fn(() => 'https://github.com/test/repo.git'),
   },
 }))
@@ -76,7 +76,7 @@ describe('内部工具', () => {
     })
 
     it('应该从 url 分析返回 git href', () => {
-      mockUtils.gitUrlAnalysis.mockReturnValue({
+      mockUtils.parseGitRemoteUrl.mockReturnValue({
         href: 'https://github.com/test/repo',
       })
 
@@ -85,11 +85,11 @@ describe('内部工具', () => {
       const result = getGitHref(gitUrl)
 
       expect(result).toBe('https://github.com/test/repo')
-      expect(mockUtils.gitUrlAnalysis).toHaveBeenCalledWith(gitUrl)
+      expect(mockUtils.parseGitRemoteUrl).toHaveBeenCalledWith(gitUrl)
     })
 
     it('当 git url 分析返回 null 时应该返回占位符', () => {
-      mockUtils.gitUrlAnalysis.mockReturnValue(null)
+      mockUtils.parseGitRemoteUrl.mockReturnValue(null)
 
       const { getGitHref } = internalUtils
       const gitUrl = 'invalid-url'
@@ -99,7 +99,7 @@ describe('内部工具', () => {
     })
 
     it('当 git url 分析返回未定义的 href 时应该返回占位符', () => {
-      mockUtils.gitUrlAnalysis.mockReturnValue({ href: undefined })
+      mockUtils.parseGitRemoteUrl.mockReturnValue({ href: undefined })
 
       const { getGitHref } = internalUtils
       const gitUrl = 'https://github.com/test/repo.git'
@@ -109,7 +109,7 @@ describe('内部工具', () => {
     })
 
     it('应该缓存 git href 并在后续调用中返回相同值', () => {
-      mockUtils.gitUrlAnalysis.mockReturnValue({
+      mockUtils.parseGitRemoteUrl.mockReturnValue({
         href: 'https://github.com/test/repo',
       })
 

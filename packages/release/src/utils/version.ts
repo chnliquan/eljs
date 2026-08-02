@@ -1,4 +1,5 @@
-import { getGitCommitSha, run } from '@eljs/utils'
+import { run } from '@eljs/utils/cp'
+import { getGitCommitSha } from '@eljs/utils/git'
 import semver, { type ReleaseType } from 'semver'
 import type { DistTag, PrereleaseId } from '../types'
 

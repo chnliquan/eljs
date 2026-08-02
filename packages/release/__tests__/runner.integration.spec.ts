@@ -1,3 +1,4 @@
+import { PluginHostState } from '@eljs/plugin-host'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -30,6 +31,6 @@ describe('ReleaseRunner 集成', () => {
 
     await runner.testLoad()
 
-    expect(runner.getPluginDiagnostics()).toHaveLength(6)
+    expect(runner.state).toBe(PluginHostState.Ready)
   })
 })

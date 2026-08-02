@@ -1,5 +1,6 @@
 import { release } from '@eljs/release'
-import { isGitBehindRemote, isGitClean, logger } from '@eljs/utils'
+import { isGitBehindRemote, isGitClean } from '@eljs/utils/git'
+import { logger } from '@eljs/utils/logger'
 import { EOL } from 'node:os'
 import { $, argv } from 'zx'
 

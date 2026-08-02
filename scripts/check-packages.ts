@@ -376,7 +376,7 @@ try {
       'class SmokeRunner extends ReleaseRunner { smokeLoad() { return this.load() } }',
       `const runner = new SmokeRunner({ cwd: ${JSON.stringify(releaseFixtureRoot)} })`,
       'await runner.smokeLoad()',
-      "if (runner.getPluginDiagnostics().length !== 6) throw new Error('Release ESM plugins were not fully loaded')",
+      "if (runner.state !== 'ready') throw new Error('Release ESM plugins were not fully loaded')",
     ].join(';'),
   ])
   run(process.execPath, [
@@ -385,7 +385,7 @@ try {
       "const { ReleaseRunner } = require('@eljs/release')",
       'class SmokeRunner extends ReleaseRunner { smokeLoad() { return this.load() } }',
       `const runner = new SmokeRunner({ cwd: ${JSON.stringify(releaseFixtureRoot)} })`,
-      "runner.smokeLoad().then(() => { if (runner.getPluginDiagnostics().length !== 6) throw new Error('Release CJS plugins were not fully loaded') })",
+      "runner.smokeLoad().then(() => { if (runner.state !== 'ready') throw new Error('Release CJS plugins were not fully loaded') })",
     ].join(';'),
   ])
 

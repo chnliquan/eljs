@@ -33,7 +33,7 @@ vi.mock('@eljs/utils', () => ({
   createDebugger: vi.fn(() => vi.fn()),
   deepMerge: vi.fn(),
   getPackageManager: vi.fn(),
-  isPathExistsSync: vi.fn(),
+  pathExistsSync: vi.fn(),
   logger: {
     error: vi.fn(),
     step: vi.fn(),
@@ -41,6 +41,10 @@ vi.mock('@eljs/utils', () => ({
   },
   readJsonSync: vi.fn(),
 }))
+vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/npm', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/object', async () => import('@eljs/utils'))
 vi.mock('../src/default')
 vi.mock('../src/internal/release-lock', () => ({
   ReleaseLock: {
@@ -64,7 +68,7 @@ describe('ReleaseRunner 类测试', () => {
     const {
       deepMerge,
       getPackageManager,
-      isPathExistsSync,
+      pathExistsSync,
       readJsonSync,
       logger,
     } = requiredModule0
@@ -93,7 +97,7 @@ describe('ReleaseRunner 类测试', () => {
           Promise.resolve(options?.initialValue),
         )
     })
-    isPathExistsSync.mockReturnValue(true)
+    pathExistsSync.mockReturnValue(true)
     getPackageManager.mockResolvedValue('npm')
     deepMerge.mockReturnValue({
       cwd: process.cwd(),
@@ -133,7 +137,9 @@ describe('ReleaseRunner 类测试', () => {
       const runner = new ReleaseRunner()
 
       expect(runner).toBeInstanceOf(ReleaseRunner)
-      expect(runner.appData).toBeDefined()
+      expect(() => runner.appData).toThrow(
+        expect.objectContaining({ code: 'PLUGIN_HOST_INVALID_STATE' }),
+      )
     })
 
     it('应该拒绝在配置解析前读取最终配置', () => {
@@ -156,23 +162,23 @@ describe('ReleaseRunner 类测试', () => {
     it('应该将相对工作目录规范化为绝对路径', () => {
       new ReleaseRunner({ cwd: 'fixtures/project' })
 
-      expect(requiredModule0.isPathExistsSync).toHaveBeenCalledWith(
+      expect(requiredModule0.pathExistsSync).toHaveBeenCalledWith(
         `${process.cwd()}/fixtures/project/package.json`,
       )
     })
 
     it('应该正确验证 package.json 路径', () => {
-      const { isPathExistsSync } = requiredModule0
+      const { pathExistsSync } = requiredModule0
       const itPath = '/it/project'
 
       new ReleaseRunner({ cwd: itPath })
 
-      expect(isPathExistsSync).toHaveBeenCalledWith('/it/project/package.json')
+      expect(pathExistsSync).toHaveBeenCalledWith('/it/project/package.json')
     })
 
     it('当 package.json 不存在时应该抛出 AppError', () => {
-      const { isPathExistsSync } = requiredModule0
-      isPathExistsSync.mockReturnValue(false)
+      const { pathExistsSync } = requiredModule0
+      pathExistsSync.mockReturnValue(false)
 
       expect(() => new ReleaseRunner()).toThrow()
     })
@@ -184,15 +190,21 @@ describe('ReleaseRunner 类测试', () => {
       expect(() => new ReleaseRunner()).toThrow()
     })
 
-    it('应该正确设置 appData', () => {
+    it('应该在准备阶段完成前隐藏不完整的 appData', () => {
       const mockPkg = { name: 'it-package', version: '2.0.0' }
       const { readJsonSync } = requiredModule0
       readJsonSync.mockReturnValue(mockPkg)
 
       const runner = new ReleaseRunner({ cwd: '/it/path' })
 
-      expect(runner.appData.projectPkg).toEqual(mockPkg)
-      expect(runner.appData.projectPkgJsonPath).toBe('/it/path/package.json')
+      expect(() => runner.appData).toThrow('modifyAppData')
+      expect(runner['_initialAppData']).toEqual({
+        branch: '',
+        latestTag: null,
+        projectPkg: mockPkg,
+        projectPkgJsonPath: '/it/path/package.json',
+        workspacePackages: [],
+      })
     })
 
     it('应该正确传递配置到 PluginHost', () => {
@@ -466,8 +478,8 @@ describe('ReleaseRunner 类测试', () => {
     })
 
     it('应该处理文件系统访问错误', () => {
-      const { isPathExistsSync } = requiredModule0
-      isPathExistsSync.mockImplementation(() => {
+      const { pathExistsSync } = requiredModule0
+      pathExistsSync.mockImplementation(() => {
         throw new Error('Permission denied')
       })
 
@@ -484,8 +496,8 @@ describe('ReleaseRunner 类测试', () => {
     })
 
     it('应该正确使用 chalk 来格式化错误消息', () => {
-      const { isPathExistsSync, chalk } = requiredModule0
-      isPathExistsSync.mockReturnValue(false)
+      const { pathExistsSync, chalk } = requiredModule0
+      pathExistsSync.mockReturnValue(false)
       chalk.cyan.mockReturnValue('[styled-path]')
 
       expect(() => new ReleaseRunner({ cwd: '/it' })).toThrow()
@@ -573,8 +585,8 @@ describe('ReleaseRunner 类测试', () => {
     it('应该有所有必需的公共属性', () => {
       const runner = new ReleaseRunner()
 
-      expect(runner).toHaveProperty('appData')
-      expect(typeof runner.appData).toBe('object')
+      expect('appData' in runner).toBe(true)
+      expect(() => runner.appData).toThrow()
       expect('config' in runner).toBe(true)
     })
 
@@ -586,13 +598,12 @@ describe('ReleaseRunner 类测试', () => {
       expect(typeof runner.runHook).toBe('function')
     })
 
-    it('appData 应该有正确的初始结构', () => {
+    it('appData 应该在准备完成后才可读取', () => {
       const runner = new ReleaseRunner()
 
-      expect(runner.appData).toHaveProperty('projectPkgJsonPath')
-      expect(runner.appData).toHaveProperty('projectPkg')
-      expect(typeof runner.appData.projectPkgJsonPath).toBe('string')
-      expect(runner.appData.projectPkg).toBeTruthy()
+      expect(() => runner.appData).toThrow(
+        expect.objectContaining({ code: 'PLUGIN_HOST_INVALID_STATE' }),
+      )
     })
   })
 
@@ -629,7 +640,7 @@ describe('ReleaseRunner 类测试', () => {
       specialPackages.forEach(pkg => {
         readJsonSync.mockReturnValue(pkg)
         const runner = new ReleaseRunner()
-        expect(runner.appData.projectPkg).toEqual(pkg)
+        expect(runner['_initialAppData'].projectPkg).toEqual(pkg)
       })
     })
 

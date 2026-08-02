@@ -1,4 +1,5 @@
-import * as importedModule0 from '@eljs/utils'
+import * as importedUtils from '@eljs/utils'
+import * as importedModule0 from '@eljs/utils/module'
 import path from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -12,6 +13,7 @@ import {
 import { createTempDir } from './setup'
 
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+const requiredUtils = vi.mocked(importedUtils, { deep: true })
 
 // Mock dependencies
 vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
@@ -22,14 +24,14 @@ vi.mock('@eljs/utils', () => ({
   findUp: {
     sync: vi.fn().mockReturnValue('/mock/package.json'),
   },
-  isPathExistsSync: vi.fn().mockReturnValue(true),
+  pathExistsSync: vi.fn().mockReturnValue(true),
   readJsonSync: vi
     .fn()
     .mockReturnValue({ name: 'test-plugin', main: 'index.js' }),
   resolve: {
     sync: vi.fn().mockReturnValue('/resolved/path/plugin.js'),
   },
-  winPath: vi.fn((path: string) => path),
+  toPosixPath: vi.fn((path: string) => path),
   fileLoadersSync: {
     '.js': vi.fn().mockReturnValue({ default: vi.fn() }),
     '.ts': vi.fn().mockReturnValue({ default: vi.fn() }),
@@ -46,8 +48,7 @@ vi.mock('@eljs/utils', () => ({
     ),
 }))
 
-const { fileLoaders, fileLoadersSync, findUp, isPathExistsSync } =
-  requiredModule0
+const { fileLoaders, fileLoadersSync, findUp, pathExistsSync } = requiredUtils
 
 describe('插件', () => {
   let mockCwd: string
@@ -62,7 +63,7 @@ describe('插件', () => {
     }
 
     // Reset mocks
-    isPathExistsSync.mockReturnValue(true)
+    pathExistsSync.mockReturnValue(true)
     fileLoadersSync['.js'].mockReturnValue({ default: vi.fn() })
     fileLoaders['.js'].mockResolvedValue(vi.fn())
     vi.clearAllMocks()
@@ -75,17 +76,13 @@ describe('插件', () => {
       expect(plugin.path).toBe('/mock/plugin/index.js')
       expect(plugin.type).toBe(PluginKind.Plugin)
       expect(plugin.constructorOptions).toEqual(validOptions)
-      expect(plugin.getDiagnostics().metrics).toMatchObject({
-        hookDurationsMs: {},
-        hookErrorCounts: {},
-      })
       expect(plugin.enable).toBe(true)
       expect(plugin.id).toBeTruthy()
       expect(plugin.key).toBeTruthy()
     })
 
     it('should throw error for non-existent path', () => {
-      isPathExistsSync.mockReturnValue(false)
+      pathExistsSync.mockReturnValue(false)
 
       expect(() => new Plugin(validOptions)).toThrow(
         'Invalid `plugin` in /mock/plugin/index.js, could not be found.',

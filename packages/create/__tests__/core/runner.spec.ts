@@ -85,15 +85,6 @@ describe('CreateRunner 类完整测试', () => {
           if (name === 'modifyPrompts') {
             return Promise.resolve(options.initialValue)
           }
-          if (name === 'modifyTsConfig') {
-            return Promise.resolve(options.initialValue)
-          }
-          if (name === 'modifyJestConfig') {
-            return Promise.resolve(options.initialValue)
-          }
-          if (name === 'modifyPrettierConfig') {
-            return Promise.resolve(options.initialValue)
-          }
           return Promise.resolve(undefined)
         })
     })
@@ -115,16 +106,19 @@ describe('CreateRunner 类完整测试', () => {
       expect(runner.run.length).toBe(2) // target, projectName 两个参数
     })
 
-    it('应该正确初始化所有属性', () => {
+    it('应该在运行数据收集前拒绝读取相关属性', () => {
       const runner = new CreateRunner({ cwd: mockCwd })
 
       expect(runner.stage).toBe(CreateRunnerStage.Uninitialized)
-      expect(typeof runner.paths).toBe('object')
-      expect(typeof runner.appData).toBe('object')
-      expect(typeof runner.prompts).toBe('object')
-      expect(typeof runner.tsConfig).toBe('object')
-      expect(typeof runner.jestConfig).toBe('object')
-      expect(typeof runner.prettierConfig).toBe('object')
+      expect(() => runner.paths).toThrow(
+        expect.objectContaining({ code: 'PLUGIN_HOST_INVALID_STATE' }),
+      )
+      expect(() => runner.appData).toThrow(
+        expect.objectContaining({ code: 'PLUGIN_HOST_INVALID_STATE' }),
+      )
+      expect(() => runner.prompts).toThrow(
+        expect.objectContaining({ code: 'PLUGIN_HOST_INVALID_STATE' }),
+      )
     })
 
     it('应该拒绝在配置解析前读取最终配置', () => {
@@ -143,24 +137,13 @@ describe('CreateRunner 类完整测试', () => {
       expect('runHook' in runner).toBe(true)
     })
 
-    it('初始属性应该有正确的类型和默认值', () => {
+    it('初始运行数据应该处于未就绪状态', () => {
       const runner = new CreateRunner({ cwd: mockCwd })
 
       expect(runner.stage).toBe(CreateRunnerStage.Uninitialized)
-      expect(typeof runner.paths).toBe('object')
-      expect(typeof runner.appData).toBe('object')
-      expect(typeof runner.prompts).toBe('object')
-      expect(typeof runner.tsConfig).toBe('object')
-      expect(typeof runner.jestConfig).toBe('object')
-      expect(typeof runner.prettierConfig).toBe('object')
-
-      // 验证初始值为空对象
-      expect(Object.keys(runner.paths)).toHaveLength(0)
-      expect(Object.keys(runner.appData)).toHaveLength(0)
-      expect(Object.keys(runner.prompts)).toHaveLength(0)
-      expect(Object.keys(runner.tsConfig)).toHaveLength(0)
-      expect(Object.keys(runner.jestConfig)).toHaveLength(0)
-      expect(Object.keys(runner.prettierConfig)).toHaveLength(0)
+      expect(() => runner.paths).toThrow('modifyPaths')
+      expect(() => runner.appData).toThrow('modifyAppData')
+      expect(() => runner.prompts).toThrow('modifyPrompts')
     })
 
     it('应该有所有必需的公共方法', () => {
@@ -177,12 +160,9 @@ describe('CreateRunner 类完整测试', () => {
 
       expect(runner).toBeInstanceOf(CreateRunner)
       expect(runner.stage).toBe(CreateRunnerStage.Uninitialized)
-      expect(runner.paths).toEqual({})
-      expect(runner.appData).toEqual({})
-      expect(runner.prompts).toEqual({})
-      expect(runner.tsConfig).toEqual({})
-      expect(runner.jestConfig).toEqual({})
-      expect(runner.prettierConfig).toEqual({})
+      expect(() => runner.paths).toThrow()
+      expect(() => runner.appData).toThrow()
+      expect(() => runner.prompts).toThrow()
     })
 
     it('应该正确传递配置到 PluginHost 基类', () => {
@@ -272,13 +252,10 @@ describe('CreateRunner 类完整测试', () => {
       expect(runHookCalls[1][0]).toBe('modifyAppData')
       expect(runHookCalls[2][0]).toBe('addQuestions')
       expect(runHookCalls[3][0]).toBe('modifyPrompts')
-      expect(runHookCalls[4][0]).toBe('modifyTsConfig')
-      expect(runHookCalls[5][0]).toBe('modifyJestConfig')
-      expect(runHookCalls[6][0]).toBe('modifyPrettierConfig')
-      expect(runHookCalls[7][0]).toBe('onStart')
-      expect(runHookCalls[8][0]).toBe('onBeforeGenerateFiles')
-      expect(runHookCalls[9][0]).toBe('onGenerateFiles')
-      expect(runHookCalls[10][0]).toBe('onGenerateDone')
+      expect(runHookCalls[4][0]).toBe('onStart')
+      expect(runHookCalls[5][0]).toBe('onBeforeGenerateFiles')
+      expect(runHookCalls[6][0]).toBe('onGenerateFiles')
+      expect(runHookCalls[7][0]).toBe('onGenerateDone')
     })
 
     it('应该正确设置 modifyPaths 的初始值', async () => {
@@ -412,35 +389,6 @@ describe('CreateRunner 类完整测试', () => {
       await runner.run(target, projectName)
 
       expect(runner.prompts).toEqual(expectedPrompts)
-    })
-
-    it('应该正确设置各种配置对象', async () => {
-      const target = '/test/project'
-      const projectName = 'test-project'
-      const tsConfig = { compilerOptions: { target: 'es2020' } }
-      const jestConfig = { testEnvironment: 'node' }
-      const prettierConfig = { semi: false }
-
-      ;((runner as any).runHook as Mock).mockImplementation(
-        (name: string, options?: any) => {
-          if (name === 'modifyTsConfig') {
-            return Promise.resolve(tsConfig)
-          }
-          if (name === 'modifyJestConfig') {
-            return Promise.resolve(jestConfig)
-          }
-          if (name === 'modifyPrettierConfig') {
-            return Promise.resolve(prettierConfig)
-          }
-          return Promise.resolve(options?.initialValue || {})
-        },
-      )
-
-      await runner.run(target, projectName)
-
-      expect(runner.tsConfig).toEqual(tsConfig)
-      expect(runner.jestConfig).toEqual(jestConfig)
-      expect(runner.prettierConfig).toEqual(prettierConfig)
     })
 
     it('应该在事件钩子中传递正确的参数', async () => {
@@ -609,9 +557,6 @@ describe('CreateRunner 类完整测试', () => {
       expect(runner).toHaveProperty('paths')
       expect(runner).toHaveProperty('appData')
       expect(runner).toHaveProperty('prompts')
-      expect(runner).toHaveProperty('tsConfig')
-      expect(runner).toHaveProperty('jestConfig')
-      expect(runner).toHaveProperty('prettierConfig')
     })
   })
 
@@ -737,7 +682,7 @@ describe('CreateRunner 类完整测试', () => {
         public: '/detailed/target/public',
       }
 
-      runner.paths = detailedPaths
+      runner['_paths'] = detailedPaths
       expect(runner.paths).toEqual(detailedPaths)
       expect(Object.keys(runner.paths)).toHaveLength(12) // 包含所有字段
       expect(runner.paths.src).toBe('/detailed/target/src')
@@ -792,7 +737,7 @@ describe('CreateRunner 类完整测试', () => {
         environment: 'production',
       }
 
-      runner.appData = detailedAppData
+      runner['_appData'] = detailedAppData
       expect(runner.appData).toEqual(detailedAppData)
       expect(runner.appData.framework).toBe('react')
       expect(runner.appData.features).toContain('auth')
@@ -835,7 +780,6 @@ describe('CreateRunner 类完整测试', () => {
         year: '2024',
         date: '2024-11-17',
         dateTime: '2024-11-17 18:00:00',
-        dirname: 'professional-project',
         description:
           'A professional-grade TypeScript project with comprehensive features',
         license: 'MIT',
@@ -863,7 +807,7 @@ describe('CreateRunner 类完整测试', () => {
         analytics: 'google-analytics',
       }
 
-      runner.prompts = detailedPrompts
+      runner['_prompts'] = detailedPrompts
       expect(runner.prompts).toEqual(detailedPrompts)
       expect(runner.prompts.license).toBe('MIT')
       expect(runner.prompts.features).toContain('authentication')
@@ -900,27 +844,6 @@ describe('CreateRunner 类完整测试', () => {
 
       expect(runner.paths.target).toBe(longTarget)
       expect(runner.appData.projectName).toBe(longProjectName)
-    })
-
-    it('应该处理插件返回 null 或 undefined', async () => {
-      const runner = new CreateRunner({ cwd: '/test' })
-
-      ;((runner as any).runHook as Mock).mockImplementation(
-        (name: string, options?: any) => {
-          if (name === 'modifyTsConfig') {
-            return Promise.resolve(null)
-          }
-          if (name === 'modifyJestConfig') {
-            return Promise.resolve(undefined)
-          }
-          return Promise.resolve(options?.initialValue || {})
-        },
-      )
-
-      await runner.run('/test/target', 'test-project')
-
-      expect(runner.tsConfig).toBeNull()
-      expect(runner.jestConfig).toBeUndefined()
     })
   })
 
@@ -971,9 +894,6 @@ describe('CreateRunner 类完整测试', () => {
         'collectingPaths',
         'collectingAppData',
         'collectingPrompts',
-        'collectingTsConfig',
-        'collectingJestConfig',
-        'collectingPrettierConfig',
         'generatingFiles',
         'completed',
         'failed',
@@ -1023,26 +943,6 @@ describe('CreateRunner 类完整测试', () => {
         year: '2024',
         date: '2024-11-17',
         dateTime: '2024-11-17 10:00:00',
-        dirname: 'my-react-app',
-      }
-
-      const mockTsConfig = {
-        compilerOptions: {
-          target: 'es5',
-          lib: ['dom', 'dom.iterable', 'es6'],
-          allowJs: true,
-          skipLibCheck: true,
-          esModuleInterop: true,
-          allowSyntheticDefaultImports: true,
-          strict: true,
-          forceConsistentCasingInFileNames: true,
-          moduleResolution: 'node',
-          resolveJsonModule: true,
-          isolatedModules: true,
-          noEmit: true,
-          jsx: 'react-jsx',
-        },
-        include: ['src'],
       }
 
       ;((runner as any).runHook as Mock).mockImplementation(
@@ -1056,12 +956,6 @@ describe('CreateRunner 类完整测试', () => {
               return Promise.resolve([])
             case 'modifyPrompts':
               return Promise.resolve(mockPrompts)
-            case 'modifyTsConfig':
-              return Promise.resolve(mockTsConfig)
-            case 'modifyJestConfig':
-              return Promise.resolve({})
-            case 'modifyPrettierConfig':
-              return Promise.resolve({})
             default:
               return Promise.resolve(options?.initialValue || {})
           }
@@ -1075,7 +969,6 @@ describe('CreateRunner 类完整测试', () => {
       expect(runner.paths).toEqual(mockPaths)
       expect(runner.appData).toEqual(mockAppData)
       expect(runner.prompts).toEqual(mockPrompts)
-      expect(runner.tsConfig).toEqual(mockTsConfig)
 
       // 验证所有插件钩子都被调用
       expect((runner as any).runHook).toHaveBeenCalledWith('onStart')
@@ -1155,8 +1048,8 @@ describe('CreateRunner 类完整测试', () => {
         },
       }
 
-      runner.appData = enterpriseConfig.appData
-      runner.paths = enterpriseConfig.paths
+      runner['_appData'] = enterpriseConfig.appData
+      runner['_paths'] = enterpriseConfig.paths
 
       expect(runner.appData.organization).toBe('Enterprise Corp')
       expect(runner.appData.security).toEqual(

@@ -13,10 +13,7 @@ import * as importedModule3 from '../../src/file'
 import * as importedModule4 from '../../src/npm/package-manager'
 
 import * as path from 'node:path'
-import { clearWorkspaceCache } from '../../src/path/root'
-
 import {
-  extractCallDir,
   findExistingPath,
   findExistingPathSync,
   getBunWorkspaceRoot,
@@ -26,12 +23,8 @@ import {
   getPnpmWorkspaceRoot,
   getWorkspacePackageRoots,
   getWorkspaceRoot,
-  getWorkspaces,
   getYarnWorkspaceRoot,
   toPosixPath,
-  tryPaths,
-  tryPathsSync,
-  winPath,
 } from '../../src/path'
 
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
@@ -60,10 +53,10 @@ describe('路径工具函数', () => {
   const mockYaml = requiredModule2 as {
     load: MockedFunction<(content: string) => unknown>
   }
-  const mockIsPathExists = requiredModule3.pathExists as MockedFunction<
+  const mockPathExists = requiredModule3.pathExists as MockedFunction<
     (path: string) => Promise<boolean>
   >
-  const mockIsPathExistsSync = requiredModule3.pathExistsSync as MockedFunction<
+  const mockPathExistsSync = requiredModule3.pathExistsSync as MockedFunction<
     (path: string) => boolean
   >
   const mockReadFile = requiredModule3.readFile as MockedFunction<
@@ -79,13 +72,12 @@ describe('路径工具函数', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    clearWorkspaceCache()
   })
 
   describe('推荐 API 名称', () => {
     it('应该使用清晰名称完成路径查找和转换', async () => {
-      mockIsPathExists.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
-      mockIsPathExistsSync.mockReturnValue(true)
+      mockPathExists.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+      mockPathExistsSync.mockReturnValue(true)
 
       await expect(findExistingPath(['/no', '/yes'])).resolves.toBe('/yes')
       expect(findExistingPathSync(['/yes'])).toBe('/yes')
@@ -94,19 +86,19 @@ describe('路径工具函数', () => {
     })
   })
 
-  describe('winPath Windows 路径转换', () => {
+  describe('toPosixPath Windows 路径转换', () => {
     it('应该转换反斜杠为正斜杠', () => {
-      expect(winPath('C:\\Users\\test')).toBe('C:/Users/test')
-      expect(winPath('')).toBe('')
+      expect(toPosixPath('C:\\Users\\test')).toBe('C:/Users/test')
+      expect(toPosixPath('')).toBe('')
     })
 
     it('应该保留扩展长度路径', () => {
       const extended = '\\\\?\\C:\\long\\path'
-      expect(winPath(extended)).toBe(extended)
+      expect(toPosixPath(extended)).toBe(extended)
     })
 
     it('应该处理混合斜杠', () => {
-      expect(winPath('C:\\Users/mixed\\path')).toBe('C:/Users/mixed/path')
+      expect(toPosixPath('C:\\Users/mixed\\path')).toBe('C:/Users/mixed/path')
     })
 
     it('应该处理复杂的扩展长度路径', () => {
@@ -123,80 +115,80 @@ describe('路径工具函数', () => {
       ]
 
       testCases.forEach(testCase => {
-        expect(winPath(testCase.input)).toBe(testCase.expected)
+        expect(toPosixPath(testCase.input)).toBe(testCase.expected)
       })
     })
   })
 
-  describe('tryPaths 路径查找', () => {
+  describe('findExistingPath 路径查找', () => {
     it('应该返回第一个存在的路径', async () => {
-      mockIsPathExists.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+      mockPathExists.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
 
-      const result = await tryPaths(['/no', '/yes'])
+      const result = await findExistingPath(['/no', '/yes'])
       expect(result).toBe('/yes')
     })
 
     it('应该处理都不存在', async () => {
-      mockIsPathExists.mockResolvedValue(false)
+      mockPathExists.mockResolvedValue(false)
 
-      const result = await tryPaths(['/no1', '/no2'])
+      const result = await findExistingPath(['/no1', '/no2'])
       expect(result).toBeUndefined()
     })
 
     it('应该处理空数组', async () => {
-      const result = await tryPaths([])
+      const result = await findExistingPath([])
       expect(result).toBeUndefined()
     })
 
     it('应该按顺序检查', async () => {
-      mockIsPathExists
+      mockPathExists
         .mockResolvedValueOnce(false)
         .mockResolvedValueOnce(false)
         .mockResolvedValueOnce(true)
 
-      const result = await tryPaths(['/1', '/2', '/3'])
+      const result = await findExistingPath(['/1', '/2', '/3'])
       expect(result).toBe('/3')
     })
   })
 
-  describe('tryPathsSync 同步查找', () => {
+  describe('findExistingPathSync 同步查找', () => {
     it('应该返回第一个存在的路径', () => {
-      mockIsPathExistsSync.mockReturnValueOnce(false).mockReturnValueOnce(true)
+      mockPathExistsSync.mockReturnValueOnce(false).mockReturnValueOnce(true)
 
-      const result = tryPathsSync(['/no', '/yes'])
+      const result = findExistingPathSync(['/no', '/yes'])
       expect(result).toBe('/yes')
     })
 
     it('应该处理都不存在', () => {
-      mockIsPathExistsSync.mockReturnValue(false)
+      mockPathExistsSync.mockReturnValue(false)
 
-      const result = tryPathsSync(['/no1', '/no2'])
+      const result = findExistingPathSync(['/no1', '/no2'])
       expect(result).toBeUndefined()
     })
 
     it('应该处理空数组', () => {
-      const result = tryPathsSync([])
+      const result = findExistingPathSync([])
       expect(result).toBeUndefined()
     })
   })
 
-  describe('extractCallDir 目录提取', () => {
+  describe('getCallerDirectory 目录提取', () => {
     it('应该提取调用目录', () => {
-      const result = extractCallDir()
+      const result = getCallerDirectory()
       expect(typeof result).toBe('string')
       expect(path.isAbsolute(result)).toBe(true)
     })
 
     it('应该处理不同栈深度', () => {
       function wrapper() {
-        return extractCallDir(3)
+        return getCallerDirectory(3)
       }
       const result = wrapper()
       expect(typeof result).toBe('string')
     })
 
     it('应该处理匿名函数', () => {
-      const result = (() => extractCallDir(3))()
+      const result = (() => getCallerDirectory(3))()
       expect(typeof result).toBe('string')
     })
 
@@ -208,7 +200,7 @@ describe('路径工具函数', () => {
         return level3()
       }
       function level3() {
-        return extractCallDir(5)
+        return getCallerDirectory(5)
       }
 
       const result = level1()
@@ -218,7 +210,7 @@ describe('路径工具函数', () => {
     it('应该处理栈深度边界', () => {
       ;[1, 2, 3, 4, 5].forEach(depth => {
         try {
-          const result = extractCallDir(depth)
+          const result = getCallerDirectory(depth)
           expect(typeof result).toBe('string')
         } catch {
           // 某些深度可能失败
@@ -305,7 +297,7 @@ describe('路径工具函数', () => {
     })
   })
 
-  describe('getWorkspaces 工作区列表', () => {
+  describe('getWorkspacePackageRoots 工作区列表', () => {
     it('应该获取npm工作区', async () => {
       mockGetPackageManager.mockResolvedValue('npm')
       mockReadJson.mockResolvedValue({ workspaces: ['packages/*'] })
@@ -318,14 +310,14 @@ describe('路径工具函数', () => {
 
     it('应该获取pnpm工作区', async () => {
       mockGetPackageManager.mockResolvedValue('pnpm')
-      mockIsPathExists.mockResolvedValue(true)
+      mockPathExists.mockResolvedValue(true)
       mockReadFile.mockResolvedValue('packages:\n  - "packages/*"')
       mockYaml.load.mockReturnValue({ packages: ['packages/*'] })
       mockGlob.sync.mockReturnValue(['packages/core'])
 
-      const result = await getWorkspaces('/pnpm-project')
+      const result = await getWorkspacePackageRoots('/pnpm-project')
 
-      expect(mockIsPathExists).toHaveBeenCalledWith(
+      expect(mockPathExists).toHaveBeenCalledWith(
         '/pnpm-project/pnpm-workspace.yaml',
       )
       expect(mockYaml.load).toHaveBeenCalled()
@@ -337,7 +329,7 @@ describe('路径工具函数', () => {
       mockReadJson.mockResolvedValue({ workspaces: ['packages/*'] })
       mockGlob.sync.mockReturnValue(['packages/app'])
 
-      const result = await getWorkspaces('/project-relative', true)
+      const result = await getWorkspacePackageRoots('/project-relative', true)
 
       expect(result).toEqual(['packages/app'])
     })
@@ -345,12 +337,13 @@ describe('路径工具函数', () => {
     it('应该处理特定包', async () => {
       mockGetPackageManager.mockResolvedValue('npm')
       mockReadJson.mockResolvedValue({ workspaces: ['specific-pkg'] })
-      mockIsPathExists.mockResolvedValue(true)
+      mockGlob.sync.mockReturnValue(['specific-pkg'])
 
-      const result = await getWorkspaces('/project-specific', true)
+      const result = await getWorkspacePackageRoots('/project-specific', true)
 
-      expect(mockIsPathExists).toHaveBeenCalledWith(
-        '/project-specific/specific-pkg',
+      expect(mockGlob.sync).toHaveBeenCalledWith(
+        'specific-pkg',
+        expect.any(Object),
       )
       expect(result).toEqual(['specific-pkg'])
     })
@@ -359,16 +352,16 @@ describe('路径工具函数', () => {
       mockGetPackageManager.mockResolvedValue('npm')
       mockReadJson.mockResolvedValue({})
 
-      const result = await getWorkspaces('/single')
+      const result = await getWorkspacePackageRoots('/single')
 
       expect(result).toEqual(['/single'])
     })
 
     it('应该处理pnpm无配置文件', async () => {
       mockGetPackageManager.mockResolvedValue('pnpm')
-      mockIsPathExists.mockResolvedValue(false)
+      mockPathExists.mockResolvedValue(false)
 
-      const result = await getWorkspaces('/no-pnpm-config')
+      const result = await getWorkspacePackageRoots('/no-pnpm-config')
 
       expect(result).toEqual(['/no-pnpm-config'])
     })
@@ -378,7 +371,7 @@ describe('路径工具函数', () => {
       mockReadJson.mockResolvedValue({ workspaces: ['packages/***'] })
       mockGlob.sync.mockReturnValue(['packages/test'])
 
-      const result = await getWorkspaces('/norm', true)
+      const result = await getWorkspacePackageRoots('/norm', true)
 
       expect(mockGlob.sync).toHaveBeenCalledWith(
         'packages/*',
@@ -392,44 +385,73 @@ describe('路径工具函数', () => {
       mockReadJson.mockResolvedValue({
         workspaces: ['packages/*', 'tools/build'],
       })
-      mockGlob.sync.mockReturnValueOnce(['packages/app'])
-      mockIsPathExists.mockResolvedValue(true)
+      mockGlob.sync
+        .mockReturnValueOnce(['packages/app'])
+        .mockReturnValueOnce(['tools/build'])
 
-      const result = await getWorkspaces('/complex', true)
+      const result = await getWorkspacePackageRoots('/complex', true)
 
       expect(result).toEqual(['packages/app', 'tools/build'])
     })
 
-    it('应该测试缓存功能', async () => {
-      const testDir = '/cache-test'
-
+    it('应该支持 Yarn object workspaces', async () => {
       mockGetPackageManager.mockResolvedValue('npm')
-      mockReadJson.mockResolvedValue({ workspaces: ['packages/*'] })
-      mockGlob.sync.mockReturnValue(['packages/cached'])
+      mockReadJson.mockResolvedValue({
+        workspaces: { packages: ['packages/*'] },
+      })
+      mockGlob.sync.mockReturnValue(['packages/app'])
 
-      // 第一次调用
-      const result1 = await getWorkspaces(testDir)
-      expect(result1).toEqual(['/cache-test/packages/cached'])
+      const result = await getWorkspacePackageRoots('/yarn-object', true)
 
-      // 第二次调用 - 应该使用缓存
-      const result2 = await getWorkspaces(testDir)
-      expect(result2).toEqual(['/cache-test/packages/cached'])
+      expect(result).toEqual(['packages/app'])
+    })
 
-      // 验证缓存有效
+    it('应该处理排除模式并去除重复结果', async () => {
+      mockGetPackageManager.mockResolvedValue('npm')
+      mockReadJson.mockResolvedValue({
+        workspaces: ['packages/*', 'packages/app', '!packages/private'],
+      })
+      mockGlob.sync
+        .mockReturnValueOnce(['packages/app'])
+        .mockReturnValueOnce(['packages/app'])
+
+      const result = await getWorkspacePackageRoots('/patterns', true)
+
+      expect(result).toEqual(['packages/app'])
+      expect(mockGlob.sync).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          ignore: ['*/*.*', 'packages/private'],
+        }),
+      )
       expect(mockGetPackageManager).toHaveBeenCalledTimes(1)
     })
 
-    it('应该分别缓存相对路径和绝对路径结果', async () => {
+    it('每次调用都应该重新读取工作区配置', async () => {
       mockGetPackageManager.mockResolvedValue('npm')
-      mockReadJson.mockResolvedValue({ workspaces: ['packages/*'] })
-      mockGlob.sync.mockReturnValue(['packages/cached'])
+      mockReadJson
+        .mockResolvedValueOnce({ workspaces: ['packages/*'] })
+        .mockResolvedValueOnce({ workspaces: ['apps/*'] })
+      mockGlob.sync
+        .mockReturnValueOnce(['packages/app'])
+        .mockReturnValueOnce(['apps/web'])
 
-      const absolute = await getWorkspaces('/cache-mode')
-      const relative = await getWorkspaces('/cache-mode', true)
-
-      expect(absolute).toEqual(['/cache-mode/packages/cached'])
-      expect(relative).toEqual(['packages/cached'])
+      await expect(getWorkspacePackageRoots('/fresh', true)).resolves.toEqual([
+        'packages/app',
+      ])
+      await expect(getWorkspacePackageRoots('/fresh', true)).resolves.toEqual([
+        'apps/web',
+      ])
       expect(mockGetPackageManager).toHaveBeenCalledTimes(2)
+    })
+
+    it('应该拒绝无效的工作区配置', async () => {
+      mockGetPackageManager.mockResolvedValue('npm')
+      mockReadJson.mockResolvedValue({ workspaces: { packages: 'packages/*' } })
+
+      await expect(getWorkspacePackageRoots('/invalid')).rejects.toThrow(
+        'Invalid workspace configuration',
+      )
     })
   })
 
@@ -437,47 +459,57 @@ describe('路径工具函数', () => {
     it('应该处理工作区检测错误', async () => {
       mockGetPackageManager.mockRejectedValue(new Error('Detection failed'))
 
-      await expect(getWorkspaces('/error')).rejects.toThrow('Detection failed')
+      await expect(getWorkspacePackageRoots('/error')).rejects.toThrow(
+        'Detection failed',
+      )
     })
 
     it('应该处理文件读取错误', async () => {
       mockGetPackageManager.mockResolvedValue('npm')
       mockReadJson.mockRejectedValue(new Error('Read failed'))
 
-      await expect(getWorkspaces('/read-error')).rejects.toThrow('Read failed')
+      await expect(getWorkspacePackageRoots('/read-error')).rejects.toThrow(
+        'Read failed',
+      )
     })
 
     it('应该处理yaml解析错误', async () => {
       mockGetPackageManager.mockResolvedValue('pnpm')
-      mockIsPathExists.mockResolvedValue(true)
+      mockPathExists.mockResolvedValue(true)
       mockReadFile.mockResolvedValue('invalid yaml')
       mockYaml.load.mockImplementation(() => {
         throw new Error('YAML error')
       })
 
-      await expect(getWorkspaces('/yaml-error')).rejects.toThrow('YAML error')
+      await expect(getWorkspacePackageRoots('/yaml-error')).rejects.toThrow(
+        'YAML error',
+      )
     })
   })
 
   describe('实际场景', () => {
     it('应该模拟monorepo检测', async () => {
       mockGetPackageManager.mockResolvedValue('pnpm')
-      mockIsPathExists.mockResolvedValue(true)
+      mockPathExists.mockResolvedValue(true)
       mockReadFile.mockResolvedValue('packages:\n  - "packages/*"')
       mockYaml.load.mockReturnValue({ packages: ['packages/*'] })
       mockGlob.sync.mockReturnValue(['packages/core', 'packages/ui'])
 
-      const result = await getWorkspaces('/monorepo', true)
+      const result = await getWorkspacePackageRoots('/monorepo', true)
 
       expect(result).toEqual(['packages/core', 'packages/ui'])
     })
 
     it('应该处理路径查找场景', async () => {
-      mockIsPathExists.mockImplementation(
+      mockPathExists.mockImplementation(
         async (path: string) => path === '/found',
       )
 
-      const result = await tryPaths(['/notfound', '/found', '/also-notfound'])
+      const result = await findExistingPath([
+        '/notfound',
+        '/found',
+        '/also-notfound',
+      ])
 
       expect(result).toBe('/found')
     })
@@ -497,7 +529,7 @@ describe('路径工具函数', () => {
       mockReadJson.mockResolvedValue({ workspaces: ['packages/*'] })
       mockGlob.sync.mockReturnValue(['packages/test'])
 
-      const result = await getWorkspaces('/project')
+      const result = await getWorkspacePackageRoots('/project')
 
       expect(Array.isArray(result)).toBe(true)
       expect(result.every(item => typeof item === 'string')).toBe(true)

@@ -34,6 +34,8 @@ vi.mock('@eljs/utils', () => ({
   getGitCommitSha: vi.fn(),
   run: vi.fn(),
 }))
+vi.mock('@eljs/utils/cp', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/git', async () => import('@eljs/utils'))
 
 describe('版本处理工具函数测试', () => {
   beforeEach(() => {

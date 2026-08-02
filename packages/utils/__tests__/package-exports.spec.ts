@@ -2,6 +2,9 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
+import * as rootExports from '../src'
+import * as pathExports from '../src/path'
+
 interface PackageManifest {
   exports: Record<string, unknown>
   sideEffects?: boolean
@@ -60,5 +63,62 @@ describe('package exports contract', () => {
         },
       })
     }
+  })
+
+  it('does not proxy unrelated third-party packages from the root entry', () => {
+    const removedThirdPartyExports = [
+      'ejs',
+      'glob',
+      'importFresh',
+      'ini',
+      'Mustache',
+      'resolve',
+      'rimraf',
+      'urllib',
+      'uuidv1',
+      'uuidv3',
+      'uuidv4',
+      'uuidv5',
+      'yaml',
+    ]
+
+    for (const exportName of removedThirdPartyExports) {
+      expect(rootExports).not.toHaveProperty(exportName)
+    }
+  })
+
+  it('does not expose removed compatibility aliases', () => {
+    const removedRootAliases = [
+      'copyTpl',
+      'copyTplSync',
+      'downloadGitRepository',
+      'extractCallDir',
+      'fstat',
+      'fstatSync',
+      'getExecutableCommand',
+      'getPid',
+      'getWorkspaces',
+      'gitUrlAnalysis',
+      'isPathExists',
+      'isPathExistsSync',
+      'parseCommand',
+      'pkgNameAnalysis',
+      'runCommand',
+      'safeWriteFile',
+      'safeWriteFileSync',
+      'safeWriteJson',
+      'safeWriteJsonSync',
+      'tmpdir',
+      'tmpdirSync',
+      'tryPaths',
+      'tryPathsSync',
+      'winPath',
+    ]
+
+    for (const exportName of removedRootAliases) {
+      expect(rootExports).not.toHaveProperty(exportName)
+    }
+
+    expect(pathExports).not.toHaveProperty('getWorkspaces')
   })
 })

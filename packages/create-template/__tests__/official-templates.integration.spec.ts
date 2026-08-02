@@ -1,9 +1,9 @@
-import { isPathExists, readJson, remove } from '@eljs/utils/file'
+import { pathExists, readJson, remove } from '@eljs/utils/file'
 import {
   downloadNpmTarball,
   getNpmPackage,
   getNpmRequestConfig,
-  pkgNameAnalysis,
+  parsePackageSpecifier,
 } from '@eljs/utils/npm'
 import type { PackageJson } from '@eljs/utils/types'
 import path from 'node:path'
@@ -21,7 +21,7 @@ describe.runIf(process.env.ELJS_TEST_OFFICIAL_TEMPLATES === '1')(
     it.each(officialTemplates)(
       '$value 包含当前创建器需要的入口文件',
       async template => {
-        const { name, version } = pkgNameAnalysis(template.value)
+        const { name, version } = parsePackageSpecifier(template.value)
         expect(version).toBeTypeOf('string')
         if (!version) {
           throw new Error(`${template.value} must use an exact version`)
@@ -49,10 +49,10 @@ describe.runIf(process.env.ELJS_TEST_OFFICIAL_TEMPLATES === '1')(
             path.join(templateRoot, 'package.json'),
           )
           const hasConfig = await Promise.all([
-            isPathExists(path.join(templateRoot, 'create.config.ts')),
-            isPathExists(path.join(templateRoot, 'create.config.js')),
-            isPathExists(path.join(templateRoot, 'generators/index.ts')),
-            isPathExists(path.join(templateRoot, 'generators/index.js')),
+            pathExists(path.join(templateRoot, 'create.config.ts')),
+            pathExists(path.join(templateRoot, 'create.config.js')),
+            pathExists(path.join(templateRoot, 'generators/index.ts')),
+            pathExists(path.join(templateRoot, 'generators/index.js')),
           ])
 
           expect(packageJson).toMatchObject({ name, version })

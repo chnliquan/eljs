@@ -1,4 +1,4 @@
-import { run, type RunCommandOptions } from '@eljs/utils'
+import { run, type RunCommandOptions } from '@eljs/utils/cp'
 
 /**
  * 判断 Git 标签是否指向当前提交

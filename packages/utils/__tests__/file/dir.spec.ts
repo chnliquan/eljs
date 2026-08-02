@@ -21,8 +21,6 @@ import {
   createTempDirSync,
   mkdir,
   mkdirSync,
-  tmpdir,
-  tmpdirSync,
 } from '../../src/file/dir'
 
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
@@ -36,10 +34,10 @@ vi.mock('../../src/guards')
 describe('目录操作工具', () => {
   const mockMkdirp = mkdirp as MockedFunction<typeof mkdirp>
   const mockMkdirpSync = mkdirpSync as MockedFunction<typeof mkdirpSync>
-  const mockIsPathExists = requiredModule0.pathExists as MockedFunction<
+  const mockPathExists = requiredModule0.pathExists as MockedFunction<
     (filePath: string) => Promise<boolean>
   >
-  const mockIsPathExistsSync = requiredModule0.pathExistsSync as MockedFunction<
+  const mockPathExistsSync = requiredModule0.pathExistsSync as MockedFunction<
     (filePath: string) => boolean
   >
   const mockIsBoolean = requiredModule1.isBoolean as MockedFunction<
@@ -68,28 +66,28 @@ describe('目录操作工具', () => {
 
   describe('mkdir 异步目录创建', () => {
     it('应该创建不存在的目录', async () => {
-      mockIsPathExists.mockResolvedValue(false)
+      mockPathExists.mockResolvedValue(false)
       mockMkdirp.mockResolvedValue('/created/path')
 
       const result = await mkdir(testDir)
 
-      expect(mockIsPathExists).toHaveBeenCalledWith(testDir)
+      expect(mockPathExists).toHaveBeenCalledWith(testDir)
       expect(mockMkdirp).toHaveBeenCalledWith(testDir, undefined)
       expect(result).toBe('/created/path')
     })
 
     it('应该跳过已存在的目录', async () => {
-      mockIsPathExists.mockResolvedValue(true)
+      mockPathExists.mockResolvedValue(true)
 
       const result = await mkdir(testDir)
 
-      expect(mockIsPathExists).toHaveBeenCalledWith(testDir)
+      expect(mockPathExists).toHaveBeenCalledWith(testDir)
       expect(mockMkdirp).not.toHaveBeenCalled()
       expect(result).toBeUndefined()
     })
 
     it('应该使用指定的模式创建目录', async () => {
-      mockIsPathExists.mockResolvedValue(false)
+      mockPathExists.mockResolvedValue(false)
       mockMkdirp.mockResolvedValue(undefined)
       const mode = 0o755
 
@@ -99,7 +97,7 @@ describe('目录操作工具', () => {
     })
 
     it('应该在创建失败时抛出错误', async () => {
-      mockIsPathExists.mockResolvedValue(false)
+      mockPathExists.mockResolvedValue(false)
       mockMkdirp.mockRejectedValue(new Error('Permission denied'))
 
       await expect(mkdir(testDir)).rejects.toThrow(/Create directory .* failed/)
@@ -108,28 +106,28 @@ describe('目录操作工具', () => {
 
   describe('mkdirSync 同步目录创建', () => {
     it('应该同步创建不存在的目录', () => {
-      mockIsPathExistsSync.mockReturnValue(false)
+      mockPathExistsSync.mockReturnValue(false)
       mockMkdirpSync.mockReturnValue('/created/sync/path')
 
       const result = mkdirSync(testDir)
 
-      expect(mockIsPathExistsSync).toHaveBeenCalledWith(testDir)
+      expect(mockPathExistsSync).toHaveBeenCalledWith(testDir)
       expect(mockMkdirpSync).toHaveBeenCalledWith(testDir, undefined)
       expect(result).toBe('/created/sync/path')
     })
 
     it('应该跳过已存在的目录', () => {
-      mockIsPathExistsSync.mockReturnValue(true)
+      mockPathExistsSync.mockReturnValue(true)
 
       const result = mkdirSync(testDir)
 
-      expect(mockIsPathExistsSync).toHaveBeenCalledWith(testDir)
+      expect(mockPathExistsSync).toHaveBeenCalledWith(testDir)
       expect(mockMkdirpSync).not.toHaveBeenCalled()
       expect(result).toBeUndefined()
     })
 
     it('应该在同步创建失败时抛出错误', () => {
-      mockIsPathExistsSync.mockReturnValue(false)
+      mockPathExistsSync.mockReturnValue(false)
       mockMkdirpSync.mockImplementation(() => {
         throw new Error('Permission denied')
       })
@@ -138,7 +136,7 @@ describe('目录操作工具', () => {
     })
   })
 
-  describe('tmpdir 异步临时目录创建', () => {
+  describe('createTempDir 异步临时目录创建', () => {
     beforeEach(() => {
       // 重置环境变量 mock
       delete process.env.HOME
@@ -219,7 +217,7 @@ describe('目录操作工具', () => {
     })
   })
 
-  describe('tmpdirSync 同步临时目录创建', () => {
+  describe('createTempDirSync 同步临时目录创建', () => {
     beforeEach(() => {
       delete process.env.HOME
       Object.defineProperty(process, 'platform', {
@@ -265,28 +263,6 @@ describe('目录操作工具', () => {
     })
   })
 
-  describe('兼容别名', () => {
-    it('旧异步名称仍委托给临时目录实现', async () => {
-      Object.defineProperty(process, 'platform', {
-        value: 'win32',
-        writable: true,
-      })
-
-      await expect(tmpdir()).resolves.toBe(os.tmpdir())
-    })
-
-    it('旧同步名称保持同步返回值', () => {
-      Object.defineProperty(process, 'platform', {
-        value: 'win32',
-        writable: true,
-      })
-
-      const result = tmpdirSync()
-      expect(result).toBe(os.tmpdir())
-      expect(result).not.toBeInstanceOf(Promise)
-    })
-  })
-
   describe('边界情况和平台兼容性', () => {
     beforeEach(() => {
       Object.defineProperty(process, 'platform', {
@@ -301,7 +277,7 @@ describe('目录操作工具', () => {
       mockMkdirp.mockResolvedValue(undefined)
 
       // 直接测试 os.homedir() 的返回值，而不是 spy
-      const result = await tmpdir()
+      const result = await createTempDir()
 
       // 结果应该包含 homedir 或者是系统临时目录
       expect(typeof result).toBe('string')
@@ -313,7 +289,7 @@ describe('目录操作工具', () => {
       mockIsBoolean.mockReturnValue(false)
       mockMkdirp.mockResolvedValue(undefined)
 
-      const result = await tmpdir('')
+      const result = await createTempDir('')
 
       expect(result).toBe(path.join('/home/user', '.cli_tmp'))
     })
@@ -325,7 +301,7 @@ describe('目录操作工具', () => {
         writable: true,
       })
 
-      const result = await tmpdir()
+      const result = await createTempDir()
 
       expect(result).toBe(os.tmpdir())
     })

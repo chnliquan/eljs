@@ -99,23 +99,3 @@ export function pathExistsSync(file: string): boolean {
     return false
   }
 }
-
-/**
- * 判断路径是否存在
- * @param file - 文件路径
- * @returns 路径存在时返回 `true`
- * @deprecated 请改用 {@link pathExists}
- */
-export function isPathExists(file: string): Promise<boolean> {
-  return pathExists(file)
-}
-
-/**
- * 同步判断路径是否存在
- * @param file - 文件路径
- * @returns 路径存在时返回 `true`
- * @deprecated 请改用 {@link pathExistsSync}
- */
-export function isPathExistsSync(file: string): boolean {
-  return pathExistsSync(file)
-}

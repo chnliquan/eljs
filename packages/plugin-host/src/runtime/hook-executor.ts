@@ -12,16 +12,11 @@ import { HookRegistry } from './hook-registry'
 import { PluginRegistry } from './plugin-registry'
 
 /**
- * 根据 Hook 类型执行聚合逻辑并记录调试数据
+ * 根据 Hook 类型执行聚合逻辑
  *
  * @internal
  */
 export class HookExecutor {
-  /**
-   * 每个 Hook 保留的最近耗时样本数量
-   */
-  private static readonly _timingSampleLimit = 20
-
   /**
    * 创建 Hook 执行器
    *
@@ -265,7 +260,7 @@ export class HookExecutor {
   }
 
   /**
-   * 执行单个 Hook 并记录耗时与失败次数
+   * 执行单个 Hook 并统一转换执行错误
    *
    * @typeParam T - Hook 返回值类型
    * @param hook - Hook 记录
@@ -279,13 +274,10 @@ export class HookExecutor {
     fn: () => T | Promise<T>,
   ): Promise<T> {
     this._throwIfAborted(key)
-    const startTime = performance.now()
-    let failed = true
 
     try {
       const result = await fn()
       this._throwIfAborted(key)
-      failed = false
       return result
     } catch (error) {
       if (
@@ -309,13 +301,6 @@ export class HookExecutor {
             pluginPath: hook.plugin.path,
           },
         },
-      )
-    } finally {
-      hook.plugin.recordHookExecution(
-        key,
-        performance.now() - startTime,
-        failed,
-        HookExecutor._timingSampleLimit,
       )
     }
   }

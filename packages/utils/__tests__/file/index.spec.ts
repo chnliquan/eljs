@@ -8,14 +8,12 @@ import {
   isDirectorySync,
   isFile,
   isFileSync,
-  isPathExists,
-  isPathExistsSync,
   isSymlink,
   isSymlinkSync,
   pathExists,
   pathExistsSync,
 } from '../../src/file/is'
-import { fstat, fstatSync, statPath, statPathSync } from '../../src/file/stat'
+import { statPath, statPathSync } from '../../src/file/stat'
 
 describe('文件工具函数', () => {
   let tempDir: string
@@ -53,38 +51,38 @@ describe('文件工具函数', () => {
     }
   })
 
-  describe('fstat 和 fstatSync 文件状态', () => {
+  describe('statPath 和 statPathSync 文件状态', () => {
     it('新名称应该返回精确的同步和异步状态', async () => {
       expect((await statPath(testFile)).isFile()).toBe(true)
       expect(statPathSync(testDir).isDirectory()).toBe(true)
     })
 
-    describe('fstat 异步文件状态', () => {
+    describe('statPath 异步文件状态', () => {
       it('应该返回现有文件的文件状态', async () => {
-        const stats = await fstat(testFile)
+        const stats = await statPath(testFile)
         expect(stats).toBeInstanceOf(fs.Stats)
         expect(stats.isFile()).toBe(true)
         expect(stats.isDirectory()).toBe(false)
       })
 
       it('应该返回现有目录的目录状态', async () => {
-        const stats = await fstat(testDir)
+        const stats = await statPath(testDir)
         expect(stats).toBeInstanceOf(fs.Stats)
         expect(stats.isFile()).toBe(false)
         expect(stats.isDirectory()).toBe(true)
       })
 
       it('应该在 symlink=true 时处理符号链接', async () => {
-        if (await isPathExists(testSymlink)) {
-          const stats = await fstat(testSymlink, true)
+        if (await pathExists(testSymlink)) {
+          const stats = await statPath(testSymlink, true)
           expect(stats).toBeInstanceOf(fs.Stats)
           expect(stats.isSymbolicLink()).toBe(true)
         }
       })
 
       it('应该在 symlink=false 时跟随符号链接', async () => {
-        if (await isPathExists(testSymlink)) {
-          const stats = await fstat(testSymlink, false)
+        if (await pathExists(testSymlink)) {
+          const stats = await statPath(testSymlink, false)
           expect(stats).toBeInstanceOf(fs.Stats)
           expect(stats.isFile()).toBe(true) // 应该跟随到目标文件
         }
@@ -92,20 +90,22 @@ describe('文件工具函数', () => {
 
       it('应该为不存在的文件抛出错误', async () => {
         const nonExistentFile = path.join(tempDir, 'non-existent.txt')
-        await expect(fstat(nonExistentFile)).rejects.toThrow(/Stat .* failed/)
+        await expect(statPath(nonExistentFile)).rejects.toThrow(
+          /Stat .* failed/,
+        )
       })
     })
 
-    describe('fstatSync 同步文件状态', () => {
+    describe('statPathSync 同步文件状态', () => {
       it('应该返回现有文件的文件状态', () => {
-        const stats = fstatSync(testFile)
+        const stats = statPathSync(testFile)
         expect(stats).toBeInstanceOf(fs.Stats)
         expect(stats.isFile()).toBe(true)
         expect(stats.isDirectory()).toBe(false)
       })
 
       it('应该返回现有目录的目录状态', () => {
-        const stats = fstatSync(testDir)
+        const stats = statPathSync(testDir)
         expect(stats).toBeInstanceOf(fs.Stats)
         expect(stats.isFile()).toBe(false)
         expect(stats.isDirectory()).toBe(true)
@@ -113,7 +113,7 @@ describe('文件工具函数', () => {
 
       it('应该为不存在的文件抛出错误', () => {
         const nonExistentFile = path.join(tempDir, 'non-existent.txt')
-        expect(() => fstatSync(nonExistentFile)).toThrow(/Stat .* failed/)
+        expect(() => statPathSync(nonExistentFile)).toThrow(/Stat .* failed/)
       })
     })
   })
@@ -138,7 +138,7 @@ describe('文件工具函数', () => {
       })
 
       it('应该跟随符号链接到文件', async () => {
-        if (await isPathExists(testSymlink)) {
+        if (await pathExists(testSymlink)) {
           expect(await isFile(testSymlink)).toBe(true)
         }
       })
@@ -192,7 +192,7 @@ describe('文件工具函数', () => {
 
     describe('isSymlink 符号链接检查', () => {
       it('应该对符号链接返回 true', async () => {
-        if (await isPathExists(testSymlink)) {
+        if (await pathExists(testSymlink)) {
           expect(await isSymlink(testSymlink)).toBe(true)
         }
       })
@@ -228,45 +228,45 @@ describe('文件工具函数', () => {
       })
     })
 
-    describe('isPathExists 路径存在检查', () => {
+    describe('pathExists 路径存在检查', () => {
       it('应该对现有文件返回 true', async () => {
-        expect(await isPathExists(testFile)).toBe(true)
+        expect(await pathExists(testFile)).toBe(true)
       })
 
       it('应该对现有目录返回 true', async () => {
-        expect(await isPathExists(testDir)).toBe(true)
+        expect(await pathExists(testDir)).toBe(true)
       })
 
       it('应该对现有符号链接返回 true', async () => {
         if (fs.existsSync(testSymlink)) {
-          expect(await isPathExists(testSymlink)).toBe(true)
+          expect(await pathExists(testSymlink)).toBe(true)
         }
       })
 
       it('应该对不存在的路径返回 false', async () => {
-        expect(await isPathExists(path.join(tempDir, 'non-existent.txt'))).toBe(
+        expect(await pathExists(path.join(tempDir, 'non-existent.txt'))).toBe(
           false,
         )
       })
     })
 
-    describe('isPathExistsSync 同步路径存在检查', () => {
+    describe('pathExistsSync 同步路径存在检查', () => {
       it('应该对现有文件返回 true', () => {
-        expect(isPathExistsSync(testFile)).toBe(true)
+        expect(pathExistsSync(testFile)).toBe(true)
       })
 
       it('应该对现有目录返回 true', () => {
-        expect(isPathExistsSync(testDir)).toBe(true)
+        expect(pathExistsSync(testDir)).toBe(true)
       })
 
       it('应该对现有符号链接返回 true', () => {
         if (fs.existsSync(testSymlink)) {
-          expect(isPathExistsSync(testSymlink)).toBe(true)
+          expect(pathExistsSync(testSymlink)).toBe(true)
         }
       })
 
       it('应该对不存在的路径返回 false', () => {
-        expect(isPathExistsSync(path.join(tempDir, 'non-existent.txt'))).toBe(
+        expect(pathExistsSync(path.join(tempDir, 'non-existent.txt'))).toBe(
           false,
         )
       })
@@ -278,7 +278,7 @@ describe('文件工具函数', () => {
       expect(await isFile('')).toBe(false)
       expect(await isDirectory('')).toBe(false)
       expect(await isSymlink('')).toBe(false)
-      expect(await isPathExists('')).toBe(false)
+      expect(await pathExists('')).toBe(false)
     })
 
     it('应该优雅地处理权限错误', async () => {

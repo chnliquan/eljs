@@ -1,5 +1,5 @@
 import type { RunCommandOptions } from '@eljs/utils/cp'
-import { isPathExists, readJson, writeJson } from '@eljs/utils/file'
+import { pathExists, readJson, writeJson } from '@eljs/utils/file'
 import { isObject } from '@eljs/utils/guards'
 import { chalk, logger } from '@eljs/utils/logger'
 import { install } from '@eljs/utils/npm'
@@ -86,7 +86,7 @@ export default definePlugin(context => {
       const pkgJsonPath = join(context.paths.target, 'package.json')
       let pkg = context.appData.pkg
 
-      if (await isPathExists(pkgJsonPath)) {
+      if (await pathExists(pkgJsonPath)) {
         const origin = await readJson(pkgJsonPath)
         pkg = mergePackageJson(origin, pkg)
       }

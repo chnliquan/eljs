@@ -21,6 +21,7 @@ vi.mock('@eljs/utils', () => ({
     event: vi.fn(),
   },
 }))
+vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
 
 describe('用户取消功能测试', () => {
   beforeEach(() => {

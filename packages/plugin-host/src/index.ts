@@ -47,8 +47,6 @@ export { Plugin } from './plugin/plugin'
 export { PluginApi } from './plugin/plugin-api'
 export {
   PluginKind,
-  type PluginDiagnostics,
-  type PluginExecutionMetrics,
   type PluginHookEnablement,
   type PluginInitializationResult,
   type PluginInitializer,

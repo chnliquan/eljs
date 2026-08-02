@@ -1,4 +1,4 @@
-import type { PackageJson, PackageManager } from '@eljs/utils'
+import type { PackageJson, PackageManager } from '@eljs/utils/types'
 
 /**
  * 根项目清单中发布流程依赖的最小字段
@@ -13,6 +13,21 @@ export type WorkspacePackageJson = PackageJson & {
   name: string
   /** 安装失败不阻断消费方安装的运行时依赖 */
   optionalDependencies?: Record<string, string>
+}
+
+/**
+ * 发布流程加载的单个 workspace 包
+ *
+ * @remarks
+ * 根路径、清单路径和清单内容必须始终作为同一对象传递，避免并行数组发生索引错位
+ */
+export interface WorkspacePackage {
+  /** 包根目录 */
+  readonly rootPath: string
+  /** package.json 文件路径 */
+  readonly manifestPath: string
+  /** 当前发布阶段使用的清单内容 */
+  manifest: WorkspacePackageJson
 }
 
 /**
@@ -54,25 +69,12 @@ export interface AppData {
    */
   projectPkg: ProjectPackageJson
   /**
-   * 项目中所有包的 package.json 路径
+   * 项目中的全部具名 workspace 包
+   *
+   * @remarks
+   * 可发布包由 `manifest.private !== true` 派生，不单独持久化另一份名称或路径集合
    */
-  pkgJsonPaths: string[]
-  /**
-   * 项目中所有包的 package.json 内容
-   */
-  pkgs: WorkspacePackageJson[]
-  /**
-   * 项目中的所有包名
-   */
-  pkgNames: string[]
-  /**
-   * 项目中可发布包的路径
-   */
-  validPkgRootPaths: string[]
-  /**
-   * 项目中可以发布包的名称
-   */
-  validPkgNames: string[]
+  workspacePackages: WorkspacePackage[]
   /**
    * 当前版本已经发布、且本地发布标签指向 HEAD 的包名
    * 仅在恢复一次中断的发布时存在

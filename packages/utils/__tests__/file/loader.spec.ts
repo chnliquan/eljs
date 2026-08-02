@@ -138,7 +138,7 @@ describe('文件加载器工具 - 完整测试', () => {
   const mockRemoveSync = requiredModule6.removeSync as MockedFunction<
     (filePath: string) => boolean
   >
-  const mockIsPathExistsSync = requiredModule7.pathExistsSync as MockedFunction<
+  const mockPathExistsSync = requiredModule7.pathExistsSync as MockedFunction<
     (filePath: string) => boolean
   >
 
@@ -426,7 +426,7 @@ describe('文件加载器工具 - 完整测试', () => {
         diagnostics: [],
       })
       mockImportFresh.mockReturnValue(mockResult)
-      mockIsPathExistsSync.mockReturnValue(true) // 模拟文件存在，需要清理
+      mockPathExistsSync.mockReturnValue(true) // 模拟文件存在，需要清理
 
       const result = loadTsSync('/test.ts')
 

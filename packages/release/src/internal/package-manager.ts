@@ -1,4 +1,5 @@
-import { isPathExistsSync, type PackageManager } from '@eljs/utils'
+import { pathExistsSync } from '@eljs/utils/file'
+import type { PackageManager } from '@eljs/utils/types'
 import path from 'node:path'
 import semver from 'semver'
 
@@ -60,7 +61,7 @@ export function resolvePackageManagerVariant(
     }
   }
 
-  return isPathExistsSync(path.join(cwd, '.yarnrc.yml'))
+  return pathExistsSync(path.join(cwd, '.yarnrc.yml'))
     ? 'yarn-berry'
     : 'yarn-classic'
 }

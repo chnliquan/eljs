@@ -1,7 +1,6 @@
 import { afterEach, vi, type MockedFunction } from 'vitest'
 import type {
   Plugin,
-  PluginExecutionMetrics,
   PluginHookEnablement,
   PluginHostOptions,
   PluginInitializer,
@@ -14,7 +13,6 @@ export interface MockPluginOptions {
   type?: PluginKind
   enable?: PluginHookEnablement
   initializer?: MockedFunction<PluginInitializer> | PluginInitializer
-  metrics?: PluginExecutionMetrics
   [key: string]: unknown
 }
 
@@ -28,11 +26,6 @@ export const createMockPlugin = (
 ): Plugin => {
   let key = options.key || id
   let enable = options.enable ?? true
-  const metrics: PluginExecutionMetrics = options.metrics || {
-    hookDurationsMs: {},
-    hookErrorCounts: {},
-    initializationDurationMs: 0,
-  }
 
   const mockPlugin = {
     constructorOptions: {
@@ -56,23 +49,6 @@ export const createMockPlugin = (
           configuration.enable === undefined ? enable : configuration.enable
       },
     ),
-    getDiagnostics: vi.fn(() => ({
-      id,
-      key,
-      path: `/mock/path/${id}`,
-      type: options.type || 'plugin',
-      metrics: {
-        initializationDurationMs: metrics.initializationDurationMs,
-        initializationFailed: metrics.initializationFailed,
-        hookDurationsMs: Object.fromEntries(
-          Object.entries(metrics.hookDurationsMs).map(([hookKey, samples]) => [
-            hookKey,
-            [...samples],
-          ]),
-        ),
-        hookErrorCounts: { ...metrics.hookErrorCounts },
-      },
-    })),
     getMetadata: vi.fn(() => ({
       id,
       key,
@@ -80,28 +56,6 @@ export const createMockPlugin = (
       type: options.type || 'plugin',
     })),
     loadInitializer: vi.fn(async () => options.initializer || vi.fn()),
-    recordHookExecution: vi.fn(
-      (
-        hookKey: string,
-        duration: number,
-        failed: boolean,
-        sampleLimit: number,
-      ) => {
-        const samples = (metrics.hookDurationsMs[hookKey] ||= [])
-        samples.push(duration)
-        if (samples.length > sampleLimit) {
-          samples.splice(0, samples.length - sampleLimit)
-        }
-        if (failed) {
-          metrics.hookErrorCounts[hookKey] =
-            (metrics.hookErrorCounts[hookKey] || 0) + 1
-        }
-      },
-    ),
-    recordInitialization: vi.fn((duration: number, failed: boolean) => {
-      metrics.initializationDurationMs = duration
-      metrics.initializationFailed = failed || undefined
-    }),
   } as unknown as Plugin
   return mockPlugin
 }

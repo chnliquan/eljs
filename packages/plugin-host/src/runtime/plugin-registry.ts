@@ -2,7 +2,6 @@ import type { MaybePromiseFunction } from '@eljs/utils/types'
 
 import { PluginHostError, PluginHostErrorCode } from '../errors'
 import type { Plugin } from '../plugin/plugin'
-import type { PluginDiagnostics } from '../plugin/types'
 
 /**
  * 一个延迟解析的 Hook 跳过请求
@@ -276,17 +275,6 @@ export class PluginRegistry {
         },
       )
     }
-  }
-
-  /**
-   * 获取调试信息快照
-   *
-   * @returns 与内部可变数据隔离的插件诊断列表
-   */
-  public getDiagnostics(): PluginDiagnostics[] {
-    return [...this._pluginsById.values()].map(plugin =>
-      plugin.getDiagnostics(),
-    )
   }
 
   /**

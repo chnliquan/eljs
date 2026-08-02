@@ -1,4 +1,6 @@
-import { createDebugger, logger, readJson, type PackageJson } from '@eljs/utils'
+import { readJson } from '@eljs/utils/file'
+import { createDebugger, logger } from '@eljs/utils/logger'
+import type { PackageJson } from '@eljs/utils/types'
 import { InvalidArgumentError, program } from 'commander'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'

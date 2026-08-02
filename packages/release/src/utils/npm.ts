@@ -1,4 +1,6 @@
-import { chalk, getNpmPackage, logger, run } from '@eljs/utils'
+import { run } from '@eljs/utils/cp'
+import { chalk, logger } from '@eljs/utils/logger'
+import { getNpmPackage } from '@eljs/utils/npm'
 import resolveBin from 'resolve-bin'
 import semver from 'semver'
 

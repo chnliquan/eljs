@@ -33,7 +33,7 @@ vi.mock('@eljs/utils', () => ({
     (obj: unknown): obj is object =>
       obj !== null && typeof obj === 'object' && !Array.isArray(obj),
   ),
-  isPathExists: vi.fn(),
+  pathExists: vi.fn(),
   logger: {
     info: vi.fn(),
     ready: vi.fn(),
@@ -61,7 +61,7 @@ interface MockUtils {
   >
   install: MockedFunction<(...args: unknown[]) => Promise<void>>
   isObject: MockedFunction<(obj: unknown) => boolean>
-  isPathExists: MockedFunction<(path: string) => Promise<boolean>>
+  pathExists: MockedFunction<(path: string) => Promise<boolean>>
   logger: {
     info: MockedFunction<(message: string) => void>
     ready: MockedFunction<(message: string) => void>
@@ -311,14 +311,14 @@ describe('内部插件 built-in', () => {
     })
 
     it('应该处理文件存在时的 package.json 生成', async () => {
-      mockUtils.isPathExists.mockResolvedValue(true)
+      mockUtils.pathExists.mockResolvedValue(true)
       mockUtils.readJson.mockResolvedValue({ description: '现有包' })
 
       builtInPlugin(mockContext)
 
       await onGenerateDoneCallbacks[0]()
 
-      expect(mockUtils.isPathExists).toHaveBeenCalledWith(
+      expect(mockUtils.pathExists).toHaveBeenCalledWith(
         '/test/project/package.json',
       )
       expect(mockUtils.readJson).toHaveBeenCalled()
@@ -330,13 +330,13 @@ describe('内部插件 built-in', () => {
     })
 
     it('应该处理文件不存在时的 package.json 生成', async () => {
-      mockUtils.isPathExists.mockResolvedValue(false)
+      mockUtils.pathExists.mockResolvedValue(false)
 
       builtInPlugin(mockContext)
 
       await onGenerateDoneCallbacks[0]()
 
-      expect(mockUtils.isPathExists).toHaveBeenCalledWith(
+      expect(mockUtils.pathExists).toHaveBeenCalledWith(
         '/test/project/package.json',
       )
       expect(mockUtils.readJson).not.toHaveBeenCalled()

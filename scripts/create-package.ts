@@ -1,16 +1,16 @@
 // create package.json, README, etc. for packages that don't have them yet.
 import {
-  camelCase,
-  getWorkspaces,
-  isPathExistsSync,
-  logger,
   mkdirSync,
+  pathExistsSync,
   readJson,
   readJsonSync,
-  safeWriteFileSync,
+  writeFileAtomicSync,
   writeJsonSync,
-  type PackageJson,
-} from '@eljs/utils'
+} from '@eljs/utils/file'
+import { logger } from '@eljs/utils/logger'
+import { getWorkspacePackageRoots } from '@eljs/utils/path'
+import { camelCase } from '@eljs/utils/string'
+import type { PackageJson } from '@eljs/utils/types'
 import { EOL } from 'node:os'
 import path from 'node:path'
 import { argv, chalk } from 'zx'
@@ -164,7 +164,7 @@ main()
 
 async function main(): Promise<void> {
   const rootPath = path.resolve(__dirname, '../')
-  const pkgPaths = await getWorkspaces(rootPath, true)
+  const pkgPaths = await getWorkspacePackageRoots(rootPath, true)
   const { version } = await readJson<PackageJson>(
     path.resolve(rootPath, 'package.json'),
   )
@@ -181,7 +181,7 @@ async function main(): Promise<void> {
 
     const pkgDir = path.resolve(rootPath, dirname)
 
-    if (!isPathExistsSync(pkgDir)) {
+    if (!pathExistsSync(pkgDir)) {
       mkdirSync(pkgDir)
     }
 
@@ -200,7 +200,7 @@ function ensurePackageJson(
   shortName: string,
 ): void {
   const pkgJSONPath = path.resolve(dirname, `package.json`)
-  const pkgJSONExists = isPathExistsSync(pkgJSONPath)
+  const pkgJSONExists = pathExistsSync(pkgJSONPath)
   let pkgJSON: PackageJson = Object.create(null)
 
   if (pkgJSONExists) {
@@ -228,9 +228,9 @@ function ensurePackageJson(
 function ensureReadme(name: string, dirname: string, shortName: string): void {
   const readmePath = path.resolve(dirname, `README.md`)
 
-  if (!isPathExistsSync(readmePath)) {
+  if (!pathExistsSync(readmePath)) {
     step('Generate README.md')
-    safeWriteFileSync(
+    writeFileAtomicSync(
       readmePath,
       `
 # ${name}
@@ -300,12 +300,12 @@ function ensureSrcIndex(dirname: string): void {
   const srcDir = path.resolve(dirname, `src`)
   const indexPath = path.resolve(dirname, `src/index.ts`)
 
-  if (!isPathExistsSync(indexPath)) {
-    if (!isPathExistsSync(srcDir)) {
+  if (!pathExistsSync(indexPath)) {
+    if (!pathExistsSync(srcDir)) {
       mkdirSync(srcDir)
     }
 
-    safeWriteFileSync(
+    writeFileAtomicSync(
       indexPath,
       `
 export {}
@@ -317,9 +317,9 @@ export {}
 function ensureRslibConfig(dirname: string): void {
   const rslibConfigPath = path.resolve(dirname, 'rslib.config.ts')
 
-  if (!isPathExistsSync(rslibConfigPath)) {
+  if (!pathExistsSync(rslibConfigPath)) {
     step('Generate rslib.config.ts')
-    safeWriteFileSync(
+    writeFileAtomicSync(
       rslibConfigPath,
       `
 export { default } from '../../rslib.base.config.ts'
@@ -333,14 +333,14 @@ function ensureTsconfig(dirname: string): void {
   const ensureBuildTsconfigPath = path.resolve(dirname, `tsconfig.build.json`)
   const tsconfigFiles = createTsconfigFiles()
 
-  if (!isPathExistsSync(ensureTsconfigPath)) {
+  if (!pathExistsSync(ensureTsconfigPath)) {
     step('Generate tsconfig.json')
-    safeWriteFileSync(ensureTsconfigPath, tsconfigFiles['tsconfig.json'])
+    writeFileAtomicSync(ensureTsconfigPath, tsconfigFiles['tsconfig.json'])
   }
 
-  if (!isPathExistsSync(ensureBuildTsconfigPath)) {
+  if (!pathExistsSync(ensureBuildTsconfigPath)) {
     step('Generate tsconfig.build.json')
-    safeWriteFileSync(
+    writeFileAtomicSync(
       ensureBuildTsconfigPath,
       tsconfigFiles['tsconfig.build.json'],
     )

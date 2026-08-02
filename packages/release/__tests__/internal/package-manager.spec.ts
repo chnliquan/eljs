@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { isPathExistsSync } from '@eljs/utils'
+import { pathExistsSync } from '@eljs/utils'
 
 import {
   resolveDeclaredPackageManager,
@@ -9,8 +9,9 @@ import {
 import type { ProjectPackageJson } from '../../src/types'
 
 vi.mock('@eljs/utils', () => ({
-  isPathExistsSync: vi.fn(),
+  pathExistsSync: vi.fn(),
 }))
+vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
 
 describe('发布包管理器变体解析', () => {
   const projectPkg: ProjectPackageJson = {
@@ -19,7 +20,7 @@ describe('发布包管理器变体解析', () => {
   }
 
   beforeEach(() => {
-    vi.mocked(isPathExistsSync).mockReturnValue(false)
+    vi.mocked(pathExistsSync).mockReturnValue(false)
   })
 
   it.each([
@@ -61,7 +62,7 @@ describe('发布包管理器变体解析', () => {
       expect(
         resolvePackageManagerVariant(packageManager, '/project', projectPkg),
       ).toBe(packageManager)
-      expect(isPathExistsSync).not.toHaveBeenCalled()
+      expect(pathExistsSync).not.toHaveBeenCalled()
     },
   )
 
@@ -93,12 +94,12 @@ describe('发布包管理器变体解析', () => {
   })
 
   it('没有有效声明时应该通过 .yarnrc.yml 识别 Yarn Berry', () => {
-    vi.mocked(isPathExistsSync).mockReturnValue(true)
+    vi.mocked(pathExistsSync).mockReturnValue(true)
 
     expect(resolvePackageManagerVariant('yarn', '/project', projectPkg)).toBe(
       'yarn-berry',
     )
-    expect(isPathExistsSync).toHaveBeenCalledWith('/project/.yarnrc.yml')
+    expect(pathExistsSync).toHaveBeenCalledWith('/project/.yarnrc.yml')
   })
 
   it('没有 Berry 信号时应该回退到 Yarn Classic', () => {

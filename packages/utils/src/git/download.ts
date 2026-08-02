@@ -78,26 +78,6 @@ export async function cloneGitRepository(
 }
 
 /**
- * 下载 Git 仓库的选项
- * @deprecated 请改用 {@link CloneGitRepositoryOptions}
- */
-export type DownloadGitRepositoryOptions = CloneGitRepositoryOptions
-
-/**
- * 克隆 Git 仓库
- * @param url - Git 地址
- * @param options - 选项
- * @returns 克隆后的 package 目录
- * @deprecated 请改用 {@link cloneGitRepository}
- */
-export function downloadGitRepository(
-  url: string,
-  options?: DownloadGitRepositoryOptions,
-): Promise<string> {
-  return cloneGitRepository(url, options)
-}
-
-/**
  * 将 npm 风格的 Git 地址转换为 `git clone` 可接受的仓库地址和可选 ref
  *
  * @remarks

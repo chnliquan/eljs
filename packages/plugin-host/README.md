@@ -312,7 +312,7 @@ protected async load(): Promise<void>
 
 Loads and initializes all presets and plugins based on configuration files and constructor options.
 Each instance can load exactly once. Successful loading moves it into `ready`; a failed load moves it into the terminal `failed`
-state and clears partial registrations while retaining an isolated failure diagnostics snapshot.
+state and clears partial registrations.
 
 **Features:**
 
@@ -433,19 +433,6 @@ TypeScript to be available in the consuming project.
 
 Plugins and JavaScript/TypeScript configuration files execute in the current Node.js process with
 the current process permissions. Only load trusted plugins and configuration.
-
-### Debug diagnostics
-
-```ts
-const diagnostics = runner.getPluginDiagnostics()
-```
-
-Diagnostics contain plugin initialization time and outcome, the latest 20 timing samples for each
-hook, and hook failure counts. Failed initialization diagnostics remain available after partial
-registrations are cleared. They are intended for local debugging rather than production monitoring.
-
-Each entry exposes a `metrics` object with `initializationDurationMs`, `initializationFailed`,
-`hookDurationsMs`, and `hookErrorCounts`.
 
 ## 🎯 Hook System
 

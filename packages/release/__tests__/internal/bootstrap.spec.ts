@@ -14,9 +14,9 @@ import {
 import {
   getGitBranch,
   getGitLatestTag,
-  getWorkspaces,
-  isPathExists,
+  getWorkspacePackageRoots,
   logger,
+  pathExists,
   readJson,
 } from '@eljs/utils'
 import path from 'node:path'
@@ -31,13 +31,17 @@ vi.mock('@eljs/utils', () => ({
   },
   getGitBranch: vi.fn(),
   getGitLatestTag: vi.fn(),
-  getWorkspaces: vi.fn(),
-  isPathExists: vi.fn(),
+  getWorkspacePackageRoots: vi.fn(),
+  pathExists: vi.fn(),
   logger: {
     warn: vi.fn(),
   },
   readJson: vi.fn(),
 }))
+vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/git', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/path', async () => import('@eljs/utils'))
 
 vi.mock('node:path')
 vi.mock('../../src/utils', () => ({
@@ -67,12 +71,12 @@ describe('Bootstrap 插件测试', () => {
     vi.clearAllMocks()
 
     // 设置默认模拟
-    ;(getWorkspaces as MockedFunction<typeof getWorkspaces>).mockResolvedValue(
-      [],
-    )
-    ;(isPathExists as MockedFunction<typeof isPathExists>).mockResolvedValue(
-      true,
-    )
+    ;(
+      getWorkspacePackageRoots as MockedFunction<
+        typeof getWorkspacePackageRoots
+      >
+    ).mockResolvedValue([])
+    ;(pathExists as MockedFunction<typeof pathExists>).mockResolvedValue(true)
     ;(path.join as MockedFunction<typeof path.join>).mockImplementation(
       (...args) => args.join('/'),
     )
@@ -102,7 +106,9 @@ describe('Bootstrap 插件测试', () => {
       }
 
       ;(
-        getWorkspaces as MockedFunction<typeof getWorkspaces>
+        getWorkspacePackageRoots as MockedFunction<
+          typeof getWorkspacePackageRoots
+        >
       ).mockResolvedValue([mockCwd])
       ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue(
         mockPackageJson,
@@ -126,11 +132,13 @@ describe('Bootstrap 插件测试', () => {
 
       expect(result).toEqual(
         expect.objectContaining({
-          pkgJsonPaths: [`${mockCwd}/package.json`],
-          pkgs: [mockPackageJson],
-          pkgNames: ['test-package'],
-          validPkgRootPaths: [mockCwd],
-          validPkgNames: ['test-package'],
+          workspacePackages: [
+            {
+              manifest: mockPackageJson,
+              manifestPath: `${mockCwd}/package.json`,
+              rootPath: mockCwd,
+            },
+          ],
           registry: 'https://registry.npmjs.org',
           branch: 'main',
           latestTag: 'v1.0.0',
@@ -152,7 +160,9 @@ describe('Bootstrap 插件测试', () => {
       ]
 
       ;(
-        getWorkspaces as MockedFunction<typeof getWorkspaces>
+        getWorkspacePackageRoots as MockedFunction<
+          typeof getWorkspacePackageRoots
+        >
       ).mockResolvedValue(workspaces)
       ;(readJson as MockedFunction<typeof readJson>)
         .mockResolvedValueOnce(mockPackages[0])
@@ -167,14 +177,13 @@ describe('Bootstrap 插件测试', () => {
         cwd: mockCwd,
       })
 
-      expect(result.pkgJsonPaths).toHaveLength(3)
-      expect(result.pkgs).toEqual(mockPackages)
-      expect(result.pkgNames).toEqual(['pkg1', 'pkg2', 'pkg3'])
-      expect(result.validPkgRootPaths).toEqual([
-        '/test/project/packages/pkg1',
-        '/test/project/packages/pkg3',
-      ]) // 排除 private 包
-      expect(result.validPkgNames).toEqual(['pkg1', 'pkg3'])
+      expect(result.workspacePackages).toEqual(
+        workspaces.map((rootPath, index) => ({
+          manifest: mockPackages[index],
+          manifestPath: `${rootPath}/package.json`,
+          rootPath,
+        })),
+      )
     })
 
     it('应该跳过不存在 package.json 的目录', async () => {
@@ -184,9 +193,11 @@ describe('Bootstrap 插件测试', () => {
       ]
 
       ;(
-        getWorkspaces as MockedFunction<typeof getWorkspaces>
+        getWorkspacePackageRoots as MockedFunction<
+          typeof getWorkspacePackageRoots
+        >
       ).mockResolvedValue(workspaces)
-      ;(isPathExists as MockedFunction<typeof isPathExists>)
+      ;(pathExists as MockedFunction<typeof pathExists>)
         .mockResolvedValueOnce(true) // pkg1 存在
         .mockResolvedValueOnce(false) // pkg2 不存在
       ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue({
@@ -203,8 +214,8 @@ describe('Bootstrap 插件测试', () => {
         cwd: mockCwd,
       })
 
-      expect(result.pkgJsonPaths).toHaveLength(1)
-      expect(result.pkgNames).toEqual(['pkg1'])
+      expect(result.workspacePackages).toHaveLength(1)
+      expect(result.workspacePackages[0].manifest.name).toBe('pkg1')
       expect(readJson).toHaveBeenCalledTimes(1)
     })
 
@@ -222,7 +233,9 @@ describe('Bootstrap 插件测试', () => {
       }
 
       ;(
-        getWorkspaces as MockedFunction<typeof getWorkspaces>
+        getWorkspacePackageRoots as MockedFunction<
+          typeof getWorkspacePackageRoots
+        >
       ).mockResolvedValue([mockCwd, '/test/valid-package'])
       ;(readJson as MockedFunction<typeof readJson>)
         .mockResolvedValueOnce(mockPackageWithoutName)
@@ -240,8 +253,9 @@ describe('Bootstrap 插件测试', () => {
         'No name field was found in [cyan]/test/project/package.json[/cyan], skipped.',
       )
       // 应该只包含有效的包
-      expect(result.pkgNames).toEqual(['valid-package'])
-      expect(result.validPkgNames).toEqual(['valid-package'])
+      expect(
+        result.workspacePackages.map(({ manifest }) => manifest.name),
+      ).toEqual(['valid-package'])
     })
 
     it('应该正确区分公开包和私有包', async () => {
@@ -251,7 +265,9 @@ describe('Bootstrap 插件测试', () => {
       ]
 
       ;(
-        getWorkspaces as MockedFunction<typeof getWorkspaces>
+        getWorkspacePackageRoots as MockedFunction<
+          typeof getWorkspacePackageRoots
+        >
       ).mockResolvedValue(workspaces)
       ;(readJson as MockedFunction<typeof readJson>)
         .mockResolvedValueOnce({
@@ -273,16 +289,21 @@ describe('Bootstrap 插件测试', () => {
         cwd: mockCwd,
       })
 
-      expect(result.pkgNames).toEqual(['public-pkg', 'private-pkg'])
-      expect(result.validPkgNames).toEqual(['public-pkg'])
-      expect(result.validPkgRootPaths).toEqual([
-        '/test/project/packages/public-pkg',
-      ])
+      expect(
+        result.workspacePackages.map(({ manifest }) => manifest.name),
+      ).toEqual(['public-pkg', 'private-pkg'])
+      expect(
+        result.workspacePackages
+          .filter(({ manifest }) => !manifest.private)
+          .map(({ rootPath }) => rootPath),
+      ).toEqual(['/test/project/packages/public-pkg'])
     })
 
     it('应该获取 Git 相关信息', async () => {
       ;(
-        getWorkspaces as MockedFunction<typeof getWorkspaces>
+        getWorkspacePackageRoots as MockedFunction<
+          typeof getWorkspacePackageRoots
+        >
       ).mockResolvedValue([mockCwd])
       ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue({
         name: 'test-pkg',
@@ -312,7 +333,9 @@ describe('Bootstrap 插件测试', () => {
 
     it('应该从项目配置中获取 registry', async () => {
       ;(
-        getWorkspaces as MockedFunction<typeof getWorkspaces>
+        getWorkspacePackageRoots as MockedFunction<
+          typeof getWorkspacePackageRoots
+        >
       ).mockResolvedValue([mockCwd])
       ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue({
         name: 'test-pkg',
@@ -344,7 +367,9 @@ describe('Bootstrap 插件测试', () => {
       }
       mockContext.config.npm.registry = 'https://configured-registry.com'
       ;(
-        getWorkspaces as MockedFunction<typeof getWorkspaces>
+        getWorkspacePackageRoots as MockedFunction<
+          typeof getWorkspacePackageRoots
+        >
       ).mockResolvedValue([mockCwd])
       ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue({
         name: 'test-pkg',
@@ -373,7 +398,9 @@ describe('Bootstrap 插件测试', () => {
       }
       mockContext.config.npm.registry = 'https://configured-registry.com'
       ;(
-        getWorkspaces as MockedFunction<typeof getWorkspaces>
+        getWorkspacePackageRoots as MockedFunction<
+          typeof getWorkspacePackageRoots
+        >
       ).mockResolvedValue([mockCwd])
       ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue({
         name: 'test-pkg',
@@ -398,7 +425,9 @@ describe('Bootstrap 插件测试', () => {
 
     it('未明确配置时应该拒绝混用多个 registry', async () => {
       ;(
-        getWorkspaces as MockedFunction<typeof getWorkspaces>
+        getWorkspacePackageRoots as MockedFunction<
+          typeof getWorkspacePackageRoots
+        >
       ).mockResolvedValue(['/test/project/pkg-a', '/test/project/pkg-b'])
       ;(readJson as MockedFunction<typeof readJson>)
         .mockResolvedValueOnce({
@@ -428,7 +457,9 @@ describe('Bootstrap 插件测试', () => {
 
     it('比较 registry 时应该忽略末尾斜杠', async () => {
       ;(
-        getWorkspaces as MockedFunction<typeof getWorkspaces>
+        getWorkspacePackageRoots as MockedFunction<
+          typeof getWorkspacePackageRoots
+        >
       ).mockResolvedValue(['/test/project/pkg-a', '/test/project/pkg-b'])
       ;(readJson as MockedFunction<typeof readJson>)
         .mockResolvedValueOnce({
@@ -460,7 +491,9 @@ describe('Bootstrap 插件测试', () => {
 
     it('未明确配置时应该拒绝仅部分发布包声明 registry', async () => {
       ;(
-        getWorkspaces as MockedFunction<typeof getWorkspaces>
+        getWorkspacePackageRoots as MockedFunction<
+          typeof getWorkspacePackageRoots
+        >
       ).mockResolvedValue(['/test/project/pkg-a', '/test/project/pkg-b'])
       ;(readJson as MockedFunction<typeof readJson>)
         .mockResolvedValueOnce({
@@ -487,7 +520,9 @@ describe('Bootstrap 插件测试', () => {
 
     it('当没有有效包时应该抛出 AppError', async () => {
       ;(
-        getWorkspaces as MockedFunction<typeof getWorkspaces>
+        getWorkspacePackageRoots as MockedFunction<
+          typeof getWorkspacePackageRoots
+        >
       ).mockResolvedValue([mockCwd])
       ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue({
         name: 'private-pkg',
@@ -509,7 +544,9 @@ describe('Bootstrap 插件测试', () => {
 
     it('应该处理空的工作空间列表', async () => {
       ;(
-        getWorkspaces as MockedFunction<typeof getWorkspaces>
+        getWorkspacePackageRoots as MockedFunction<
+          typeof getWorkspacePackageRoots
+        >
       ).mockResolvedValue([])
 
       bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
@@ -524,7 +561,9 @@ describe('Bootstrap 插件测试', () => {
 
     it('应该保持原有的 memo 属性', async () => {
       ;(
-        getWorkspaces as MockedFunction<typeof getWorkspaces>
+        getWorkspacePackageRoots as MockedFunction<
+          typeof getWorkspacePackageRoots
+        >
       ).mockResolvedValue([mockCwd])
       ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue({
         name: 'test-pkg',
@@ -547,14 +586,16 @@ describe('Bootstrap 插件测试', () => {
       expect(
         (result as AppData & { existingProperty: string }).existingProperty,
       ).toBe('existing-value')
-      expect(result.pkgNames).toEqual(['test-pkg'])
+      expect(result.workspacePackages[0].manifest.name).toBe('test-pkg')
     })
   })
 
   describe('错误处理', () => {
-    it('应该处理 getWorkspaces 抛出的错误', async () => {
+    it('应该处理 getWorkspacePackageRoots 抛出的错误', async () => {
       ;(
-        getWorkspaces as MockedFunction<typeof getWorkspaces>
+        getWorkspacePackageRoots as MockedFunction<
+          typeof getWorkspacePackageRoots
+        >
       ).mockRejectedValue(new Error('获取工作空间失败'))
 
       bootstrapPlugin(mockContext as unknown as ReleasePluginContext)
@@ -569,7 +610,9 @@ describe('Bootstrap 插件测试', () => {
 
     it('应该处理 readJson 抛出的错误', async () => {
       ;(
-        getWorkspaces as MockedFunction<typeof getWorkspaces>
+        getWorkspacePackageRoots as MockedFunction<
+          typeof getWorkspacePackageRoots
+        >
       ).mockResolvedValue([mockCwd])
       ;(readJson as MockedFunction<typeof readJson>).mockRejectedValue(
         new Error('读取 package.json 失败'),
@@ -587,7 +630,9 @@ describe('Bootstrap 插件测试', () => {
 
     it('应该处理 getGitBranch 抛出的错误', async () => {
       ;(
-        getWorkspaces as MockedFunction<typeof getWorkspaces>
+        getWorkspacePackageRoots as MockedFunction<
+          typeof getWorkspacePackageRoots
+        >
       ).mockResolvedValue([mockCwd])
       ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue({
         name: 'test-pkg',

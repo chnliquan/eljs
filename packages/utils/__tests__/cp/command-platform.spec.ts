@@ -2,7 +2,7 @@ import path from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import which from 'which'
 
-import { findExecutable, getExecutableCommand } from '../../src/cp/command'
+import { findExecutable } from '../../src/cp/command'
 
 vi.mock('which')
 
@@ -17,9 +17,7 @@ describe('可执行命令跨平台解析', () => {
     const dirs = ['first-bin', 'second-bin']
     mockWhich.mockResolvedValue('second-bin/tool')
 
-    await expect(getExecutableCommand('tool', dirs)).resolves.toBe(
-      'second-bin/tool',
-    )
+    await expect(findExecutable('tool', dirs)).resolves.toBe('second-bin/tool')
     expect(mockWhich).toHaveBeenCalledWith('tool', {
       path: dirs.join(path.delimiter),
       nothrow: true,
@@ -29,7 +27,7 @@ describe('可执行命令跨平台解析', () => {
   it('应该保留系统 PATH 和 PATHEXT 的默认查找行为', async () => {
     mockWhich.mockResolvedValue(null as never)
 
-    await expect(getExecutableCommand('missing-tool')).resolves.toBeNull()
+    await expect(findExecutable('missing-tool')).resolves.toBeNull()
     expect(mockWhich).toHaveBeenCalledWith('missing-tool', { nothrow: true })
   })
 

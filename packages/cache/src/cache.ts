@@ -1,11 +1,11 @@
 import {
-  isPathExists,
-  isPathExistsSync,
   mkdir,
+  pathExists,
+  pathExistsSync,
   readFile,
   remove,
   writeJson,
-} from '@eljs/utils'
+} from '@eljs/utils/file'
 import * as crypto from 'node:crypto'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
@@ -127,7 +127,7 @@ export class Cache<T = any> {
 
     try {
       // 检查文件是否存在
-      if (!(await isPathExists(filePath))) {
+      if (!(await pathExists(filePath))) {
         this._recordMiss()
         return null
       }
@@ -305,7 +305,7 @@ export class Cache<T = any> {
       errors: [],
     }
 
-    if (!this.options.enabled || !(await isPathExists(this.cacheDir))) {
+    if (!this.options.enabled || !(await pathExists(this.cacheDir))) {
       return result
     }
 
@@ -417,7 +417,7 @@ export class Cache<T = any> {
     let diskUsage = 0
 
     try {
-      if (await isPathExists(this.cacheDir)) {
+      if (await pathExists(this.cacheDir)) {
         const files = await fs.promises.readdir(this.cacheDir)
         for (const file of files) {
           try {
@@ -445,7 +445,7 @@ export class Cache<T = any> {
   public async clear(): Promise<void> {
     this.memoryCache.clear()
 
-    if (!this.options.enabled || !isPathExistsSync(this.cacheDir)) {
+    if (!this.options.enabled || !pathExistsSync(this.cacheDir)) {
       return
     }
 
@@ -502,7 +502,7 @@ export class Cache<T = any> {
 
     try {
       // 确保缓存目录存在
-      if (!(await isPathExists(this.cacheDir))) {
+      if (!(await pathExists(this.cacheDir))) {
         await mkdir(this.cacheDir)
       }
 
@@ -627,7 +627,7 @@ export class Cache<T = any> {
    * 从磁盘预加载有效的缓存条目到内存
    */
   private async _preloadValidCache(): Promise<void> {
-    if (!(await isPathExists(this.cacheDir))) {
+    if (!(await pathExists(this.cacheDir))) {
       return
     }
 
@@ -764,7 +764,7 @@ export class Cache<T = any> {
     const filePath = this._getCacheFilePath(cacheKey)
 
     try {
-      if (await isPathExists(filePath)) {
+      if (await pathExists(filePath)) {
         await remove(filePath)
       }
     } catch {

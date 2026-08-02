@@ -18,10 +18,10 @@ import {
   gitTag,
   isGitBehindRemote,
   isGitClean,
-  isPathExists,
   normalizeArgs,
+  pathExists,
   readFile,
-  safeWriteFile,
+  writeFileAtomic,
 } from '@eljs/utils'
 
 import gitPlugin from '../../../src/internal/plugins/git'
@@ -78,11 +78,11 @@ interface GitTestApi {
     latestTag: string | null
     projectPkgJsonPath: string
     projectPkg: { name: string; version: string; private: boolean }
-    pkgJsonPaths: string[]
-    pkgs: Array<{ name: string; version: string; private: boolean }>
-    pkgNames: string[]
-    validPkgRootPaths: string[]
-    validPkgNames: string[]
+    workspacePackages: Array<{
+      rootPath: string
+      manifestPath: string
+      manifest: { name: string; version: string; private: boolean }
+    }>
     existingPkgNames?: string[]
     isReleaseRetry?: boolean
     packageManager: string
@@ -120,15 +120,19 @@ vi.mock('@eljs/utils', () => ({
   gitTag: vi.fn(),
   isGitBehindRemote: vi.fn(),
   isGitClean: vi.fn(),
-  isPathExists: vi.fn(),
+  pathExists: vi.fn(),
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
   },
   normalizeArgs: vi.fn(),
   readFile: vi.fn(),
-  safeWriteFile: vi.fn(),
+  writeFileAtomic: vi.fn(),
 }))
+vi.mock('@eljs/utils/cp', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/git', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
 
 vi.mock('../../../src/utils', () => ({
   AppError: class AppError extends Error {
@@ -197,11 +201,17 @@ describe('Git 插件测试', () => {
         latestTag: null,
         projectPkgJsonPath: '/it/package.json',
         projectPkg: { name: 'it-project', version: '1.0.0', private: false },
-        pkgJsonPaths: ['/it/package.json'],
-        pkgs: [{ name: 'it-package', version: '1.0.0', private: false }],
-        pkgNames: ['it-package'],
-        validPkgRootPaths: ['/it'],
-        validPkgNames: ['it-package'],
+        workspacePackages: [
+          {
+            manifest: {
+              name: 'it-package',
+              version: '1.0.0',
+              private: false,
+            },
+            manifestPath: '/it/package.json',
+            rootPath: '/it',
+          },
+        ],
         packageManager: 'npm',
       },
       cwd: '/it/project',
@@ -217,15 +227,13 @@ describe('Git 插件测试', () => {
     ;(getChangelog as MockedFunction<typeof getChangelog>).mockResolvedValue(
       '## Changelog\n\n- Feature: Added new functionality',
     )
-    ;(isPathExists as MockedFunction<typeof isPathExists>).mockResolvedValue(
-      true,
-    )
+    ;(pathExists as MockedFunction<typeof pathExists>).mockResolvedValue(true)
     ;(readFile as MockedFunction<typeof readFile>).mockResolvedValue(
       '# Existing changelog',
     )
-    ;(safeWriteFile as MockedFunction<typeof safeWriteFile>).mockResolvedValue(
-      undefined,
-    )
+    ;(
+      writeFileAtomic as MockedFunction<typeof writeFileAtomic>
+    ).mockResolvedValue(undefined)
     ;(gitCommit as MockedFunction<typeof gitCommit>).mockResolvedValue(
       undefined,
     )
@@ -434,7 +442,7 @@ describe('Git 插件测试', () => {
       await onBeforeReleaseHandler(releaseInfo)
 
       expect(readFile).toHaveBeenCalledWith('/it/project/CHANGELOG.md')
-      expect(safeWriteFile).toHaveBeenCalledWith(
+      expect(writeFileAtomic).toHaveBeenCalledWith(
         '/it/project/CHANGELOG.md',
         expect.stringContaining(
           '# Existing changelog\n\n## [1.1.0] - 2023-11-13',
@@ -455,7 +463,7 @@ describe('Git 插件测试', () => {
       await onBeforeReleaseHandler(releaseInfo)
 
       expect(readFile).not.toHaveBeenCalled()
-      expect(safeWriteFile).not.toHaveBeenCalled()
+      expect(writeFileAtomic).not.toHaveBeenCalled()
     })
 
     it('dry-run 时不应该更新变更日志文件', async () => {
@@ -469,7 +477,7 @@ describe('Git 插件测试', () => {
       })
 
       expect(readFile).not.toHaveBeenCalled()
-      expect(safeWriteFile).not.toHaveBeenCalled()
+      expect(writeFileAtomic).not.toHaveBeenCalled()
     })
 
     it('恢复部分发布时不应该重复写入变更日志', async () => {
@@ -483,7 +491,7 @@ describe('Git 插件测试', () => {
       })
 
       expect(readFile).not.toHaveBeenCalled()
-      expect(safeWriteFile).not.toHaveBeenCalled()
+      expect(writeFileAtomic).not.toHaveBeenCalled()
     })
 
     it('首个包发布失败后的重试不应该重复写入变更日志', async () => {
@@ -497,11 +505,11 @@ describe('Git 插件测试', () => {
       })
 
       expect(readFile).not.toHaveBeenCalled()
-      expect(safeWriteFile).not.toHaveBeenCalled()
+      expect(writeFileAtomic).not.toHaveBeenCalled()
     })
 
     it('应该处理变更日志文件不存在的情况', async () => {
-      ;(isPathExists as MockedFunction<typeof isPathExists>).mockResolvedValue(
+      ;(pathExists as MockedFunction<typeof pathExists>).mockResolvedValue(
         false,
       )
 
@@ -515,7 +523,7 @@ describe('Git 插件测试', () => {
       await onBeforeReleaseHandler(releaseInfo)
 
       expect(readFile).not.toHaveBeenCalled()
-      expect(safeWriteFile).toHaveBeenCalledWith(
+      expect(writeFileAtomic).toHaveBeenCalledWith(
         '/it/project/CHANGELOG.md',
         expect.stringContaining('## [1.1.0] - 2023-11-13'),
       )
@@ -533,7 +541,7 @@ describe('Git 插件测试', () => {
         changelog: '## Changes\n\n- Added feature',
       })
 
-      expect(safeWriteFile).toHaveBeenCalledWith(
+      expect(writeFileAtomic).toHaveBeenCalledWith(
         '/it/project/CHANGELOG.md',
         expect.stringMatching(
           /^# ChangeLog\n\n## Changes[\s\S]+Previous release notes$/,
@@ -554,7 +562,7 @@ describe('Git 插件测试', () => {
 
       await onBeforeReleaseHandler(releaseInfo)
 
-      expect(safeWriteFile).toHaveBeenCalledWith(
+      expect(writeFileAtomic).toHaveBeenCalledWith(
         '/it/project/HISTORY.md',
         expect.any(String),
       )
@@ -712,8 +720,26 @@ describe('Git 插件测试', () => {
 
     it('独立模式下不应该为私有包创建标签', async () => {
       mockContext.config.git!.independent = true
-      mockContext.appData.pkgNames = ['public-package', 'private-package']
-      mockContext.appData.validPkgNames = ['public-package']
+      mockContext.appData.workspacePackages = [
+        {
+          manifest: {
+            name: 'public-package',
+            version: '1.0.0',
+            private: false,
+          },
+          manifestPath: '/it/public-package/package.json',
+          rootPath: '/it/public-package',
+        },
+        {
+          manifest: {
+            name: 'private-package',
+            version: '1.0.0',
+            private: true,
+          },
+          manifestPath: '/it/private-package/package.json',
+          rootPath: '/it/private-package',
+        },
+      ]
 
       await onReleaseHandler({
         version: '1.1.0',
@@ -902,7 +928,7 @@ describe('Git 插件测试', () => {
 
     it('应该处理文件写入失败', async () => {
       ;(
-        safeWriteFile as MockedFunction<typeof safeWriteFile>
+        writeFileAtomic as MockedFunction<typeof writeFileAtomic>
       ).mockRejectedValue(new Error('write failed'))
 
       const releaseInfo = {
@@ -965,7 +991,7 @@ describe('Git 插件测试', () => {
         prereleaseId: null,
         changelog,
       })
-      expect(safeWriteFile).toHaveBeenCalled()
+      expect(writeFileAtomic).toHaveBeenCalled()
 
       // 4. 提交和推送
       const onReleaseHandler = getOnReleaseHandler()

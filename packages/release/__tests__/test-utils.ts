@@ -90,11 +90,13 @@ export function createMockAppData(
       config: {},
       publishConfig: {},
     },
-    pkgJsonPaths: ['/it/package.json'],
-    pkgs: [],
-    pkgNames: ['it-project'],
-    validPkgRootPaths: ['/it'],
-    validPkgNames: ['it-project'],
+    workspacePackages: [
+      {
+        manifest: { name: 'it-project', version: '1.0.0' },
+        manifestPath: '/it/package.json',
+        rootPath: '/it',
+      },
+    ],
     packageManager: 'npm',
     packageManagerVariant: 'npm',
     ...overrides,

@@ -107,54 +107,6 @@ export type PluginType = `${PluginKind}`
 export type PluginHookEnablement = boolean | (() => boolean)
 
 /**
- * 插件初始化及 Hook 执行指标
- */
-export interface PluginExecutionMetrics {
-  /**
-   * 插件初始化耗时，单位为毫秒
-   */
-  initializationDurationMs?: number
-  /**
-   * 插件初始化是否失败
-   */
-  initializationFailed?: boolean
-  /**
-   * 各 Hook 最近的执行耗时，单位为毫秒
-   */
-  hookDurationsMs: Record<string, number[]>
-  /**
-   * 各 Hook 执行失败次数
-   */
-  hookErrorCounts: Record<string, number>
-}
-
-/**
- * 对外提供的只读插件调试快照
- */
-export interface PluginDiagnostics {
-  /**
-   * 插件 ID
-   */
-  id: string
-  /**
-   * 插件 key
-   */
-  key: string
-  /**
-   * 插件入口路径
-   */
-  path: string
-  /**
-   * 插件类型
-   */
-  type: PluginType
-  /**
-   * 插件执行指标快照
-   */
-  metrics: PluginExecutionMetrics
-}
-
-/**
  * 提供给插件代码的只读插件元数据
  */
 export interface PluginMetadata {

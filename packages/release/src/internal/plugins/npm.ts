@@ -1,4 +1,6 @@
-import { chalk, getNpmUser, logger, normalizeArgs, run } from '@eljs/utils'
+import { normalizeArgs, run } from '@eljs/utils/cp'
+import { chalk, logger } from '@eljs/utils/logger'
+import { getNpmUser } from '@eljs/utils/npm'
 import { definePlugin } from '../../define'
 import { AppError, ReleasePublishError } from '../../utils'
 import { mapWithConcurrency } from '../concurrency'
@@ -42,7 +44,9 @@ export default definePlugin(context => {
           })
 
       await mapWithConcurrency(
-        context.appData.validPkgNames,
+        context.appData.workspacePackages
+          .filter(({ manifest }) => !manifest.private)
+          .map(({ manifest }) => manifest.name),
         context.config.npm.networkConcurrency,
         checkPackageOwner,
       )

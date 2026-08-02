@@ -64,6 +64,9 @@ export interface ReleasePluginCapabilities {
   readonly config: ResolvedConfig
   /**
    * 当前发布应用数据
+   *
+   * @remarks
+   * 插件初始化及 `modifyAppData` Hook 执行期间不可读取；Hook 应使用其 `memo` 入参
    */
   readonly appData: AppData
   /**

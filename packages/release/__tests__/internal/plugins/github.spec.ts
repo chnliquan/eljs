@@ -14,7 +14,12 @@ import {
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-import { getGitUrl, getGitUrlSync, gitUrlAnalysis, logger } from '@eljs/utils'
+import {
+  getGitUrl,
+  getGitUrlSync,
+  logger,
+  parseGitRemoteUrl,
+} from '@eljs/utils'
 import newGithubReleaseUrl from 'new-github-release-url'
 import open from 'open'
 
@@ -43,7 +48,11 @@ interface GitHubTestApi {
   onCheck: MockedFunction<(handler: () => Promise<void>) => void>
   config: Config
   appData: {
-    validPkgNames: string[]
+    workspacePackages: Array<{
+      rootPath: string
+      manifestPath: string
+      manifest: { name: string; version: string; private?: boolean }
+    }>
   }
   cwd: string
 }
@@ -60,13 +69,15 @@ type OnReleaseHandler = (args: {
 vi.mock('@eljs/utils', () => ({
   getGitUrl: vi.fn(),
   getGitUrlSync: vi.fn(),
-  gitUrlAnalysis: vi.fn(),
+  parseGitRemoteUrl: vi.fn(),
   logger: {
     info: vi.fn(),
     ready: vi.fn(),
     warn: vi.fn(),
   },
 }))
+vi.mock('@eljs/utils/git', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
 
 vi.mock('new-github-release-url', () => ({ default: vi.fn() }))
 vi.mock('open')
@@ -90,7 +101,13 @@ describe('GitHub 插件测试', () => {
         },
       } as Config,
       appData: {
-        validPkgNames: ['it-package'],
+        workspacePackages: [
+          {
+            manifest: { name: 'it-package', version: '1.0.0' },
+            manifestPath: '/it/package.json',
+            rootPath: '/it',
+          },
+        ],
       },
       cwd: '/it/project',
     }
@@ -104,9 +121,11 @@ describe('GitHub 插件测试', () => {
     ;(getGitUrl as MockedFunction<typeof getGitUrl>).mockResolvedValue(
       'https://github.com/user/repo.git',
     )
-    ;(gitUrlAnalysis as MockedFunction<typeof gitUrlAnalysis>).mockReturnValue({
+    ;(
+      parseGitRemoteUrl as MockedFunction<typeof parseGitRemoteUrl>
+    ).mockReturnValue({
       href: 'https://github.com/user/repo',
-    } as ReturnType<typeof gitUrlAnalysis>)
+    } as ReturnType<typeof parseGitRemoteUrl>)
     ;(
       newGithubReleaseUrl as MockedFunction<typeof newGithubReleaseUrl>
     ).mockReturnValue('https://github.com/user/repo/releases/new?tag=v1.1.0')
@@ -152,10 +171,10 @@ describe('GitHub 插件测试', () => {
         'https://gitlab.com/user/repo.git',
       )
       ;(
-        gitUrlAnalysis as MockedFunction<typeof gitUrlAnalysis>
+        parseGitRemoteUrl as MockedFunction<typeof parseGitRemoteUrl>
       ).mockReturnValue({
         href: 'https://gitlab.com/user/repo',
-      } as ReturnType<typeof gitUrlAnalysis>)
+      } as ReturnType<typeof parseGitRemoteUrl>)
 
       githubPlugin(mockContext as unknown as ReleasePluginContext)
       const describeCall = mockContext.describe.mock.calls[0][0]
@@ -169,10 +188,10 @@ describe('GitHub 插件测试', () => {
         'https://evilgithub.com/user/repo.git',
       )
       ;(
-        gitUrlAnalysis as MockedFunction<typeof gitUrlAnalysis>
+        parseGitRemoteUrl as MockedFunction<typeof parseGitRemoteUrl>
       ).mockReturnValue({
         href: 'https://evilgithub.com/user/repo',
-      } as ReturnType<typeof gitUrlAnalysis>)
+      } as ReturnType<typeof parseGitRemoteUrl>)
 
       githubPlugin(mockContext as unknown as ReleasePluginContext)
       const describeCall = mockContext.describe.mock.calls[0][0]
@@ -185,10 +204,10 @@ describe('GitHub 插件测试', () => {
         'https://github.corp.example.com/user/repo.git',
       )
       ;(
-        gitUrlAnalysis as MockedFunction<typeof gitUrlAnalysis>
+        parseGitRemoteUrl as MockedFunction<typeof parseGitRemoteUrl>
       ).mockReturnValue({
         href: 'https://github.corp.example.com/user/repo',
-      } as ReturnType<typeof gitUrlAnalysis>)
+      } as ReturnType<typeof parseGitRemoteUrl>)
 
       githubPlugin(mockContext as unknown as ReleasePluginContext)
       const describeCall = mockContext.describe.mock.calls[0][0]
@@ -247,7 +266,18 @@ describe('GitHub 插件测试', () => {
 
     it('独立标签模式应该为每个可发布包准备对应的发布页面', async () => {
       mockContext.config.git!.independent = true
-      mockContext.appData.validPkgNames = ['core', 'app']
+      mockContext.appData.workspacePackages = [
+        {
+          manifest: { name: 'core', version: '1.0.0' },
+          manifestPath: '/it/core/package.json',
+          rootPath: '/it/core',
+        },
+        {
+          manifest: { name: 'app', version: '1.0.0' },
+          manifestPath: '/it/app/package.json',
+          rootPath: '/it/app',
+        },
+      ]
 
       await onReleaseHandler({
         version: '1.1.0',
@@ -332,7 +362,7 @@ describe('GitHub 插件测试', () => {
 
     it('当无法解析仓库 URL 时应该跳过', async () => {
       ;(
-        gitUrlAnalysis as MockedFunction<typeof gitUrlAnalysis>
+        parseGitRemoteUrl as MockedFunction<typeof parseGitRemoteUrl>
       ).mockReturnValue(null)
 
       const versionInfo = {
@@ -541,10 +571,10 @@ describe('GitHub 插件测试', () => {
     it('企业 GitHub 应该使用 /api/v3 端点', async () => {
       process.env.RELEASE_TEST_GITHUB_TOKEN = 'secret-token'
       ;(
-        gitUrlAnalysis as MockedFunction<typeof gitUrlAnalysis>
+        parseGitRemoteUrl as MockedFunction<typeof parseGitRemoteUrl>
       ).mockReturnValue({
         href: 'https://github.corp.example.com/team/repo',
-      } as ReturnType<typeof gitUrlAnalysis>)
+      } as ReturnType<typeof parseGitRemoteUrl>)
       const fetchMock = vi
         .fn<typeof fetch>()
         .mockResolvedValue(new Response('{}', { status: 200 }))
@@ -602,7 +632,7 @@ describe('GitHub 插件测试', () => {
       })
 
       expect(getGitUrl).toHaveBeenCalled()
-      expect(gitUrlAnalysis).toHaveBeenCalled()
+      expect(parseGitRemoteUrl).toHaveBeenCalled()
       expect(newGithubReleaseUrl).toHaveBeenCalled()
       expect(open).toHaveBeenCalled()
     })

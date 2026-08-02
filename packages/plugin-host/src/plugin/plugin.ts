@@ -1,6 +1,6 @@
-import { isPathExistsSync, readJsonSync } from '@eljs/utils/file'
+import { pathExistsSync, readJsonSync } from '@eljs/utils/file'
 import { findUp } from '@eljs/utils/module'
-import { winPath } from '@eljs/utils/path'
+import { toPosixPath } from '@eljs/utils/path'
 import { camelCase } from '@eljs/utils/string'
 import type { PackageJson } from '@eljs/utils/types'
 import { createHash } from 'node:crypto'
@@ -18,8 +18,6 @@ import { PluginHostError, PluginHostErrorCode } from '../errors'
 import { SUPPORTED_PLUGIN_EXTENSIONS } from './plugin-formats'
 import { loadPluginInitializer } from './plugin-loader'
 import type {
-  PluginDiagnostics,
-  PluginExecutionMetrics,
   PluginHookEnablement,
   PluginInitializer,
   PluginMetadata,
@@ -51,13 +49,6 @@ export class Plugin {
    * 插件 key 的内部可变值
    */
   private _key: string
-  /**
-   * 插件执行诊断的内部可变值
-   */
-  private readonly _metrics: PluginExecutionMetrics = {
-    hookDurationsMs: Object.create(null),
-    hookErrorCounts: Object.create(null),
-  }
   /**
    * 插件 Hook 启用条件的内部可变值
    */
@@ -109,16 +100,16 @@ export class Plugin {
     }
 
     const cwd = resolve(options.cwd)
-    this.path = winPath(resolve(cwd, options.path))
+    this.path = toPosixPath(resolve(cwd, options.path))
     this.type = options.type
-    this._cwd = winPath(cwd)
+    this._cwd = toPosixPath(cwd)
     this.constructorOptions = Object.freeze({
       ...options,
       cwd: this._cwd,
       path: this.path,
     })
 
-    if (!isPathExistsSync(this.path)) {
+    if (!pathExistsSync(this.path)) {
       throw new PluginHostError(
         PluginHostErrorCode.InvalidPluginPath,
         `Invalid \`${this.type}\` in ${this.path}, could not be found.`,
@@ -150,8 +141,8 @@ export class Plugin {
       pkg = readJsonSync(pkgJsonPath)
       isPkgEntry =
         typeof pkg.name === 'string' &&
-        winPath(join(dirname(pkgJsonPath), pkg.main || 'index.js')) ===
-          winPath(this.path)
+        toPosixPath(join(dirname(pkgJsonPath), pkg.main || 'index.js')) ===
+          toPosixPath(this.path)
     }
 
     this.id = this._getId(pkg.name as string, pkgJsonPath, isPkgEntry)
@@ -220,48 +211,6 @@ export class Plugin {
   }
 
   /**
-   * 记录插件初始化耗时和结果
-   *
-   * @param durationMs - 初始化耗时，单位为毫秒
-   * @param failed - 初始化是否失败
-   *
-   * @internal
-   */
-  public recordInitialization(durationMs: number, failed: boolean): void {
-    this._metrics.initializationDurationMs = durationMs
-    this._metrics.initializationFailed = failed || undefined
-  }
-
-  /**
-   * 记录一次 Hook 执行结果
-   *
-   * @param key - Hook key
-   * @param durationMs - 执行耗时，单位为毫秒
-   * @param failed - 执行是否失败
-   * @param sampleLimit - 保留的最近耗时样本数量
-   *
-   * @internal
-   */
-  public recordHookExecution(
-    key: string,
-    durationMs: number,
-    failed: boolean,
-    sampleLimit: number,
-  ): void {
-    const samples = (this._metrics.hookDurationsMs[key] ||= [])
-    samples.push(durationMs)
-
-    if (samples.length > sampleLimit) {
-      samples.splice(0, samples.length - sampleLimit)
-    }
-
-    if (failed) {
-      this._metrics.hookErrorCounts[key] =
-        (this._metrics.hookErrorCounts[key] || 0) + 1
-    }
-  }
-
-  /**
    * 创建只读插件元数据快照
    *
    * @returns 与插件内部状态隔离的元数据
@@ -273,27 +222,6 @@ export class Plugin {
       path: this.path,
       type: this.type,
     })
-  }
-
-  /**
-   * 创建插件调试信息快照
-   *
-   * @returns 与内部可变数据隔离的诊断信息
-   */
-  public getDiagnostics(): PluginDiagnostics {
-    return {
-      ...this.getMetadata(),
-      metrics: {
-        initializationDurationMs: this._metrics.initializationDurationMs,
-        initializationFailed: this._metrics.initializationFailed,
-        hookDurationsMs: Object.fromEntries(
-          Object.entries(this._metrics.hookDurationsMs).map(
-            ([key, samples]) => [key, [...samples]],
-          ),
-        ),
-        hookErrorCounts: { ...this._metrics.hookErrorCounts },
-      },
-    }
   }
 
   /**
@@ -310,7 +238,7 @@ export class Plugin {
     if (isPkgEntry) {
       id = pkgName
     } else {
-      const relativePath = winPath(relative(this._cwd, this.path))
+      const relativePath = toPosixPath(relative(this._cwd, this.path))
       const isInsideCwd =
         relativePath !== '' &&
         relativePath !== '..' &&
@@ -320,9 +248,9 @@ export class Plugin {
       if (isInsideCwd) {
         id = `./${relativePath}`
       } else if (pkgPath && pkgName) {
-        id = winPath(join(pkgName, relative(dirname(pkgPath), this.path)))
+        id = toPosixPath(join(pkgName, relative(dirname(pkgPath), this.path)))
       } else {
-        id = winPath(this.path)
+        id = toPosixPath(this.path)
       }
     }
 

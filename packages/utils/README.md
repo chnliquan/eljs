@@ -114,9 +114,9 @@ console.log(result.stdout)
 
 ## API 命名迁移
 
-为使函数名直接表达行为，新代码应使用下列名称。旧名称仍保留为废弃兼容别名，本版本不会立即移除：
+为使函数名直接表达行为，原兼容名称已经移除。升级旧代码时使用下列替代关系：
 
-| 推荐名称                    | 兼容旧名称              |
+| 当前名称                    | 已移除名称              |
 | --------------------------- | ----------------------- |
 | `createTempDir`             | `tmpdir`                |
 | `createTempDirSync`         | `tmpdirSync`            |
@@ -134,10 +134,9 @@ console.log(result.stdout)
 | `parsePackageSpecifier`     | `pkgNameAnalysis`       |
 | `findExistingPath`          | `tryPaths`              |
 | `getCallerDirectory`        | `extractCallDir`        |
-| `getWorkspacePackageRoots`  | `getWorkspaces`         |
 | `toPosixPath`               | `winPath`               |
 
-兼容别名会委托给同一个实现；其中 `tmpdirSync()` 已修正为真正的同步返回值。升级时若旧代码曾对它使用 `await`，删除 `await` 即可。
+`createTempDirSync()` 是同步 API；若旧代码曾对 `tmpdirSync()` 使用 `await`，迁移时同时删除 `await`。
 
 ### 有界下载与流式解压
 

@@ -1,4 +1,3 @@
-import * as eljsUtils from '@eljs/utils'
 import * as cliUtils from '@eljs/utils/cli'
 import * as fileUtils from '@eljs/utils/file'
 import * as guardUtils from '@eljs/utils/guards'
@@ -65,7 +64,12 @@ const mockedEljs = {
   ...vi.mocked(loggerUtils, { deep: true }),
   ...vi.mocked(moduleUtils, { deep: true }),
   ...vi.mocked(pathUtils, { deep: true }),
-} as unknown as Mocked<typeof eljsUtils>
+} as unknown as Mocked<typeof cliUtils> &
+  Mocked<typeof fileUtils> &
+  Mocked<typeof guardUtils> &
+  Mocked<typeof loggerUtils> &
+  Mocked<typeof moduleUtils> &
+  Mocked<typeof pathUtils>
 const MockedDownload = TemplateDownloader as MockedClass<
   typeof TemplateDownloader
 >
@@ -89,12 +93,12 @@ describe('ProjectCreator 类完整测试', () => {
 
     // Setup default mocks
     mockedEljs.createDebugger.mockReturnValue(vi.fn())
-    mockedEljs.isPathExists.mockResolvedValue(false)
+    mockedEljs.pathExists.mockResolvedValue(false)
     mockedEljs.isDirectory.mockResolvedValue(true)
     mockedEljs.mkdir.mockResolvedValue(undefined)
     mockedEljs.move.mockResolvedValue(undefined)
     mockedEljs.remove.mockResolvedValue(true)
-    mockedEljs.tryPaths.mockResolvedValue('/mock/config')
+    mockedEljs.findExistingPath.mockResolvedValue('/mock/config')
     mockedEljs.findUp.mockResolvedValue('/mock/template/root')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(mockedEljs.resolve as any).sync = vi
@@ -310,7 +314,7 @@ describe('ProjectCreator 类完整测试', () => {
     })
 
     it('应该在 force 模式下备份并在成功后删除原目录', async () => {
-      mockedEljs.isPathExists.mockResolvedValue(true)
+      mockedEljs.pathExists.mockResolvedValue(true)
 
       const create = new ProjectCreator({
         template: 'test-template',
@@ -332,7 +336,7 @@ describe('ProjectCreator 类完整测试', () => {
     })
 
     it('备份日志失败时仍然执行可恢复覆盖', async () => {
-      mockedEljs.isPathExists.mockResolvedValue(true)
+      mockedEljs.pathExists.mockResolvedValue(true)
       loggerMocks.logger.event.mockImplementationOnce(() => {
         throw new Error('Logger failed')
       })
@@ -351,7 +355,7 @@ describe('ProjectCreator 类完整测试', () => {
     })
 
     it('用户交互选择 merge 时也应该先备份原目录', async () => {
-      mockedEljs.isPathExists.mockResolvedValue(true)
+      mockedEljs.pathExists.mockResolvedValue(true)
       mockedEljs.prompts.mockResolvedValue({
         action: 'merge',
         confirmed: true,
@@ -404,7 +408,7 @@ describe('ProjectCreator 类完整测试', () => {
     )
 
     it('应该在用户选择 cancel 时提前返回', async () => {
-      mockedEljs.isPathExists.mockResolvedValue(true)
+      mockedEljs.pathExists.mockResolvedValue(true)
       mockedEljs.prompts.mockResolvedValue({
         action: false,
         confirmed: true,
@@ -417,8 +421,8 @@ describe('ProjectCreator 类完整测试', () => {
     })
 
     it('应该在找不到配置文件和生成器文件时抛出错误', async () => {
-      mockedEljs.tryPaths.mockResolvedValue(undefined)
-      mockedEljs.isPathExists.mockResolvedValue(true)
+      mockedEljs.findExistingPath.mockResolvedValue(undefined)
+      mockedEljs.pathExists.mockResolvedValue(true)
 
       const create = new ProjectCreator({
         template: 'test-template',
@@ -433,7 +437,7 @@ describe('ProjectCreator 类完整测试', () => {
     })
 
     it('应该在覆盖生成失败时恢复原目录', async () => {
-      mockedEljs.isPathExists.mockResolvedValue(true)
+      mockedEljs.pathExists.mockResolvedValue(true)
       MockedRunner.prototype.run.mockRejectedValue(new Error('Generate failed'))
 
       const create = new ProjectCreator({
@@ -455,7 +459,7 @@ describe('ProjectCreator 类完整测试', () => {
     })
 
     it('提交锁状态失败时应该保留备份并恢复原目录', async () => {
-      mockedEljs.isPathExists.mockResolvedValue(true)
+      mockedEljs.pathExists.mockResolvedValue(true)
       targetLockMocks.updateTargetLockBackup
         .mockResolvedValueOnce(undefined)
         .mockRejectedValueOnce(new Error('Lock update failed'))
@@ -480,7 +484,7 @@ describe('ProjectCreator 类完整测试', () => {
 
     it('备份移动失败但原目标仍在时不应该删除原目标', async () => {
       const moveError = new Error('Backup move failed')
-      mockedEljs.isPathExists
+      mockedEljs.pathExists
         .mockResolvedValueOnce(true)
         .mockResolvedValueOnce(false)
         .mockResolvedValueOnce(true)
@@ -503,7 +507,7 @@ describe('ProjectCreator 类完整测试', () => {
     })
 
     it('应该清理生成失败的新目标目录', async () => {
-      mockedEljs.isPathExists
+      mockedEljs.pathExists
         .mockResolvedValueOnce(false)
         .mockResolvedValueOnce(true)
         .mockResolvedValue(false)
@@ -516,7 +520,7 @@ describe('ProjectCreator 类完整测试', () => {
     })
 
     it('应该创建 CreateRunner 实例并执行', async () => {
-      mockedEljs.tryPaths
+      mockedEljs.findExistingPath
         .mockResolvedValueOnce('/mock/downloaded/template/create.config.ts')
         .mockResolvedValueOnce('/mock/downloaded/template/generators/index.ts')
 
@@ -607,7 +611,7 @@ describe('ProjectCreator 类完整测试', () => {
         '/node_modules/template/index.js',
       )
       mockedEljs.findUp.mockResolvedValue('/node_modules/template')
-      mockedEljs.isPathExists.mockImplementation(async pathInput => {
+      mockedEljs.pathExists.mockImplementation(async pathInput => {
         if (
           typeof pathInput === 'string' &&
           pathInput.includes('package.json')
@@ -699,7 +703,7 @@ describe('ProjectCreator 类完整测试', () => {
     })
 
     it('应该在非本地模板时清理下载的文件', async () => {
-      mockedEljs.isPathExists
+      mockedEljs.pathExists
         .mockResolvedValueOnce(false) // target dir
         .mockResolvedValueOnce(true) // template exists for cleanup
 
@@ -712,7 +716,7 @@ describe('ProjectCreator 类完整测试', () => {
     })
 
     it('应该清理 Git 下载器拥有的父级临时目录', async () => {
-      mockedEljs.isPathExists
+      mockedEljs.pathExists
         .mockResolvedValueOnce(false)
         .mockResolvedValueOnce(true)
 
@@ -732,7 +736,7 @@ describe('ProjectCreator 类完整测试', () => {
       MockedRunner.prototype.run.mockRejectedValue(
         new Error('CreateRunner failed'),
       )
-      mockedEljs.isPathExists
+      mockedEljs.pathExists
         .mockResolvedValueOnce(false) // target dir
         .mockResolvedValueOnce(true) // partially generated target
         .mockResolvedValueOnce(true) // template exists for cleanup
@@ -751,7 +755,7 @@ describe('ProjectCreator 类完整测试', () => {
       const generationError = new Error('CreateRunner failed')
       const cleanupError = new Error('Cleanup failed')
       MockedRunner.prototype.run.mockRejectedValue(generationError)
-      mockedEljs.isPathExists
+      mockedEljs.pathExists
         .mockResolvedValueOnce(false)
         .mockResolvedValueOnce(true)
         .mockResolvedValueOnce(true)

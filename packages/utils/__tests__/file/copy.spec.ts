@@ -23,8 +23,6 @@ import {
   copyFileSync,
   copyTemplate,
   copyTemplateSync,
-  copyTpl,
-  copyTplSync,
   type CopyFileOptions,
 } from '../../src/file/copy'
 
@@ -206,7 +204,7 @@ describe('文件复制工具 - Mock 测试', () => {
     })
   })
 
-  describe('copyTpl 模板复制', () => {
+  describe('copyTemplate 模板复制', () => {
     it('新名称应该复制并渲染模板', async () => {
       await copyTemplate('/template.tpl', '/output.txt.tpl', { name: 'new' })
 
@@ -219,7 +217,7 @@ describe('文件复制工具 - Mock 测试', () => {
     it('应该读取模板并渲染内容', async () => {
       const data = { name: 'World', project: 'Test' }
 
-      await copyTpl('/template.tpl', '/output.txt.tpl', data)
+      await copyTemplate('/template.tpl', '/output.txt.tpl', data)
 
       expect(mockReadFile).toHaveBeenCalledWith('/template.tpl')
       expect(mockRenderTemplate).toHaveBeenCalledWith(
@@ -236,7 +234,7 @@ describe('文件复制工具 - Mock 测试', () => {
     it('应该处理目标文件名中的模板', async () => {
       const data = { filename: 'dynamic' }
 
-      await copyTpl('/source.tpl', '/{{filename}}-result.txt.tpl', data)
+      await copyTemplate('/source.tpl', '/{{filename}}-result.txt.tpl', data)
 
       // 第一次调用：渲染内容
       expect(mockRenderTemplate).toHaveBeenNthCalledWith(
@@ -258,7 +256,7 @@ describe('文件复制工具 - Mock 测试', () => {
       const renderOptions = { type: 'ejs' as const }
       const options: CopyFileOptions = { renderOptions }
 
-      await copyTpl('/template.tpl', '/output.txt', {}, options)
+      await copyTemplate('/template.tpl', '/output.txt', {}, options)
 
       expect(mockRenderTemplate).toHaveBeenCalledWith(
         'Template {{name}} content',
@@ -271,7 +269,7 @@ describe('文件复制工具 - Mock 测试', () => {
       const mockConsoleLog = vi.spyOn(console, 'log')
       const options: CopyFileOptions = { basedir: '/project' }
 
-      await copyTpl('/template.tpl', '/project/output.txt', {}, options)
+      await copyTemplate('/template.tpl', '/project/output.txt', {}, options)
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
         expect.stringMatching(/Write:.*output\.txt/),
@@ -279,7 +277,7 @@ describe('文件复制工具 - Mock 测试', () => {
     })
   })
 
-  describe('copyTplSync 同步模板复制', () => {
+  describe('copyTemplateSync 同步模板复制', () => {
     it('新名称应该同步复制并渲染模板', () => {
       copyTemplateSync('/template.tpl', '/output.txt.tpl', { name: 'new' })
 
@@ -292,7 +290,7 @@ describe('文件复制工具 - Mock 测试', () => {
     it('应该同步读取和渲染模板', () => {
       const data = { name: 'SyncTest' }
 
-      copyTplSync('/sync-template.tpl', '/sync-output.txt.tpl', data)
+      copyTemplateSync('/sync-template.tpl', '/sync-output.txt.tpl', data)
 
       expect(mockReadFileSync).toHaveBeenCalledWith('/sync-template.tpl')
       expect(mockRenderTemplate).toHaveBeenCalledWith(
@@ -332,9 +330,9 @@ describe('文件复制工具 - Mock 测试', () => {
 
       await copyDirectory('/source', '/target', { name: 'test' })
 
-      // normal.txt 使用 copyFile，template.tpl 使用 copyTpl
+      // normal.txt 使用 copyFile，template.tpl 使用 copyTemplate
       expect(mockIsDirectory).toHaveBeenCalledTimes(2)
-      expect(mockReadFile).toHaveBeenCalled() // copyTpl 调用
+      expect(mockReadFile).toHaveBeenCalled() // copyTemplate 调用
     })
 
     it('应该跳过目录', async () => {
@@ -440,12 +438,12 @@ describe('文件复制工具 - Mock 测试', () => {
       )
     })
 
-    it('应该在 copyTpl 读取失败时抛出错误', async () => {
+    it('应该在 copyTemplate 读取失败时抛出错误', async () => {
       mockReadFile.mockRejectedValue(new Error('Read template failed'))
 
-      await expect(copyTpl('/template.tpl', '/output.txt', {})).rejects.toThrow(
-        /Copy template .* failed/,
-      )
+      await expect(
+        copyTemplate('/template.tpl', '/output.txt', {}),
+      ).rejects.toThrow(/Copy template .* failed/)
     })
 
     it('应该在 copyDirectory glob 失败时抛出错误', async () => {
@@ -503,7 +501,11 @@ describe('文件复制工具 - Mock 测试', () => {
         version: '2.0.0',
       }
 
-      await copyTpl('/complex.tpl', '/{{project}}-v{{version}}.txt.tpl', data)
+      await copyTemplate(
+        '/complex.tpl',
+        '/{{project}}-v{{version}}.txt.tpl',
+        data,
+      )
 
       expect(mockReadFile).toHaveBeenCalledWith('/complex.tpl')
       expect(mockRenderTemplate).toHaveBeenNthCalledWith(
@@ -543,7 +545,7 @@ describe('文件复制工具 - Mock 测试', () => {
       // 应该检查每个文件是否为目录
       expect(mockIsDirectory).toHaveBeenCalledTimes(4)
 
-      // 模板文件应该调用 readFile（copyTpl 使用）
+      // 模板文件应该调用 readFile（copyTemplate 使用）
       expect(mockReadFile).toHaveBeenCalled()
     })
   })

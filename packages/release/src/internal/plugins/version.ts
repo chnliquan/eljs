@@ -1,11 +1,6 @@
-import {
-  chalk,
-  confirm,
-  createDebugger,
-  logger,
-  pascalCase,
-  prompts,
-} from '@eljs/utils'
+import { confirm, prompts } from '@eljs/utils/cli'
+import { chalk, createDebugger, logger } from '@eljs/utils/logger'
+import { pascalCase } from '@eljs/utils/string'
 import { EOL } from 'node:os'
 import semver, { type ReleaseType } from 'semver'
 
@@ -90,9 +85,12 @@ export default definePlugin(context => {
         )
       }
 
+      const publishablePackageNames = context.appData.workspacePackages
+        .filter(({ manifest }) => !manifest.private)
+        .map(({ manifest }) => manifest.name)
       const existingPkgNames: string[] = []
       const versionChecks = await mapWithConcurrency(
-        context.appData.validPkgNames,
+        publishablePackageNames,
         context.config.npm.networkConcurrency,
         async pkgName => ({
           exists: await checkVersion(
@@ -105,17 +103,17 @@ export default definePlugin(context => {
         }),
       )
       const releaseTagNames = context.config.git.independent
-        ? context.appData.validPkgNames.map(pkgName => `${pkgName}@${version}`)
+        ? publishablePackageNames.map(pkgName => `${pkgName}@${version}`)
         : [`v${version}`]
       const workspaceVersions = new Map(
-        context.appData.pkgNames.map((pkgName, index) => [
-          pkgName,
-          context.appData.pkgs[index]?.version,
+        context.appData.workspacePackages.map(({ manifest }) => [
+          manifest.name,
+          manifest.version,
         ]),
       )
       const shouldCheckReleaseTags =
         versionChecks.some(({ exists }) => exists) ||
-        context.appData.validPkgNames.every(
+        publishablePackageNames.every(
           pkgName => workspaceVersions.get(pkgName) === version,
         )
       const tagChecks = new Map(
@@ -173,7 +171,7 @@ export default definePlugin(context => {
       }
 
       preparedVersionPlan = await prepareVersionPlan(context.appData, version)
-      context.appData.pkgs = preparedVersionPlan.pkgs
+      context.appData.workspacePackages = preparedVersionPlan.workspacePackages
       context.appData.projectPkg = preparedVersionPlan.projectPkg
     },
   )
@@ -184,9 +182,11 @@ export default definePlugin(context => {
         ? preparedVersionPlan
         : await prepareVersionPlan(context.appData, version)
     preparedVersionPlan = plan
-    context.appData.pkgs = plan.pkgs
+    context.appData.workspacePackages = plan.workspacePackages
     context.appData.projectPkg = plan.projectPkg
-    debug?.(context.appData.pkgNames)
+    debug?.(
+      context.appData.workspacePackages.map(({ manifest }) => manifest.name),
+    )
 
     if (!context.config.dryRun) {
       await writeVersionPlan(plan)
@@ -229,7 +229,8 @@ export default definePlugin(context => {
           rollbackErrors.push(error)
         }
 
-        context.appData.pkgs = preparedVersionPlan.originalPkgs
+        context.appData.workspacePackages =
+          preparedVersionPlan.originalWorkspacePackages
         context.appData.projectPkg = preparedVersionPlan.originalProjectPkg
       }
 
@@ -251,7 +252,10 @@ async function getIncrementVersion(
   releaseTypeOrVersion?: string,
 ): Promise<string> {
   const { prerelease, prereleaseId, canary } = context.config.npm
-  const { registry, projectPkg, validPkgNames, pkgs } = context.appData
+  const { registry, projectPkg, workspacePackages } = context.appData
+  const publishablePackageNames = workspacePackages
+    .filter(({ manifest }) => !manifest.private)
+    .map(({ manifest }) => manifest.name)
 
   context.step('Incrementing version ...')
 
@@ -264,8 +268,8 @@ async function getIncrementVersion(
 
   const localVersion = getMaxVersion(
     projectPkg.version,
-    ...pkgs
-      .map(pkg => pkg.version)
+    ...workspacePackages
+      .map(({ manifest }) => manifest.version)
       .filter((version): version is string => Boolean(version)),
   )
   const remoteQueryOptions = {
@@ -275,13 +279,13 @@ async function getIncrementVersion(
   const remoteDistTags =
     prereleaseId && !['alpha', 'beta', 'rc'].includes(prereleaseId)
       ? await getRemoteDistTag(
-          validPkgNames,
+          publishablePackageNames,
           remoteQueryOptions,
           ['latest', 'alpha', 'beta', 'rc', prereleaseId],
           context.config.npm.networkConcurrency,
         )
       : await getRemoteDistTag(
-          validPkgNames,
+          publishablePackageNames,
           remoteQueryOptions,
           undefined,
           context.config.npm.networkConcurrency,
@@ -531,9 +535,11 @@ async function confirmVersion(
   context: ReleasePluginContext,
   initialVersion: string,
 ): Promise<string> {
-  const { validPkgNames } = context.appData
+  const publishablePackageNames = context.appData.workspacePackages
+    .filter(({ manifest }) => !manifest.private)
+    .map(({ manifest }) => manifest.name)
 
-  if (!validPkgNames.length) {
+  if (!publishablePackageNames.length) {
     return initialVersion
   }
 
@@ -542,12 +548,12 @@ async function confirmVersion(
   while (true) {
     let confirmMessage: string
 
-    if (validPkgNames.length === 1) {
+    if (publishablePackageNames.length === 1) {
       confirmMessage = `Are you sure to bump version to ${chalk.cyan(version)}`
     } else {
       console.log(`The packages will be bumped are as follows:${EOL}`)
 
-      for (const pkgName of validPkgNames) {
+      for (const pkgName of publishablePackageNames) {
         console.log(` - ${chalk.cyan(`${pkgName}@${version}`)}`)
       }
 

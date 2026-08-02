@@ -20,13 +20,9 @@ import {
   clearCachedSudoPassword,
   findExecutable,
   findProcessId,
-  getExecutableCommand,
-  getPid,
   normalizeArgs,
-  parseCommand,
   parseCommandLine,
   run,
-  runCommand,
   runCommandLine,
   RunCommandOptions,
   sudo,
@@ -45,7 +41,6 @@ vi.mock('../../src/guards')
 vi.mock('../../src/cp/command', async importOriginal => ({
   ...(await importOriginal<typeof import('../../src/cp/command')>()),
   findExecutable: vi.fn(),
-  getExecutableCommand: vi.fn(),
 }))
 
 // 定义类型
@@ -71,7 +66,7 @@ describe('命令处理工具函数', () => {
   const mockExeca = execa as unknown as Mock
   const mockSpawn = cp.spawn as MockedFunction<typeof cp.spawn>
   const mockRead = read as MockedFunction<typeof read>
-  const mockIsPathExists = requiredModule0.isPathExists as MockedFunction<
+  const mockPathExists = requiredModule0.pathExists as MockedFunction<
     (path: string) => Promise<boolean>
   >
   const mockIsObject = requiredModule1.isObject as MockedFunction<
@@ -79,9 +74,6 @@ describe('命令处理工具函数', () => {
   >
   const mockIsArray = requiredModule1.isArray as MockedFunction<
     (value: unknown) => boolean
-  >
-  const mockGetExecutableCommand = getExecutableCommand as MockedFunction<
-    typeof getExecutableCommand
   >
   const mockFindExecutable = findExecutable as MockedFunction<
     typeof findExecutable
@@ -100,24 +92,24 @@ describe('命令处理工具函数', () => {
     )
   })
 
-  describe('parseCommand 解析命令', () => {
+  describe('parseCommandLine 解析命令', () => {
     it('应该解析带空格的简单命令', () => {
-      const result = parseCommand('npm install package')
+      const result = parseCommandLine('npm install package')
       expect(result).toEqual(['npm', 'install', 'package'])
     })
 
     it('应该处理多个空格', () => {
-      const result = parseCommand('npm    install     package')
+      const result = parseCommandLine('npm    install     package')
       expect(result).toEqual(['npm', 'install', 'package'])
     })
 
     it('应该处理转义空格', () => {
-      const result = parseCommand('echo hello\\\\ world test')
+      const result = parseCommandLine('echo hello\\\\ world test')
       expect(result).toEqual(['echo', 'hello\\ world', 'test'])
     })
 
     it('应该处理空字符串', () => {
-      const result = parseCommand('')
+      const result = parseCommandLine('')
       expect(result).toEqual([])
     })
 
@@ -130,17 +122,17 @@ describe('命令处理工具函数', () => {
     })
 
     it('应该处理单个命令', () => {
-      const result = parseCommand('ls')
+      const result = parseCommandLine('ls')
       expect(result).toEqual(['ls'])
     })
 
     it('应该修剪空白字符', () => {
-      const result = parseCommand('  npm install  ')
+      const result = parseCommandLine('  npm install  ')
       expect(result).toEqual(['npm', 'install'])
     })
 
     it('应该处理复杂的转义空格', () => {
-      const result = parseCommand('mv file\\\\ with\\\\ spaces destination')
+      const result = parseCommandLine('mv file\\\\ with\\\\ spaces destination')
       expect(result).toEqual(['mv', 'file\\ with\\ spaces', 'destination'])
     })
   })
@@ -229,7 +221,7 @@ describe('命令处理工具函数', () => {
     })
   })
 
-  describe('runCommand 运行命令字符串', () => {
+  describe('runCommandLine 运行命令字符串', () => {
     it('应该解析并运行命令字符串', () => {
       const mockProcess = { stdout: 'success' } as unknown as ReturnType<
         typeof execa
@@ -238,7 +230,7 @@ describe('命令处理工具函数', () => {
         mockProcess as unknown as ReturnType<typeof execa>,
       )
 
-      const result = runCommand('npm install package')
+      const result = runCommandLine('npm install package')
 
       expect(execa).toHaveBeenCalledWith(
         'npm',
@@ -257,7 +249,7 @@ describe('命令处理工具函数', () => {
       )
       const options: RunCommandOptions = { cwd: '/test' }
 
-      runCommand('ls -la', options)
+      runCommandLine('ls -la', options)
 
       expect(execa).toHaveBeenCalledWith('ls', ['-la'], options)
     })
@@ -279,47 +271,47 @@ describe('命令处理工具函数', () => {
     })
   })
 
-  describe('getExecutableCommand 获取可执行命令', () => {
+  describe('findExecutable 获取可执行命令', () => {
     beforeEach(() => {
       // Mock process.env.PATH
       process.env.PATH = '/usr/bin:/bin:/usr/local/bin'
       // For these tests, we'll manually set up the mock responses
-      mockGetExecutableCommand.mockRestore()
+      mockFindExecutable.mockRestore()
     })
 
     it('应该在 PATH 中找到可执行文件', async () => {
-      mockIsPathExists.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
-      mockGetExecutableCommand.mockResolvedValue('/bin/node')
+      mockPathExists.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+      mockFindExecutable.mockResolvedValue('/bin/node')
 
-      const result = await mockGetExecutableCommand('node')
+      const result = await mockFindExecutable('node')
 
       expect(result).toBe('/bin/node')
     })
 
     it('应该在未找到时返回 null', async () => {
-      mockIsPathExists.mockResolvedValue(false)
-      mockGetExecutableCommand.mockResolvedValue(null)
+      mockPathExists.mockResolvedValue(false)
+      mockFindExecutable.mockResolvedValue(null)
 
-      const result = await mockGetExecutableCommand('nonexistent')
+      const result = await mockFindExecutable('nonexistent')
 
       expect(result).toBeNull()
     })
 
     it('应该使用自定义目录', async () => {
-      mockIsPathExists.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
-      mockGetExecutableCommand.mockResolvedValue('/other/bin/test')
+      mockPathExists.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+      mockFindExecutable.mockResolvedValue('/other/bin/test')
 
-      const result = await mockGetExecutableCommand('test')
+      const result = await mockFindExecutable('test')
 
       expect(result).toBe('/other/bin/test')
     })
 
     it('应该处理空的 PATH', async () => {
       delete process.env.PATH
-      mockIsPathExists.mockResolvedValue(false)
-      mockGetExecutableCommand.mockResolvedValue(null)
+      mockPathExists.mockResolvedValue(false)
+      mockFindExecutable.mockResolvedValue(null)
 
-      const result = await mockGetExecutableCommand('test')
+      const result = await mockFindExecutable('test')
 
       expect(result).toBeNull()
     })
@@ -362,7 +354,7 @@ describe('命令处理工具函数', () => {
     })
   })
 
-  describe('getPid 获取进程 ID', () => {
+  describe('findProcessId 获取进程 ID', () => {
     it('新名称应该查找进程 ID', async () => {
       mockExeca.mockResolvedValue({
         stdout: '1234 node',
@@ -377,7 +369,7 @@ describe('命令处理工具函数', () => {
         stdout: mockStdout,
       } as unknown as ReturnType<typeof execa>)
 
-      const result = await getPid('node')
+      const result = await findProcessId('node')
 
       expect(result).toBe(1234)
     })
@@ -388,7 +380,7 @@ describe('命令处理工具函数', () => {
         stdout: mockStdout,
       } as unknown as ReturnType<typeof execa>)
 
-      const result = await getPid('node')
+      const result = await findProcessId('node')
 
       expect(result).toBe(5678)
     })
@@ -399,7 +391,7 @@ describe('命令处理工具函数', () => {
         stdout: mockStdout,
       } as unknown as ReturnType<typeof execa>)
 
-      const result = await getPid('node')
+      const result = await findProcessId('node')
 
       expect(result).toBeNull()
     })
@@ -410,7 +402,7 @@ describe('命令处理工具函数', () => {
         stdout: mockStdout,
       } as unknown as ReturnType<typeof execa>)
 
-      const result = await getPid('node')
+      const result = await findProcessId('node')
 
       expect(result).toBeNull()
     })
@@ -419,7 +411,7 @@ describe('命令处理工具函数', () => {
       const error = new Error('ps 命令失败')
       mockExeca.mockRejectedValue(error)
 
-      await expect(getPid('node')).rejects.toThrow('ps 命令失败')
+      await expect(findProcessId('node')).rejects.toThrow('ps 命令失败')
     })
 
     it('应该在 Windows 上解析 tasklist CSV 输出', async () => {
@@ -430,7 +422,7 @@ describe('命令处理工具函数', () => {
         stdout: '"node.exe","4321","Console","1","12,000 K"\r\n',
       } as unknown as ReturnType<typeof execa>)
 
-      await expect(getPid('node')).resolves.toBe(4321)
+      await expect(findProcessId('node')).resolves.toBe(4321)
       expect(execa).toHaveBeenCalledWith(
         'tasklist',
         ['/FO', 'CSV', '/NH'],
@@ -467,8 +459,8 @@ describe('命令处理工具函数', () => {
       }
       mockSpawn.mockReturnValue(mockChildProcess as unknown as ChildProcess)
 
-      // Mock getExecutableCommand directly
-      mockGetExecutableCommand.mockResolvedValue('sudo')
+      // Mock findExecutable directly
+      mockFindExecutable.mockResolvedValue('sudo')
       mockFindExecutable.mockResolvedValue('sudo')
     })
 
@@ -592,7 +584,7 @@ describe('命令处理工具函数', () => {
       // 重置 mock 以进行第二次调用
       vi.clearAllMocks()
       mockSpawn.mockReturnValue(mockChildProcess as unknown as ChildProcess)
-      mockGetExecutableCommand.mockResolvedValue('sudo')
+      mockFindExecutable.mockResolvedValue('sudo')
 
       // 第二次调用应该使用缓存的密码
       const secondResult = sudo(['ls'], options)

@@ -16,12 +16,6 @@ export interface ParsedPackageSpecifier {
 }
 
 /**
- * 解析后的 npm 包名
- * @deprecated 请改用 {@link ParsedPackageSpecifier}
- */
-export type ResolvedPkgName = ParsedPackageSpecifier
-
-/**
  * 解析 npm 包标识
  * @param specifier - 包名及可选版本
  * @returns 解析后的包名、版本、命名空间和非命名空间名称
@@ -54,14 +48,4 @@ export function parsePackageSpecifier(
       unscopedName: specifier,
     }
   }
-}
-
-/**
- * 解析 npm 包标识
- * @param name - 包名及可选版本
- * @returns 解析后的包名、版本、命名空间和非命名空间名称
- * @deprecated 请改用 {@link parsePackageSpecifier}
- */
-export function pkgNameAnalysis(name: string): ResolvedPkgName {
-  return parsePackageSpecifier(name)
 }

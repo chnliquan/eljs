@@ -35,16 +35,6 @@ export async function findProcessId(command: string): Promise<number | null> {
 }
 
 /**
- * 查找命令对应的进程 ID
- * @param command - 命令名称或可执行文件路径
- * @returns 首个匹配进程的 ID，未找到时返回 `null`
- * @deprecated 请改用 {@link findProcessId}
- */
-export function getPid(command: string): Promise<number | null> {
-  return findProcessId(command)
-}
-
-/**
  * 解析 Windows `tasklist` 的 CSV 输出
  * @param data - `tasklist` 标准输出
  * @param command - 要匹配的命令名称或路径

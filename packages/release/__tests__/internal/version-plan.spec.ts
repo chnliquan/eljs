@@ -1,4 +1,5 @@
-import { safeWriteJson, type PackageJson } from '@eljs/utils'
+import { writeJsonAtomic } from '@eljs/utils/file'
+import type { PackageJson } from '@eljs/utils/types'
 import {
   beforeEach,
   describe,
@@ -15,18 +16,20 @@ import {
 } from '../../src/internal/version-plan'
 import type { AppData } from '../../src/types'
 
-vi.mock('@eljs/utils', async importOriginal => {
-  const actual = await importOriginal<typeof import('@eljs/utils')>()
+vi.mock('@eljs/utils/file', async importOriginal => {
+  const actual = await importOriginal<typeof import('@eljs/utils/file')>()
   return {
     ...actual,
-    safeWriteJson: vi.fn(),
+    writeJsonAtomic: vi.fn(),
   }
 })
 
 describe('版本清单两阶段更新计划', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    ;(safeWriteJson as MockedFunction<typeof safeWriteJson>).mockResolvedValue()
+    ;(
+      writeJsonAtomic as MockedFunction<typeof writeJsonAtomic>
+    ).mockResolvedValue()
   })
 
   it('应该在内存中完成全部清单更新且不修改输入对象', async () => {
@@ -34,42 +37,48 @@ describe('版本清单两阶段更新计划', () => {
 
     const plan = await prepareVersionPlan(appData, '2.0.0')
 
-    expect(appData.pkgs[0].version).toBe('1.0.0')
-    expect(appData.pkgs[1].dependencies?.core).toBe('workspace:^')
-    expect(plan.pkgs[0].version).toBe('2.0.0')
-    expect(plan.pkgs[1].dependencies?.core).toBe('workspace:^')
+    expect(appData.workspacePackages[0].manifest.version).toBe('1.0.0')
+    expect(appData.workspacePackages[1].manifest.dependencies?.core).toBe(
+      'workspace:^',
+    )
+    expect(plan.workspacePackages[0].manifest.version).toBe('2.0.0')
+    expect(plan.workspacePackages[1].manifest.dependencies?.core).toBe(
+      'workspace:^',
+    )
     expect(plan.projectPkg.version).toBe('2.0.0')
-    expect(safeWriteJson).not.toHaveBeenCalled()
+    expect(writeJsonAtomic).not.toHaveBeenCalled()
   })
 
   it('任一清单校验失败时不应该修改输入对象或写入文件', async () => {
     const appData = createAppData()
-    appData.pkgs[1].dependencies = { core: 'workspace:invalid range' }
+    appData.workspacePackages[1].manifest.dependencies = {
+      core: 'workspace:invalid range',
+    }
 
     await expect(prepareVersionPlan(appData, '2.0.0')).rejects.toThrow(
       'Invalid workspace protocol',
     )
 
-    expect(appData.pkgs[0].version).toBe('1.0.0')
-    expect(appData.pkgs[1].version).toBe('1.0.0')
-    expect(safeWriteJson).not.toHaveBeenCalled()
+    expect(appData.workspacePackages[0].manifest.version).toBe('1.0.0')
+    expect(appData.workspacePackages[1].manifest.version).toBe('1.0.0')
+    expect(writeJsonAtomic).not.toHaveBeenCalled()
   })
 
   it('写入失败时应该恢复本次已经写入的清单', async () => {
     const plan = await prepareVersionPlan(createAppData(), '2.0.0')
-    ;(safeWriteJson as MockedFunction<typeof safeWriteJson>)
+    ;(writeJsonAtomic as MockedFunction<typeof writeJsonAtomic>)
       .mockResolvedValueOnce()
       .mockRejectedValueOnce(new Error('disk full'))
       .mockResolvedValueOnce()
 
     await expect(writeVersionPlan(plan)).rejects.toThrow('disk full')
 
-    expect(safeWriteJson).toHaveBeenNthCalledWith(
+    expect(writeJsonAtomic).toHaveBeenNthCalledWith(
       1,
       '/repo/core/package.json',
       expect.objectContaining({ version: '2.0.0' }),
     )
-    expect(safeWriteJson).toHaveBeenNthCalledWith(
+    expect(writeJsonAtomic).toHaveBeenNthCalledWith(
       3,
       '/repo/core/package.json',
       expect.objectContaining({ version: '1.0.0' }),
@@ -78,7 +87,7 @@ describe('版本清单两阶段更新计划', () => {
 
   it('写入和回滚同时失败时应该保留全部错误', async () => {
     const plan = await prepareVersionPlan(createAppData(), '2.0.0')
-    ;(safeWriteJson as MockedFunction<typeof safeWriteJson>)
+    ;(writeJsonAtomic as MockedFunction<typeof writeJsonAtomic>)
       .mockResolvedValueOnce()
       .mockRejectedValueOnce(new Error('disk full'))
       .mockRejectedValueOnce(new Error('rollback failed'))
@@ -94,16 +103,16 @@ describe('版本清单两阶段更新计划', () => {
 
     await rollbackVersionPlan(plan)
 
-    expect(safeWriteJson).toHaveBeenCalledTimes(3)
-    expect(safeWriteJson).toHaveBeenCalledWith(
+    expect(writeJsonAtomic).toHaveBeenCalledTimes(3)
+    expect(writeJsonAtomic).toHaveBeenCalledWith(
       '/repo/core/package.json',
       expect.objectContaining({ version: '1.0.0' }),
     )
-    expect(safeWriteJson).toHaveBeenCalledWith(
+    expect(writeJsonAtomic).toHaveBeenCalledWith(
       '/repo/app/package.json',
       expect.objectContaining({ version: '1.0.0' }),
     )
-    expect(safeWriteJson).toHaveBeenCalledWith(
+    expect(writeJsonAtomic).toHaveBeenCalledWith(
       '/repo/package.json',
       expect.objectContaining({ version: '1.0.0' }),
     )
@@ -122,19 +131,23 @@ function createAppData(): AppData {
     latestTag: null,
     packageManager: 'pnpm',
     packageManagerVariant: 'pnpm',
-    pkgJsonPaths: ['/repo/core/package.json', '/repo/app/package.json'],
-    pkgNames: ['core', 'app'],
-    pkgs: [
-      { name: 'core', version: '1.0.0' },
+    workspacePackages: [
       {
-        name: 'app',
-        version: '1.0.0',
-        dependencies: { core: 'workspace:^' },
+        manifest: { name: 'core', version: '1.0.0' },
+        manifestPath: '/repo/core/package.json',
+        rootPath: '/repo/core',
+      },
+      {
+        manifest: {
+          name: 'app',
+          version: '1.0.0',
+          dependencies: { core: 'workspace:^' },
+        },
+        manifestPath: '/repo/app/package.json',
+        rootPath: '/repo/app',
       },
     ],
     projectPkg,
     projectPkgJsonPath: '/repo/package.json',
-    validPkgNames: ['core', 'app'],
-    validPkgRootPaths: ['/repo/core', '/repo/app'],
   }
 }

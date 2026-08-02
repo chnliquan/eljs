@@ -1,10 +1,10 @@
 import {
-  downloadGitRepository,
+  cloneGitRepository,
   downloadNpmTarball,
   findUp,
   getNpmPackage,
   getNpmRequestConfig,
-  pkgNameAnalysis,
+  parsePackageSpecifier,
   readJson,
   remove,
   run,
@@ -39,12 +39,12 @@ vi.mock('@eljs/utils', () => ({
   chalk: {
     cyan: vi.fn((text: string) => text),
   },
-  downloadGitRepository: vi.fn(),
+  cloneGitRepository: vi.fn(),
   downloadNpmTarball: vi.fn(),
   findUp: vi.fn(),
   getNpmPackage: vi.fn(),
   getNpmRequestConfig: vi.fn(),
-  pkgNameAnalysis: vi.fn(),
+  parsePackageSpecifier: vi.fn(),
   readJson: vi.fn(),
   remove: vi.fn(),
   run: vi.fn(),
@@ -60,14 +60,14 @@ describe('TemplateDownloader 类测试', () => {
   const mockGetNpmRequestConfig = getNpmRequestConfig as MockedFunction<
     typeof getNpmRequestConfig
   >
-  const mockPkgNameAnalysis = pkgNameAnalysis as MockedFunction<
-    typeof pkgNameAnalysis
+  const mockParsePackageSpecifier = parsePackageSpecifier as MockedFunction<
+    typeof parsePackageSpecifier
   >
   const mockDownloadNpmTarball = downloadNpmTarball as MockedFunction<
     typeof downloadNpmTarball
   >
-  const mockDownloadGitRepository = downloadGitRepository as MockedFunction<
-    typeof downloadGitRepository
+  const mockDownloadGitRepository = cloneGitRepository as MockedFunction<
+    typeof cloneGitRepository
   >
   const mockFindUp = findUp as MockedFunction<typeof findUp>
   const mockReadJson = readJson as MockedFunction<typeof readJson>
@@ -107,7 +107,7 @@ describe('TemplateDownloader 类测试', () => {
     vi.mocked(path.dirname).mockReturnValue('/tmp/download')
 
     // Default successful mocks
-    mockPkgNameAnalysis.mockReturnValue({
+    mockParsePackageSpecifier.mockReturnValue({
       name: mockPackageName,
       version: mockVersion,
       scope: '',
@@ -207,7 +207,7 @@ describe('TemplateDownloader 类测试', () => {
         const result = await download.download()
 
         expect(result).toBe(mockDownloadPath)
-        expect(mockPkgNameAnalysis).toHaveBeenCalledWith(mockPackageName)
+        expect(mockParsePackageSpecifier).toHaveBeenCalledWith(mockPackageName)
         expect(mockGetNpmPackage).toHaveBeenCalledWith(mockPackageName, {
           cwd: mockCwd,
           version: mockVersion,
@@ -265,22 +265,21 @@ describe('TemplateDownloader 类测试', () => {
         )
       })
 
-      it('应该拒绝与固定摘要不一致的registry元数据', async () => {
+      it('应该优先使用固定摘要而不依赖registry元数据的算法', async () => {
         const download = new TemplateDownloader({
           type: 'npm',
           value: mockPackageName,
           integrity: 'sha512-trusted-integrity',
         })
 
-        await expect(download.download()).rejects.toMatchObject({
-          code: 'CREATE_TEMPLATE_DOWNLOAD_FAILED',
-          details: {
-            packageName: mockPackageName,
-            version: mockVersion,
-          },
-        })
-        expect(mockGetNpmRequestConfig).not.toHaveBeenCalled()
-        expect(mockDownloadNpmTarball).not.toHaveBeenCalled()
+        await download.download()
+
+        expect(mockDownloadNpmTarball).toHaveBeenCalledWith(
+          mockTarball,
+          expect.objectContaining({
+            integrity: 'sha512-trusted-integrity',
+          }),
+        )
       })
 
       it('应该把取消信号传递给npm元数据请求', async () => {
@@ -311,7 +310,7 @@ describe('TemplateDownloader 类测试', () => {
         const download = new TemplateDownloader(options)
 
         // Mock package name analysis for this specific package
-        mockPkgNameAnalysis.mockReturnValueOnce({
+        mockParsePackageSpecifier.mockReturnValueOnce({
           name: packageName,
           version: mockVersion,
           scope: '',
@@ -325,7 +324,7 @@ describe('TemplateDownloader 类测试', () => {
       })
 
       it('应该处理不带版本的包', async () => {
-        mockPkgNameAnalysis.mockReturnValue({
+        mockParsePackageSpecifier.mockReturnValue({
           name: mockPackageName,
           version: '1.0.0',
           scope: '',
@@ -369,7 +368,7 @@ describe('TemplateDownloader 类测试', () => {
           value: scopedPackage,
         }
 
-        mockPkgNameAnalysis.mockReturnValue({
+        mockParsePackageSpecifier.mockReturnValue({
           name: scopedPackage,
           version: mockVersion,
           scope: '@scope',
@@ -380,7 +379,7 @@ describe('TemplateDownloader 类测试', () => {
 
         await download.download()
 
-        expect(mockPkgNameAnalysis).toHaveBeenCalledWith(scopedPackage)
+        expect(mockParsePackageSpecifier).toHaveBeenCalledWith(scopedPackage)
         expect(mockGetNpmPackage).toHaveBeenCalledWith(scopedPackage, {
           cwd: undefined,
           version: mockVersion,
@@ -395,7 +394,7 @@ describe('TemplateDownloader 类测试', () => {
           value: packageWithVersion,
         }
 
-        mockPkgNameAnalysis.mockReturnValue({
+        mockParsePackageSpecifier.mockReturnValue({
           name: 'test-package',
           version: '2.0.0',
           scope: '',
@@ -691,7 +690,7 @@ describe('TemplateDownloader 类测试', () => {
       expect(result).toBe(mockDownloadPath)
 
       // Verify complete flow
-      expect(mockPkgNameAnalysis).toHaveBeenCalledWith(
+      expect(mockParsePackageSpecifier).toHaveBeenCalledWith(
         `${mockPackageName}@${mockVersion}`,
       )
       expect(mockGetNpmPackage).toHaveBeenCalledWith(mockPackageName, {

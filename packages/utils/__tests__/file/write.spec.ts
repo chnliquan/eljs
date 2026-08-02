@@ -16,10 +16,6 @@ import { EOL } from 'node:os'
 import * as path from 'node:path'
 
 import {
-  safeWriteFile,
-  safeWriteFileSync,
-  safeWriteJson,
-  safeWriteJsonSync,
   writeFile,
   writeFileAtomic,
   writeFileAtomicSync,
@@ -36,10 +32,10 @@ const requiredModule0 = vi.mocked(importedModule0, { deep: true })
 vi.mock('../../src/file/is')
 
 describe('文件写入工具', () => {
-  const mockIsPathExists = requiredModule0.pathExists as MockedFunction<
+  const mockPathExists = requiredModule0.pathExists as MockedFunction<
     (filePath: string) => Promise<boolean>
   >
-  const mockIsPathExistsSync = requiredModule0.pathExistsSync as MockedFunction<
+  const mockPathExistsSync = requiredModule0.pathExistsSync as MockedFunction<
     (filePath: string) => boolean
   >
 
@@ -200,76 +196,76 @@ describe('文件写入工具', () => {
     })
   })
 
-  describe('safeWriteFile 安全文件写入', () => {
+  describe('writeFileAtomic 安全文件写入', () => {
     it('新名称应该原子写入文件', async () => {
       await writeFileAtomic(testFile, 'atomic')
       expect(await fsp.readFile(testFile, 'utf8')).toBe('atomic')
     })
 
     beforeEach(() => {
-      mockIsPathExists.mockResolvedValue(false)
+      mockPathExists.mockResolvedValue(false)
     })
 
     it('应该安全写入文件', async () => {
       const content = 'Safe content'
 
-      await safeWriteFile(testFile, content)
+      await writeFileAtomic(testFile, content)
 
       expect(fs.existsSync(testFile)).toBe(true)
       expect(await fsp.readFile(testFile, 'utf8')).toBe(content)
     })
 
     it('应该在失败时清理临时文件', async () => {
-      mockIsPathExists.mockResolvedValue(true)
+      mockPathExists.mockResolvedValue(true)
 
       // 创建一个会导致重命名失败的场景
       const invalidTarget = path.join(tempDir, 'readonly', 'test.txt')
 
-      await expect(safeWriteFile(invalidTarget, 'content')).rejects.toThrow()
+      await expect(writeFileAtomic(invalidTarget, 'content')).rejects.toThrow()
 
       // 应该尝试清理临时文件
-      expect(mockIsPathExists).toHaveBeenCalled()
+      expect(mockPathExists).toHaveBeenCalled()
     })
 
     it('应该使用指定编码安全写入', async () => {
       const content = 'Content with encoding'
 
-      await safeWriteFile(testFile, content, 'ascii')
+      await writeFileAtomic(testFile, content, 'ascii')
 
       expect(fs.existsSync(testFile)).toBe(true)
     })
   })
 
-  describe('safeWriteFileSync 同步安全文件写入', () => {
+  describe('writeFileAtomicSync 同步安全文件写入', () => {
     it('新名称应该同步原子写入文件', () => {
       writeFileAtomicSync(testFile, 'atomic-sync')
       expect(fs.readFileSync(testFile, 'utf8')).toBe('atomic-sync')
     })
 
     beforeEach(() => {
-      mockIsPathExistsSync.mockReturnValue(false)
+      mockPathExistsSync.mockReturnValue(false)
     })
 
     it('应该同步安全写入文件', () => {
       const content = 'Sync safe content'
 
-      safeWriteFileSync(testFile, content)
+      writeFileAtomicSync(testFile, content)
 
       expect(fs.existsSync(testFile)).toBe(true)
       expect(fs.readFileSync(testFile, 'utf8')).toBe(content)
     })
 
     it('应该在同步失败时清理临时文件', () => {
-      mockIsPathExistsSync.mockReturnValue(true)
+      mockPathExistsSync.mockReturnValue(true)
 
       const invalidTarget = path.join(tempDir, 'readonly', 'test.txt')
 
-      expect(() => safeWriteFileSync(invalidTarget, 'content')).toThrow()
-      expect(mockIsPathExistsSync).toHaveBeenCalled()
+      expect(() => writeFileAtomicSync(invalidTarget, 'content')).toThrow()
+      expect(mockPathExistsSync).toHaveBeenCalled()
     })
   })
 
-  describe('safeWriteJson 安全JSON写入', () => {
+  describe('writeJsonAtomic 安全JSON写入', () => {
     it('新名称应该原子写入 JSON', async () => {
       await writeJsonAtomic(testJsonFile, { mode: 'atomic' })
       expect(JSON.parse(await fsp.readFile(testJsonFile, 'utf8'))).toEqual({
@@ -278,7 +274,7 @@ describe('文件写入工具', () => {
     })
 
     beforeEach(() => {
-      mockIsPathExists.mockResolvedValue(false)
+      mockPathExists.mockResolvedValue(false)
     })
 
     it('应该安全写入JSON文件', async () => {
@@ -289,7 +285,7 @@ describe('文件写入工具', () => {
 
       const data: TestData = { safe: true, data: 'test' }
 
-      await safeWriteJson(testJsonFile, data)
+      await writeJsonAtomic(testJsonFile, data)
 
       expect(fs.existsSync(testJsonFile)).toBe(true)
       const content = await fsp.readFile(testJsonFile, 'utf8')
@@ -297,16 +293,16 @@ describe('文件写入工具', () => {
     })
 
     it('应该在JSON安全写入失败时清理临时文件', async () => {
-      mockIsPathExists.mockResolvedValue(true)
+      mockPathExists.mockResolvedValue(true)
 
       const invalidTarget = path.join(tempDir, 'readonly', 'test.json')
 
-      await expect(safeWriteJson(invalidTarget, {})).rejects.toThrow()
-      expect(mockIsPathExists).toHaveBeenCalled()
+      await expect(writeJsonAtomic(invalidTarget, {})).rejects.toThrow()
+      expect(mockPathExists).toHaveBeenCalled()
     })
   })
 
-  describe('safeWriteJsonSync 同步安全JSON写入', () => {
+  describe('writeJsonAtomicSync 同步安全JSON写入', () => {
     it('新名称应该同步原子写入 JSON', () => {
       writeJsonAtomicSync(testJsonFile, { mode: 'atomic-sync' })
       expect(JSON.parse(fs.readFileSync(testJsonFile, 'utf8'))).toEqual({
@@ -315,13 +311,13 @@ describe('文件写入工具', () => {
     })
 
     beforeEach(() => {
-      mockIsPathExistsSync.mockReturnValue(false)
+      mockPathExistsSync.mockReturnValue(false)
     })
 
     it('应该同步安全写入JSON文件', () => {
       const data = { syncSafe: true, test: 'data' }
 
-      safeWriteJsonSync(testJsonFile, data)
+      writeJsonAtomicSync(testJsonFile, data)
 
       expect(fs.existsSync(testJsonFile)).toBe(true)
       const content = fs.readFileSync(testJsonFile, 'utf8')
@@ -329,12 +325,12 @@ describe('文件写入工具', () => {
     })
 
     it('应该在同步JSON安全写入失败时清理临时文件', () => {
-      mockIsPathExistsSync.mockReturnValue(true)
+      mockPathExistsSync.mockReturnValue(true)
 
       const invalidTarget = path.join(tempDir, 'readonly', 'test.json')
 
-      expect(() => safeWriteJsonSync(invalidTarget, {})).toThrow()
-      expect(mockIsPathExistsSync).toHaveBeenCalled()
+      expect(() => writeJsonAtomicSync(invalidTarget, {})).toThrow()
+      expect(mockPathExistsSync).toHaveBeenCalled()
     })
   })
 

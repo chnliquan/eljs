@@ -32,6 +32,8 @@ vi.mock('@eljs/utils', () => ({
   createDebugger: vi.fn(() => vi.fn()),
   readJson: vi.fn(),
 }))
+vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
 
 const { mockProgram } = vi.hoisted(() => ({
   mockProgram: {

@@ -25,7 +25,6 @@ import {
 import {
   getGitUrl,
   getGitUrlSync,
-  gitUrlAnalysis,
   parseGitRemoteUrl,
 } from '../../src/git/remote'
 import {
@@ -59,10 +58,10 @@ describe('Git Meta 工具', () => {
   const mockIsObject = requiredModule1.isObject as MockedFunction<
     (value: unknown) => boolean
   >
-  const mockIsPathExists = requiredModule2.pathExists as MockedFunction<
+  const mockPathExists = requiredModule2.pathExists as MockedFunction<
     (path: string) => Promise<boolean>
   >
-  const mockIsPathExistsSync = requiredModule2.pathExistsSync as MockedFunction<
+  const mockPathExistsSync = requiredModule2.pathExistsSync as MockedFunction<
     (path: string) => boolean
   >
   const mockReadFile = requiredModule2.readFile as MockedFunction<
@@ -306,7 +305,7 @@ describe('Git Meta 工具', () => {
     })
   })
 
-  describe('gitUrlAnalysis', () => {
+  describe('parseGitRemoteUrl', () => {
     it('新名称应该解析远程仓库地址', () => {
       expect(parseGitRemoteUrl('git@github.com:eljs/utils.git')).toEqual({
         name: 'utils',
@@ -320,7 +319,7 @@ describe('Git Meta 工具', () => {
     it('应该解析SSH格式的Git URL', () => {
       const sshUrl = 'git@github.com:user/repo.git'
 
-      const result = gitUrlAnalysis(sshUrl)
+      const result = parseGitRemoteUrl(sshUrl)
 
       expect(result).toEqual({
         name: 'repo',
@@ -334,7 +333,7 @@ describe('Git Meta 工具', () => {
     it('应该解析HTTPS格式的Git URL', () => {
       const httpsUrl = 'https://github.com/organization/project.git'
 
-      const result = gitUrlAnalysis(httpsUrl)
+      const result = parseGitRemoteUrl(httpsUrl)
 
       expect(result).toEqual({
         name: 'project',
@@ -348,7 +347,7 @@ describe('Git Meta 工具', () => {
     it('应该处理多级组织结构', () => {
       const nestedUrl = 'https://gitlab.com/company/team/subteam/project.git'
 
-      const result = gitUrlAnalysis(nestedUrl)
+      const result = parseGitRemoteUrl(nestedUrl)
 
       expect(result).toEqual({
         name: 'project',
@@ -360,15 +359,15 @@ describe('Git Meta 工具', () => {
     })
 
     it('应该在空URL时返回null', () => {
-      expect(gitUrlAnalysis('')).toBeNull()
-      expect(gitUrlAnalysis(null as unknown as string)).toBeNull()
-      expect(gitUrlAnalysis(undefined as unknown as string)).toBeNull()
+      expect(parseGitRemoteUrl('')).toBeNull()
+      expect(parseGitRemoteUrl(null as unknown as string)).toBeNull()
+      expect(parseGitRemoteUrl(undefined as unknown as string)).toBeNull()
     })
 
     it('应该在无效URL格式时返回null', () => {
-      expect(gitUrlAnalysis('invalid-url')).toBeNull()
-      expect(gitUrlAnalysis('ftp://invalid.com/repo')).toBeNull()
-      expect(gitUrlAnalysis('just-a-string')).toBeNull()
+      expect(parseGitRemoteUrl('invalid-url')).toBeNull()
+      expect(parseGitRemoteUrl('ftp://invalid.com/repo')).toBeNull()
+      expect(parseGitRemoteUrl('just-a-string')).toBeNull()
     })
 
     it('应该处理URL解析错误', () => {
@@ -379,14 +378,14 @@ describe('Git Meta 工具', () => {
       ]
 
       invalidUrls.forEach(url => {
-        expect(gitUrlAnalysis(url)).toBeNull()
+        expect(parseGitRemoteUrl(url)).toBeNull()
       })
     })
 
     it('应该处理企业Git服务器', () => {
       const corpUrl = 'git@git.corp.company.com:team/awesome-project.git'
 
-      const result = gitUrlAnalysis(corpUrl)
+      const result = parseGitRemoteUrl(corpUrl)
 
       expect(result).toEqual({
         name: 'awesome-project',
@@ -422,7 +421,7 @@ describe('Git Meta 工具', () => {
       ]
 
       testCases.forEach(testCase => {
-        expect(gitUrlAnalysis(testCase.url)).toEqual(testCase.expected)
+        expect(parseGitRemoteUrl(testCase.url)).toEqual(testCase.expected)
       })
     })
 
@@ -441,7 +440,7 @@ describe('Git Meta 工具', () => {
       ]
 
       complexCases.forEach(testCase => {
-        const result = gitUrlAnalysis(testCase.url)
+        const result = parseGitRemoteUrl(testCase.url)
         expect(result?.name).toBe(testCase.name)
         expect(result?.group).toBe(testCase.group)
       })
@@ -516,7 +515,7 @@ describe('Git Meta 工具', () => {
   describe('类型安全验证', () => {
     it('应该返回正确类型的GitRemoteRepository', () => {
       const testUrl = 'git@github.com:test/repository.git'
-      const result = gitUrlAnalysis(testUrl)
+      const result = parseGitRemoteUrl(testUrl)
 
       if (result) {
         // TypeScript 应该知道这些属性的类型
@@ -532,7 +531,7 @@ describe('Git Meta 工具', () => {
     })
 
     it('应该处理null值安全', () => {
-      const nullResult = gitUrlAnalysis('')
+      const nullResult = parseGitRemoteUrl('')
       expect(nullResult).toBeNull()
 
       // TypeScript 类型守卫
@@ -566,7 +565,7 @@ describe('Git Meta 工具', () => {
         'git@gitlab.com:gitlab-org/gitlab.git',
       ]
 
-      const results = repositories.map(url => gitUrlAnalysis(url))
+      const results = repositories.map(url => parseGitRemoteUrl(url))
 
       expect(results[0]?.name).toBe('react')
       expect(results[0]?.group).toBe('facebook')
@@ -580,7 +579,7 @@ describe('Git Meta 工具', () => {
   describe('getGitUrl 和 getGitUrlSync', () => {
     describe('getGitUrl', () => {
       it('应该从 .git/config 文件获取 URL', async () => {
-        mockIsPathExists.mockResolvedValue(true)
+        mockPathExists.mockResolvedValue(true)
         mockReadFile.mockResolvedValue(`
 [core]
     repositoryformatversion = 0
@@ -601,7 +600,7 @@ describe('Git Meta 工具', () => {
       })
 
       it('应该在使用 exact=true 时检查当前目录', async () => {
-        mockIsPathExists.mockResolvedValue(true)
+        mockPathExists.mockResolvedValue(true)
         mockReadFile.mockResolvedValue('')
         mockIni.parse.mockReturnValue({
           'remote "origin"': { url: 'git@github.com:user/exact-repo.git' },
@@ -609,12 +608,12 @@ describe('Git Meta 工具', () => {
 
         const result = await getGitUrl('/exact-dir', true)
 
-        expect(mockIsPathExists).toHaveBeenCalledWith('/exact-dir/.git')
+        expect(mockPathExists).toHaveBeenCalledWith('/exact-dir/.git')
         expect(result).toBe('git@github.com:user/exact-repo.git')
       })
 
       it('应该在 .git 目录不存在时返回空字符串', async () => {
-        mockIsPathExists.mockResolvedValue(false)
+        mockPathExists.mockResolvedValue(false)
 
         const result = await getGitUrl('/no-git')
 
@@ -623,7 +622,7 @@ describe('Git Meta 工具', () => {
       })
 
       it('应该在读取配置文件失败时返回空字符串', async () => {
-        mockIsPathExists.mockResolvedValue(true)
+        mockPathExists.mockResolvedValue(true)
         mockReadFile.mockRejectedValue(new Error('Read failed'))
 
         const result = await getGitUrl('/error-project')
@@ -632,7 +631,7 @@ describe('Git Meta 工具', () => {
       })
 
       it('应该在没有 origin 远程时返回空字符串', async () => {
-        mockIsPathExists.mockResolvedValue(true)
+        mockPathExists.mockResolvedValue(true)
         mockReadFile.mockResolvedValue('[core]\n    bare = false\n')
         mockIni.parse.mockReturnValue({ core: { bare: false } })
 
@@ -644,7 +643,7 @@ describe('Git Meta 工具', () => {
 
     describe('getGitUrlSync', () => {
       it('应该同步获取 Git URL', () => {
-        mockIsPathExistsSync.mockReturnValue(true)
+        mockPathExistsSync.mockReturnValue(true)
         mockReadFileSync.mockReturnValue(`
 [remote "origin"]
     url = git@gitlab.com:company/project.git
@@ -662,7 +661,7 @@ describe('Git Meta 工具', () => {
       })
 
       it('应该在同步模式下处理错误', () => {
-        mockIsPathExistsSync.mockReturnValue(true)
+        mockPathExistsSync.mockReturnValue(true)
         mockReadFileSync.mockImplementation(() => {
           throw new Error('Sync read failed')
         })
@@ -690,7 +689,7 @@ describe('Git Meta 工具', () => {
 
     describe('getGitRepository', () => {
       it('应该获取完整的 Git 仓库信息', async () => {
-        mockIsPathExists.mockResolvedValue(true)
+        mockPathExists.mockResolvedValue(true)
         mockReadFile
           .mockResolvedValueOnce(mockGitConfig) // config
           .mockResolvedValueOnce(mockGitHead) // HEAD
@@ -715,7 +714,7 @@ describe('Git Meta 工具', () => {
       })
 
       it('应该处理没有用户信息的情况', async () => {
-        mockIsPathExists.mockResolvedValue(true)
+        mockPathExists.mockResolvedValue(true)
         mockReadFile
           .mockResolvedValueOnce(
             '[remote "origin"]\n    url = git@github.com:test/repo.git',
@@ -734,7 +733,7 @@ describe('Git Meta 工具', () => {
       })
 
       it('应该处理没有 origin 远程的情况', async () => {
-        mockIsPathExists.mockResolvedValue(true)
+        mockPathExists.mockResolvedValue(true)
         mockReadFile
           .mockResolvedValueOnce('[core]\n    bare = false')
           .mockResolvedValueOnce(mockGitHead)
@@ -748,7 +747,7 @@ describe('Git Meta 工具', () => {
       })
 
       it('应该在 Git 目录不存在时返回 null', async () => {
-        mockIsPathExists.mockResolvedValue(false)
+        mockPathExists.mockResolvedValue(false)
 
         const result = await getGitRepository('/no-git')
 
@@ -756,7 +755,7 @@ describe('Git Meta 工具', () => {
       })
 
       it('应该在读取配置失败时返回 null', async () => {
-        mockIsPathExists.mockResolvedValue(true)
+        mockPathExists.mockResolvedValue(true)
         mockReadFile.mockRejectedValue(new Error('Config read failed'))
 
         const result = await getGitRepository('/error')
@@ -766,7 +765,7 @@ describe('Git Meta 工具', () => {
 
       it('应该处理复杂的分支引用', async () => {
         const complexHead = 'ref: refs/heads/feature/complex-branch-name\n'
-        mockIsPathExists.mockResolvedValue(true)
+        mockPathExists.mockResolvedValue(true)
         mockReadFile
           .mockResolvedValueOnce(mockGitConfig)
           .mockResolvedValueOnce(complexHead)
@@ -783,7 +782,7 @@ describe('Git Meta 工具', () => {
 
     describe('getGitRepositorySync', () => {
       it('应该同步获取 Git 仓库信息', () => {
-        mockIsPathExistsSync.mockReturnValue(true)
+        mockPathExistsSync.mockReturnValue(true)
         mockReadFileSync
           .mockReturnValueOnce(mockGitConfig)
           .mockReturnValueOnce(mockGitHead)
@@ -801,7 +800,7 @@ describe('Git Meta 工具', () => {
       })
 
       it('应该在同步模式下处理错误', () => {
-        mockIsPathExistsSync.mockReturnValue(true)
+        mockPathExistsSync.mockReturnValue(true)
         mockReadFileSync.mockImplementation(() => {
           throw new Error('Sync config read failed')
         })
@@ -988,16 +987,16 @@ describe('Git Meta 工具', () => {
   describe('getProjectGitDir 和 getProjectGitDirSync', () => {
     describe('getProjectGitDir', () => {
       it('应该找到当前目录的 .git 目录', async () => {
-        mockIsPathExists.mockResolvedValue(true)
+        mockPathExists.mockResolvedValue(true)
 
         const result = await getProjectGitDir('/project')
 
         expect(result).toBe('/project/.git')
-        expect(mockIsPathExists).toHaveBeenCalledWith('/project/.git/config')
+        expect(mockPathExists).toHaveBeenCalledWith('/project/.git/config')
       })
 
       it('应该向上查找 .git 目录', async () => {
-        mockIsPathExists
+        mockPathExists
           .mockResolvedValueOnce(false) // /project/subdir/.git/config
           .mockResolvedValueOnce(false) // /project/.git/config
           .mockResolvedValueOnce(true) // //.git/config
@@ -1005,11 +1004,11 @@ describe('Git Meta 工具', () => {
         const result = await getProjectGitDir('/project/subdir')
 
         expect(result).toBe('/.git')
-        expect(mockIsPathExists).toHaveBeenCalledTimes(3)
+        expect(mockPathExists).toHaveBeenCalledTimes(3)
       })
 
       it('应该在找不到 .git 目录时返回 undefined', async () => {
-        mockIsPathExists.mockResolvedValue(false)
+        mockPathExists.mockResolvedValue(false)
 
         const result = await getProjectGitDir('/no-git')
 
@@ -1017,16 +1016,16 @@ describe('Git Meta 工具', () => {
       })
 
       it('应该在到达根目录时停止查找', async () => {
-        mockIsPathExists.mockResolvedValue(false)
+        mockPathExists.mockResolvedValue(false)
 
         const result = await getProjectGitDir('/')
 
         expect(result).toBeUndefined()
-        expect(mockIsPathExists).toHaveBeenCalledWith('/.git/config')
+        expect(mockPathExists).toHaveBeenCalledWith('/.git/config')
       })
 
       it('应该处理复杂的路径层次结构', async () => {
-        mockIsPathExists
+        mockPathExists
           .mockResolvedValueOnce(false) // /a/b/c/d/.git/config
           .mockResolvedValueOnce(false) // /a/b/c/.git/config
           .mockResolvedValueOnce(true) // /a/b/.git/config
@@ -1039,18 +1038,18 @@ describe('Git Meta 工具', () => {
 
     describe('getProjectGitDirSync', () => {
       it('应该同步找到 .git 目录', () => {
-        mockIsPathExistsSync.mockReturnValue(true)
+        mockPathExistsSync.mockReturnValue(true)
 
         const result = getProjectGitDirSync('/sync-project')
 
         expect(result).toBe('/sync-project/.git')
-        expect(mockIsPathExistsSync).toHaveBeenCalledWith(
+        expect(mockPathExistsSync).toHaveBeenCalledWith(
           '/sync-project/.git/config',
         )
       })
 
       it('应该同步向上查找', () => {
-        mockIsPathExistsSync
+        mockPathExistsSync
           .mockReturnValueOnce(false) // current dir
           .mockReturnValueOnce(true) // parent dir
 
@@ -1060,7 +1059,7 @@ describe('Git Meta 工具', () => {
       })
 
       it('应该在同步模式下找不到时返回 undefined', () => {
-        mockIsPathExistsSync.mockReturnValue(false)
+        mockPathExistsSync.mockReturnValue(false)
 
         const result = getProjectGitDirSync('/no-sync-git')
 

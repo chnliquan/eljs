@@ -46,7 +46,7 @@ describe('BaseGenerator 基础生成器', () => {
   const mockCopyFileSync = requiredModule1.copyFileSync as MockedFunction<
     (from: string, to: string, options?: CopyFileOptions) => void
   >
-  const mockCopyTpl = requiredModule1.copyTemplate as MockedFunction<
+  const mockCopyTemplate = requiredModule1.copyTemplate as MockedFunction<
     (
       from: string,
       to: string,
@@ -54,14 +54,15 @@ describe('BaseGenerator 基础生成器', () => {
       options?: CopyFileOptions,
     ) => Promise<void>
   >
-  const mockCopyTplSync = requiredModule1.copyTemplateSync as MockedFunction<
-    (
-      from: string,
-      to: string,
-      data: Record<string, unknown>,
-      options?: CopyFileOptions,
-    ) => void
-  >
+  const mockCopyTemplateSync =
+    requiredModule1.copyTemplateSync as MockedFunction<
+      (
+        from: string,
+        to: string,
+        data: Record<string, unknown>,
+        options?: CopyFileOptions,
+      ) => void
+    >
   const mockCopyDirectory = requiredModule1.copyDirectory as MockedFunction<
     (
       from: string,
@@ -106,8 +107,8 @@ describe('BaseGenerator 基础生成器', () => {
     mockPrompts.mockResolvedValue({})
     mockCopyFile.mockResolvedValue(undefined)
     mockCopyFileSync.mockImplementation(() => undefined)
-    mockCopyTpl.mockResolvedValue(undefined)
-    mockCopyTplSync.mockImplementation(() => undefined)
+    mockCopyTemplate.mockResolvedValue(undefined)
+    mockCopyTemplateSync.mockImplementation(() => undefined)
     mockCopyDirectory.mockResolvedValue(undefined)
     mockCopyDirectorySync.mockImplementation(() => undefined)
     mockIsFunction.mockReturnValue(false)
@@ -237,7 +238,7 @@ describe('BaseGenerator 基础生成器', () => {
       await generator.run()
       await generator.copyTpl('/template.tpl', '/output.txt', data)
 
-      expect(mockCopyTpl).toHaveBeenCalledWith(
+      expect(mockCopyTemplate).toHaveBeenCalledWith(
         '/template.tpl',
         '/output.txt',
         data,
@@ -255,7 +256,7 @@ describe('BaseGenerator 基础生成器', () => {
       await generator.run()
       generator.copyTplSync('/sync-template.tpl', '/sync-output.txt', data)
 
-      expect(mockCopyTplSync).toHaveBeenCalledWith(
+      expect(mockCopyTemplateSync).toHaveBeenCalledWith(
         '/sync-template.tpl',
         '/sync-output.txt',
         data,

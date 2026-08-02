@@ -8,6 +8,5 @@ export {
   getPnpmWorkspaceRoot,
   getWorkspacePackageRoots,
   getWorkspaceRoot,
-  getWorkspaces,
   getYarnWorkspaceRoot,
 } from './root'

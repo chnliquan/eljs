@@ -1,21 +1,16 @@
 import { prompts } from '@eljs/utils/cli'
-import {
-  isDirectory,
-  isPathExists,
-  mkdir,
-  move,
-  remove,
-} from '@eljs/utils/file'
+import { isDirectory, mkdir, move, pathExists, remove } from '@eljs/utils/file'
 import { isString } from '@eljs/utils/guards'
 import { chalk, createDebugger, logger } from '@eljs/utils/logger'
 import { findUp, resolve } from '@eljs/utils/module'
-import { tryPaths } from '@eljs/utils/path'
+import { findExistingPath } from '@eljs/utils/path'
 import { randomUUID } from 'node:crypto'
-import { cp, realpath } from 'node:fs/promises'
+import { cp } from 'node:fs/promises'
 import path, { join } from 'node:path'
 
 import type { Config, RemoteTemplate } from '../types'
 import { AppError } from '../utils'
+import { resolveProspectiveCanonicalPath } from './canonical-path'
 import { CreateRunner } from './create-runner'
 import {
   acquireTargetLock,
@@ -127,7 +122,7 @@ export class ProjectCreator {
     if (
       !this._isLocal &&
       this._templateRootPath &&
-      (await isPathExists(this._templateRootPath))
+      (await pathExists(this._templateRootPath))
     ) {
       const cleanupRootPath =
         !isString(this._template) && this._template.type === 'git'
@@ -216,12 +211,12 @@ export class ProjectCreator {
       await assertPathsDoNotOverlap(templateRootPath, targetDir)
     }
 
-    const configFile = await tryPaths([
+    const configFile = await findExistingPath([
       join(templateRootPath, 'create.config.ts'),
       join(templateRootPath, 'create.config.js'),
     ])
 
-    const generatorFile = await tryPaths([
+    const generatorFile = await findExistingPath([
       join(templateRootPath, 'generators/index.ts'),
       join(templateRootPath, 'generators/index.js'),
     ])
@@ -236,7 +231,7 @@ export class ProjectCreator {
       )
     }
 
-    const targetExists = await isPathExists(targetDir)
+    const targetExists = await pathExists(targetDir)
     let shouldOverwrite = false
     let shouldMergeExisting = Boolean(
       targetExists && this.constructorOptions.merge,
@@ -326,9 +321,9 @@ export class ProjectCreator {
     } catch (error) {
       try {
         if (backupPath) {
-          if (await isPathExists(backupPath)) {
+          if (await pathExists(backupPath)) {
             await move(backupPath, targetDir, true)
-          } else if (!(await isPathExists(targetDir))) {
+          } else if (!(await pathExists(targetDir))) {
             throw new Error(
               'Both the original target and its backup are missing',
               { cause: error },
@@ -336,7 +331,7 @@ export class ProjectCreator {
           }
           await updateTargetLockBackup(targetLock, undefined)
           backupPath = undefined
-        } else if (ownsTarget && (await isPathExists(targetDir))) {
+        } else if (ownsTarget && (await pathExists(targetDir))) {
           await remove(targetDir)
         }
       } catch (recoveryError) {
@@ -451,7 +446,7 @@ export class ProjectCreator {
 
           this._templateRootPath = (await findUp(
             async directory => {
-              const exist = await isPathExists(
+              const exist = await pathExists(
                 path.join(directory, 'package.json'),
               )
               if (exist) {
@@ -579,8 +574,8 @@ async function assertPathsDoNotOverlap(
   targetDir: string,
 ): Promise<void> {
   const [templatePath, targetPath] = await Promise.all([
-    resolveCanonicalPath(templateRootPath),
-    resolveCanonicalPath(targetDir),
+    resolveProspectiveCanonicalPath(templateRootPath),
+    resolveProspectiveCanonicalPath(targetDir),
   ])
 
   if (
@@ -594,53 +589,6 @@ async function assertPathsDoNotOverlap(
         details: { targetDir, templateRootPath },
       },
     )
-  }
-}
-
-/**
- * 解析路径的真实位置，并为尚未创建的目标保留词法绝对路径
- *
- * @param candidate - 待解析路径
- * @returns 能解析符号链接时的真实路径，否则返回词法绝对路径
- */
-async function resolveCanonicalPath(candidate: string): Promise<string> {
-  return resolveProspectiveCanonicalPath(candidate)
-}
-
-/**
- * 通过最近存在的父目录解析尚未创建路径的真实位置
- *
- * @remarks
- * 只对完整路径调用 `realpath` 会在末级尚不存在时回退到词法路径，从而遗漏父目录
- * 中的符号链接；逐级回溯可以在写入前识别该类路径逃逸
- *
- * @param candidate - 已存在或即将创建的路径
- * @returns 解析符号链接后的预期绝对路径
- */
-async function resolveProspectiveCanonicalPath(
-  candidate: string,
-): Promise<string> {
-  let current = path.resolve(candidate)
-  const missingSegments: string[] = []
-
-  while (true) {
-    try {
-      const existingPath = await realpath(current)
-      return path.resolve(existingPath, ...missingSegments.reverse())
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code
-      if (code !== 'ENOENT' && code !== 'ENOTDIR') {
-        throw error
-      }
-
-      const parent = path.dirname(current)
-      if (parent === current) {
-        return path.resolve(candidate)
-      }
-
-      missingSegments.push(path.basename(current))
-      current = parent
-    }
   }
 }
 

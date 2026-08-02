@@ -183,18 +183,19 @@ describe('类型定义测试', () => {
         latestTag: 'v1.0.0',
         projectPkgJsonPath: '/project/package.json',
         projectPkg: mockPackageJson as Required<PackageJson>,
-        pkgJsonPaths: ['/project/package.json'],
-        pkgs: [mockPackageJson as Required<PackageJson>],
-        pkgNames: ['it-project'],
-        validPkgRootPaths: ['/project'],
-        validPkgNames: ['it-project'],
+        workspacePackages: [
+          {
+            manifest: mockPackageJson as Required<PackageJson>,
+            manifestPath: '/project/package.json',
+            rootPath: '/project',
+          },
+        ],
         packageManager: 'pnpm',
       }
 
       expect(appData.cliVersion).toBe('1.0.0')
       expect(appData.packageManager).toBe('pnpm')
-      expect(Array.isArray(appData.pkgNames)).toBe(true)
-      expect(Array.isArray(appData.validPkgNames)).toBe(true)
+      expect(Array.isArray(appData.workspacePackages)).toBe(true)
     })
 
     it('应该允许 latestTag 为 null', () => {
@@ -213,11 +214,7 @@ describe('类型定义测试', () => {
         latestTag: null,
         projectPkgJsonPath: '/project/package.json',
         projectPkg: {} as Required<PackageJson>,
-        pkgJsonPaths: [],
-        pkgs: [],
-        pkgNames: [],
-        validPkgRootPaths: [],
-        validPkgNames: [],
+        workspacePackages: [],
         packageManager: 'npm',
         packageManagerVariant: 'npm',
         // 扩展字段
@@ -307,15 +304,11 @@ describe('类型定义测试', () => {
         latestTag: null,
         projectPkgJsonPath: '',
         projectPkg: {} as Required<PackageJson>,
-        pkgJsonPaths: [],
-        pkgs: [],
-        pkgNames: [],
-        validPkgRootPaths: [],
-        validPkgNames: [],
+        workspacePackages: [],
         packageManager: 'npm',
       }
 
-      expect(Array.isArray(minimalAppData.pkgNames)).toBe(true)
+      expect(Array.isArray(minimalAppData.workspacePackages)).toBe(true)
       expect(minimalAppData.latestTag).toBeNull()
     })
   })

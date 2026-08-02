@@ -52,15 +52,16 @@ interface NpmTestApi {
   step: MockedFunction<(message: string) => void>
   config: Config
   appData: {
-    validPkgNames: string[]
-    pkgNames: string[]
-    validPkgRootPaths: string[]
-    pkgs: Array<{
-      name: string
-      version: string
-      private?: boolean
-      dependencies?: Record<string, string>
-      optionalDependencies?: Record<string, string>
+    workspacePackages: Array<{
+      rootPath: string
+      manifestPath: string
+      manifest: {
+        name: string
+        version: string
+        private?: boolean
+        dependencies?: Record<string, string>
+        optionalDependencies?: Record<string, string>
+      }
     }>
     existingPkgNames?: string[]
     registry?: string
@@ -68,6 +69,24 @@ interface NpmTestApi {
     packageManagerVariant: string
   }
   cwd: string
+}
+
+type TestWorkspacePackageInput =
+  NpmTestApi['appData']['workspacePackages'][number]['manifest'] & {
+    rootPath: string
+  }
+
+function setWorkspacePackages(
+  context: NpmTestApi,
+  packages: TestWorkspacePackageInput[],
+): void {
+  context.appData.workspacePackages = packages.map(
+    ({ rootPath, ...manifest }) => ({
+      manifest,
+      manifestPath: `${rootPath}/package.json`,
+      rootPath,
+    }),
+  )
 }
 
 // 全局类型定义
@@ -102,6 +121,9 @@ vi.mock('@eljs/utils', () => ({
   normalizeArgs: vi.fn(),
   run: vi.fn(),
 }))
+vi.mock('@eljs/utils/cp', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/npm', async () => import('@eljs/utils'))
 
 vi.mock('../../../src/utils', () => ({
   AppError: class AppError extends Error {
@@ -170,10 +192,13 @@ describe('NPM 插件测试', () => {
         },
       },
       appData: {
-        validPkgNames: ['test-package'],
-        pkgNames: ['test-package'],
-        validPkgRootPaths: ['/test/package'],
-        pkgs: [{ name: 'test-package', version: '1.1.0' }],
+        workspacePackages: [
+          {
+            manifest: { name: 'test-package', version: '1.1.0' },
+            manifestPath: '/test/package/package.json',
+            rootPath: '/test/package',
+          },
+        ],
         packageManager: 'npm',
         packageManagerVariant: 'npm',
       },
@@ -312,21 +337,20 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该在写入版本文件前拒绝循环运行时依赖', () => {
-      mockContext.appData.validPkgNames = ['pkg1', 'pkg2']
-      mockContext.appData.pkgNames = ['pkg1', 'pkg2']
-      mockContext.appData.validPkgRootPaths = ['/test/pkg1', '/test/pkg2']
-      mockContext.appData.pkgs = [
+      setWorkspacePackages(mockContext, [
         {
           name: 'pkg1',
           version: '1.1.0',
           dependencies: { pkg2: 'workspace:*' },
+          rootPath: '/test/pkg1',
         },
         {
           name: 'pkg2',
           version: '1.1.0',
           dependencies: { pkg1: 'workspace:*' },
+          rootPath: '/test/pkg2',
         },
-      ]
+      ])
 
       expect(() =>
         onBeforeBumpVersionHandler({
@@ -435,7 +459,8 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该为预发布版本使用 tag', async () => {
-      mockContext.appData.pkgs[0].version = '1.1.0-alpha.1'
+      mockContext.appData.workspacePackages[0].manifest.version =
+        '1.1.0-alpha.1'
       const versionInfo = {
         version: '1.1.0-alpha.1',
         isPrerelease: true,
@@ -455,7 +480,7 @@ describe('NPM 插件测试', () => {
     })
 
     it('数字型预发布版本应该使用安全的 next tag', async () => {
-      mockContext.appData.pkgs[0].version = '1.1.0-1'
+      mockContext.appData.workspacePackages[0].manifest.version = '1.1.0-1'
 
       await onReleaseHandler({
         version: '1.1.0-1',
@@ -472,13 +497,10 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该处理多个包的发布', async () => {
-      mockContext.appData.validPkgNames = ['pkg1', 'pkg2']
-      mockContext.appData.pkgNames = ['pkg1', 'pkg2']
-      mockContext.appData.validPkgRootPaths = ['/test/pkg1', '/test/pkg2']
-      mockContext.appData.pkgs = [
-        { name: 'pkg1', version: '1.1.0' },
-        { name: 'pkg2', version: '1.1.0' },
-      ]
+      setWorkspacePackages(mockContext, [
+        { name: 'pkg1', version: '1.1.0', rootPath: '/test/pkg1' },
+        { name: 'pkg2', version: '1.1.0', rootPath: '/test/pkg2' },
+      ])
       const versionInfo = {
         version: '1.1.0',
         isPrerelease: false,
@@ -501,17 +523,15 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该按照 workspace 运行时依赖顺序发布', async () => {
-      mockContext.appData.validPkgNames = ['app', 'core']
-      mockContext.appData.pkgNames = ['app', 'core']
-      mockContext.appData.validPkgRootPaths = ['/test/app', '/test/core']
-      mockContext.appData.pkgs = [
+      setWorkspacePackages(mockContext, [
         {
           name: 'app',
           version: '1.1.0',
           dependencies: { core: 'workspace:*' },
+          rootPath: '/test/app',
         },
-        { name: 'core', version: '1.1.0' },
-      ]
+        { name: 'core', version: '1.1.0', rootPath: '/test/core' },
+      ])
 
       await onReleaseHandler({
         version: '1.1.0',
@@ -535,21 +555,20 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该在发布前拒绝循环运行时依赖', async () => {
-      mockContext.appData.validPkgNames = ['pkg1', 'pkg2']
-      mockContext.appData.pkgNames = ['pkg1', 'pkg2']
-      mockContext.appData.validPkgRootPaths = ['/test/pkg1', '/test/pkg2']
-      mockContext.appData.pkgs = [
+      setWorkspacePackages(mockContext, [
         {
           name: 'pkg1',
           version: '1.1.0',
           dependencies: { pkg2: 'workspace:*' },
+          rootPath: '/test/pkg1',
         },
         {
           name: 'pkg2',
           version: '1.1.0',
           dependencies: { pkg1: 'workspace:*' },
+          rootPath: '/test/pkg2',
         },
-      ]
+      ])
 
       await expect(
         onReleaseHandler({
@@ -563,13 +582,10 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该在发布前拒绝重复的 workspace 包名', async () => {
-      mockContext.appData.validPkgNames = ['pkg1']
-      mockContext.appData.pkgNames = ['pkg1', 'pkg1']
-      mockContext.appData.validPkgRootPaths = ['/test/pkg1']
-      mockContext.appData.pkgs = [
-        { name: 'pkg1', version: '1.1.0' },
-        { name: 'pkg1', version: '1.1.0' },
-      ]
+      setWorkspacePackages(mockContext, [
+        { name: 'pkg1', version: '1.1.0', rootPath: '/test/pkg1' },
+        { name: 'pkg1', version: '1.1.0', rootPath: '/test/pkg1-copy' },
+      ])
 
       await expect(
         onReleaseHandler({
@@ -582,37 +598,21 @@ describe('NPM 插件测试', () => {
       expect(run).not.toHaveBeenCalled()
     })
 
-    it('应该在发布前拒绝未对齐的包名和清单', async () => {
-      mockContext.appData.pkgNames = ['pkg1', 'pkg2']
-      mockContext.appData.pkgs = [{ name: 'pkg1', version: '1.1.0' }]
-
-      await expect(
-        onReleaseHandler({
-          version: '1.1.0',
-          isPrerelease: false,
-          prereleaseId: null,
-          changelog: 'test',
-        }),
-      ).rejects.toThrow('package names and manifests are not aligned')
-      expect(run).not.toHaveBeenCalled()
-    })
-
     it('应该在发布前拒绝依赖私有 workspace 包', async () => {
-      mockContext.appData.validPkgNames = ['public-package']
-      mockContext.appData.pkgNames = ['public-package', 'private-package']
-      mockContext.appData.validPkgRootPaths = ['/test/public-package']
-      mockContext.appData.pkgs = [
+      setWorkspacePackages(mockContext, [
         {
           name: 'public-package',
           version: '1.1.0',
           dependencies: { 'private-package': 'workspace:*' },
+          rootPath: '/test/public-package',
         },
         {
           name: 'private-package',
           version: '1.1.0',
           private: true,
+          rootPath: '/test/private-package',
         },
-      ]
+      ])
 
       await expect(
         onReleaseHandler({
@@ -680,18 +680,11 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该在首个失败后停止并报告已经发布和尚未发布的包', async () => {
-      mockContext.appData.validPkgNames = ['core', 'app', 'cli']
-      mockContext.appData.pkgNames = ['core', 'app', 'cli']
-      mockContext.appData.validPkgRootPaths = [
-        '/test/core',
-        '/test/app',
-        '/test/cli',
-      ]
-      mockContext.appData.pkgs = [
-        { name: 'core', version: '1.1.0' },
-        { name: 'app', version: '1.1.0' },
-        { name: 'cli', version: '1.1.0' },
-      ]
+      setWorkspacePackages(mockContext, [
+        { name: 'core', version: '1.1.0', rootPath: '/test/core' },
+        { name: 'app', version: '1.1.0', rootPath: '/test/app' },
+        { name: 'cli', version: '1.1.0', rootPath: '/test/cli' },
+      ])
       ;(run as MockedFunction<typeof run>)
         .mockResolvedValueOnce({
           stdout: '',
@@ -712,13 +705,10 @@ describe('NPM 插件测试', () => {
     })
 
     it('发布中断错误应该提供结构化恢复进度', async () => {
-      mockContext.appData.validPkgNames = ['core', 'app']
-      mockContext.appData.pkgNames = ['core', 'app']
-      mockContext.appData.validPkgRootPaths = ['/test/core', '/test/app']
-      mockContext.appData.pkgs = [
-        { name: 'core', version: '1.1.0' },
-        { name: 'app', version: '1.1.0' },
-      ]
+      setWorkspacePackages(mockContext, [
+        { name: 'core', version: '1.1.0', rootPath: '/test/core' },
+        { name: 'app', version: '1.1.0', rootPath: '/test/app' },
+      ])
       ;(run as MockedFunction<typeof run>)
         .mockResolvedValueOnce({ stdout: '' } as Awaited<
           ReturnType<typeof run>
@@ -793,7 +783,7 @@ describe('NPM 插件测试', () => {
         .calls[0][0] as OnReleaseHandler
 
       // 测试正式发布
-      mockContext.appData.pkgs[0].version = '1.0.0'
+      mockContext.appData.workspacePackages[0].manifest.version = '1.0.0'
       await onReleaseHandler({
         version: '1.0.0',
         isPrerelease: false,
@@ -809,7 +799,7 @@ describe('NPM 插件测试', () => {
       vi.clearAllMocks()
 
       // 测试预发布
-      mockContext.appData.pkgs[0].version = '1.1.0-beta.1'
+      mockContext.appData.workspacePackages[0].manifest.version = '1.1.0-beta.1'
       await onReleaseHandler({
         version: '1.1.0-beta.1',
         isPrerelease: true,
@@ -824,8 +814,7 @@ describe('NPM 插件测试', () => {
     })
 
     it('应该处理空的包名列表', async () => {
-      mockContext.appData.validPkgNames = []
-      mockContext.appData.validPkgRootPaths = []
+      mockContext.appData.workspacePackages = []
 
       npmPlugin(mockContext as unknown as ReleasePluginContext)
       const onCheckHandler = mockContext.onCheck.mock

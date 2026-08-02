@@ -1,11 +1,7 @@
-import {
-  logger,
-  runCommand,
-  safeWriteJson,
-  type PackageJson,
-  type PackageManager,
-  type RunCommandOptions,
-} from '@eljs/utils'
+import { runCommandLine, type RunCommandOptions } from '@eljs/utils/cp'
+import { writeJsonAtomic } from '@eljs/utils/file'
+import { logger } from '@eljs/utils/logger'
+import type { PackageJson, PackageManager } from '@eljs/utils/types'
 import semver from 'semver'
 
 import type { PackageManagerVariant } from '../types'
@@ -62,7 +58,7 @@ export async function updatePackageLock(
     command = 'npm install --package-lock-only --ignore-scripts'
   }
 
-  await runCommand(command, { ...options })
+  await runCommandLine(command, { ...options })
 }
 
 /**
@@ -93,7 +89,7 @@ export async function updatePackageVersion(
   }
 
   if (write) {
-    await safeWriteJson(pkgJsonPath, pkg)
+    await writeJsonAtomic(pkgJsonPath, pkg)
   }
 }
 

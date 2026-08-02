@@ -13,8 +13,6 @@ import {
   getYarnWorkspaceRoot,
 } from './workspace-lock'
 
-const workspaceCache = new Map<string, string[]>()
-
 export {
   getBunWorkspaceRoot,
   getLernaWorkspaceRoot,
@@ -22,18 +20,6 @@ export {
   getPnpmWorkspaceRoot,
   getYarnWorkspaceRoot,
 } from './workspace-lock'
-
-/**
- * 清除工作区目录解析缓存
- *
- * @remarks
- * 仅用于测试隔离，不通过 path 公共入口导出
- *
- * @internal
- */
-export function clearWorkspaceCache(): void {
-  workspaceCache.clear()
-}
 
 /**
  * 获取工作区根目录
@@ -56,84 +42,89 @@ export async function getWorkspaceRoot(cwd: string): Promise<string> {
  * @param cwd - 当前工作目录
  * @param relative - 是否展示相对路径
  * @returns 匹配的包根目录列表
+ * @throws {@link TypeError} 工作区配置不是字符串数组或 `{ packages: string[] }` 时抛出
  */
 export async function getWorkspacePackageRoots(
   cwd: string,
   relative = false,
 ): Promise<string[]> {
   const resolvedCwd = path.resolve(cwd)
-  const cacheKey = `pkg_paths_${resolvedCwd}_${relative ? 'relative' : 'absolute'}`
-
-  const cachedWorkspaces = workspaceCache.get(cacheKey)
-
-  if (cachedWorkspaces) {
-    return cachedWorkspaces
-  }
-
   const packageManager = await getPackageManager(resolvedCwd)
-  const packageRootPath: string[] = []
-  let workspaces: string[] = []
+  let workspacePatterns: string[] = []
 
   if (packageManager === 'pnpm') {
-    // pnpm
     const workspacePath = path.resolve(resolvedCwd, 'pnpm-workspace.yaml')
 
     if (await pathExists(workspacePath)) {
-      workspaces = (
-        yaml.load(await readFile(workspacePath)) as {
-          packages: string[]
-        }
-      ).packages
+      const workspaceConfig = yaml.load(await readFile(workspacePath))
+      workspacePatterns = normalizeWorkspacePatterns(
+        isRecord(workspaceConfig) ? workspaceConfig.packages : workspaceConfig,
+        workspacePath,
+      )
     }
   } else {
-    // yarn | npm | bun
     const pkgJsonPath = path.resolve(resolvedCwd, 'package.json')
     const pkg = await readJson<PackageJson>(pkgJsonPath)
-    workspaces = (pkg?.workspaces as string[]) || []
+    workspacePatterns = normalizeWorkspacePatterns(pkg?.workspaces, pkgJsonPath)
   }
 
-  if (workspaces?.length) {
-    for (let matcher of workspaces) {
-      matcher = matcher.replace(/\/\*+$/, '/*')
+  if (workspacePatterns.length === 0) {
+    return [relative ? '.' : resolvedCwd]
+  }
 
-      if (matcher.endsWith('/*')) {
-        let rootPath = glob.sync(matcher, {
-          cwd: resolvedCwd,
-          ignore: '*/*.*',
-        })
+  const ignoredPatterns = workspacePatterns
+    .filter(pattern => pattern.startsWith('!'))
+    .map(pattern => normalizeWorkspacePattern(pattern.slice(1)))
+  const packageRoots = new Set<string>()
 
-        if (!relative) {
-          rootPath = rootPath.map(pkgPath => {
-            return path.join(resolvedCwd, pkgPath)
-          })
-        }
-
-        packageRootPath.push(...rootPath)
-      } else if (await pathExists(path.resolve(resolvedCwd, matcher))) {
-        packageRootPath.push(
-          relative ? matcher : path.join(resolvedCwd, matcher),
-        )
-      }
+  for (const pattern of workspacePatterns) {
+    if (pattern.startsWith('!')) {
+      continue
     }
-  } else {
-    packageRootPath.push(relative ? '.' : resolvedCwd)
+
+    const matches = glob.sync(normalizeWorkspacePattern(pattern), {
+      cwd: resolvedCwd,
+      ignore: ['*/*.*', ...ignoredPatterns],
+    })
+
+    for (const match of matches) {
+      packageRoots.add(relative ? match : path.resolve(resolvedCwd, match))
+    }
   }
 
-  // 缓存结果
-  workspaceCache.set(cacheKey, packageRootPath)
-  return packageRootPath
+  return [...packageRoots]
 }
 
-/**
- * 获取工作区包根目录
- * @param cwd - 当前工作目录
- * @param relative - 是否展示相对路径
- * @returns 匹配的包根目录列表
- * @deprecated 请改用 {@link getWorkspacePackageRoots}
- */
-export function getWorkspaces(
-  cwd: string,
-  relative = false,
-): Promise<string[]> {
-  return getWorkspacePackageRoots(cwd, relative)
+function normalizeWorkspacePatterns(
+  value: unknown,
+  sourcePath: string,
+): string[] {
+  let patterns: unknown = value
+
+  if (isRecord(value)) {
+    patterns = value.packages
+  }
+
+  if (patterns === undefined) {
+    return []
+  }
+
+  if (
+    !Array.isArray(patterns) ||
+    patterns.some(pattern => typeof pattern !== 'string' || !pattern.trim())
+  ) {
+    throw new TypeError(
+      `Invalid workspace configuration in ${sourcePath}: expected a non-empty string array or { packages: string[] }`,
+    )
+  }
+
+  return patterns
+}
+
+function normalizeWorkspacePattern(pattern: string): string {
+  return pattern.replace(/\/\*+$/u, '/*')
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
 }

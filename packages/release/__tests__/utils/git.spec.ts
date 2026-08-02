@@ -14,6 +14,7 @@ import { isGitTagAtHead } from '../../src/utils/git'
 vi.mock('@eljs/utils', () => ({
   run: vi.fn(),
 }))
+vi.mock('@eljs/utils/cp', async () => import('@eljs/utils'))
 
 describe('release Git 工具', () => {
   beforeEach(() => {

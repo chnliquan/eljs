@@ -52,29 +52,17 @@ export class CreateRunner extends PluginHost<
    */
   private _stage = CreateRunnerStage.Uninitialized
   /**
-   * 项目生成使用的路径集合
+   * 已完成 Hook 收集的项目路径
    */
-  public paths: Paths = Object.create(null)
+  private _paths: Paths | null = null
   /**
-   * 插件共同维护的项目元数据
+   * 已完成 Hook 收集的项目元数据
    */
-  public appData: AppData = Object.create(null)
+  private _appData: AppData | null = null
   /**
-   * 用户交互输入
+   * 已完成 Hook 收集的用户交互输入
    */
-  public prompts: Prompts = Object.create(null)
-  /**
-   * 生成的 TypeScript 配置
-   */
-  public tsConfig: Record<string, unknown> = Object.create(null)
-  /**
-   * 生成的 Jest 配置
-   */
-  public jestConfig: Record<string, unknown> = Object.create(null)
-  /**
-   * 生成的 Prettier 配置
-   */
-  public prettierConfig: Record<string, unknown> = Object.create(null)
+  private _prompts: Prompts | null = null
 
   /**
    * 当前项目创建阶段
@@ -105,6 +93,45 @@ export class CreateRunner extends PluginHost<
     }
 
     return this._config
+  }
+
+  /**
+   * 项目生成使用的路径集合
+   *
+   * @remarks
+   * `modifyPaths` Hook 执行期间应通过其 `memo` 入参访问正在收集的路径
+   *
+   * @returns 已完成收集的项目路径
+   * @throws {@link PluginHostError} `modifyPaths` Hook 尚未完成时抛出
+   */
+  public get paths(): Paths {
+    return this._requireRuntimeData(this._paths, 'paths', 'modifyPaths')
+  }
+
+  /**
+   * 插件共同维护的项目元数据
+   *
+   * @remarks
+   * `modifyAppData` Hook 执行期间应通过其 `memo` 入参访问正在收集的数据
+   *
+   * @returns 已完成收集的项目元数据
+   * @throws {@link PluginHostError} `modifyAppData` Hook 尚未完成时抛出
+   */
+  public get appData(): AppData {
+    return this._requireRuntimeData(this._appData, 'appData', 'modifyAppData')
+  }
+
+  /**
+   * 用户交互输入
+   *
+   * @remarks
+   * `modifyPrompts` Hook 执行期间应通过其 `memo` 入参访问正在收集的输入
+   *
+   * @returns 已完成收集的用户输入
+   * @throws {@link PluginHostError} `modifyPrompts` Hook 尚未完成时抛出
+   */
+  public get prompts(): Prompts {
+    return this._requireRuntimeData(this._prompts, 'prompts', 'modifyPrompts')
   }
 
   /**
@@ -153,7 +180,7 @@ export class CreateRunner extends PluginHost<
       await this._resolveConfig()
 
       this._stage = CreateRunnerStage.CollectingPaths
-      this.paths = await this.runHook('modifyPaths', {
+      this._paths = await this.runHook('modifyPaths', {
         initialValue: {
           cwd: this.cwd,
           target,
@@ -164,7 +191,7 @@ export class CreateRunner extends PluginHost<
       })
 
       this._stage = CreateRunnerStage.CollectingAppData
-      this.appData = await this.runHook('modifyAppData', {
+      this._appData = await this.runHook('modifyAppData', {
         initialValue: {
           scene: 'web',
           cliVersion: localRequire('../../package.json').version,
@@ -183,24 +210,18 @@ export class CreateRunner extends PluginHost<
         args: { cwd: this.cwd },
       })
 
-      this.prompts = await this.runHook('modifyPrompts', {
-        initialValue: {} as Prompts,
+      this._prompts = await this.runHook('modifyPrompts', {
+        initialValue: {
+          author: '',
+          email: '',
+          gitUrl: '',
+          gitHref: '',
+          registry: '',
+          year: '',
+          date: '',
+          dateTime: '',
+        },
         args: { questions },
-      })
-
-      this._stage = CreateRunnerStage.CollectingTsConfig
-      this.tsConfig = await this.runHook('modifyTsConfig', {
-        initialValue: {},
-      })
-
-      this._stage = CreateRunnerStage.CollectingJestConfig
-      this.jestConfig = await this.runHook('modifyJestConfig', {
-        initialValue: {},
-      })
-
-      this._stage = CreateRunnerStage.CollectingPrettierConfig
-      this.prettierConfig = await this.runHook('modifyPrettierConfig', {
-        initialValue: {},
       })
 
       this._stage = CreateRunnerStage.GeneratingFiles
@@ -251,6 +272,22 @@ export class CreateRunner extends PluginHost<
     this._config = config
   }
 
+  private _requireRuntimeData<T>(
+    value: T | null,
+    property: string,
+    hook: string,
+  ): T {
+    if (value === null) {
+      throw new PluginHostError(
+        PluginHostErrorCode.InvalidState,
+        `CreateRunner.${property} is unavailable before the \`${hook}\` hook completes.`,
+        { details: { stage: this._stage } },
+      )
+    }
+
+    return value
+  }
+
   /**
    * 为 create 插件上下文提供运行时数据视图
    *
@@ -261,9 +298,6 @@ export class CreateRunner extends PluginHost<
     const getAppData = () => this.appData
     const getPaths = () => this.paths as Required<Paths>
     const getPrompts = () => this.prompts
-    const getTsConfig = () => this.tsConfig
-    const getJestConfig = () => this.jestConfig
-    const getPrettierConfig = () => this.prettierConfig
 
     return {
       get config() {
@@ -277,15 +311,6 @@ export class CreateRunner extends PluginHost<
       },
       get prompts() {
         return getPrompts()
-      },
-      get tsConfig() {
-        return getTsConfig()
-      },
-      get jestConfig() {
-        return getJestConfig()
-      },
-      get prettierConfig() {
-        return getPrettierConfig()
       },
     }
   }

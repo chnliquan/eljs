@@ -103,20 +103,6 @@ export function run(
 
 /**
  * 解析并运行不经过 shell 的命令行文本
- * @param command - 命令行文本
- * @param options - 选项
- * @returns 子进程句柄
- * @deprecated 请改用 {@link runCommandLine}
- */
-export function runCommand(
-  command: string,
-  options?: RunCommandOptions,
-): RunCommandChildProcess {
-  return runCommandLine(command, options)
-}
-
-/**
- * 解析并运行不经过 shell 的命令行文本
  * @param commandLine - 命令行文本
  * @param options - 选项
  * @returns 子进程句柄
@@ -149,18 +135,4 @@ export async function findExecutable(
     ...(dirs ? { path: dirs.join(path.delimiter) } : {}),
     nothrow: true,
   })
-}
-
-/**
- * 查找可执行文件
- * @param target - 命令
- * @param dirs - 文件夹
- * @returns 可执行文件绝对路径，未找到时返回 `null`
- * @deprecated 请改用 {@link findExecutable}
- */
-export function getExecutableCommand(
-  target: string,
-  dirs?: string[],
-): Promise<string | null> {
-  return findExecutable(target, dirs)
 }

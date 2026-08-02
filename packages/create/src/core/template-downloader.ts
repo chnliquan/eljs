@@ -1,13 +1,13 @@
 import { run } from '@eljs/utils/cp'
 import { readJson, remove } from '@eljs/utils/file'
-import { downloadGitRepository } from '@eljs/utils/git'
+import { cloneGitRepository } from '@eljs/utils/git'
 import { chalk } from '@eljs/utils/logger'
 import { findUp } from '@eljs/utils/module'
 import {
   downloadNpmTarball,
   getNpmPackage,
   getNpmRequestConfig,
-  pkgNameAnalysis,
+  parsePackageSpecifier,
 } from '@eljs/utils/npm'
 import type { PackageJson } from '@eljs/utils/types'
 import path from 'node:path'
@@ -104,7 +104,7 @@ export class TemplateDownloader {
     name: string,
     registry?: string,
   ): Promise<string> {
-    const { name: pkgName, version } = pkgNameAnalysis(name)
+    const { name: pkgName, version } = parsePackageSpecifier(name)
     let data: Awaited<ReturnType<typeof getNpmPackage>>
 
     try {
@@ -143,20 +143,6 @@ export class TemplateDownloader {
       const expectedIntegrity = this.constructorOptions.integrity
 
       if (
-        expectedIntegrity &&
-        registryIntegrity &&
-        expectedIntegrity !== registryIntegrity
-      ) {
-        throw new AppError(
-          `Template ${projectName} integrity does not match the trusted catalog`,
-          {
-            code: 'CREATE_TEMPLATE_DOWNLOAD_FAILED',
-            details: { packageName: pkgName, version: data.version },
-          },
-        )
-      }
-
-      if (
         data.dist.unpackedSize !== undefined &&
         data.dist.unpackedSize > MAX_TEMPLATE_UNPACKED_BYTES
       ) {
@@ -177,6 +163,7 @@ export class TemplateDownloader {
       )
       templateRootPath = await downloadNpmTarball(tarball, {
         ...requestConfig,
+        // 调用方固定的摘要是独立信任根，应直接校验归档字节而不是比较 registry 的序列化形式
         integrity: expectedIntegrity || registryIntegrity,
         maxBytes: MAX_TEMPLATE_TARBALL_BYTES,
         maxEntries: MAX_TEMPLATE_TARBALL_ENTRIES,
@@ -219,8 +206,8 @@ export class TemplateDownloader {
           : {}),
       }
       templateRootPath = Object.keys(gitOptions).length
-        ? await downloadGitRepository(url, gitOptions)
-        : await downloadGitRepository(url)
+        ? await cloneGitRepository(url, gitOptions)
+        : await cloneGitRepository(url)
       this._spinner.succeed()
     } catch (error) {
       this._spinner.fail()

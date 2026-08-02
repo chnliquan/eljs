@@ -11,7 +11,7 @@ import { CreateTemplate, type CreateTemplateOptions } from '../src/create'
 
 // 导入 mock 后的模块
 import { ProjectCreator } from '@eljs/create'
-import { prompts } from '@eljs/utils'
+import { prompts } from '@eljs/utils/cli'
 
 import { onCancel } from '../src/utils'
 
@@ -20,8 +20,7 @@ vi.mock('@eljs/create', async importOriginal => ({
   ...(await importOriginal<typeof import('@eljs/create')>()),
   ProjectCreator: vi.fn(),
 }))
-vi.mock('@eljs/utils/cli', async () => import('@eljs/utils'))
-vi.mock('@eljs/utils')
+vi.mock('@eljs/utils/cli')
 vi.mock('../src/utils')
 
 describe('CreateTemplate 类功能测试', () => {

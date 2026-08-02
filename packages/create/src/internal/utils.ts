@@ -1,7 +1,7 @@
 import {
   getGitUserSync,
-  gitUrlAnalysis,
   getGitUrlSync as gitUrlSync,
+  parseGitRemoteUrl,
 } from '@eljs/utils/git'
 
 const account = getGitUserSync()
@@ -27,6 +27,6 @@ export function getGitHref(gitUrl: string) {
     return _gitHref
   }
 
-  _gitHref = gitUrlAnalysis(gitUrl)?.href || '${gitHref}'
+  _gitHref = parseGitRemoteUrl(gitUrl)?.href || '${gitHref}'
   return _gitHref
 }

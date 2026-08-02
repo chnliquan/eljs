@@ -1,5 +1,5 @@
 import { isDirectory, type RenderTemplateOptions } from '@eljs/utils/file'
-import { extractCallDir } from '@eljs/utils/path'
+import { getCallerDirectory } from '@eljs/utils/path'
 import { basename, join, resolve } from 'node:path'
 
 import { definePlugin } from '../../define'
@@ -12,7 +12,7 @@ export default definePlugin(context => {
       data: object = {},
       options?: RenderTemplateOptions,
     ) => {
-      const baseDir = extractCallDir(3)
+      const baseDir = getCallerDirectory(3)
       const srcFile = resolve(baseDir, path)
 
       if (await isDirectory(srcFile)) {

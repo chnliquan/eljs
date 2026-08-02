@@ -30,13 +30,3 @@ export function parseCommandLine(commandLine: string): string[] {
 
   return tokens
 }
-
-/**
- * 将命令行文本解析为命令和参数
- * @param command - 命令行文本
- * @returns 命令及参数组成的数组
- * @deprecated 请改用 {@link parseCommandLine}
- */
-export function parseCommand(command: string): string[] {
-  return parseCommandLine(command)
-}

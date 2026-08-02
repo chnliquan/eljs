@@ -22,9 +22,10 @@ vi.mock('../../src/guards')
 
 describe('NPM Download 工具', () => {
   const mockDownloadTo = downloadTo as MockedFunction<typeof downloadTo>
-  const mockTmpdir = requiredModule0.createTempDir as unknown as MockedFunction<
-    (random?: boolean) => Promise<string>
-  >
+  const mockCreateTempDir =
+    requiredModule0.createTempDir as unknown as MockedFunction<
+      (random?: boolean) => Promise<string>
+    >
   const mockRemove = requiredModule0.remove as MockedFunction<
     typeof importedModule0.remove
   >
@@ -35,7 +36,7 @@ describe('NPM Download 工具', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockDownloadTo.mockResolvedValue(undefined)
-    mockTmpdir.mockResolvedValue('/tmp/random-dir')
+    mockCreateTempDir.mockResolvedValue('/tmp/random-dir')
     mockRemove.mockResolvedValue(true)
     mockIsObject.mockReturnValue(false)
   })
@@ -62,7 +63,7 @@ describe('NPM Download 工具', () => {
 
       const result = await downloadNpmTarball(url)
 
-      expect(mockTmpdir).toHaveBeenCalledWith(true)
+      expect(mockCreateTempDir).toHaveBeenCalledWith(true)
       expect(mockDownloadTo).toHaveBeenCalledWith(
         url,
         '/tmp/random-dir',
@@ -79,7 +80,7 @@ describe('NPM Download 工具', () => {
 
       const result = await downloadNpmTarball(url, options)
 
-      expect(mockTmpdir).toHaveBeenCalledWith(true)
+      expect(mockCreateTempDir).toHaveBeenCalledWith(true)
       expect(mockDownloadTo).toHaveBeenCalledWith(
         url,
         '/tmp/random-dir',
@@ -114,7 +115,7 @@ describe('NPM Download 工具', () => {
     })
 
     it('应该处理临时目录创建失败', async () => {
-      mockTmpdir.mockRejectedValue(new Error('Cannot create temp dir'))
+      mockCreateTempDir.mockRejectedValue(new Error('Cannot create temp dir'))
 
       await expect(
         downloadNpmTarball('https://example.com/test.tgz'),
@@ -127,7 +128,7 @@ describe('NPM Download 工具', () => {
         '',
       )
 
-      expect(mockTmpdir).toHaveBeenCalledWith(true)
+      expect(mockCreateTempDir).toHaveBeenCalledWith(true)
       expect(result).toBe('/tmp/random-dir')
     })
 
@@ -150,7 +151,7 @@ describe('NPM Download 工具', () => {
     it('应该处理 (url) 重载', async () => {
       await downloadNpmTarball('https://example.com/pkg.tgz')
 
-      expect(mockTmpdir).toHaveBeenCalledWith(true)
+      expect(mockCreateTempDir).toHaveBeenCalledWith(true)
       expect(mockDownloadTo).toHaveBeenCalledWith(
         'https://example.com/pkg.tgz',
         '/tmp/random-dir',
@@ -161,7 +162,7 @@ describe('NPM Download 工具', () => {
     it('应该处理 (url, dest) 重载', async () => {
       await downloadNpmTarball('https://example.com/pkg.tgz', '/dest')
 
-      expect(mockTmpdir).not.toHaveBeenCalled()
+      expect(mockCreateTempDir).not.toHaveBeenCalled()
       expect(mockDownloadTo).toHaveBeenCalledWith(
         'https://example.com/pkg.tgz',
         '/dest',

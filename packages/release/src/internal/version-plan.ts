@@ -1,11 +1,8 @@
-import { safeWriteJson, type PackageJson } from '@eljs/utils'
+import { writeJsonAtomic } from '@eljs/utils/file'
+import type { PackageJson } from '@eljs/utils/types'
 
-import type {
-  AppData,
-  ProjectPackageJson,
-  WorkspacePackageJson,
-} from '../types'
-import { AppError, updatePackageVersion } from '../utils'
+import type { AppData, ProjectPackageJson, WorkspacePackage } from '../types'
+import { updatePackageVersion } from '../utils'
 
 /**
  * 单个清单在版本更新事务中的原始值和目标值
@@ -31,10 +28,10 @@ export interface PreparedVersionPlan {
   readonly version: string
   /** 待写入的清单集合 */
   readonly manifests: readonly PreparedVersionManifest[]
-  /** 提供给后续发布预检的 workspace 清单 */
-  readonly pkgs: WorkspacePackageJson[]
-  /** 版本更新前的 workspace 清单快照 */
-  readonly originalPkgs: WorkspacePackageJson[]
+  /** 提供给后续发布预检的 workspace 包 */
+  readonly workspacePackages: WorkspacePackage[]
+  /** 版本更新前的 workspace 包快照 */
+  readonly originalWorkspacePackages: WorkspacePackage[]
   /** 提供给后续生命周期的根项目清单 */
   readonly projectPkg: ProjectPackageJson
   /** 版本更新前的根项目清单快照 */
@@ -55,51 +52,46 @@ export interface PreparedVersionPlan {
 export async function prepareVersionPlan(
   appData: Pick<
     AppData,
-    'pkgJsonPaths' | 'pkgNames' | 'pkgs' | 'projectPkg' | 'projectPkgJsonPath'
+    'projectPkg' | 'projectPkgJsonPath' | 'workspacePackages'
   >,
   version: string,
 ): Promise<PreparedVersionPlan> {
-  const { projectPkgJsonPath, projectPkg, pkgNames, pkgJsonPaths, pkgs } =
-    appData
-
-  if (
-    pkgNames.length !== pkgJsonPaths.length ||
-    pkgNames.length !== pkgs.length
-  ) {
-    throw new AppError(
-      'Version update preflight failed: package names, paths, and manifests are not aligned.',
-    )
-  }
+  const { projectPkgJsonPath, projectPkg, workspacePackages } = appData
+  const packageNames = workspacePackages.map(({ manifest }) => manifest.name)
 
   const manifests: PreparedVersionManifest[] = []
-  const updatedPackages: WorkspacePackageJson[] = []
+  const updatedWorkspacePackages: WorkspacePackage[] = []
 
   // 每个对象都来自 JSON 清单，先克隆可确保后续校验失败时不污染共享状态
-  for (let index = 0; index < pkgs.length; index++) {
-    const original = structuredClone(pkgs[index])
-    const updated = structuredClone(pkgs[index])
+  for (const workspacePackage of workspacePackages) {
+    const original = structuredClone(workspacePackage.manifest)
+    const updated = structuredClone(workspacePackage.manifest)
     await updatePackageVersion(
-      pkgJsonPaths[index],
+      workspacePackage.manifestPath,
       updated,
       version,
-      pkgNames,
+      packageNames,
       { write: false },
     )
     manifests.push({
-      path: pkgJsonPaths[index],
+      path: workspacePackage.manifestPath,
       original,
       updated,
     })
-    updatedPackages.push(updated as WorkspacePackageJson)
+    updatedWorkspacePackages.push({
+      ...workspacePackage,
+      manifest: updated as WorkspacePackage['manifest'],
+    })
   }
 
-  const projectPackageIndex = pkgJsonPaths.indexOf(projectPkgJsonPath)
+  const projectWorkspacePackage = updatedWorkspacePackages.find(
+    ({ manifestPath }) => manifestPath === projectPkgJsonPath,
+  )
   let updatedProjectPackage: ProjectPackageJson
 
-  if (projectPackageIndex >= 0) {
-    updatedProjectPackage = updatedPackages[
-      projectPackageIndex
-    ] as ProjectPackageJson
+  if (projectWorkspacePackage) {
+    updatedProjectPackage =
+      projectWorkspacePackage.manifest as ProjectPackageJson
   } else {
     const original = structuredClone(projectPkg)
     const updated = structuredClone(projectPkg)
@@ -120,11 +112,14 @@ export async function prepareVersionPlan(
 
   return {
     manifests,
-    originalPkgs: pkgs.map(pkg => structuredClone(pkg)),
+    originalWorkspacePackages: workspacePackages.map(workspacePackage => ({
+      ...workspacePackage,
+      manifest: structuredClone(workspacePackage.manifest),
+    })),
     originalProjectPkg: structuredClone(projectPkg),
-    pkgs: updatedPackages,
     projectPkg: updatedProjectPackage,
     version,
+    workspacePackages: updatedWorkspacePackages,
   }
 }
 
@@ -143,7 +138,7 @@ export async function rollbackVersionPlan(
 
   for (const manifest of [...plan.manifests].reverse()) {
     try {
-      await safeWriteJson(manifest.path, manifest.original)
+      await writeJsonAtomic(manifest.path, manifest.original)
     } catch (error) {
       rollbackErrors.push(error)
     }
@@ -179,7 +174,7 @@ export async function writeVersionPlan(
 
   try {
     for (const manifest of plan.manifests) {
-      await safeWriteJson(manifest.path, manifest.updated)
+      await writeJsonAtomic(manifest.path, manifest.updated)
       written.push(manifest)
     }
   } catch (writeError) {

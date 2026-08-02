@@ -1,7 +1,7 @@
 import {
   copyDirectory,
   copyFile,
-  copyTpl,
+  copyTemplate,
   type CopyFileOptions,
 } from '@eljs/utils/file'
 import { resolve } from 'node:path'
@@ -25,7 +25,7 @@ export default definePlugin(context => {
   context.registerCapability(
     'copyTpl',
     async (from, to, data, options: CopyFileOptions) => {
-      await copyTpl(from, to, data, {
+      await copyTemplate(from, to, data, {
         ...options,
         basedir: context.paths.target,
       })

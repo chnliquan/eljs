@@ -191,10 +191,6 @@ describe('插件宿主集成', () => {
 
     await host.testLoad()
 
-    expect(host.getPluginDiagnostics().map(plugin => plugin.path)).toEqual([
-      parentPlugin,
-      childPlugin,
-    ])
     await expect(
       host.runHook('addValues', { initialValue: [] }),
     ).resolves.toEqual(['child'])
@@ -243,17 +239,9 @@ describe('插件宿主集成', () => {
     })
 
     expect(host.state).toBe(PluginHostState.Failed)
-    expect(host.getPluginDiagnostics()).toEqual([
-      expect.objectContaining({
-        id: './broken-plugin',
-        metrics: expect.objectContaining({
-          initializationFailed: true,
-        }),
-      }),
-    ])
   })
 
-  it('插件返回值无效时应该记录初始化失败', async () => {
+  it('插件返回值无效时应该失败', async () => {
     const invalidPlugin = path.join(cwd, 'invalid-result-plugin.mjs')
     await writeFile(
       invalidPlugin,
@@ -267,14 +255,6 @@ describe('插件宿主集成', () => {
     await expect(host.testLoad()).rejects.toMatchObject({
       code: PluginHostErrorCode.InvalidPluginResult,
     })
-    expect(host.getPluginDiagnostics()).toEqual([
-      expect.objectContaining({
-        path: invalidPlugin,
-        metrics: expect.objectContaining({
-          initializationFailed: true,
-        }),
-      }),
-    ])
   })
 
   it('应该在嵌套插件错误中保留父 preset 来源', async () => {

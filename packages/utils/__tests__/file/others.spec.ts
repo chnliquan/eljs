@@ -38,10 +38,10 @@ vi.mock('mustache')
 describe('文件移动、删除和渲染工具', () => {
   const mockRimraf = rimraf as MockedFunction<typeof rimraf>
   const mockRimrafSync = rimrafSync as MockedFunction<typeof rimrafSync>
-  const mockIsPathExists = requiredModule0.pathExists as MockedFunction<
+  const mockPathExists = requiredModule0.pathExists as MockedFunction<
     (filePath: string) => Promise<boolean>
   >
-  const mockIsPathExistsSync = requiredModule0.pathExistsSync as MockedFunction<
+  const mockPathExistsSync = requiredModule0.pathExistsSync as MockedFunction<
     (filePath: string) => boolean
   >
   const mockEjs = vi.mocked(ejs, { deep: true })
@@ -74,17 +74,17 @@ describe('文件移动、删除和渲染工具', () => {
 
   describe('move 异步文件移动', () => {
     it('应该移动文件到新位置', async () => {
-      mockIsPathExists.mockResolvedValue(false)
+      mockPathExists.mockResolvedValue(false)
 
       await move(sourceFile, targetFile)
 
-      expect(mockIsPathExists).toHaveBeenCalledWith(targetFile)
+      expect(mockPathExists).toHaveBeenCalledWith(targetFile)
       expect(fs.existsSync(sourceFile)).toBe(false)
       expect(fs.existsSync(targetFile)).toBe(true)
     })
 
     it('应该在目标存在且不覆盖时抛出错误', async () => {
-      mockIsPathExists.mockResolvedValue(true)
+      mockPathExists.mockResolvedValue(true)
 
       await expect(move(sourceFile, targetFile)).rejects.toThrow(
         /already exists/,
@@ -92,7 +92,7 @@ describe('文件移动、删除和渲染工具', () => {
     })
 
     it('应该在覆盖模式下删除目标文件', async () => {
-      mockIsPathExists.mockResolvedValue(true)
+      mockPathExists.mockResolvedValue(true)
       mockRimraf.mockResolvedValue(true)
 
       await move(sourceFile, targetFile, true)
@@ -101,7 +101,7 @@ describe('文件移动、删除和渲染工具', () => {
     })
 
     it('应该在移动失败时抛出错误', async () => {
-      mockIsPathExists.mockResolvedValue(false)
+      mockPathExists.mockResolvedValue(false)
 
       const invalidTarget = '/invalid/readonly/target.txt'
 
@@ -111,17 +111,17 @@ describe('文件移动、删除和渲染工具', () => {
 
   describe('moveSync 同步文件移动', () => {
     it('应该同步移动文件', () => {
-      mockIsPathExistsSync.mockReturnValue(false)
+      mockPathExistsSync.mockReturnValue(false)
 
       moveSync(sourceFile, targetFile)
 
-      expect(mockIsPathExistsSync).toHaveBeenCalledWith(targetFile)
+      expect(mockPathExistsSync).toHaveBeenCalledWith(targetFile)
       expect(fs.existsSync(sourceFile)).toBe(false)
       expect(fs.existsSync(targetFile)).toBe(true)
     })
 
     it('应该在同步模式下处理覆盖', () => {
-      mockIsPathExistsSync.mockReturnValue(true)
+      mockPathExistsSync.mockReturnValue(true)
       mockRimrafSync.mockReturnValue(true)
 
       moveSync(sourceFile, targetFile, true)
@@ -130,7 +130,7 @@ describe('文件移动、删除和渲染工具', () => {
     })
 
     it('应该在目标存在且不覆盖时抛出错误', () => {
-      mockIsPathExistsSync.mockReturnValue(true)
+      mockPathExistsSync.mockReturnValue(true)
 
       expect(() => moveSync(sourceFile, targetFile)).toThrow(/already exists/)
     })

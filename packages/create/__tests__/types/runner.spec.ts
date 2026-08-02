@@ -134,7 +134,6 @@ describe('CreateRunner 类型', () => {
         year: '2024',
         date: '2024-01-15',
         dateTime: '2024-01-15 14:30:00',
-        dirname: 'my-project',
       }
 
       expect(prompts.author).toBe('John Doe')
@@ -145,7 +144,6 @@ describe('CreateRunner 类型', () => {
       expect(prompts.year).toBe('2024')
       expect(prompts.date).toBe('2024-01-15')
       expect(prompts.dateTime).toBe('2024-01-15 14:30:00')
-      expect(prompts.dirname).toBe('my-project')
     })
 
     it('应该允许任意类型的其他属性', () => {
@@ -158,7 +156,6 @@ describe('CreateRunner 类型', () => {
         year: '2024',
         date: '2024-02-20',
         dateTime: '2024-02-20 10:15:30',
-        dirname: 'jane-project',
         framework: 'react',
         typescript: true,
         testing: 'jest',
@@ -189,7 +186,6 @@ describe('CreateRunner 类型', () => {
         year: '2024',
         date: '2024-02-20',
         dateTime: '2024-02-20 10:15:30',
-        dirname: 'jane-project',
         framework: 'react',
       }
 
@@ -206,7 +202,6 @@ describe('CreateRunner 类型', () => {
         year: '2024',
         date: '2024-12-31',
         dateTime: '2024-12-31 23:59:59',
-        dirname: 'test-project',
       }
 
       // 测试年份格式 (YYYY)
@@ -229,9 +224,6 @@ describe('CreateRunner 类型', () => {
         'collectingPaths',
         'collectingAppData',
         'collectingPrompts',
-        'collectingTsConfig',
-        'collectingJestConfig',
-        'collectingPrettierConfig',
         'generatingFiles',
         'completed',
         'failed',
@@ -249,13 +241,6 @@ describe('CreateRunner 类型', () => {
       expect(CreateRunnerStage.CollectingPaths).toBe('collectingPaths')
       expect(CreateRunnerStage.CollectingAppData).toBe('collectingAppData')
       expect(CreateRunnerStage.CollectingPrompts).toBe('collectingPrompts')
-      expect(CreateRunnerStage.CollectingTsConfig).toBe('collectingTsConfig')
-      expect(CreateRunnerStage.CollectingJestConfig).toBe(
-        'collectingJestConfig',
-      )
-      expect(CreateRunnerStage.CollectingPrettierConfig).toBe(
-        'collectingPrettierConfig',
-      )
       expect(CreateRunnerStage.GeneratingFiles).toBe('generatingFiles')
       expect(CreateRunnerStage.Completed).toBe('completed')
       expect(CreateRunnerStage.Failed).toBe('failed')
@@ -283,7 +268,7 @@ describe('CreateRunner 类型', () => {
 
     it('应该有正确数量的枚举值', () => {
       const enumValues = Object.values(CreateRunnerStage)
-      expect(enumValues).toHaveLength(12)
+      expect(enumValues).toHaveLength(9)
     })
 
     it('应该为工作流程维护枚举顺序', () => {
@@ -295,9 +280,6 @@ describe('CreateRunner 类型', () => {
         'collectingPaths',
         'collectingAppData',
         'collectingPrompts',
-        'collectingTsConfig',
-        'collectingJestConfig',
-        'collectingPrettierConfig',
         'generatingFiles',
         'completed',
         'failed',

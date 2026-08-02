@@ -26,6 +26,9 @@ vi.mock('@eljs/utils', () => ({
   },
   run: vi.fn(),
 }))
+vi.mock('@eljs/utils/cp', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/npm', async () => import('@eljs/utils'))
 
 vi.mock('resolve-bin', () => {
   const sync = vi.fn()

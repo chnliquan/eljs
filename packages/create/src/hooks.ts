@@ -20,9 +20,6 @@ export const createHookSchema = defineHooks({
     Prompts,
     { questions: prompts.PromptObject[] }
   >(),
-  modifyTsConfig: defineModifyHook<Record<string, unknown>>(),
-  modifyJestConfig: defineModifyHook<Record<string, unknown>>(),
-  modifyPrettierConfig: defineModifyHook<Record<string, unknown>>(),
   onStart: defineEventHook(),
   onBeforeGenerateFiles: defineEventHook<{
     prompts: Prompts
@@ -48,26 +45,23 @@ export interface CreatePluginCapabilities {
   readonly config: ResolvedConfig
   /**
    * 当前应用数据
+   *
+   * @remarks
+   * 插件初始化及 `modifyAppData` Hook 执行期间不可读取；Hook 应使用其 `memo` 入参
    */
   readonly appData: AppData
   /**
    * 已解析的项目路径
+   *
+   * @remarks
+   * 插件初始化及 `modifyPaths` Hook 执行期间不可读取；Hook 应使用其 `memo` 入参
    */
   readonly paths: Required<Paths>
   /**
    * 用户交互输入
+   *
+   * @remarks
+   * 插件初始化及 `modifyPrompts` Hook 执行期间不可读取；Hook 应使用其 `memo` 入参
    */
   readonly prompts: Prompts
-  /**
-   * 当前 TypeScript 配置
-   */
-  readonly tsConfig: Record<string, unknown>
-  /**
-   * 当前 Jest 配置
-   */
-  readonly jestConfig: Record<string, unknown>
-  /**
-   * 当前 Prettier 配置
-   */
-  readonly prettierConfig: Record<string, unknown>
 }

@@ -21,82 +21,48 @@ export interface PublishTarget {
  * @param appData - 已加载的工作区包数据
  * @param version - 所有发布包应具备的目标版本
  * @returns 依赖包在前、消费包在后的发布目标
+ * @remarks 标记为 private 的包不会进入发布目标，但发布包不能在运行时依赖这些包
  * @throws {@link AppError}
- * 当清单映射不一致、目标为私有包、版本不一致、依赖了不可发布的
- * workspace 包或存在运行时循环依赖时抛出
+ * 当包名重复、发布包版本不一致、依赖了不可发布的 workspace 包或存在运行时循环依赖时抛出
  * @internal
  */
 export function createPublishPlan(
-  appData: Pick<
-    AppData,
-    'pkgNames' | 'pkgs' | 'validPkgNames' | 'validPkgRootPaths'
-  >,
+  appData: Pick<AppData, 'workspacePackages'>,
   version: string,
 ): PublishTarget[] {
-  const { pkgNames, pkgs, validPkgNames, validPkgRootPaths } = appData
+  const { workspacePackages } = appData
+  const packageNames = workspacePackages.map(({ manifest }) => manifest.name)
 
-  if (pkgNames.length !== pkgs.length) {
-    throw new AppError(
-      'Publish preflight failed: package names and manifests are not aligned.',
-    )
-  }
-
-  if (validPkgNames.length !== validPkgRootPaths.length) {
-    throw new AppError(
-      'Publish preflight failed: package names and paths are not aligned.',
-    )
-  }
-
-  if (new Set(pkgNames).size !== pkgNames.length) {
+  if (new Set(packageNames).size !== packageNames.length) {
     throw new AppError(
       'Publish preflight failed: workspace package names must be unique.',
     )
   }
 
-  if (new Set(validPkgNames).size !== validPkgNames.length) {
-    throw new AppError(
-      'Publish preflight failed: publishable package names must be unique.',
-    )
-  }
-
-  const workspacePackages = new Map(
-    pkgNames.map((name, index) => [name, pkgs[index]]),
+  const workspacePackageManifests = new Map(
+    appData.workspacePackages.map(({ manifest }) => [manifest.name, manifest]),
   )
-  const targets = validPkgNames.map((name, index) => {
-    const packageJson = workspacePackages.get(name)
+  const targets = appData.workspacePackages
+    .filter(({ manifest }) => !manifest.private)
+    .map(({ manifest: packageJson, rootPath }) => {
+      const { name } = packageJson
 
-    if (!packageJson) {
-      throw new AppError(
-        `Publish preflight failed: no manifest was loaded for ${name}.`,
-      )
-    }
+      if (packageJson.version !== version) {
+        throw new AppError(
+          `Publish preflight failed: ${name} has version ${packageJson.version}, expected ${version}.`,
+        )
+      }
 
-    if (packageJson.private) {
-      throw new AppError(
-        `Publish preflight failed: ${name} is marked as private.`,
-      )
-    }
-
-    if (packageJson.version !== version) {
-      throw new AppError(
-        `Publish preflight failed: ${name} has version ${packageJson.version}, expected ${version}.`,
-      )
-    }
-
-    return {
-      name,
-      rootPath: validPkgRootPaths[index],
-      packageJson,
-    }
-  })
-  const targetNames = new Set(validPkgNames)
+      return { name, packageJson, rootPath }
+    })
+  const targetNames = new Set(targets.map(({ name }) => name))
 
   for (const target of targets) {
     const runtimeDependencies = getRuntimeDependencies(target.packageJson)
 
     for (const dependencyName of Object.keys(runtimeDependencies)) {
       if (
-        workspacePackages.has(dependencyName) &&
+        workspacePackageManifests.has(dependencyName) &&
         !targetNames.has(dependencyName)
       ) {
         throw new AppError(

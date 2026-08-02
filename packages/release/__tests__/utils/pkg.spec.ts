@@ -14,8 +14,8 @@ import {
 
 import {
   logger,
-  runCommand,
-  safeWriteJson,
+  runCommandLine,
+  writeJsonAtomic,
   type PackageJson,
   type PackageManager,
 } from '@eljs/utils'
@@ -31,9 +31,12 @@ vi.mock('@eljs/utils', () => ({
   logger: {
     info: vi.fn(),
   },
-  runCommand: vi.fn(),
-  safeWriteJson: vi.fn(),
+  runCommandLine: vi.fn(),
+  writeJsonAtomic: vi.fn(),
 }))
+vi.mock('@eljs/utils/cp', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
 
 describe('包管理工具函数测试', () => {
   beforeEach(() => {
@@ -42,9 +45,9 @@ describe('包管理工具函数测试', () => {
 
   describe('updatePackageLock 函数', () => {
     beforeEach(() => {
-      ;(runCommand as MockedFunction<typeof runCommand>).mockResolvedValue(
-        {} as Awaited<ReturnType<typeof runCommand>>,
-      )
+      ;(
+        runCommandLine as MockedFunction<typeof runCommandLine>
+      ).mockResolvedValue({} as Awaited<ReturnType<typeof runCommandLine>>)
     })
 
     it('应该为 pnpm 执行正确的命令', async () => {
@@ -52,7 +55,7 @@ describe('包管理工具函数测试', () => {
 
       await updatePackageLock(packageManager)
 
-      expect(runCommand).toHaveBeenCalledWith(
+      expect(runCommandLine).toHaveBeenCalledWith(
         'pnpm install --lockfile-only --ignore-scripts',
         {},
       )
@@ -63,7 +66,7 @@ describe('包管理工具函数测试', () => {
 
       await updatePackageLock(packageManager)
 
-      expect(runCommand).toHaveBeenCalledWith(
+      expect(runCommandLine).toHaveBeenCalledWith(
         'yarn install --ignore-scripts',
         {},
       )
@@ -72,7 +75,7 @@ describe('包管理工具函数测试', () => {
     it('应该为 Yarn Berry 仅更新锁文件', async () => {
       await updatePackageLock('yarn', undefined, 'yarn-berry')
 
-      expect(runCommand).toHaveBeenCalledWith(
+      expect(runCommandLine).toHaveBeenCalledWith(
         'yarn install --mode=update-lockfile',
         {},
       )
@@ -83,7 +86,7 @@ describe('包管理工具函数测试', () => {
 
       await updatePackageLock(packageManager)
 
-      expect(runCommand).toHaveBeenCalledWith(
+      expect(runCommandLine).toHaveBeenCalledWith(
         'bun install --lockfile-only --ignore-scripts',
         {},
       )
@@ -94,36 +97,38 @@ describe('包管理工具函数测试', () => {
 
       await updatePackageLock(packageManager)
 
-      expect(runCommand).toHaveBeenCalledWith(
+      expect(runCommandLine).toHaveBeenCalledWith(
         'npm install --package-lock-only --ignore-scripts',
         {},
       )
     })
 
-    it('应该传递选项给 runCommand', async () => {
+    it('应该传递选项给 runCommandLine', async () => {
       const options = { cwd: '/custom/path', timeout: 5000 }
 
       await updatePackageLock('pnpm', options)
 
-      expect(runCommand).toHaveBeenCalledWith(
+      expect(runCommandLine).toHaveBeenCalledWith(
         'pnpm install --lockfile-only --ignore-scripts',
         options,
       )
     })
 
     it('应该允许命令成功时输出 stderr', async () => {
-      ;(runCommand as MockedFunction<typeof runCommand>).mockResolvedValue({
+      ;(
+        runCommandLine as MockedFunction<typeof runCommandLine>
+      ).mockResolvedValue({
         stderr: 'warning',
-      } as Awaited<ReturnType<typeof runCommand>>)
+      } as Awaited<ReturnType<typeof runCommandLine>>)
 
       await expect(updatePackageLock('pnpm')).resolves.toBeUndefined()
     })
 
     it('应该向调用方传播命令执行失败', async () => {
       const error = new Error('命令执行失败')
-      ;(runCommand as MockedFunction<typeof runCommand>).mockRejectedValue(
-        error,
-      )
+      ;(
+        runCommandLine as MockedFunction<typeof runCommandLine>
+      ).mockRejectedValue(error)
 
       await expect(updatePackageLock('pnpm')).rejects.toBe(error)
     })
@@ -141,7 +146,7 @@ describe('包管理工具函数测试', () => {
       await updatePackageVersion(pkgJsonPath, pkg, version)
 
       expect(pkg.version).toBe('1.1.0')
-      expect(safeWriteJson).toHaveBeenCalledWith(pkgJsonPath, pkg)
+      expect(writeJsonAtomic).toHaveBeenCalledWith(pkgJsonPath, pkg)
     })
 
     it('应该更新包版本和依赖版本', async () => {
@@ -170,7 +175,7 @@ describe('包管理工具函数测试', () => {
       expect(pkg.dependencies?.['external-dep']).toBe('2.0.0') // 不应该被更新
       expect(pkg.devDependencies?.['@it/dep2']).toBe('1.1.0')
       expect(pkg.optionalDependencies?.['@it/dep3']).toBe('1.1.0')
-      expect(safeWriteJson).toHaveBeenCalledWith(pkgJsonPath, pkg)
+      expect(writeJsonAtomic).toHaveBeenCalledWith(pkgJsonPath, pkg)
     })
 
     it('应该处理没有依赖的包', async () => {
@@ -185,7 +190,7 @@ describe('包管理工具函数测试', () => {
       await updatePackageVersion(pkgJsonPath, pkg, version, pkgNames)
 
       expect(pkg.version).toBe('1.1.0')
-      expect(safeWriteJson).toHaveBeenCalledWith(pkgJsonPath, pkg)
+      expect(writeJsonAtomic).toHaveBeenCalledWith(pkgJsonPath, pkg)
     })
 
     it('dry-run 应该只修改内存中的清单', async () => {
@@ -200,7 +205,7 @@ describe('包管理工具函数测试', () => {
       })
 
       expect(pkg.version).toBe('1.1.0')
-      expect(safeWriteJson).not.toHaveBeenCalled()
+      expect(writeJsonAtomic).not.toHaveBeenCalled()
     })
   })
 

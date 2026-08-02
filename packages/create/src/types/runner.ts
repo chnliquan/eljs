@@ -88,10 +88,6 @@ export type Prompts<
    * 创建时对应的时间，YYYY-MM-DD hh:mm:ss
    */
   dateTime: string
-  /**
-   * 创建时使用的文件夹名称
-   */
-  dirname: string
 } & Extensions
 
 /**
@@ -122,18 +118,6 @@ export enum CreateRunnerStage {
    * 正在收集交互输入
    */
   CollectingPrompts = 'collectingPrompts',
-  /**
-   * 正在收集 TypeScript 配置
-   */
-  CollectingTsConfig = 'collectingTsConfig',
-  /**
-   * 正在收集 Jest 配置
-   */
-  CollectingJestConfig = 'collectingJestConfig',
-  /**
-   * 正在收集 Prettier 配置
-   */
-  CollectingPrettierConfig = 'collectingPrettierConfig',
   /**
    * 正在生成文件
    */

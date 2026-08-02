@@ -19,7 +19,6 @@ import path from 'node:path'
 
 import {
   cloneGitRepository,
-  downloadGitRepository,
   getGitBranch,
   getGitCommitSha,
   getGitUrl,
@@ -27,12 +26,12 @@ import {
   gitCommit,
   gitPush,
   gitTag,
-  gitUrlAnalysis,
   hasGit,
   hasProjectGit,
   isGitAheadRemote,
   isGitBehindRemote,
   isGitClean,
+  parseGitRemoteUrl,
   type GitRemoteRepository,
 } from '../../src/git'
 
@@ -59,14 +58,11 @@ describe('Git 工具函数', () => {
   const mockRun = requiredModule1.run as Mock<
     (command: string, args?: string[], options?: object) => Promise<Result>
   >
-  const mockIsPathExists = requiredModule2.pathExists as Mock<
+  const mockPathExists = requiredModule2.pathExists as Mock<
     (path: string) => Promise<boolean>
   >
   const mockReadFile = requiredModule2.readFile as Mock<
     (path: string) => Promise<string>
-  >
-  const mockTmpdir = requiredModule2.tmpdir as unknown as Mock<
-    () => Promise<string>
   >
   const mockCreateTempDir = requiredModule2.createTempDir as unknown as Mock<
     () => Promise<string>
@@ -81,7 +77,6 @@ describe('Git 工具函数', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockRemove.mockResolvedValue(true)
-    mockCreateTempDir.mockImplementation(() => mockTmpdir())
     mockIsObject.mockImplementation(
       value =>
         value !== null && typeof value === 'object' && !Array.isArray(value),
@@ -312,7 +307,7 @@ describe('Git 工具函数', () => {
   describe('元数据', () => {
     describe('getGitUrl 获取 Git URL', () => {
       it('应该从配置返回 Git URL', async () => {
-        mockIsPathExists.mockResolvedValue(true)
+        mockPathExists.mockResolvedValue(true)
         mockReadFile.mockResolvedValue(`
 [core]
     repositoryformatversion = 0
@@ -332,7 +327,7 @@ describe('Git 工具函数', () => {
       })
 
       it('应该在没有 Git 目录时返回空字符串', async () => {
-        mockIsPathExists.mockResolvedValue(false)
+        mockPathExists.mockResolvedValue(false)
 
         const result = await getGitUrl('/project')
 
@@ -395,7 +390,7 @@ describe('Git 工具函数', () => {
       })
     })
 
-    describe('gitUrlAnalysis Git URL 解析', () => {
+    describe('parseGitRemoteUrl Git URL 解析', () => {
       it('应该解析 SSH Git URL', () => {
         const url = 'git@github.com:user/repo.git'
         const expected: GitRemoteRepository = {
@@ -406,7 +401,7 @@ describe('Git 工具函数', () => {
           ssh: 'git@github.com:user/repo.git',
         }
 
-        const result = gitUrlAnalysis(url)
+        const result = parseGitRemoteUrl(url)
 
         expect(result).toEqual(expected)
       })
@@ -421,7 +416,7 @@ describe('Git 工具函数', () => {
           ssh: 'git@github.com:user/repo.git',
         }
 
-        const result = gitUrlAnalysis(url)
+        const result = parseGitRemoteUrl(url)
 
         expect(result).toEqual(expected)
       })
@@ -436,19 +431,19 @@ describe('Git 工具函数', () => {
           ssh: 'git@gitlab.com:group/subgroup/repo.git',
         }
 
-        const result = gitUrlAnalysis(url)
+        const result = parseGitRemoteUrl(url)
 
         expect(result).toEqual(expected)
       })
 
       it('应该对无效 URL 返回 null', () => {
-        const result = gitUrlAnalysis('invalid-url')
+        const result = parseGitRemoteUrl('invalid-url')
 
         expect(result).toBeNull()
       })
 
       it('应该对空 URL 返回 null', () => {
-        const result = gitUrlAnalysis('')
+        const result = parseGitRemoteUrl('')
 
         expect(result).toBeNull()
       })
@@ -516,10 +511,10 @@ describe('Git 工具函数', () => {
   })
 
   describe('下载', () => {
-    describe('downloadGitRepository 下载 Git 仓库', () => {
+    describe('cloneGitRepository 下载 Git 仓库', () => {
       it('应该成功克隆仓库', async () => {
         const tempDir = '/tmp/test-dir'
-        mockTmpdir.mockResolvedValue(tempDir)
+        mockCreateTempDir.mockResolvedValue(tempDir)
         mockRun.mockResolvedValue({
           stdout: '',
           stderr: '',
@@ -553,7 +548,7 @@ describe('Git 工具函数', () => {
           exitCode: 0,
         } as Result)
 
-        const result = await downloadGitRepository(
+        const result = await cloneGitRepository(
           'https://github.com/user/repo.git',
           { branch: 'develop', dest: customDest },
         )
@@ -577,14 +572,14 @@ describe('Git 工具函数', () => {
 
       it('应该解析地址片段并移除 npm 风格协议前缀', async () => {
         const tempDir = '/tmp/test-dir'
-        mockTmpdir.mockResolvedValue(tempDir)
+        mockCreateTempDir.mockResolvedValue(tempDir)
         mockRun.mockResolvedValue({
           stdout: '',
           stderr: '',
           exitCode: 0,
         } as Result)
 
-        await downloadGitRepository(
+        await cloneGitRepository(
           'git+https://github.com/user/repo.git#feature%2Fcreate',
         )
 
@@ -606,11 +601,11 @@ describe('Git 工具函数', () => {
 
       it('应该在失败时抛出增强错误', async () => {
         const tempDir = '/tmp/test-dir'
-        mockTmpdir.mockResolvedValue(tempDir)
+        mockCreateTempDir.mockResolvedValue(tempDir)
         mockRun.mockRejectedValue(new Error('网络错误'))
 
         await expect(
-          downloadGitRepository('https://github.com/user/repo.git'),
+          cloneGitRepository('https://github.com/user/repo.git'),
         ).rejects.toThrow(
           'Download https://github.com/user/repo.git failed: 网络错误.',
         )

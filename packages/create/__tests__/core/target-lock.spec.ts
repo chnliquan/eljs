@@ -1,4 +1,4 @@
-import { isPathExists } from '@eljs/utils/file'
+import { pathExists } from '@eljs/utils/file'
 import { randomUUID } from 'node:crypto'
 import {
   mkdir,
@@ -6,6 +6,7 @@ import {
   readFile,
   rename,
   rm,
+  symlink,
   writeFile,
 } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -35,11 +36,61 @@ describe('目标目录锁', () => {
 
     await expect(acquireTargetLock(cwd, targetDir)).rejects.toMatchObject({
       code: 'CREATE_TARGET_LOCKED',
-      details: { ownerPid: process.pid, targetDir },
+      details: { ownerPid: process.pid, targetDir: lock.metadata.targetDir },
     })
 
     await releaseTargetLock(lock)
-    await expect(isPathExists(lock.path)).resolves.toBe(false)
+    await expect(pathExists(lock.path)).resolves.toBe(false)
+  })
+
+  it('同一物理目标的符号链接别名共用一把锁', async () => {
+    const targetDir = await createWorkspace(true)
+    const targetAlias = path.join(cwd, 'project-alias')
+    await symlink(
+      targetDir,
+      targetAlias,
+      process.platform === 'win32' ? 'junction' : 'dir',
+    )
+    const lock = await acquireTargetLock(cwd, targetDir)
+
+    await expect(acquireTargetLock(cwd, targetAlias)).rejects.toMatchObject({
+      code: 'CREATE_TARGET_LOCKED',
+      details: { ownerPid: process.pid, targetDir: lock.metadata.targetDir },
+    })
+
+    await releaseTargetLock(lock)
+  })
+
+  it('应该通过工作目录别名恢复同一物理位置的遗留备份', async () => {
+    cwd = await mkdtemp(path.join(tmpdir(), 'eljs-target-lock-alias-'))
+    const workspaceRoot = path.join(cwd, 'workspace')
+    const workspaceAlias = path.join(cwd, 'workspace-alias')
+    const targetDir = path.join(workspaceRoot, 'project')
+    const targetAlias = path.join(workspaceAlias, 'project')
+    await mkdir(targetDir, { recursive: true })
+    await writeFile(path.join(targetDir, 'original.txt'), 'original\n')
+    await symlink(
+      workspaceRoot,
+      workspaceAlias,
+      process.platform === 'win32' ? 'junction' : 'dir',
+    )
+
+    const lock = await acquireTargetLock(workspaceAlias, targetAlias)
+    const backupAlias = path.join(
+      workspaceAlias,
+      `.eljs-backup-${randomUUID()}`,
+    )
+    await updateTargetLockBackup(lock, backupAlias)
+    await rename(targetAlias, backupAlias)
+    await mkdir(targetAlias)
+    await markOwnerDead(lock.path)
+
+    const recoveredLock = await acquireTargetLock(workspaceRoot, targetDir)
+
+    await expect(
+      readFile(path.join(targetDir, 'original.txt'), 'utf8'),
+    ).resolves.toBe('original\n')
+    await releaseTargetLock(recoveredLock)
   })
 
   it('进程异常退出后恢复原目标备份', async () => {
@@ -57,10 +108,10 @@ describe('目标目录锁', () => {
     const recoveredLock = await acquireTargetLock(cwd, targetDir)
 
     await expect(readFile(originalFile, 'utf8')).resolves.toBe('original\n')
-    await expect(
-      isPathExists(path.join(targetDir, 'partial.txt')),
-    ).resolves.toBe(false)
-    await expect(isPathExists(backupPath)).resolves.toBe(false)
+    await expect(pathExists(path.join(targetDir, 'partial.txt'))).resolves.toBe(
+      false,
+    )
+    await expect(pathExists(backupPath)).resolves.toBe(false)
     await releaseTargetLock(recoveredLock)
   })
 
@@ -73,7 +124,7 @@ describe('目标目录锁', () => {
 
     const recoveredLock = await acquireTargetLock(cwd, targetDir)
 
-    await expect(isPathExists(targetDir)).resolves.toBe(false)
+    await expect(pathExists(targetDir)).resolves.toBe(false)
     await releaseTargetLock(recoveredLock)
   })
 
@@ -86,7 +137,7 @@ describe('目标目录锁', () => {
     await expect(acquireTargetLock(cwd, targetDir)).rejects.toMatchObject({
       code: 'CREATE_RECOVERY_FAILED',
     })
-    await expect(isPathExists(targetDir)).resolves.toBe(true)
+    await expect(pathExists(targetDir)).resolves.toBe(true)
   })
 
   it('拒绝无法解析的锁文件', async () => {
@@ -136,6 +187,26 @@ describe('目标目录锁', () => {
     await expect(releaseTargetLock(lock)).rejects.toMatchObject({
       code: 'CREATE_TARGET_LOCKED',
     })
+  })
+
+  it('更新备份路径时拒绝覆盖所有者已变化的锁', async () => {
+    const targetDir = await createWorkspace()
+    const lock = await acquireTargetLock(cwd, targetDir)
+    const metadata = JSON.parse(await readFile(lock.path, 'utf8')) as {
+      backupPath?: string
+      ownerId: string
+    }
+    metadata.ownerId = 'another-owner'
+    await writeFile(lock.path, JSON.stringify(metadata))
+
+    await expect(
+      updateTargetLockBackup(lock, path.join(cwd, 'backup')),
+    ).rejects.toMatchObject({
+      code: 'CREATE_TARGET_LOCKED',
+    })
+    await expect(readFile(lock.path, 'utf8')).resolves.toBe(
+      JSON.stringify(metadata),
+    )
   })
 
   async function createWorkspace(targetExists = false): Promise<string> {

@@ -1,4 +1,4 @@
-import { logger } from '@eljs/utils'
+import { logger } from '@eljs/utils/logger'
 
 /**
  * 输出取消提示并结束当前进程

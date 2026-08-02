@@ -29,7 +29,7 @@ vi.mock('../../src/guards')
 
 describe('Generator 生成器', () => {
   const mockPrompts = prompts as MockedFunction<typeof prompts>
-  const mockIsPathExistsSync = requiredModule0.pathExistsSync as MockedFunction<
+  const mockPathExistsSync = requiredModule0.pathExistsSync as MockedFunction<
     (filePath: string) => boolean
   >
   const mockMkdirSync = requiredModule0.mkdirSync as MockedFunction<
@@ -46,14 +46,15 @@ describe('Generator 生成器', () => {
       options?: unknown,
     ) => Promise<void>
   >
-  const mockCopyTpl = requiredModule0.copyTemplate as unknown as MockedFunction<
-    (
-      from: string,
-      to: string,
-      data: Record<string, unknown>,
-      options?: unknown,
-    ) => Promise<void>
-  >
+  const mockCopyTemplate =
+    requiredModule0.copyTemplate as unknown as MockedFunction<
+      (
+        from: string,
+        to: string,
+        data: Record<string, unknown>,
+        options?: unknown,
+      ) => Promise<void>
+    >
   const mockCopyDirectory = requiredModule0.copyDirectory as MockedFunction<
     (
       from: string,
@@ -75,11 +76,11 @@ describe('Generator 生成器', () => {
 
     // Setup mocks
     mockPrompts.mockResolvedValue({})
-    mockIsPathExistsSync.mockReturnValue(false)
+    mockPathExistsSync.mockReturnValue(false)
     mockMkdirSync.mockImplementation(() => undefined)
     mockIsDirectorySync.mockReturnValue(false)
     mockCopyFile.mockResolvedValue(undefined)
-    mockCopyTpl.mockResolvedValue(undefined)
+    mockCopyTemplate.mockResolvedValue(undefined)
     mockCopyDirectory.mockResolvedValue(undefined)
     mockIsFunction.mockReturnValue(false)
   })
@@ -220,7 +221,7 @@ describe('Generator 生成器', () => {
       const tplGenerator = new Generator(tplOptions)
       await tplGenerator.writing()
 
-      expect(mockCopyTpl).toHaveBeenCalledWith(
+      expect(mockCopyTemplate).toHaveBeenCalledWith(
         '/template.tpl',
         '/output.txt',
         {},
@@ -253,7 +254,7 @@ describe('Generator 生成器', () => {
 
     it('用户取消覆盖目录时不应继续复制或触发完成回调', async () => {
       mockIsDirectorySync.mockReturnValue(true)
-      mockIsPathExistsSync.mockReturnValue(true)
+      mockPathExistsSync.mockReturnValue(true)
       const onDone = vi.fn()
       const generator = new Generator({
         src: '/template-dir',

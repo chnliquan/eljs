@@ -1,10 +1,7 @@
-import {
-  chalk,
-  getWorkspaces,
-  logger,
-  type PackageJson,
-  readJson,
-} from '@eljs/utils'
+import { readJson } from '@eljs/utils/file'
+import { chalk, logger } from '@eljs/utils/logger'
+import { getWorkspacePackageRoots } from '@eljs/utils/path'
+import type { PackageJson } from '@eljs/utils/types'
 import { EOL } from 'node:os'
 import path from 'node:path'
 import { $, argv } from 'zx'
@@ -26,7 +23,7 @@ async function main(): Promise<void> {
   }
 
   const rootPath = path.resolve(__dirname, '../')
-  const workspaces = await getWorkspaces(rootPath)
+  const workspaces = await getWorkspacePackageRoots(rootPath)
   const packages: Array<{
     name: string
     registry?: string

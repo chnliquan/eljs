@@ -1,16 +1,13 @@
+import { normalizeArgs } from '@eljs/utils/cp'
+import { pathExists, readFile, writeFileAtomic } from '@eljs/utils/file'
 import {
-  chalk,
   gitCommit,
   gitPush,
   gitTag,
   isGitBehindRemote,
   isGitClean,
-  isPathExists,
-  logger,
-  normalizeArgs,
-  readFile,
-  safeWriteFile,
-} from '@eljs/utils'
+} from '@eljs/utils/git'
+import { chalk, logger } from '@eljs/utils/logger'
 import { EOL } from 'node:os'
 import path from 'node:path'
 
@@ -92,7 +89,7 @@ export default definePlugin(context => {
       changelog = `${changelog.trim()}${EOL}${EOL}${placeholder}`
     }
 
-    if (await isPathExists(changelogFile)) {
+    if (await pathExists(changelogFile)) {
       const remain = (await readFile(changelogFile)).trim()
       const titlePattern = /^#\s+.+$/m
 
@@ -110,14 +107,16 @@ export default definePlugin(context => {
       changelog = `# ChangeLog${EOL}${EOL}${changelog}`
     }
 
-    await safeWriteFile(changelogFile, changelog)
+    await writeFileAtomic(changelogFile, changelog)
   })
 
   context.onRelease(
     async ({ version }) => {
       const { independent, commit, commitMessage, commitArgs } =
         context.config.git
-      const { validPkgNames } = context.appData
+      const publishablePackageNames = context.appData.workspacePackages
+        .filter(({ manifest }) => !manifest.private)
+        .map(({ manifest }) => manifest.name)
 
       if (
         !commit ||
@@ -141,7 +140,7 @@ export default definePlugin(context => {
       )
 
       const tags = independent
-        ? validPkgNames.map(pkgName => `${pkgName}@${version}`)
+        ? publishablePackageNames.map(pkgName => `${pkgName}@${version}`)
         : [`v${version}`]
 
       for (const tagName of tags) {

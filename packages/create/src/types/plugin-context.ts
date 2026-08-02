@@ -126,14 +126,3 @@ export type CreatePluginContext = Omit<
   install(args: string[], option?: RunCommandOptions): Promise<void>
   // #endregion
 }
-
-/**
- * create 插件入口上下文的旧名称
- *
- * @remarks
- * 该别名用于兼容 `@eljs/create@1.3.1` 及更早版本编写的模版插件，新插件应使用
- * {@link CreatePluginContext}；移除前会保留至少一个主版本迁移周期
- *
- * @deprecated 请改用 {@link CreatePluginContext}
- */
-export type Api = CreatePluginContext

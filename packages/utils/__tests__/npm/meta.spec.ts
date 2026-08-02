@@ -17,7 +17,7 @@ import which from 'which'
 
 import { getNpmPrefix } from '../../src/npm/global-prefix'
 import { getNpmPackage } from '../../src/npm/package-metadata'
-import { pkgNameAnalysis } from '../../src/npm/package-specifier'
+import { parsePackageSpecifier } from '../../src/npm/package-specifier'
 import { getNpmRegistry, getNpmUser } from '../../src/npm/registry-cli'
 
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
@@ -388,9 +388,9 @@ describe('NPM Meta 工具', () => {
     })
   })
 
-  describe('pkgNameAnalysis', () => {
+  describe('parsePackageSpecifier', () => {
     it('应该解析简单包名', () => {
-      const result = pkgNameAnalysis('lodash')
+      const result = parsePackageSpecifier('lodash')
 
       expect(result).toEqual({
         name: 'lodash',
@@ -401,7 +401,7 @@ describe('NPM Meta 工具', () => {
     })
 
     it('应该解析带版本的包名', () => {
-      const result = pkgNameAnalysis('react@18.2.0')
+      const result = parsePackageSpecifier('react@18.2.0')
 
       expect(result).toEqual({
         name: 'react',
@@ -412,7 +412,7 @@ describe('NPM Meta 工具', () => {
     })
 
     it('应该解析 scoped 包名', () => {
-      const result = pkgNameAnalysis('@types/node')
+      const result = parsePackageSpecifier('@types/node')
 
       expect(result).toEqual({
         name: '@types/node',
@@ -423,7 +423,7 @@ describe('NPM Meta 工具', () => {
     })
 
     it('应该解析 scoped 包名带版本', () => {
-      const result = pkgNameAnalysis('@babel/core@7.20.0')
+      const result = parsePackageSpecifier('@babel/core@7.20.0')
 
       expect(result).toEqual({
         name: '@babel/core',
@@ -434,7 +434,7 @@ describe('NPM Meta 工具', () => {
     })
 
     it('应该处理预发布版本', () => {
-      const result = pkgNameAnalysis('package@1.0.0-alpha.1')
+      const result = parsePackageSpecifier('package@1.0.0-alpha.1')
 
       expect(result).toEqual({
         name: 'package',
@@ -453,14 +453,14 @@ describe('NPM Meta 工具', () => {
       ]
 
       cases.forEach(pkg => {
-        const result = pkgNameAnalysis(pkg)
+        const result = parsePackageSpecifier(pkg)
         expect(typeof result.name).toBe('string')
         expect(typeof result.version).toBe('string')
       })
     })
 
     it('应该处理解析错误', () => {
-      const result = pkgNameAnalysis('')
+      const result = parsePackageSpecifier('')
 
       expect(result).toEqual({
         name: '',
@@ -473,7 +473,7 @@ describe('NPM Meta 工具', () => {
 
   describe('类型安全验证', () => {
     it('应该返回正确类型', () => {
-      const result = pkgNameAnalysis('@scope/package@1.0.0')
+      const result = parsePackageSpecifier('@scope/package@1.0.0')
 
       expect(typeof result.name).toBe('string')
       expect(typeof result.version).toBe('string')

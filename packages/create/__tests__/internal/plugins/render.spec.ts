@@ -17,7 +17,7 @@ import type { CreatePluginContext } from '../../../src/types'
 
 // Mock types
 interface MockUtils {
-  extractCallDir: MockedFunction<(depth: number) => string>
+  getCallerDirectory: MockedFunction<(depth: number) => string>
   isDirectory: MockedFunction<(path: string) => Promise<boolean>>
 }
 
@@ -31,7 +31,7 @@ interface MockPath {
 vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils/path', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils', () => ({
-  extractCallDir: vi.fn(() => '/base/dir'),
+  getCallerDirectory: vi.fn(() => '/base/dir'),
   isDirectory: vi.fn(),
 }))
 
@@ -106,7 +106,7 @@ describe('内部插件 render', () => {
     })
 
     it('应该处理目录渲染', async () => {
-      mockUtils.extractCallDir.mockReturnValue('/caller/dir')
+      mockUtils.getCallerDirectory.mockReturnValue('/caller/dir')
       mockUtils.isDirectory.mockResolvedValue(true)
 
       const data = { name: 'test' }
@@ -114,7 +114,7 @@ describe('内部插件 render', () => {
 
       await renderCallback('templates/src', data, options)
 
-      expect(mockUtils.extractCallDir).toHaveBeenCalledWith(3)
+      expect(mockUtils.getCallerDirectory).toHaveBeenCalledWith(3)
       expect(mockPath.resolve).toHaveBeenCalledWith(
         '/caller/dir',
         'templates/src',
@@ -133,7 +133,7 @@ describe('内部插件 render', () => {
     })
 
     it('应该处理模板文件渲染（.tpl）', async () => {
-      mockUtils.extractCallDir.mockReturnValue('/caller/dir')
+      mockUtils.getCallerDirectory.mockReturnValue('/caller/dir')
       mockUtils.isDirectory.mockResolvedValue(false)
       mockPath.basename.mockReturnValue('component.tsx')
 
@@ -145,7 +145,7 @@ describe('内部插件 render', () => {
 
       await renderCallback('templates/component.tsx.tpl', data, options)
 
-      expect(mockUtils.extractCallDir).toHaveBeenCalledWith(3)
+      expect(mockUtils.getCallerDirectory).toHaveBeenCalledWith(3)
       expect(mockPath.resolve).toHaveBeenCalledWith(
         '/caller/dir',
         'templates/component.tsx.tpl',
@@ -169,7 +169,7 @@ describe('内部插件 render', () => {
     })
 
     it('应该处理常规文件渲染', async () => {
-      mockUtils.extractCallDir.mockReturnValue('/caller/dir')
+      mockUtils.getCallerDirectory.mockReturnValue('/caller/dir')
       mockUtils.isDirectory.mockResolvedValue(false)
       mockPath.basename.mockReturnValue('config.json')
 
@@ -178,7 +178,7 @@ describe('内部插件 render', () => {
 
       await renderCallback('templates/config.json', data, options)
 
-      expect(mockUtils.extractCallDir).toHaveBeenCalledWith(3)
+      expect(mockUtils.getCallerDirectory).toHaveBeenCalledWith(3)
       expect(mockPath.resolve).toHaveBeenCalledWith(
         '/caller/dir',
         'templates/config.json',
@@ -199,7 +199,7 @@ describe('内部插件 render', () => {
     })
 
     it('应该处理默认空数据的渲染', async () => {
-      mockUtils.extractCallDir.mockReturnValue('/caller/dir')
+      mockUtils.getCallerDirectory.mockReturnValue('/caller/dir')
       mockUtils.isDirectory.mockResolvedValue(true)
 
       await renderCallback('templates/src')
@@ -215,7 +215,7 @@ describe('内部插件 render', () => {
     })
 
     it('应该处理默认空选项的渲染', async () => {
-      mockUtils.extractCallDir.mockReturnValue('/caller/dir')
+      mockUtils.getCallerDirectory.mockReturnValue('/caller/dir')
       mockUtils.isDirectory.mockResolvedValue(false)
       mockPath.basename.mockReturnValue('file.txt')
 
@@ -232,7 +232,7 @@ describe('内部插件 render', () => {
     })
 
     it('应该为 .tpl 文件提取正确的 basename', async () => {
-      mockUtils.extractCallDir.mockReturnValue('/caller/dir')
+      mockUtils.getCallerDirectory.mockReturnValue('/caller/dir')
       mockUtils.isDirectory.mockResolvedValue(false)
 
       // Mock basename 模拟 .tpl 移除
@@ -255,7 +255,7 @@ describe('内部插件 render', () => {
     })
 
     it('应该根据扩展名正确确定文件类型', async () => {
-      mockUtils.extractCallDir.mockReturnValue('/caller/dir')
+      mockUtils.getCallerDirectory.mockReturnValue('/caller/dir')
       mockUtils.isDirectory.mockResolvedValue(false)
 
       // 测试 .tpl 文件
@@ -272,7 +272,7 @@ describe('内部插件 render', () => {
     })
 
     it('应该正确处理复杂的文件路径', async () => {
-      mockUtils.extractCallDir.mockReturnValue('/base/project')
+      mockUtils.getCallerDirectory.mockReturnValue('/base/project')
       mockUtils.isDirectory.mockResolvedValue(false)
       mockPath.basename.mockReturnValue('deep-file.js')
 

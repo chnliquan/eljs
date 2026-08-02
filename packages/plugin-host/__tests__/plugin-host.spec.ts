@@ -47,9 +47,9 @@ vi.mock('@eljs/utils', () => ({
     sync: vi.fn().mockReturnValue('/mock/package.json'),
   },
   isDirectorySync: vi.fn().mockReturnValue(true),
-  isPathExistsSync: vi.fn().mockReturnValue(true),
+  pathExistsSync: vi.fn().mockReturnValue(true),
   isFunction: vi.fn().mockReturnValue(true),
-  winPath: vi.fn().mockImplementation(path => path || 'mocked-path'),
+  toPosixPath: vi.fn().mockImplementation(path => path || 'mocked-path'),
   camelCase: vi.fn().mockImplementation(str => str || 'mockedCase'),
   readJsonSync: vi
     .fn()
@@ -212,7 +212,6 @@ describe('插件宿主', () => {
       expect(host.constructorOptions).toEqual(options)
       expect(host.cwd).toBe(mockCwd)
       expect(host.state).toBe(PluginHostState.Uninitialized)
-      expect(host.getPluginDiagnostics()).toEqual([])
     })
 
     it('应该处理缺失的可选属性', () => {
@@ -372,12 +371,7 @@ describe('插件宿主', () => {
 
     it('应该正确执行添加钩子', async () => {
       const mockFn = vi.fn().mockResolvedValue(['item1'])
-      const plugin = createTestPlugin(mockCwd, 'plugin1', {
-        metrics: {
-          hookDurationsMs: {} as Record<string, number[]>,
-          hookErrorCounts: {},
-        },
-      })
+      const plugin = createTestPlugin(mockCwd, 'plugin1')
       const hook = {
         fn: mockFn,
         plugin,
@@ -400,12 +394,7 @@ describe('插件宿主', () => {
 
     it('应该正确执行修改钩子', async () => {
       const mockFn = vi.fn().mockResolvedValue({ modified: true })
-      const plugin = createTestPlugin(mockCwd, 'plugin1', {
-        metrics: {
-          hookDurationsMs: {} as Record<string, number[]>,
-          hookErrorCounts: {},
-        },
-      })
+      const plugin = createTestPlugin(mockCwd, 'plugin1')
       const hook = {
         fn: mockFn,
         plugin,
@@ -431,17 +420,9 @@ describe('插件宿主', () => {
       const disabledFn = vi.fn().mockResolvedValue(['disabled'])
 
       const enabledPlugin = createTestPlugin(mockCwd, 'enabled-plugin', {
-        metrics: {
-          hookDurationsMs: {} as Record<string, number[]>,
-          hookErrorCounts: {},
-        },
         enable: () => true,
       })
       const disabledPlugin = createTestPlugin(mockCwd, 'disabled-plugin', {
-        metrics: {
-          hookDurationsMs: {} as Record<string, number[]>,
-          hookErrorCounts: {},
-        },
         enable: () => false,
       })
 
@@ -479,103 +460,6 @@ describe('插件宿主', () => {
       expect(result).toEqual(['enabled'])
       expect(enabledFn).toHaveBeenCalled()
       expect(disabledFn).not.toHaveBeenCalled()
-    })
-
-    it('应该跟踪钩子执行性能', async () => {
-      const mockFn = vi.fn().mockResolvedValue(['result'])
-      const mockPlugin = createTestPlugin(mockCwd, 'test-plugin', {
-        metrics: {
-          hookDurationsMs: {} as Record<string, number[]>,
-          hookErrorCounts: {},
-        },
-      })
-      const hook = {
-        fn: mockFn,
-        plugin: mockPlugin,
-        constructorOptions: { plugin: mockPlugin, key: 'addItems', fn: mockFn },
-        key: 'addItems',
-      } as Hook
-
-      host.testRegisterHooks(hook)
-
-      const result = await (host as PluginHostWithInternals).runHook(
-        'addItems',
-        {
-          kind: HookKind.Add,
-          initialValue: [],
-        },
-      )
-
-      expect(result).toEqual(['result'])
-      expect(mockFn).toHaveBeenCalled()
-      const diagnostics = mockPlugin.getDiagnostics()
-      expect(diagnostics.metrics.hookDurationsMs['addItems']).toBeDefined()
-      expect(diagnostics.metrics.hookDurationsMs['addItems']).toHaveLength(1)
-      expect(typeof diagnostics.metrics.hookDurationsMs['addItems'][0]).toBe(
-        'number',
-      )
-      expect(
-        diagnostics.metrics.hookDurationsMs['addItems'][0],
-      ).toBeGreaterThanOrEqual(0)
-    })
-
-    it('应该限制每个 Hook 保留的耗时样本数量', async () => {
-      const mockFn = vi.fn().mockResolvedValue([])
-      const mockPlugin = createTestPlugin(mockCwd, 'test-plugin', {
-        metrics: {
-          hookDurationsMs: {},
-          hookErrorCounts: {},
-        },
-      })
-      const hook = {
-        fn: mockFn,
-        plugin: mockPlugin,
-        constructorOptions: { plugin: mockPlugin, key: 'addItems', fn: mockFn },
-        key: 'addItems',
-      } as Hook
-      host.testRegisterHooks(hook)
-
-      for (let index = 0; index < 25; index += 1) {
-        await host.runHook('addItems', {
-          kind: HookKind.Add,
-          initialValue: [],
-        })
-      }
-
-      expect(
-        mockPlugin.getDiagnostics().metrics.hookDurationsMs['addItems'],
-      ).toHaveLength(20)
-    })
-
-    it('应该记录失败 Hook 的耗时和错误次数', async () => {
-      const error = new Error('hook failed')
-      const mockFn = vi.fn().mockRejectedValue(error)
-      const mockPlugin = createTestPlugin(mockCwd, 'test-plugin', {
-        metrics: {
-          hookDurationsMs: {},
-          hookErrorCounts: {},
-        },
-      })
-      const hook = {
-        fn: mockFn,
-        plugin: mockPlugin,
-        constructorOptions: { plugin: mockPlugin, key: 'onFail', fn: mockFn },
-        key: 'onFail',
-      } as Hook
-      host.testRegisterHooks(hook)
-
-      await expect(
-        host.runHook('onFail', {
-          kind: HookKind.Event,
-        }),
-      ).rejects.toMatchObject({
-        cause: error,
-        code: PluginHostErrorCode.HookExecutionFailed,
-      })
-
-      const diagnostics = mockPlugin.getDiagnostics()
-      expect(diagnostics.metrics.hookDurationsMs['onFail']).toHaveLength(1)
-      expect(diagnostics.metrics.hookErrorCounts['onFail']).toBe(1)
     })
   })
 
@@ -743,14 +627,6 @@ describe('插件宿主', () => {
 
       expect(host.state).toBe(PluginHostState.Failed)
       expect(host.testUserConfig).toBeNull()
-      expect(host.getPluginDiagnostics()).toEqual([
-        expect.objectContaining({
-          id: 'broken-plugin',
-          metrics: expect.objectContaining({
-            initializationFailed: true,
-          }),
-        }),
-      ])
       expect(host.testHookCount('onBroken')).toBe(0)
       expect(host.testHasPluginCapability('brokenMethod')).toBe(false)
 
@@ -759,7 +635,7 @@ describe('插件宿主', () => {
       })
     })
 
-    it('插件上下文创建失败时应该记录初始化失败并统一包装错误', async () => {
+    it('插件上下文创建失败时应该统一包装错误', async () => {
       const extensionError = new Error('create context failed')
 
       class BrokenContextHost extends TestablePluginHost {
@@ -782,14 +658,6 @@ describe('插件宿主', () => {
         cause: extensionError,
         code: PluginHostErrorCode.PluginInitializationFailed,
       })
-      expect(host.getPluginDiagnostics()).toEqual([
-        expect.objectContaining({
-          id: 'broken-context-plugin',
-          metrics: expect.objectContaining({
-            initializationFailed: true,
-          }),
-        }),
-      ])
     })
   })
 
@@ -1058,12 +926,7 @@ describe('插件宿主', () => {
 
     it('应该正确执行获取钩子', async () => {
       const mockFn = vi.fn().mockResolvedValue('result')
-      const plugin = createTestPlugin(mockCwd, 'plugin1', {
-        metrics: {
-          hookDurationsMs: {} as Record<string, number[]>,
-          hookErrorCounts: {},
-        },
-      })
+      const plugin = createTestPlugin(mockCwd, 'plugin1')
       const hook = {
         fn: mockFn,
         plugin,
@@ -1087,12 +950,8 @@ describe('插件宿主', () => {
     it('获取钩子应该跳过 null 并返回第一个非空结果', async () => {
       const firstFn = vi.fn().mockResolvedValue(null)
       const secondFn = vi.fn().mockResolvedValue('result')
-      const firstPlugin = createTestPlugin(mockCwd, 'plugin1', {
-        metrics: { hookDurationsMs: {}, hookErrorCounts: {} },
-      })
-      const secondPlugin = createTestPlugin(mockCwd, 'plugin2', {
-        metrics: { hookDurationsMs: {}, hookErrorCounts: {} },
-      })
+      const firstPlugin = createTestPlugin(mockCwd, 'plugin1')
+      const secondPlugin = createTestPlugin(mockCwd, 'plugin2')
       host.testRegisterHooks(
         {
           fn: firstFn,
@@ -1127,12 +986,7 @@ describe('插件宿主', () => {
 
     it('应该正确执行事件钩子', async () => {
       const mockFn = vi.fn().mockResolvedValue(undefined)
-      const plugin = createTestPlugin(mockCwd, 'plugin1', {
-        metrics: {
-          hookDurationsMs: {} as Record<string, number[]>,
-          hookErrorCounts: {},
-        },
-      })
+      const plugin = createTestPlugin(mockCwd, 'plugin1')
       const hook = {
         fn: mockFn,
         plugin,
@@ -1151,34 +1005,6 @@ describe('插件宿主', () => {
 
       expect(result).toBeUndefined()
       expect(mockFn).toHaveBeenCalledWith({ eventData: 'test' })
-    })
-  })
-
-  describe('插件调试信息', () => {
-    it('应该返回不会修改内部统计的快照', () => {
-      host = new TestablePluginHost({ cwd: mockCwd })
-      const plugin = createTestPlugin(mockCwd, 'plugin1', {
-        metrics: {
-          initializationDurationMs: 1,
-          hookDurationsMs: { onStart: [2] },
-          hookErrorCounts: { onStart: 1 },
-        },
-      })
-      host.testRegisterPlugin(plugin)
-
-      const diagnostics = host.getPluginDiagnostics()
-      diagnostics[0].metrics.hookDurationsMs['onStart'].push(3)
-
-      expect(diagnostics[0]).toMatchObject({
-        id: 'plugin1',
-        metrics: {
-          initializationDurationMs: 1,
-          hookErrorCounts: { onStart: 1 },
-        },
-      })
-      expect(
-        plugin.getDiagnostics().metrics.hookDurationsMs['onStart'],
-      ).toEqual([2])
     })
   })
 

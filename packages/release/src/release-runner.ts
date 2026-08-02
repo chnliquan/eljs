@@ -3,16 +3,11 @@ import {
   PluginHostError,
   PluginHostErrorCode,
 } from '@eljs/plugin-host'
-import {
-  chalk,
-  createDebugger,
-  deepMerge,
-  getPackageManager,
-  isPathExistsSync,
-  logger,
-  readJsonSync,
-  type PackageJson,
-} from '@eljs/utils'
+import { pathExistsSync, readJsonSync } from '@eljs/utils/file'
+import { chalk, createDebugger, logger } from '@eljs/utils/logger'
+import { getPackageManager } from '@eljs/utils/npm'
+import { deepMerge } from '@eljs/utils/object'
+import type { PackageJson } from '@eljs/utils/types'
 import { createRequire } from 'node:module'
 import { EOL } from 'node:os'
 import path from 'node:path'
@@ -41,6 +36,22 @@ const localRequire = createRequire(currentModulePath)
 const debug = createDebugger('release:config')
 
 /**
+ * 发布 Hook 运行前已具备且不可丢失的根项目数据
+ *
+ * @remarks
+ * 该结构只在运行器内部跨越构造和准备阶段；`branch` 在内置 bootstrap Hook
+ * 执行前为空字符串，完整 `AppData` 仅在 `modifyAppData` 完成后公开
+ */
+type InitialAppData = Pick<
+  AppData,
+  | 'branch'
+  | 'latestTag'
+  | 'projectPkgJsonPath'
+  | 'projectPkg'
+  | 'workspacePackages'
+>
+
+/**
  * 编排版本计算、版本更新和发布 Hook 的运行器
  *
  * @remarks
@@ -61,9 +72,13 @@ export class ReleaseRunner extends PluginHost<
    */
   private readonly _releaseOptions: Readonly<Config>
   /**
-   * 发布流程共享的项目及工作区数据
+   * 构造阶段已经读取的根项目数据
    */
-  public appData: AppData = Object.create(null)
+  private readonly _initialAppData: InitialAppData
+  /**
+   * 已完成 Hook 收集的发布数据
+   */
+  private _appData: AppData | null = null
   /**
    * 当前发布阶段的内部可变值
    */
@@ -102,6 +117,27 @@ export class ReleaseRunner extends PluginHost<
   }
 
   /**
+   * 发布流程共享的项目及工作区数据
+   *
+   * @remarks
+   * `modifyAppData` Hook 执行期间应通过其 `memo` 入参访问正在收集的数据
+   *
+   * @returns 已完成收集的发布数据
+   * @throws {@link PluginHostError} `modifyAppData` Hook 尚未完成时抛出
+   */
+  public get appData(): AppData {
+    if (!this._appData) {
+      throw new PluginHostError(
+        PluginHostErrorCode.InvalidState,
+        `ReleaseRunner.appData is unavailable before the \`modifyAppData\` hook completes.`,
+        { details: { stage: this._stage } },
+      )
+    }
+
+    return this._appData
+  }
+
+  /**
    * 创建发布运行器并校验项目清单
    *
    * @param options - 发布配置和插件声明
@@ -113,7 +149,7 @@ export class ReleaseRunner extends PluginHost<
     const { presets = [], plugins = [] } = options
     const projectPkgJsonPath = path.join(cwd, 'package.json')
 
-    if (!isPathExistsSync(projectPkgJsonPath)) {
+    if (!pathExistsSync(projectPkgJsonPath)) {
       throw new AppError(`No package.json was found in ${chalk.cyan(cwd)}.`)
     }
 
@@ -144,10 +180,13 @@ export class ReleaseRunner extends PluginHost<
       cwd,
     }
 
-    this.appData = {
+    this._initialAppData = {
+      branch: '',
+      latestTag: null,
       projectPkgJsonPath,
       projectPkg: projectPkg as ProjectPackageJson,
-    } as AppData
+      workspacePackages: [],
+    }
   }
 
   /**
@@ -186,23 +225,23 @@ export class ReleaseRunner extends PluginHost<
       this._stage = ReleaseRunnerStage.Preparing
       // 根清单的 Corepack 声明可消除迁移期间同时存在多个锁文件时的歧义
       const packageManager =
-        resolveDeclaredPackageManager(this.appData.projectPkg) ??
+        resolveDeclaredPackageManager(this._initialAppData.projectPkg) ??
         (await getPackageManager(this.cwd))
       const packageManagerVariant = resolvePackageManagerVariant(
         packageManager,
         this.cwd,
-        this.appData.projectPkg,
+        this._initialAppData.projectPkg,
       )
       /**
        * 修改应用数据
        */
-      this.appData = await this.runHook('modifyAppData', {
+      this._appData = await this.runHook('modifyAppData', {
         initialValue: {
-          ...this.appData,
+          ...this._initialAppData,
           cliVersion: localRequire('../package.json').version,
           packageManager,
           packageManagerVariant,
-        } as AppData,
+        },
         args: {
           cwd: this.cwd,
         },

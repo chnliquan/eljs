@@ -18,7 +18,6 @@ import {
 } from '../plugin/plugin-resolver'
 import {
   PluginKind,
-  type PluginDiagnostics,
   type PluginInitializationResult,
   type ResolvedPluginInitializationResult,
 } from '../plugin/types'
@@ -98,11 +97,6 @@ export abstract class PluginHost<
    * 所有插件上下文扩展占用的全局属性名
    */
   private readonly _pluginContextExtensionNames = new Set<string>()
-  /**
-   * 加载失败前捕获的插件诊断快照
-   */
-  private _failureDiagnostics: PluginDiagnostics[] = []
-
   /**
    * 当前工作目录
    *
@@ -253,7 +247,6 @@ export abstract class PluginHost<
       this._throwIfAborted('load')
       this._state = PluginHostState.Ready
     } catch (error) {
-      this._failureDiagnostics = this._plugins.getDiagnostics()
       this._resetRuntimeState()
       this._state = PluginHostState.Failed
       throw error
@@ -467,131 +460,120 @@ export abstract class PluginHost<
     const [plugin, pluginOptions, origin] = currentPlugin
     this._plugins.reserve(plugin)
 
-    const initializationStart = performance.now()
     let pluginResult: PluginInitializationResult | void
-    let initializationFailed = true
 
     try {
-      try {
-        const initialize = await plugin.loadInitializer()
-        const parsedPluginOptions = await parsePluginOptions(
-          plugin,
-          initialize,
-          pluginOptions,
-          origin,
-        )
-        const pluginContext = this._createPluginContext(
-          plugin,
-          remainingPresets,
-          remainingPlugins || [],
-        )
-        pluginResult = await initialize(pluginContext, parsedPluginOptions)
-      } catch (error) {
-        if (error instanceof PluginHostError) {
-          throw error
-        }
+      const initialize = await plugin.loadInitializer()
+      const parsedPluginOptions = await parsePluginOptions(
+        plugin,
+        initialize,
+        pluginOptions,
+        origin,
+      )
+      const pluginContext = this._createPluginContext(
+        plugin,
+        remainingPresets,
+        remainingPlugins || [],
+      )
+      pluginResult = await initialize(pluginContext, parsedPluginOptions)
+    } catch (error) {
+      if (error instanceof PluginHostError) {
+        throw error
+      }
 
-        throw new PluginHostError(
-          PluginHostErrorCode.PluginInitializationFailed,
-          `Initialize ${plugin.type} \`${plugin.id}\` from ${plugin.path} failed: ${
-            (error as Error).message
-          }`,
-          {
-            cause: error,
-            details: {
-              origin,
-              pluginId: plugin.id,
-              pluginKey: plugin.key,
-              pluginPath: plugin.path,
-              pluginType: plugin.type,
-            },
+      throw new PluginHostError(
+        PluginHostErrorCode.PluginInitializationFailed,
+        `Initialize ${plugin.type} \`${plugin.id}\` from ${plugin.path} failed: ${
+          (error as Error).message
+        }`,
+        {
+          cause: error,
+          details: {
+            origin,
+            pluginId: plugin.id,
+            pluginKey: plugin.key,
+            pluginPath: plugin.path,
+            pluginType: plugin.type,
           },
-        )
-      }
-
-      if (plugin.type === PluginKind.Plugin && pluginResult !== undefined) {
-        throw new PluginHostError(
-          PluginHostErrorCode.InvalidPluginResult,
-          `Plugin should return nothing.`,
-          {
-            details: {
-              origin,
-              pluginId: plugin.id,
-              pluginKey: plugin.key,
-              pluginPath: plugin.path,
-            },
-          },
-        )
-      }
-
-      if (
-        plugin.type === PluginKind.Preset &&
-        pluginResult !== undefined &&
-        (pluginResult === null ||
-          typeof pluginResult !== 'object' ||
-          Array.isArray(pluginResult) ||
-          (pluginResult.presets !== undefined &&
-            !Array.isArray(pluginResult.presets)) ||
-          (pluginResult.plugins !== undefined &&
-            !Array.isArray(pluginResult.plugins)))
-      ) {
-        throw new PluginHostError(
-          PluginHostErrorCode.InvalidPluginResult,
-          `Preset should return an object containing optional \`presets\` and \`plugins\` arrays.`,
-          {
-            details: {
-              origin,
-              pluginId: plugin.id,
-              pluginKey: plugin.key,
-              pluginPath: plugin.path,
-              result: pluginResult,
-            },
-          },
-        )
-      }
-
-      this._plugins.complete(plugin)
-
-      // Only presets can return additional presets/plugins
-      if (plugin.type === PluginKind.Preset && pluginResult) {
-        const result: ResolvedPluginInitializationResult = {}
-
-        if (pluginResult.presets?.length) {
-          result.presets = resolvePluginDeclarations(
-            pluginResult.presets,
-            PluginKind.Preset,
-            this.cwd,
-            {
-              source: 'preset-result',
-              parentPlugin: this._getPluginOrigin(plugin),
-            },
-          )
-        }
-
-        if (pluginResult.plugins?.length) {
-          result.plugins = resolvePluginDeclarations(
-            pluginResult.plugins,
-            PluginKind.Plugin,
-            this.cwd,
-            {
-              source: 'preset-result',
-              parentPlugin: this._getPluginOrigin(plugin),
-            },
-          )
-        }
-
-        initializationFailed = false
-        return result
-      }
-
-      initializationFailed = false
-      return {}
-    } finally {
-      plugin.recordInitialization(
-        performance.now() - initializationStart,
-        initializationFailed,
+        },
       )
     }
+
+    if (plugin.type === PluginKind.Plugin && pluginResult !== undefined) {
+      throw new PluginHostError(
+        PluginHostErrorCode.InvalidPluginResult,
+        `Plugin should return nothing.`,
+        {
+          details: {
+            origin,
+            pluginId: plugin.id,
+            pluginKey: plugin.key,
+            pluginPath: plugin.path,
+          },
+        },
+      )
+    }
+
+    if (
+      plugin.type === PluginKind.Preset &&
+      pluginResult !== undefined &&
+      (pluginResult === null ||
+        typeof pluginResult !== 'object' ||
+        Array.isArray(pluginResult) ||
+        (pluginResult.presets !== undefined &&
+          !Array.isArray(pluginResult.presets)) ||
+        (pluginResult.plugins !== undefined &&
+          !Array.isArray(pluginResult.plugins)))
+    ) {
+      throw new PluginHostError(
+        PluginHostErrorCode.InvalidPluginResult,
+        `Preset should return an object containing optional \`presets\` and \`plugins\` arrays.`,
+        {
+          details: {
+            origin,
+            pluginId: plugin.id,
+            pluginKey: plugin.key,
+            pluginPath: plugin.path,
+            result: pluginResult,
+          },
+        },
+      )
+    }
+
+    this._plugins.complete(plugin)
+
+    // Only presets can return additional presets/plugins
+    if (plugin.type === PluginKind.Preset && pluginResult) {
+      const result: ResolvedPluginInitializationResult = {}
+
+      if (pluginResult.presets?.length) {
+        result.presets = resolvePluginDeclarations(
+          pluginResult.presets,
+          PluginKind.Preset,
+          this.cwd,
+          {
+            source: 'preset-result',
+            parentPlugin: this._getPluginOrigin(plugin),
+          },
+        )
+      }
+
+      if (pluginResult.plugins?.length) {
+        result.plugins = resolvePluginDeclarations(
+          pluginResult.plugins,
+          PluginKind.Plugin,
+          this.cwd,
+          {
+            source: 'preset-result',
+            parentPlugin: this._getPluginOrigin(plugin),
+          },
+        )
+      }
+
+      return result
+    }
+
+    return {}
   }
 
   /**
@@ -673,31 +655,6 @@ export abstract class PluginHost<
       )
     }
     return this._plugins.isHookEnabled(plugin)
-  }
-
-  /**
-   * 获取插件调试信息快照
-   *
-   * @returns 不暴露内部可变对象的插件诊断快照
-   */
-  public getPluginDiagnostics(): PluginDiagnostics[] {
-    const diagnostics =
-      this._state === PluginHostState.Failed
-        ? this._failureDiagnostics
-        : this._plugins.getDiagnostics()
-
-    return diagnostics.map(diagnostic => ({
-      ...diagnostic,
-      metrics: {
-        ...diagnostic.metrics,
-        hookDurationsMs: Object.fromEntries(
-          Object.entries(diagnostic.metrics.hookDurationsMs).map(
-            ([key, samples]) => [key, [...samples]],
-          ),
-        ),
-        hookErrorCounts: { ...diagnostic.metrics.hookErrorCounts },
-      },
-    }))
   }
 
   /**

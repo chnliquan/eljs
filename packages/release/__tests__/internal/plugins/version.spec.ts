@@ -13,7 +13,7 @@ import {
  * @description 测试 version.ts 版本管理插件功能
  */
 
-import { confirm, logger, prompts, safeWriteJson } from '@eljs/utils'
+import { confirm, logger, prompts, writeJsonAtomic } from '@eljs/utils'
 
 import versionPlugin from '../../../src/internal/plugins/version'
 import type { PrereleaseId } from '../../../src/types'
@@ -48,8 +48,12 @@ vi.mock('@eljs/utils', () => ({
   },
   pascalCase: vi.fn(),
   prompts: vi.fn(),
-  safeWriteJson: vi.fn(),
+  writeJsonAtomic: vi.fn(),
 }))
+vi.mock('@eljs/utils/cli', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/string', async () => import('@eljs/utils'))
 
 vi.mock('semver', () => {
   const releaseTypes = ['major', 'minor', 'patch']
@@ -120,12 +124,14 @@ describe('版本插件测试', () => {
         registry: 'https://registry.npmjs.org',
         branch: 'main',
         latestTag: null,
-        validPkgNames: ['test-package'],
-        pkgs: [{ name: 'test-package', version: '1.0.0' }],
-        pkgJsonPaths: ['/test/package.json'],
+        workspacePackages: [
+          {
+            manifest: { name: 'test-package', version: '1.0.0' },
+            manifestPath: '/test/package.json',
+            rootPath: '/test',
+          },
+        ],
         packageManager: 'npm',
-        pkgNames: ['test-package'],
-        validPkgRootPaths: ['/test'],
         projectPkg: { name: 'test-project', version: '1.0.0' },
         projectPkgJsonPath: '/test/project/package.json',
       },
@@ -173,7 +179,9 @@ describe('版本插件测试', () => {
     ).mockImplementation(async (_path, pkg, version) => {
       pkg.version = version
     })
-    ;(safeWriteJson as MockedFunction<typeof safeWriteJson>).mockResolvedValue()
+    ;(
+      writeJsonAtomic as MockedFunction<typeof writeJsonAtomic>
+    ).mockResolvedValue()
     ;(
       updatePackageLock as MockedFunction<typeof updatePackageLock>
     ).mockResolvedValue(undefined)
@@ -504,7 +512,7 @@ describe('版本插件测试', () => {
         ['test-package'],
         { write: false },
       )
-      expect(safeWriteJson).toHaveBeenCalledWith('/test/package.json', {
+      expect(writeJsonAtomic).toHaveBeenCalledWith('/test/package.json', {
         name: 'test-package',
         version: '1.1.0',
       })
@@ -512,7 +520,8 @@ describe('版本插件测试', () => {
 
     it('应该更新项目根目录 package.json', async () => {
       mockContext.appData.projectPkgJsonPath = '/test/project/package.json'
-      mockContext.appData.pkgJsonPaths = ['/test/packages/pkg1/package.json']
+      mockContext.appData.workspacePackages[0].manifestPath =
+        '/test/packages/pkg1/package.json'
 
       const versionInfo = {
         version: '1.1.0',
@@ -555,12 +564,13 @@ describe('版本插件测试', () => {
         ['test-package'],
         { write: false },
       )
-      expect(safeWriteJson).not.toHaveBeenCalled()
+      expect(writeJsonAtomic).not.toHaveBeenCalled()
     })
 
     it('不应该重复更新相同的 package.json 文件', async () => {
       mockContext.appData.projectPkgJsonPath = '/test/package.json'
-      mockContext.appData.pkgJsonPaths = ['/test/package.json']
+      mockContext.appData.workspacePackages[0].manifestPath =
+        '/test/package.json'
 
       const versionInfo = {
         version: '1.1.0',
@@ -573,29 +583,19 @@ describe('版本插件测试', () => {
       expect(updatePackageVersion).toHaveBeenCalledTimes(1)
     })
 
-    it('应该在写入前拒绝未对齐的包数据', async () => {
-      mockContext.appData.pkgJsonPaths = []
-
-      await expect(
-        onBumpVersionHandler({
-          version: '1.1.0',
-          isPrerelease: false,
-          prereleaseId: null,
-        }),
-      ).rejects.toThrow('package names, paths, and manifests are not aligned')
-      expect(updatePackageVersion).not.toHaveBeenCalled()
-    })
-
     it('根清单位于 workspace 列表非首位时也不应该重复更新', async () => {
       mockContext.appData.projectPkgJsonPath = '/test/project/package.json'
-      mockContext.appData.pkgJsonPaths = [
-        '/test/packages/pkg1/package.json',
-        '/test/project/package.json',
-      ]
-      mockContext.appData.pkgNames = ['pkg1', 'test-project']
-      mockContext.appData.pkgs = [
-        { name: 'pkg1', version: '1.0.0' },
-        { name: 'test-project', version: '1.0.0' },
+      mockContext.appData.workspacePackages = [
+        {
+          manifest: { name: 'pkg1', version: '1.0.0' },
+          manifestPath: '/test/packages/pkg1/package.json',
+          rootPath: '/test/packages/pkg1',
+        },
+        {
+          manifest: { name: 'test-project', version: '1.0.0' },
+          manifestPath: '/test/project/package.json',
+          rootPath: '/test/project',
+        },
       ]
 
       await onBumpVersionHandler({
@@ -608,15 +608,18 @@ describe('版本插件测试', () => {
     })
 
     it('应该处理多个包的版本更新', async () => {
-      mockContext.appData.pkgs = [
-        { name: 'pkg1', version: '1.0.0' },
-        { name: 'pkg2', version: '1.0.0' },
+      mockContext.appData.workspacePackages = [
+        {
+          manifest: { name: 'pkg1', version: '1.0.0' },
+          manifestPath: '/test/pkg1/package.json',
+          rootPath: '/test/pkg1',
+        },
+        {
+          manifest: { name: 'pkg2', version: '1.0.0' },
+          manifestPath: '/test/pkg2/package.json',
+          rootPath: '/test/pkg2',
+        },
       ]
-      mockContext.appData.pkgJsonPaths = [
-        '/test/pkg1/package.json',
-        '/test/pkg2/package.json',
-      ]
-      mockContext.appData.pkgNames = ['pkg1', 'pkg2']
 
       const versionInfo = {
         version: '1.1.0',
@@ -675,7 +678,18 @@ describe('版本插件测试', () => {
     })
 
     it('应该在修改文件前检查所有可发布包的目标版本', async () => {
-      mockContext.appData.validPkgNames = ['pkg1', 'pkg2']
+      mockContext.appData.workspacePackages = [
+        {
+          manifest: { name: 'pkg1', version: '1.0.0' },
+          manifestPath: '/test/pkg1/package.json',
+          rootPath: '/test/pkg1',
+        },
+        {
+          manifest: { name: 'pkg2', version: '1.0.0' },
+          manifestPath: '/test/pkg2/package.json',
+          rootPath: '/test/pkg2',
+        },
+      ]
 
       await onBeforeBumpVersionHandler({
         version: '1.1.0',
@@ -783,7 +797,7 @@ describe('版本插件测试', () => {
     })
 
     it('首个包尚未发布时也应该通过本地标签识别重试', async () => {
-      mockContext.appData.pkgs[0].version = '1.1.0'
+      mockContext.appData.workspacePackages[0].manifest.version = '1.1.0'
       ;(
         isVersionExist as MockedFunction<typeof isVersionExist>
       ).mockResolvedValue(false)
@@ -963,15 +977,17 @@ describe('版本插件测试', () => {
         '锁文件更新失败',
       )
 
-      expect(safeWriteJson).toHaveBeenCalledWith(
+      expect(writeJsonAtomic).toHaveBeenCalledWith(
         '/test/package.json',
         expect.objectContaining({ version: '1.0.0' }),
       )
-      expect(safeWriteJson).toHaveBeenCalledWith(
+      expect(writeJsonAtomic).toHaveBeenCalledWith(
         '/test/project/package.json',
         expect.objectContaining({ version: '1.0.0' }),
       )
-      expect(mockContext.appData.pkgs[0].version).toBe('1.0.0')
+      expect(mockContext.appData.workspacePackages[0].manifest.version).toBe(
+        '1.0.0',
+      )
       expect(mockContext.appData.projectPkg.version).toBe('1.0.0')
     })
   })
@@ -1098,7 +1114,8 @@ describe('版本插件测试', () => {
       ;(
         isCanaryVersion as MockedFunction<typeof isCanaryVersion>
       ).mockReturnValue(true)
-      mockContext.appData.pkgs[0].version = '1.0.0-canary.20231112-old123'
+      mockContext.appData.workspacePackages[0].manifest.version =
+        '1.0.0-canary.20231112-old123'
 
       // 当没有提供 releaseTypeOrVersion 且配置为 canary 模式时，会调用 getCanaryVersion
 
@@ -1149,9 +1166,17 @@ describe('版本插件测试', () => {
 
     it('应该将所有工作区包的本地版本纳入版本基线', async () => {
       mockContext.config.npm.confirm = false
-      mockContext.appData.pkgs = [
-        { name: 'pkg-a', version: '1.0.0' },
-        { name: 'pkg-b', version: '1.4.0' },
+      mockContext.appData.workspacePackages = [
+        {
+          manifest: { name: 'pkg-a', version: '1.0.0' },
+          manifestPath: '/test/pkg-a/package.json',
+          rootPath: '/test/pkg-a',
+        },
+        {
+          manifest: { name: 'pkg-b', version: '1.4.0' },
+          manifestPath: '/test/pkg-b/package.json',
+          rootPath: '/test/pkg-b',
+        },
       ]
 
       await getIncrementVersionHandler({ releaseTypeOrVersion: 'minor' })

@@ -51,7 +51,13 @@ export interface PackageJson {
   engines?: {
     [properName: string]: string
   }
-  workspaces?: string[]
+  /** workspace 包匹配模式，兼容数组和 Yarn object 两种声明 */
+  workspaces?:
+    | string[]
+    | {
+        packages: string[]
+        nohoist?: string[]
+      }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [propName: string]: any
 }

@@ -37,25 +37,3 @@ export function statPathSync(file: string, symlink?: boolean): fs.Stats {
     throw err
   }
 }
-
-/**
- * 获取路径状态
- * @param file - 文件路径
- * @param symlink - 是否读取符号链接自身的状态
- * @returns 路径状态
- * @deprecated 请改用 {@link statPath}
- */
-export function fstat(file: string, symlink?: boolean): Promise<fs.Stats> {
-  return statPath(file, symlink)
-}
-
-/**
- * 同步获取路径状态
- * @param file - 文件路径
- * @param symlink - 是否读取符号链接自身的状态
- * @returns 路径状态
- * @deprecated 请改用 {@link statPathSync}
- */
-export function fstatSync(file: string, symlink?: boolean): fs.Stats {
-  return statPathSync(file, symlink)
-}

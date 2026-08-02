@@ -129,13 +129,3 @@ export function parseGitRemoteUrl(url: string): GitRemoteRepository | null {
     return null
   }
 }
-
-/**
- * 解析 Git 远程地址
- * @param url - Git SSH 或 HTTP(S) 地址
- * @returns 标准化的远程仓库信息，无法解析时返回 `null`
- * @deprecated 请改用 {@link parseGitRemoteUrl}
- */
-export function gitUrlAnalysis(url: string): GitRemoteRepository | null {
-  return parseGitRemoteUrl(url)
-}
