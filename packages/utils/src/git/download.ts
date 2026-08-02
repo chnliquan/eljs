@@ -2,7 +2,6 @@ import path from 'node:path'
 
 import { run } from '../cp'
 import { createTempDir, mkdir, remove } from '../file'
-import type { UtilsRuntime } from '../observability'
 
 /**
  * 下载选项
@@ -23,10 +22,6 @@ export interface CloneGitRepositoryOptions {
    * 用于终止 Git 子进程的取消信号
    */
   signal?: AbortSignal
-  /**
-   * 接收 Git 子进程生命周期事件的运行时适配器
-   */
-  runtime?: UtilsRuntime
 }
 
 /**
@@ -45,7 +40,6 @@ export async function cloneGitRepository(
     branch: explicitBranch,
     dest = await createTempDir(true),
     signal,
-    runtime,
   } = options || {}
   const { repositoryUrl, branch: fragmentBranch } = parseGitCloneSource(url)
   const branch = explicitBranch ?? fragmentBranch
@@ -60,7 +54,6 @@ export async function cloneGitRepository(
     await mkdir(dest)
     await run('git', args, {
       cwd: dest,
-      runtime,
       signal,
     })
   } catch (error) {

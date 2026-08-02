@@ -48,6 +48,8 @@
     "build": "rslib build",
     "clean": "rimraf dist",
     "dev": "rslib build --watch",
+    "test": "vitest run packages/create-template/__tests__",
+    "test:watch": "vitest packages/create-template/__tests__",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json"
   },
   "dependencies": {

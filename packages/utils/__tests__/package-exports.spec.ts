@@ -28,7 +28,6 @@ describe('package exports contract', () => {
       './module',
       './npm',
       './object',
-      './observability',
       './path',
       './promise',
       './string',

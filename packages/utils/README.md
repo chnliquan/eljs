@@ -42,26 +42,25 @@ import { logger, readJson, run } from '@eljs/utils'
 
 ## 领域入口
 
-| 子路径                      | 主要能力                                      |
-| --------------------------- | --------------------------------------------- |
-| `@eljs/utils/cli`           | 确认、暂停与交互提示                          |
-| `@eljs/utils/cp`            | 命令执行、可执行文件解析、PID 查询与 sudo     |
-| `@eljs/utils/env`           | 全局安装检测与环境能力                        |
-| `@eljs/utils/error`         | `UtilsError` 与稳定错误码                     |
-| `@eljs/utils/file`          | 读写、复制、移动、删除、模板渲染与配置加载    |
-| `@eljs/utils/generator`     | 模板生成器生命周期                            |
-| `@eljs/utils/git`           | Git 元信息、状态和常用操作                    |
-| `@eljs/utils/guards`        | 运行时类型守卫                                |
-| `@eljs/utils/http`          | 有界缓冲下载与流式落盘、解压                  |
-| `@eljs/utils/logger`        | CLI 日志与 debug 适配                         |
-| `@eljs/utils/module`        | Node 模块查找与同步加载                       |
-| `@eljs/utils/npm`           | npm 元数据、包管理器检测、安装和 tarball 下载 |
-| `@eljs/utils/object`        | 对象合并                                      |
-| `@eljs/utils/observability` | 可注入的结构化 logger/observer 类型           |
-| `@eljs/utils/path`          | 跨平台路径和工作区解析                        |
-| `@eljs/utils/promise`       | deferred、重试和计时器                        |
-| `@eljs/utils/string`        | 常用字符串格式转换                            |
-| `@eljs/utils/types`         | 公共 TypeScript 类型                          |
+| 子路径                  | 主要能力                                      |
+| ----------------------- | --------------------------------------------- |
+| `@eljs/utils/cli`       | 确认、暂停与交互提示                          |
+| `@eljs/utils/cp`        | 命令执行、可执行文件解析、PID 查询与 sudo     |
+| `@eljs/utils/env`       | 全局安装检测与环境能力                        |
+| `@eljs/utils/error`     | `UtilsError` 与稳定错误码                     |
+| `@eljs/utils/file`      | 读写、复制、移动、删除、模板渲染与配置加载    |
+| `@eljs/utils/generator` | 模板生成器生命周期                            |
+| `@eljs/utils/git`       | Git 元信息、状态和常用操作                    |
+| `@eljs/utils/guards`    | 运行时类型守卫                                |
+| `@eljs/utils/http`      | 有界缓冲下载与流式落盘、解压                  |
+| `@eljs/utils/logger`    | CLI 日志与 debug 适配                         |
+| `@eljs/utils/module`    | Node 模块查找与同步加载                       |
+| `@eljs/utils/npm`       | npm 元数据、包管理器检测、安装和 tarball 下载 |
+| `@eljs/utils/object`    | 对象合并                                      |
+| `@eljs/utils/path`      | 跨平台路径和工作区解析                        |
+| `@eljs/utils/promise`   | deferred、重试和计时器                        |
+| `@eljs/utils/string`    | 常用字符串格式转换                            |
+| `@eljs/utils/types`     | 公共 TypeScript 类型                          |
 
 包只公开上述领域入口，不承诺 `file/loader` 等内部文件路径的兼容性。
 
@@ -165,24 +164,14 @@ console.log(manifest.byteLength)
 
 `maxBytes: 0` 和 `maxEntries: 0` 表示不限制，只有在上层已经限制资源规模时才建议使用。`integrity` 使用 SRI 格式；不匹配时返回 `ERR_DOWNLOAD_INTEGRITY`。
 
-### 结构化错误与观测
+### 结构化错误
 
 ```ts
 import { run } from '@eljs/utils/cp'
 import { UtilsError } from '@eljs/utils/error'
-import type { UtilsRuntime } from '@eljs/utils/observability'
-
-const runtime: UtilsRuntime = {
-  logger(entry) {
-    console.log(JSON.stringify(entry))
-  },
-  observer(event) {
-    metrics.record(event.operation, event.phase, event.durationMs)
-  },
-}
 
 try {
-  await run('node', ['--version'], { runtime, verbose: true })
+  await run('node', ['--version'], { verbose: true })
 } catch (error) {
   if (error instanceof UtilsError) {
     console.error(error.code, error.operation, error.details)
@@ -191,7 +180,7 @@ try {
 }
 ```
 
-`runtime` 是调用级依赖，不修改全局状态。logger 或 observer 自身抛出的异常会被隔离，不会改变原操作结果。下载和 sudo 已提供稳定错误码；底层第三方异常在尚未归一化时仍可能原样抛出。
+下载和 sudo 已提供稳定错误码；底层第三方异常在尚未归一化时仍可能原样抛出。
 
 ## 本地开发
 

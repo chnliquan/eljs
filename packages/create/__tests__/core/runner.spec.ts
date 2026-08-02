@@ -598,21 +598,6 @@ describe('CreateRunner 类完整测试', () => {
       )
     })
 
-    it('应该保留运行时适配器实例而不是深合并函数引用', async () => {
-      const runtime = { observer: vi.fn() }
-      const runner = new CreateRunner({ cwd: '/test', runtime })
-
-      await runner.run('/test/target', 'test-project')
-
-      expect(runner.config.runtime).toBe(runtime)
-      expect(requiredObjectModule.deepMerge).toHaveBeenCalledWith(
-        {},
-        requiredModule2.defaultConfig,
-        {},
-        expect.not.objectContaining({ runtime: expect.anything() }),
-      )
-    })
-
     it('应该有所有必需的公共属性', async () => {
       const runner = new CreateRunner({ cwd: '/test' })
 

@@ -9,8 +9,10 @@ import {
 import * as importedModule0 from '../../src/env'
 import * as importedModule1 from '../../src/path/workspace-lock'
 
-import { getPackageManager } from '../../src/npm/package-manager'
-import { clearPackageManagerCache } from '../../src/npm/package-manager-cache'
+import {
+  clearPackageManagerCache,
+  getPackageManager,
+} from '../../src/npm/package-manager'
 
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
 const requiredModule1 = vi.mocked(importedModule1, { deep: true })

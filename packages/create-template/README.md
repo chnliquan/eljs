@@ -9,7 +9,7 @@ Create a new project with standard templates powered by @eljs/create.
 ## ✨ Features
 
 - 🚀 **Quick Setup** - Instantly create projects with predefined templates
-- 🎯 **Scene-Based Selection** - Interactive prompts to choose application scene
+- 🎯 **Scene-Based Selection** - Select from the built-in application templates
 - 📦 **Official Templates** - Built-in web and Node.js project templates
 - 💬 **Interactive Mode** - User-friendly CLI with smart prompts
 - 🔧 **Configurable** - Support for custom working directory and merge options
@@ -89,9 +89,8 @@ Based on the current configuration, the following scenes and templates are avail
 # Start with interactive prompts
 create-template my-awesome-project
 
-# The CLI will prompt you to:
-# 1. Select the application scene (currently: NPM)
-# 2. Choose from available templates:
+# The built-in template list has one scene, so the CLI selects it automatically and
+# prompts you to choose from available templates:
 #    - Web Common Template
 #    - Node Common Template
 ```
@@ -125,33 +124,43 @@ create-template my-project --scene npm --template template-npm-web --force --cwd
 ## Programmatic API
 
 ```ts
-import { CreateTemplate, type TemplateConfig } from '@eljs/create-template'
-
-const catalog: TemplateConfig = {
-  scenes: { internal: 'Internal' },
-  templates: {
-    internal: {
-      service: {
-        type: 'local',
-        value: '/workspace/templates/service',
-        description: 'Internal service',
-      },
-    },
-  },
-}
+import { CreateTemplate } from '@eljs/create-template'
 
 const creator = new CreateTemplate({
-  catalog,
-  scene: 'internal',
-  template: 'service',
+  scene: 'npm',
+  template: 'template-npm-web',
   cwd: '/workspace/projects',
 })
 
 await creator.run('orders-service')
 ```
 
-The built-in catalog pins official templates to versions tested with the
-current CLI. A custom `catalog` can mix local, npm, and Git templates for
-offline or enterprise workflows. All `ProjectCreator` options, including
-`force`, `merge`, `signal`, and remote-template security controls, are passed
+The built-in template list pins official templates to exact versions. All
+`ProjectCreator` options, including `force`, `merge`, and `signal`, are passed
 through.
+
+## Security model
+
+- Built-in remote templates use exact versions and HTTPS registry URLs
+- Template dependency lifecycle scripts are disabled by default; only enable
+  `--allow-template-scripts` for a source you control
+
+## Development
+
+From the repository root:
+
+```bash
+# Build dependencies and this package
+pnpm --filter @eljs/create-template... build
+
+# Run package tests once or in watch mode
+pnpm --filter @eljs/create-template test
+pnpm --filter @eljs/create-template test:watch
+
+# Run static checks
+pnpm --filter @eljs/create-template typecheck
+pnpm exec eslint packages/create-template --max-warnings=0
+
+# Debug the built CLI
+DEBUG=create-template:* pnpm exec create-template my-project
+```

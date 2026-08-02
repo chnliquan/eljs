@@ -1,7 +1,7 @@
 export * from './download-npm-tarball'
 export * from './global-prefix'
 export * from './install'
-export * from './package-manager'
+export { getPackageManager } from './package-manager'
 export * from './package-metadata'
 export * from './package-specifier'
 export * from './registry-cli'

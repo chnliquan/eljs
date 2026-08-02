@@ -5,7 +5,6 @@ import path from 'node:path'
 import { pathExists, readFile, readJson } from '../file'
 import { getPackageManager } from '../npm/package-manager'
 import type { PackageJson } from '../types'
-import { workspaceCache } from './workspace-cache'
 import {
   getBunWorkspaceRoot,
   getLernaWorkspaceRoot,
@@ -14,6 +13,8 @@ import {
   getYarnWorkspaceRoot,
 } from './workspace-lock'
 
+const workspaceCache = new Map<string, string[]>()
+
 export {
   getBunWorkspaceRoot,
   getLernaWorkspaceRoot,
@@ -21,6 +22,18 @@ export {
   getPnpmWorkspaceRoot,
   getYarnWorkspaceRoot,
 } from './workspace-lock'
+
+/**
+ * 清除工作区目录解析缓存
+ *
+ * @remarks
+ * 仅用于测试隔离，不通过 path 公共入口导出
+ *
+ * @internal
+ */
+export function clearWorkspaceCache(): void {
+  workspaceCache.clear()
+}
 
 /**
  * 获取工作区根目录

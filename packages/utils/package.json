@@ -162,16 +162,6 @@
         "default": "./dist/object/index.cjs"
       }
     },
-    "./observability": {
-      "import": {
-        "types": "./dist/observability/index.d.ts",
-        "default": "./dist/observability/index.js"
-      },
-      "require": {
-        "types": "./dist/observability/index.d.cts",
-        "default": "./dist/observability/index.cjs"
-      }
-    },
     "./path": {
       "import": {
         "types": "./dist/path/index.d.ts",

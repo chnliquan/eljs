@@ -454,29 +454,6 @@ describe('download', () => {
       download('https://example.com/', '/destination'),
     ).rejects.toThrow('Unable to determine a safe filename')
   })
-
-  it('emits structured lifecycle events without exposing the URL path', async () => {
-    const observer = vi.fn()
-
-    await download('https://example.com/private/token.tgz?secret=value', {
-      runtime: { observer },
-    })
-
-    expect(observer).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        attributes: { hostname: 'example.com', protocol: 'https:' },
-        operation: 'http.download',
-        phase: 'start',
-      }),
-    )
-    expect(observer).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        operation: 'http.download',
-        phase: 'success',
-      }),
-    )
-  })
 })
 
 function createResponse(

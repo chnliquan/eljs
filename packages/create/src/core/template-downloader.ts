@@ -9,7 +9,6 @@ import {
   getNpmRequestConfig,
   pkgNameAnalysis,
 } from '@eljs/utils/npm'
-import type { UtilsRuntime } from '@eljs/utils/observability'
 import type { PackageJson } from '@eljs/utils/types'
 import path from 'node:path'
 import ora, { type Ora } from 'ora'
@@ -38,8 +37,6 @@ export interface TemplateDownloadOptions extends RemoteTemplate {
    * 用于取消下载和依赖安装子进程的信号
    */
   signal?: AbortSignal
-  /** 接收下载和子进程生命周期事件的运行时适配器 */
-  runtime?: UtilsRuntime
   /**
    * 是否允许模版依赖在准备阶段执行生命周期脚本
    *
@@ -115,6 +112,7 @@ export class TemplateDownloader {
         cwd: this.constructorOptions.cwd,
         version,
         registry,
+        signal: this.constructorOptions.signal,
       })
     } catch (error) {
       throw toTemplateError(
@@ -166,9 +164,6 @@ export class TemplateDownloader {
         maxBytes: MAX_TEMPLATE_TARBALL_BYTES,
         maxEntries: MAX_TEMPLATE_TARBALL_ENTRIES,
         maxUnpackedBytes: MAX_TEMPLATE_UNPACKED_BYTES,
-        ...(this.constructorOptions.runtime
-          ? { runtime: this.constructorOptions.runtime }
-          : {}),
         ...(this.constructorOptions.signal
           ? { signal: this.constructorOptions.signal }
           : {}),
@@ -202,9 +197,6 @@ export class TemplateDownloader {
     try {
       this._spinner.start(`Downloading ${url}`)
       const gitOptions = {
-        ...(this.constructorOptions.runtime
-          ? { runtime: this.constructorOptions.runtime }
-          : {}),
         ...(this.constructorOptions.signal
           ? { signal: this.constructorOptions.signal }
           : {}),
@@ -258,9 +250,6 @@ export class TemplateDownloader {
           cwd,
           ...(callerNpmConfig
             ? { env: { NPM_CONFIG_USERCONFIG: callerNpmConfig } }
-            : {}),
-          ...(this.constructorOptions.runtime
-            ? { runtime: this.constructorOptions.runtime }
             : {}),
           ...(this.constructorOptions.signal
             ? { signal: this.constructorOptions.signal }

@@ -62,7 +62,6 @@ export default definePlugin(context => {
 
       await install(packageManager, (args || []) as string[], {
         cwd: context.paths.target,
-        ...(context.config.runtime ? { runtime: context.config.runtime } : {}),
         stdout: 'inherit',
         ...(context.config.signal ? { signal: context.config.signal } : {}),
         ...options,

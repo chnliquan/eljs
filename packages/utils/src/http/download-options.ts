@@ -1,7 +1,5 @@
 import type { Duplex } from 'node:stream'
 
-import type { UtilsRuntime } from '../observability'
-
 /**
  * HTTP 下载操作的兼容返回值
  *
@@ -50,9 +48,6 @@ export interface DownloadOptions {
 
   /** HTTP(S) 代理地址 */
   proxy?: string
-
-  /** 当前运行环境使用的日志与监控适配器 */
-  runtime?: UtilsRuntime
 
   /** 用于主动取消请求的信号 */
   signal?: AbortSignal

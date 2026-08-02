@@ -6,7 +6,7 @@ import path from 'node:path'
 import { PassThrough, Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 
-import { observeDownload } from './download-observability'
+import { UtilsError } from '../error'
 import type { DownloadOptions, DownloadResult } from './download-options'
 import { requestDownload } from './download-request'
 import { createTarExtractor } from './download-tar'
@@ -57,8 +57,8 @@ export default function download(
   }
 
   const stream = new PassThrough() as unknown as DownloadResult
-  const promise = observeDownload('http.download', url, options, () =>
-    downloadResource(url, destination, options),
+  const promise = downloadResource(url, destination, options).catch(cause =>
+    normalizeDownloadError('http.download', cause),
   )
 
   // 兼容历史 Promise + Duplex API，完整内容下载后再向兼容流交付
@@ -95,7 +95,7 @@ export async function downloadTo(
   destination: string,
   options: DownloadOptions = {},
 ): Promise<void> {
-  await observeDownload('http.downloadTo', url, options, async () => {
+  try {
     await withDownloadResponse(
       url,
       options,
@@ -158,7 +158,31 @@ export async function downloadTo(
         })
       },
     )
-  })
+  } catch (cause) {
+    normalizeDownloadError('http.downloadTo', cause)
+  }
+}
+
+/**
+ * 将底层取消异常转换为下载 API 的稳定错误
+ *
+ * @param operation - 下载操作名称
+ * @param cause - 底层异常
+ * @throws 取消或超时时抛出 {@link UtilsError}，其他异常保持原样
+ * @internal
+ */
+function normalizeDownloadError(operation: string, cause: unknown): never {
+  if (
+    cause instanceof Error &&
+    (cause.name === 'AbortError' || cause.name === 'TimeoutError')
+  ) {
+    throw new UtilsError('ERR_OPERATION_ABORTED', 'Download was aborted', {
+      cause,
+      operation,
+    })
+  }
+
+  throw cause
 }
 
 /**

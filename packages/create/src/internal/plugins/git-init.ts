@@ -50,9 +50,6 @@ export default definePlugin(async context => {
 
         await run('git', ['init'], {
           cwd: context.paths.target,
-          ...(context.config.runtime
-            ? { runtime: context.config.runtime }
-            : {}),
           ...(context.config.signal ? { signal: context.config.signal } : {}),
           verbose: false,
         })

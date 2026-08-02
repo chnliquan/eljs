@@ -212,6 +212,7 @@ describe('TemplateDownloader 类测试', () => {
           cwd: mockCwd,
           version: mockVersion,
           registry: undefined,
+          signal: undefined,
         })
         expect(mockGetNpmRequestConfig).toHaveBeenCalledWith(
           mockTarball,
@@ -243,6 +244,26 @@ describe('TemplateDownloader 类测试', () => {
           cwd: mockCwd,
           version: mockVersion,
           registry: customRegistry,
+          signal: undefined,
+        })
+      })
+
+      it('应该把取消信号传递给npm元数据请求', async () => {
+        const controller = new AbortController()
+        const download = new TemplateDownloader({
+          type: 'npm',
+          value: mockPackageName,
+          cwd: mockCwd,
+          signal: controller.signal,
+        })
+
+        await download.download()
+
+        expect(mockGetNpmPackage).toHaveBeenCalledWith(mockPackageName, {
+          cwd: mockCwd,
+          version: mockVersion,
+          registry: undefined,
+          signal: controller.signal,
         })
       })
 
@@ -288,6 +309,7 @@ describe('TemplateDownloader 类测试', () => {
           cwd: undefined,
           version: '1.0.0',
           registry: undefined,
+          signal: undefined,
         })
       })
 
@@ -362,6 +384,7 @@ describe('TemplateDownloader 类测试', () => {
           cwd: undefined,
           version: '2.0.0',
           registry: undefined,
+          signal: undefined,
         })
       })
     })
@@ -640,6 +663,7 @@ describe('TemplateDownloader 类测试', () => {
         cwd: mockCwd,
         version: mockVersion,
         registry: 'https://registry.npmjs.org',
+        signal: undefined,
       })
       expect(mockDownloadNpmTarball).toHaveBeenCalledWith(
         mockTarball,

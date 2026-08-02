@@ -6,7 +6,20 @@ import {
   getYarnWorkspaceRoot,
 } from '../path/workspace-lock'
 import type { PackageManager } from '../types'
-import { packageManagerCache } from './package-manager-cache'
+
+const packageManagerCache = new Map<string, PackageManager | null>()
+
+/**
+ * 清除包管理器锁文件检测缓存
+ *
+ * @remarks
+ * 仅用于测试隔离，不通过 npm 公共入口导出
+ *
+ * @internal
+ */
+export function clearPackageManagerCache(): void {
+  packageManagerCache.clear()
+}
 
 /**
  * 获取包管理器

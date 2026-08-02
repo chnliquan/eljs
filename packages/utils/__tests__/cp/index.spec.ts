@@ -213,6 +213,7 @@ describe('命令处理工具函数', () => {
         expect.any(String),
         'install',
       )
+      expect(execa).toHaveBeenCalledWith('npm', ['install'], {})
       mockConsoleLog.mockRestore()
     })
 
@@ -225,34 +226,6 @@ describe('命令处理工具函数', () => {
       run('ls')
 
       expect(execa).toHaveBeenCalledWith('ls', [], undefined)
-    })
-
-    it('应该注入结构化日志和生命周期监控且不传给 execa', async () => {
-      const logger = vi.fn()
-      const observer = vi.fn()
-      const mockProcess = Promise.resolve({ stdout: 'success' })
-      mockExeca.mockReturnValue(mockProcess)
-
-      await run('npm', ['test'], {
-        runtime: { logger, observer },
-        verbose: true,
-      })
-      await Promise.resolve()
-
-      expect(execa).toHaveBeenCalledWith('npm', ['test'], {})
-      expect(logger).toHaveBeenCalledWith(
-        expect.objectContaining({
-          level: 'info',
-          operation: 'cp.run',
-        }),
-      )
-      expect(observer).toHaveBeenNthCalledWith(
-        1,
-        expect.objectContaining({ operation: 'cp.run', phase: 'start' }),
-      )
-      expect(observer).toHaveBeenLastCalledWith(
-        expect.objectContaining({ operation: 'cp.run', phase: 'success' }),
-      )
     })
   })
 

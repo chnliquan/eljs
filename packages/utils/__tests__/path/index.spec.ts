@@ -13,7 +13,7 @@ import * as importedModule3 from '../../src/file'
 import * as importedModule4 from '../../src/npm/package-manager'
 
 import * as path from 'node:path'
-import { clearWorkspaceCache } from '../../src/path/workspace-cache'
+import { clearWorkspaceCache } from '../../src/path/root'
 
 import {
   extractCallDir,

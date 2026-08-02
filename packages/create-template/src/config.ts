@@ -1,27 +1,17 @@
 /**
- * 远程模版
+ * 内置目录中的远程模板
  */
 export interface RemoteTemplate {
-  /**
-   * 模版类型
-   */
-  type: 'npm' | 'git' | 'local'
-  /**
-   * 模版值
-   */
-  value: string
-  /**
-   * 模板描述
-   */
-  description: string
-  /**
-   * 仓库地址
-   */
-  registry?: string
-  /**
-   * 是否为内置信任模板
-   */
-  trusted?: boolean
+  /** 下载协议 */
+  readonly type: 'npm' | 'git'
+  /** 包标识或 Git 地址 */
+  readonly value: string
+  /** 交互界面展示的描述 */
+  readonly description: string
+  /** npm 模板使用的 registry */
+  readonly registry?: string
+  /** 是否由内置目录确认来源可信 */
+  readonly trusted?: boolean
 }
 
 /**
@@ -31,15 +21,13 @@ export interface TemplateConfig {
   /**
    * 应用场景
    */
-  scenes: {
-    [key: string]: string
-  }
+  readonly scenes: Readonly<Record<string, string>>
   /**
    * 模版集合
    */
-  templates: {
-    [scene: string]: Record<string, RemoteTemplate>
-  }
+  readonly templates: Readonly<
+    Record<string, Readonly<Record<string, RemoteTemplate>>>
+  >
 }
 
 /**
@@ -56,7 +44,7 @@ const OFFICIAL_TEMPLATE_VERSION = '0.12.2'
  * @remarks
  * 内置模版会跳过远程代码确认，因此每次升级版本都必须完成主路径契约测试
  */
-export const defaultConfig: TemplateConfig = Object.freeze({
+export const defaultConfig = Object.freeze({
   scenes: Object.freeze({
     npm: 'NPM',
   }),
@@ -78,4 +66,4 @@ export const defaultConfig: TemplateConfig = Object.freeze({
       }),
     }),
   }),
-})
+}) satisfies TemplateConfig

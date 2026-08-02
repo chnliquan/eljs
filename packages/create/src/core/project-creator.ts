@@ -440,9 +440,6 @@ export class ProjectCreator {
     const downloadOptions: TemplateDownloadOptions = {
       ...this._template,
       cwd: this.cwd,
-      ...(this.constructorOptions.runtime
-        ? { runtime: this.constructorOptions.runtime }
-        : {}),
       ...(this.constructorOptions.signal
         ? { signal: this.constructorOptions.signal }
         : {}),

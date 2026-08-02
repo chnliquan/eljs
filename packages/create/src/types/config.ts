@@ -1,5 +1,4 @@
 import type { UserConfig } from '@eljs/plugin-host'
-import type { UtilsRuntime } from '@eljs/utils/observability'
 import type { RequiredRecursive } from '@eljs/utils/types'
 
 /**
@@ -43,10 +42,6 @@ export interface Config extends UserConfig {
    * 用于在下载、插件或生成阶段边界停止后续工作的取消信号
    */
   signal?: AbortSignal
-  /**
-   * 接收子进程与下载生命周期事件的运行时适配器
-   */
-  runtime?: UtilsRuntime
   /**
    * 本地模版路径或远程模版来源
    */
@@ -108,9 +103,7 @@ export interface Config extends UserConfig {
  * CreateRunner 完成配置解析后的配置视图
  *
  * @remarks
- * 声明式配置均已补齐默认值，运行时取消信号仍保持可选且保留原始实例
+ * 声明式配置均已补齐默认值，取消信号仍保持可选且保留原始实例
  */
-export type ResolvedConfig = RequiredRecursive<
-  Omit<Config, 'runtime' | 'signal'>
-> &
-  Pick<Config, 'runtime' | 'signal'>
+export type ResolvedConfig = RequiredRecursive<Omit<Config, 'signal'>> &
+  Pick<Config, 'signal'>

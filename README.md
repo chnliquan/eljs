@@ -32,6 +32,18 @@ npx @eljs/create my-template my-project
 
 **Features**: Dual CLI/API usage, multiple template sources, smart template resolution, interactive mode, plugin system
 
+### 🧩 @eljs/create-template
+
+Create projects from curated official templates with an interactive CLI or
+programmatic API.
+
+```bash
+npx @eljs/create-template my-project
+```
+
+**Features**: Exact-version official templates, safe remote defaults,
+cancellation, overwrite and transactional merge support
+
 ### 🛠 @eljs/utils
 
 A comprehensive collection of Node.js utilities for modern development workflows.

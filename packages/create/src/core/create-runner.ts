@@ -236,16 +236,9 @@ export class CreateRunner extends PluginHost<
    * @returns 配置解析完成后兑现的 Promise
    */
   private async _resolveConfig(): Promise<void> {
-    const {
-      runtime: constructorRuntime,
-      signal: constructorSignal,
-      ...constructorOptions
-    } = this.constructorOptions
-    const {
-      runtime: userRuntime,
-      signal: userSignal,
-      ...userConfig
-    } = this.userConfig || {}
+    const { signal: constructorSignal, ...constructorOptions } =
+      this.constructorOptions
+    const { signal: userSignal, ...userConfig } = this.userConfig || {}
     const config = deepMerge(
       {},
       defaultConfig,
@@ -255,8 +248,6 @@ export class CreateRunner extends PluginHost<
 
     // AbortSignal 依赖原型和内部状态，不能交给通用深合并器克隆
     config.signal = constructorSignal || userSignal
-    // 运行时适配器包含函数引用，保持调用方注入实例以确保事件送达同一接收端
-    config.runtime = constructorRuntime || userRuntime
     this._config = config
   }
 

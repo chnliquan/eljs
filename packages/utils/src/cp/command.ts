@@ -3,8 +3,6 @@ import { execa, type Options as ExecaOptions, type ResultPromise } from 'execa'
 import path from 'node:path'
 import which from 'which'
 
-import type { UtilsRuntime } from '../observability'
-import { emitUtilsEvent, emitUtilsLog } from '../observability/internal'
 import { parseCommandLine } from './command-line'
 
 /**
@@ -18,11 +16,6 @@ export type RunCommandOptions = Omit<
    * 子进程工作目录
    */
   cwd?: string
-
-  /**
-   * 当前运行环境使用的日志与监控适配器
-   */
-  runtime?: UtilsRuntime
 
   /**
    * 用于终止子进程的取消信号
@@ -73,38 +66,16 @@ export function run(
   }
 
   args = (args || []) as string[]
-  const runtime = options?.runtime
-  const startedAt = Date.now()
   let execaOptions: ExecaOptions | undefined
 
   if (options) {
-    const {
-      runtime: _runtime,
-      signal: _signal,
-      verbose: _verbose,
-      ...rest
-    } = options
+    const { signal: _signal, verbose: _verbose, ...rest } = options
     execaOptions = rest as ExecaOptions
   }
 
   if (options?.verbose) {
-    if (runtime?.logger) {
-      emitUtilsLog(runtime, {
-        level: 'info',
-        message: `$ ${command} ${args.join(' ')}`.trim(),
-        operation: 'cp.run',
-      })
-    } else {
-      console.log('$', chalk.greenBright(command), ...args)
-    }
+    console.log('$', chalk.greenBright(command), ...args)
   }
-
-  emitUtilsEvent(runtime, {
-    attributes: { argumentCount: args.length, command },
-    operation: 'cp.run',
-    phase: 'start',
-    timestamp: startedAt,
-  })
 
   const child = execa(command, args, execaOptions) as RunCommandChildProcess
   const abortChild = () => child.kill('SIGTERM')
@@ -121,24 +92,9 @@ export function run(
   void Promise.resolve(child).then(
     () => {
       cleanupSignal()
-      emitUtilsEvent(runtime, {
-        attributes: { argumentCount: args.length, command },
-        durationMs: Date.now() - startedAt,
-        operation: 'cp.run',
-        phase: 'success',
-        timestamp: Date.now(),
-      })
     },
-    error => {
+    () => {
       cleanupSignal()
-      emitUtilsEvent(runtime, {
-        attributes: { argumentCount: args.length, command },
-        durationMs: Date.now() - startedAt,
-        error,
-        operation: 'cp.run',
-        phase: 'failure',
-        timestamp: Date.now(),
-      })
     },
   )
 

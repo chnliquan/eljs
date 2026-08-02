@@ -4,8 +4,6 @@ import { read } from 'read'
 
 import { UtilsError } from '../error'
 import { isObject } from '../guards'
-import type { UtilsRuntime } from '../observability'
-import { emitUtilsEvent, emitUtilsLog } from '../observability/internal'
 import { findExecutable } from './command'
 
 /**
@@ -29,9 +27,6 @@ export interface SudoOptions {
 
   /** 交互读取密码时显示的提示文本 */
   prompt?: string
-
-  /** 当前运行环境使用的日志与监控适配器 */
-  runtime?: UtilsRuntime
 
   /**
    * 传给 Node.js `spawn` 的选项
@@ -86,57 +81,29 @@ export async function sudo(
   }
 
   const commandArgs = (args ?? []) as string[]
-  const runtime = options?.runtime
-  const startedAt = Date.now()
 
-  emitUtilsEvent(runtime, {
-    attributes: { argumentCount: commandArgs.length },
-    operation: 'cp.sudo',
-    phase: 'start',
-    timestamp: startedAt,
-  })
-
-  try {
-    if (process.platform === 'win32') {
-      throw new UtilsError(
-        'ERR_UNSUPPORTED_PLATFORM',
-        'sudo is not supported on Windows',
-        {
-          details: { platform: process.platform },
-          operation: 'cp.sudo',
-        },
-      )
-    }
-
-    const bin = await findExecutable('sudo')
-
-    if (!bin) {
-      throw new UtilsError(
-        'ERR_EXECUTABLE_NOT_FOUND',
-        'Unable to find the sudo executable',
-        { operation: 'cp.sudo' },
-      )
-    }
-
-    await spawnSudo(bin, commandArgs, options)
-    emitUtilsEvent(runtime, {
-      attributes: { argumentCount: commandArgs.length },
-      durationMs: Date.now() - startedAt,
-      operation: 'cp.sudo',
-      phase: 'success',
-      timestamp: Date.now(),
-    })
-  } catch (error) {
-    emitUtilsEvent(runtime, {
-      attributes: { argumentCount: commandArgs.length },
-      durationMs: Date.now() - startedAt,
-      error,
-      operation: 'cp.sudo',
-      phase: 'failure',
-      timestamp: Date.now(),
-    })
-    throw error
+  if (process.platform === 'win32') {
+    throw new UtilsError(
+      'ERR_UNSUPPORTED_PLATFORM',
+      'sudo is not supported on Windows',
+      {
+        details: { platform: process.platform },
+        operation: 'cp.sudo',
+      },
+    )
   }
+
+  const bin = await findExecutable('sudo')
+
+  if (!bin) {
+    throw new UtilsError(
+      'ERR_EXECUTABLE_NOT_FOUND',
+      'Unable to find the sudo executable',
+      { operation: 'cp.sudo' },
+    )
+  }
+
+  await spawnSudo(bin, commandArgs, options)
 }
 
 /**
@@ -158,7 +125,6 @@ async function spawnSudo(
     password,
     passwordCacheTtlMs = 5 * 60_000,
     prompt = 'sudo requires your password',
-    runtime,
     spawnOptions = {},
   } = options ?? {}
   const sudoArgs = ['-S', '-p', passwordMarker, ...commandArgs]
@@ -194,16 +160,12 @@ async function spawnSudo(
       }
     }
 
-    const log = (level: 'info' | 'warn', message: string) => {
+    const log = (message: string) => {
       if (!message) {
         return
       }
 
-      if (runtime?.logger) {
-        emitUtilsLog(runtime, { level, message, operation: 'cp.sudo' })
-      } else {
-        console.log(message)
-      }
+      console.log(message)
     }
 
     const writePassword = (value: string) => {
@@ -258,7 +220,7 @@ async function spawnSudo(
     }
 
     child.stdout?.on('data', chunk => {
-      log('info', chunk.toString().trim())
+      log(chunk.toString().trim())
     })
 
     child.stderr?.on('data', chunk => {
@@ -266,7 +228,7 @@ async function spawnSudo(
       let markerIndex = stderrBuffer.indexOf(passwordMarker)
 
       while (markerIndex >= 0) {
-        log('warn', stderrBuffer.slice(0, markerIndex).trim())
+        log(stderrBuffer.slice(0, markerIndex).trim())
         stderrBuffer = stderrBuffer.slice(markerIndex + passwordMarker.length)
         requestPassword()
         markerIndex = stderrBuffer.indexOf(passwordMarker)
@@ -274,7 +236,7 @@ async function spawnSudo(
 
       const lines = stderrBuffer.split(/\r?\n/)
       stderrBuffer = lines.pop() ?? ''
-      lines.forEach(line => log('warn', line.trim()))
+      lines.forEach(line => log(line.trim()))
     })
 
     child.once('error', cause => {
@@ -287,7 +249,7 @@ async function spawnSudo(
     })
 
     child.once('close', (exitCode, signal) => {
-      log('warn', stderrBuffer.trim())
+      log(stderrBuffer.trim())
 
       if (exitCode === 0) {
         settle()

@@ -4,7 +4,6 @@ import {
   CreateTemplate,
   defaultConfig,
   type CreateTemplateOptions,
-  type TemplateConfig,
 } from '../src'
 
 describe('create-template 公共入口', () => {
@@ -13,21 +12,13 @@ describe('create-template 公共入口', () => {
     expect(defaultConfig.templates.npm).toBeDefined()
   })
 
-  it('应该公开可组合的目录与构造选项类型', () => {
-    const catalog: TemplateConfig = {
-      scenes: { local: 'Local' },
-      templates: {
-        local: {
-          fixture: {
-            type: 'local',
-            value: './fixture',
-            description: 'Fixture Template',
-          },
-        },
-      },
+  it('应该公开创建器构造选项类型', () => {
+    const options: CreateTemplateOptions = {
+      cwd: '/workspace',
+      scene: 'npm',
+      template: 'template-npm-web',
     }
-    const options: CreateTemplateOptions = { catalog }
 
-    expect(options.catalog).toBe(catalog)
+    expect(options.scene).toBe('npm')
   })
 })

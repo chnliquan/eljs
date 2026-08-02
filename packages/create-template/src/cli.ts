@@ -1,12 +1,10 @@
-import { AppError } from '@eljs/create'
+import { AppError } from '@eljs/create/errors'
 import { readJson } from '@eljs/utils/file'
 import { createDebugger, logger } from '@eljs/utils/logger'
 import type { PackageJson } from '@eljs/utils/types'
-import { program } from 'commander'
+import { Command } from 'commander'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-
-import { CreateTemplate } from './create'
 
 export async function cli() {
   const controller = new AbortController()
@@ -32,6 +30,13 @@ export async function cli() {
   }
 }
 
+/**
+ * 注册 CLI 进程信号并返回对称的清理函数
+ *
+ * @param controller - 当前创建流程的取消控制器
+ * @returns 移除本次注册信号监听器的函数
+ * @internal
+ */
 function registerSignalHandlers(controller: AbortController): () => void {
   const handleSignal = (signal: NodeJS.Signals) => {
     if (!controller.signal.aborted) {
@@ -73,12 +78,21 @@ async function main(signal: AbortSignal) {
       : fileURLToPath(new URL('../package.json', import.meta.url))
   const pkg = await readJson<Required<PackageJson>>(packageJsonPath)
 
-  if (shouldCheckForUpdates(process.argv)) {
-    const { default: updateNotifier } = await import('update-notifier')
-    updateNotifier({ pkg }).notify()
+  const isLocalReadOnlyCommand = process.argv.some(argument =>
+    ['-h', '--help', '-v', '--version'].includes(argument),
+  )
+  if (!isLocalReadOnlyCommand) {
+    // 更新提示是辅助能力，加载或检查失败不能阻止创建主路径
+    void import('update-notifier')
+      .then(({ default: updateNotifier }) => {
+        updateNotifier({ pkg }).notify()
+      })
+      .catch(error => {
+        debug?.('update notification failed:%O', error)
+      })
   }
 
-  program
+  const command = new Command()
     .name('create-template')
     .description('Create a new project powered by @eljs/create')
     .version(pkg.version, '-v, --version', 'Output the current version')
@@ -95,25 +109,10 @@ async function main(signal: AbortSignal) {
     .action(async (projectName, options) => {
       debug?.(`projectName:`, projectName)
       debug?.(`options:%O`, options)
+      const { CreateTemplate } = await import('./create')
       await new CreateTemplate({ ...options, signal }).run(projectName)
     })
+    .showHelpAfterError()
 
-  program.showHelpAfterError()
-  await program.parseAsync(process.argv)
-}
-
-/**
- * 判断当前命令是否需要加载更新检查依赖
- *
- * @remarks
- * 帮助和版本查询是本地只读快路径，不应为网络更新提示增加启动成本
- *
- * @param argv - Node 进程参数
- * @returns 普通创建命令返回 `true`
- * @internal
- */
-function shouldCheckForUpdates(argv: readonly string[]): boolean {
-  return !argv.some(argument =>
-    ['-h', '--help', '-v', '--version'].includes(argument),
-  )
+  await command.parseAsync(process.argv)
 }
