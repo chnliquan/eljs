@@ -159,6 +159,24 @@ describe('create-template CLI', () => {
     expect(process.listeners('SIGINT')).not.toContain(signalHandler)
   })
 
+  it('信号日志失败时仍然取消流程', async () => {
+    const previousListeners = new Set(process.listeners('SIGINT'))
+    vi.mocked(logger.event).mockImplementationOnce(() => {
+      throw new Error('Logger failed')
+    })
+    run.mockImplementation(async () => {
+      const signalHandler = process
+        .listeners('SIGINT')
+        .find(listener => !previousListeners.has(listener))
+      ;(signalHandler as (signal: NodeJS.Signals) => void)('SIGINT')
+    })
+
+    await cli()
+
+    expect(run).toHaveBeenCalledWith('test-project')
+    expect(process.exitCode).toBe(130)
+  })
+
   it('领域错误输出简洁消息并设置退出码', async () => {
     run.mockRejectedValue(
       new AppError('Unknown application scene', {

@@ -29,4 +29,16 @@ describe('create-template 交互工具', () => {
     )
     expect(logger.event).toHaveBeenCalledWith('Cancel create template')
   })
+
+  it('日志失败时仍然抛出取消领域错误', () => {
+    vi.mocked(logger.event).mockImplementationOnce(() => {
+      throw new Error('Logger failed')
+    })
+
+    expect(() => onCancel()).toThrow(
+      expect.objectContaining({
+        code: 'CREATE_OPERATION_CANCELLED',
+      }),
+    )
+  })
 })

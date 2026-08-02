@@ -11,15 +11,19 @@ describe('create-template 内置目录', () => {
           'template-npm-web': {
             type: 'npm',
             description: 'Web Common Template',
-            value: '@eljs/create-plugin-npm-web@0.12.2',
+            value: '@eljs/create-plugin-npm-web@0.12.1',
             registry: 'https://registry.npmjs.org/',
+            integrity:
+              'sha512-PnCXo/ZbnGnQqdFQjG9jI1jXRn9ZV8l4DWE6Txxjmu40PkCF6MRfqCGpCBd4PN2flAKCph+DUaNrKM+6lKrrww==',
             trusted: true,
           },
           'template-npm-node': {
             type: 'npm',
             description: 'Node Common Template',
-            value: '@eljs/create-plugin-npm-node@0.12.2',
+            value: '@eljs/create-plugin-npm-node@0.12.1',
             registry: 'https://registry.npmjs.org/',
+            integrity:
+              'sha512-51zCeHJUTzpp0Gxpnn2LcWAPJOeKi1d9HUF5TIQ2pZDzrdnyuSm5quViki9kMKiYTzwf6HckEvw5I5rD3yQm8A==',
             trusted: true,
           },
         },
@@ -46,6 +50,7 @@ describe('create-template 内置目录', () => {
         expect(template.value).toMatch(/^@eljs\/[a-z0-9-]+@\d+\.\d+\.\d+$/u)
         expect(template.registry).toBeTypeOf('string')
         expect(new URL(template.registry || '').protocol).toBe('https:')
+        expect(template.integrity).toMatch(/^sha512-[A-Za-z0-9+/]+=*$/u)
         expect(template.trusted).toBe(true)
       }
     }

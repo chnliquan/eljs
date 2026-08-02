@@ -48,6 +48,12 @@ jobs:
         if: matrix.node == 24
         run: pnpm verify:test
 
+      - name: Verify official template contracts
+        if: matrix.node == 24
+        run: pnpm exec vitest run packages/create-template/__tests__/official-templates.integration.spec.ts --coverage.enabled=false
+        env:
+          ELJS_TEST_OFFICIAL_TEMPLATES: '1'
+
       - name: Runtime compatibility tests
         if: matrix.node != 24
         run: pnpm test

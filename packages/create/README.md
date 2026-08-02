@@ -71,7 +71,7 @@ const enterpriseCreator = new ProjectCreator({
 await enterpriseCreator.run('enterprise-app')
 ```
 
-`force` 使用可恢复事务：现有目录会先移动到同级临时备份，只有生成完整成功后才删除；下载、插件或文件生成失败时会恢复原目录。`merge` 保留现有目录并合并生成结果。
+`force` 和 `merge` 使用可恢复事务：现有目录会先移动到同级临时备份，只有生成完整成功后才删除；下载、插件或文件生成失败时会恢复原目录。同一目标目录同时只能由一个创建进程写入，进程异常退出后，下一次运行会根据目标锁恢复备份或清理新建目录中的半成品。
 
 ## 📖 CLI Reference
 
@@ -204,6 +204,10 @@ interface RemoteTemplate {
    */
   registry?: string
   /**
+   * Expected npm tarball Subresource Integrity digest
+   */
+  integrity?: string
+  /**
    * Skip execution confirmation for a source trusted by the caller
    * @default false
    */
@@ -226,8 +230,9 @@ template generator itself.
 NPM downloads inherit project and user `.npmrc` authentication, proxy, and
 `no-proxy` settings. Credentials are matched to the target host and path and are
 not forwarded to an unrelated tarball host. Tarballs are streamed with a 100 MiB
-download limit, a 20,000-entry extraction limit, and registry-provided integrity
-verification.
+download limit and a 20,000-entry extraction limit. npm templates always use
+registry-provided integrity verification; trusted catalogs can additionally
+provide `integrity` to reject registry metadata drift before downloading.
 
 ### API Examples
 

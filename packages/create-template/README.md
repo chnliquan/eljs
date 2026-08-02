@@ -78,8 +78,8 @@ Based on the current configuration, the following scenes and templates are avail
 
 | Template            | Description          | Type | Source                                |
 | ------------------- | -------------------- | ---- | ------------------------------------- |
-| `template-npm-web`  | Web Common Template  | npm  | `@eljs/create-plugin-npm-web@0.12.2`  |
-| `template-npm-node` | Node Common Template | npm  | `@eljs/create-plugin-npm-node@0.12.2` |
+| `template-npm-web`  | Web Common Template  | npm  | `@eljs/create-plugin-npm-web@0.12.1`  |
+| `template-npm-node` | Node Common Template | npm  | `@eljs/create-plugin-npm-node@0.12.1` |
 
 ## 📋 Usage Examples
 
@@ -141,7 +141,8 @@ through.
 
 ## Security model
 
-- Built-in remote templates use exact versions and HTTPS registry URLs
+- Built-in remote templates use exact versions, HTTPS registry URLs, and pinned
+  SHA-512 integrity digests
 - Template dependency lifecycle scripts are disabled by default; only enable
   `--allow-template-scripts` for a source you control
 
@@ -156,6 +157,9 @@ pnpm --filter @eljs/create-template... build
 # Run package tests once or in watch mode
 pnpm --filter @eljs/create-template test
 pnpm --filter @eljs/create-template test:watch
+
+# Verify the published official packages (requires npm registry access)
+ELJS_TEST_OFFICIAL_TEMPLATES=1 pnpm exec vitest run packages/create-template/__tests__/official-templates.integration.spec.ts
 
 # Run static checks
 pnpm --filter @eljs/create-template typecheck

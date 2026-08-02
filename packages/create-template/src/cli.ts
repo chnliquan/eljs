@@ -40,7 +40,11 @@ export async function cli() {
 function registerSignalHandlers(controller: AbortController): () => void {
   const handleSignal = (signal: NodeJS.Signals) => {
     if (!controller.signal.aborted) {
-      logger.event(`Cancelling create template after ${signal}`)
+      try {
+        logger.event(`Cancelling create template after ${signal}`)
+      } catch {
+        // 日志是辅助能力，不能阻止信号触发实际取消
+      }
       controller.abort(
         new AppError(`Create template operation received ${signal}`, {
           code: 'CREATE_OPERATION_CANCELLED',

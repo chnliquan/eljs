@@ -18,6 +18,12 @@ import type { Config, RemoteTemplate } from '../types'
 import { AppError } from '../utils'
 import { CreateRunner } from './create-runner'
 import {
+  acquireTargetLock,
+  releaseTargetLock,
+  type TargetLock,
+  updateTargetLockBackup,
+} from './target-lock'
+import {
   TemplateDownloader,
   type TemplateDownloadOptions,
 } from './template-downloader'
@@ -103,10 +109,16 @@ export class ProjectCreator {
    * 当项目名称、模版或目标目录无效时抛出
    */
   public async run(projectName: string): Promise<void> {
+    this._throwIfAborted('resolve-target')
+    const targetDir = await this._resolveTargetDir(projectName)
+    const targetLock = await acquireTargetLock(
+      path.resolve(this.cwd),
+      targetDir,
+    )
     let runFailure: { error: unknown } | undefined
 
     try {
-      await this._runProject(projectName)
+      await this._runProject(projectName, targetDir, targetLock)
     } catch (error) {
       runFailure = { error }
     }
@@ -127,6 +139,26 @@ export class ProjectCreator {
       } catch (error) {
         cleanupFailure = { cleanupRootPath, error }
       }
+    }
+
+    let lockCleanupFailure: unknown
+    try {
+      await releaseTargetLock(targetLock)
+    } catch (error) {
+      lockCleanupFailure = error
+    }
+
+    if (lockCleanupFailure) {
+      const failures = [
+        ...(runFailure ? [runFailure.error] : []),
+        ...(cleanupFailure ? [cleanupFailure.error] : []),
+        lockCleanupFailure,
+      ]
+      throw new AppError('Target lock cleanup failed', {
+        cause: new AggregateError(failures),
+        code: 'CREATE_CLEANUP_FAILED',
+        details: { lockPath: targetLock.path, targetDir },
+      })
     }
 
     if (cleanupFailure) {
@@ -160,13 +192,16 @@ export class ProjectCreator {
    * 执行创建事务主体，由 `run` 统一处理远程模版清理与错误聚合
    *
    * @param projectName - 项目名称
+   * @param targetDir - 已通过边界校验并加锁的目标目录
+   * @param targetLock - 当前创建流程持有的目标锁
    * @returns 创建事务主体完成后兑现的 Promise
    * @internal
    */
-  private async _runProject(projectName: string): Promise<void> {
-    this._throwIfAborted('resolve-target')
-    const targetDir = await this._resolveTargetDir(projectName)
-
+  private async _runProject(
+    projectName: string,
+    targetDir: string,
+    targetLock: TargetLock,
+  ): Promise<void> {
     debug?.(`targetDir:`, targetDir)
     debug?.(`projectName:`, projectName)
 
@@ -203,6 +238,9 @@ export class ProjectCreator {
 
     const targetExists = await isPathExists(targetDir)
     let shouldOverwrite = false
+    let shouldMergeExisting = Boolean(
+      targetExists && this.constructorOptions.merge,
+    )
 
     if (targetExists && !this.constructorOptions.merge) {
       if (this.constructorOptions.force) {
@@ -226,24 +264,31 @@ export class ProjectCreator {
           return
         } else if (action === 'overwrite') {
           shouldOverwrite = true
+        } else if (action === 'merge') {
+          shouldMergeExisting = true
         }
       }
     }
 
     let backupPath: string | undefined
-    const shouldMergeExisting = Boolean(
-      targetExists && this.constructorOptions.merge,
-    )
     const ownsTarget = !targetExists || shouldOverwrite || shouldMergeExisting
 
-    if (shouldOverwrite || shouldMergeExisting) {
-      this._throwIfAborted('backup-target')
-      backupPath = join(this.cwd, `.eljs-backup-${randomUUID()}`)
-      logger.event(`Backing up ${chalk.cyan(targetDir)} ...`)
-      await move(targetDir, backupPath)
-    }
-
     try {
+      if (shouldOverwrite || shouldMergeExisting) {
+        this._throwIfAborted('backup-target')
+        backupPath = join(
+          path.resolve(this.cwd),
+          `.eljs-backup-${randomUUID()}`,
+        )
+        try {
+          logger.event(`Backing up ${chalk.cyan(targetDir)} ...`)
+        } catch {
+          // 日志失败不能阻止已加锁目标进入可恢复备份流程
+        }
+        await updateTargetLockBackup(targetLock, backupPath)
+        await move(targetDir, backupPath)
+      }
+
       this._throwIfAborted('generate-project')
       if (shouldMergeExisting && backupPath) {
         // 在原目录副本上执行 merge，失败时可直接丢弃副本并恢复原目录
@@ -274,13 +319,22 @@ export class ProjectCreator {
       this._throwIfAborted('commit-target')
 
       if (backupPath) {
+        await updateTargetLockBackup(targetLock, undefined)
         await remove(backupPath)
         backupPath = undefined
       }
     } catch (error) {
       try {
         if (backupPath) {
-          await move(backupPath, targetDir, true)
+          if (await isPathExists(backupPath)) {
+            await move(backupPath, targetDir, true)
+          } else if (!(await isPathExists(targetDir))) {
+            throw new Error(
+              'Both the original target and its backup are missing',
+              { cause: error },
+            )
+          }
+          await updateTargetLockBackup(targetLock, undefined)
           backupPath = undefined
         } else if (ownsTarget && (await isPathExists(targetDir))) {
           await remove(targetDir)

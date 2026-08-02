@@ -109,8 +109,10 @@ describe('CreateTemplate 类功能测试', () => {
         cwd: '/test/path',
         template: {
           type: 'npm',
-          value: '@eljs/create-plugin-npm-web@0.12.2',
+          value: '@eljs/create-plugin-npm-web@0.12.1',
           registry: 'https://registry.npmjs.org/',
+          integrity:
+            'sha512-PnCXo/ZbnGnQqdFQjG9jI1jXRn9ZV8l4DWE6Txxjmu40PkCF6MRfqCGpCBd4PN2flAKCph+DUaNrKM+6lKrrww==',
           trusted: true,
         },
       })
@@ -291,8 +293,10 @@ describe('CreateTemplate 类功能测试', () => {
         merge: false,
         template: {
           type: 'npm',
-          value: '@eljs/create-plugin-npm-web@0.12.2',
+          value: '@eljs/create-plugin-npm-web@0.12.1',
           registry: 'https://registry.npmjs.org/',
+          integrity:
+            'sha512-PnCXo/ZbnGnQqdFQjG9jI1jXRn9ZV8l4DWE6Txxjmu40PkCF6MRfqCGpCBd4PN2flAKCph+DUaNrKM+6lKrrww==',
           trusted: true,
         },
       })

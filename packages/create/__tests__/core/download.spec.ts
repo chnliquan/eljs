@@ -248,6 +248,41 @@ describe('TemplateDownloader 类测试', () => {
         })
       })
 
+      it('应该使用调用方固定的完整性摘要', async () => {
+        const download = new TemplateDownloader({
+          type: 'npm',
+          value: mockPackageName,
+          integrity: 'sha512-template-integrity',
+        })
+
+        await download.download()
+
+        expect(mockDownloadNpmTarball).toHaveBeenCalledWith(
+          mockTarball,
+          expect.objectContaining({
+            integrity: 'sha512-template-integrity',
+          }),
+        )
+      })
+
+      it('应该拒绝与固定摘要不一致的registry元数据', async () => {
+        const download = new TemplateDownloader({
+          type: 'npm',
+          value: mockPackageName,
+          integrity: 'sha512-trusted-integrity',
+        })
+
+        await expect(download.download()).rejects.toMatchObject({
+          code: 'CREATE_TEMPLATE_DOWNLOAD_FAILED',
+          details: {
+            packageName: mockPackageName,
+            version: mockVersion,
+          },
+        })
+        expect(mockGetNpmRequestConfig).not.toHaveBeenCalled()
+        expect(mockDownloadNpmTarball).not.toHaveBeenCalled()
+      })
+
       it('应该把取消信号传递给npm元数据请求', async () => {
         const controller = new AbortController()
         const download = new TemplateDownloader({

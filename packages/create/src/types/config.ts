@@ -18,6 +18,13 @@ export interface RemoteTemplate {
    */
   registry?: string
   /**
+   * npm 模版压缩包的 Subresource Integrity 摘要
+   *
+   * @remarks
+   * 指定后会同时校验 registry 元数据与实际下载内容，Git 模版忽略此字段
+   */
+  integrity?: string
+  /**
    * 是否由调用方确认来源可信
    *
    * @remarks

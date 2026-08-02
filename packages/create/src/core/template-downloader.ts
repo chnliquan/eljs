@@ -139,6 +139,23 @@ export class TemplateDownloader {
     try {
       this._spinner.start(`Downloading ${projectName}`)
       const { integrity, shasum, tarball } = data.dist
+      const registryIntegrity = integrity || convertShasumToIntegrity(shasum)
+      const expectedIntegrity = this.constructorOptions.integrity
+
+      if (
+        expectedIntegrity &&
+        registryIntegrity &&
+        expectedIntegrity !== registryIntegrity
+      ) {
+        throw new AppError(
+          `Template ${projectName} integrity does not match the trusted catalog`,
+          {
+            code: 'CREATE_TEMPLATE_DOWNLOAD_FAILED',
+            details: { packageName: pkgName, version: data.version },
+          },
+        )
+      }
+
       if (
         data.dist.unpackedSize !== undefined &&
         data.dist.unpackedSize > MAX_TEMPLATE_UNPACKED_BYTES
@@ -160,7 +177,7 @@ export class TemplateDownloader {
       )
       templateRootPath = await downloadNpmTarball(tarball, {
         ...requestConfig,
-        integrity: integrity || convertShasumToIntegrity(shasum),
+        integrity: expectedIntegrity || registryIntegrity,
         maxBytes: MAX_TEMPLATE_TARBALL_BYTES,
         maxEntries: MAX_TEMPLATE_TARBALL_ENTRIES,
         maxUnpackedBytes: MAX_TEMPLATE_UNPACKED_BYTES,

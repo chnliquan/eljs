@@ -27,6 +27,11 @@ import type { RemoteTemplate } from '../../src/types'
 import { AppError } from '../../src/utils'
 
 const { mockCp } = vi.hoisted(() => ({ mockCp: vi.fn() }))
+const targetLockMocks = vi.hoisted(() => ({
+  acquireTargetLock: vi.fn(),
+  releaseTargetLock: vi.fn(),
+  updateTargetLockBackup: vi.fn(),
+}))
 const loggerMocks = vi.hoisted(() => ({
   chalk: { cyan: vi.fn((text: string) => `cyan(${text})`) },
   createDebugger: vi.fn(() => vi.fn()),
@@ -46,6 +51,7 @@ vi.mock('@eljs/utils/module')
 vi.mock('@eljs/utils/path')
 vi.mock('../../src/core/template-downloader')
 vi.mock('../../src/core/create-runner')
+vi.mock('../../src/core/target-lock', () => targetLockMocks)
 vi.mock('node:path')
 vi.mock('node:fs/promises', async importOriginal => ({
   ...(await importOriginal<typeof import('node:fs/promises')>()),
@@ -103,6 +109,21 @@ describe('ProjectCreator 类完整测试', () => {
       confirmed: true,
     })
     mockCp.mockResolvedValue(undefined)
+    targetLockMocks.acquireTargetLock.mockResolvedValue({
+      path: '/mock/cwd/.eljs-create-target.lock',
+      cwd: mockCwd,
+      metadata: {
+        version: 1,
+        ownerId: 'test-owner',
+        pid: process.pid,
+        hostname: 'test-host',
+        targetDir: '/test/cwd/test-project',
+        targetExisted: false,
+        createdAt: '2026-08-02T00:00:00.000Z',
+      },
+    })
+    targetLockMocks.releaseTargetLock.mockResolvedValue(undefined)
+    targetLockMocks.updateTargetLockBackup.mockResolvedValue(undefined)
 
     mockedPath.resolve.mockImplementation((...paths) => {
       let lastAbsoluteIndex = 0
@@ -310,6 +331,47 @@ describe('ProjectCreator 类完整测试', () => {
       )
     })
 
+    it('备份日志失败时仍然执行可恢复覆盖', async () => {
+      mockedEljs.isPathExists.mockResolvedValue(true)
+      loggerMocks.logger.event.mockImplementationOnce(() => {
+        throw new Error('Logger failed')
+      })
+
+      const create = new ProjectCreator({
+        template: 'test-template',
+        force: true,
+      })
+
+      await create.run('existing-project')
+
+      expect(mockedEljs.move).toHaveBeenCalledWith(
+        '/mock/cwd/existing-project',
+        expect.stringMatching(/^\/mock\/cwd\/\.eljs-backup-/u),
+      )
+    })
+
+    it('用户交互选择 merge 时也应该先备份原目录', async () => {
+      mockedEljs.isPathExists.mockResolvedValue(true)
+      mockedEljs.prompts.mockResolvedValue({
+        action: 'merge',
+        confirmed: true,
+      })
+
+      const create = new ProjectCreator({ template: 'test-template' })
+      await create.run('existing-project')
+
+      const backupPath = mockedEljs.move.mock.calls[0][1]
+      expect(mockedEljs.move).toHaveBeenCalledWith(
+        '/mock/cwd/existing-project',
+        backupPath,
+      )
+      expect(mockCp).toHaveBeenCalledWith(
+        backupPath,
+        '/mock/cwd/existing-project',
+        expect.objectContaining({ recursive: true }),
+      )
+    })
+
     it.each(['', '.', '..', '../outside', '/outside'])(
       '应该拒绝可能逃逸工作目录的项目名称 %p',
       async projectName => {
@@ -389,6 +451,54 @@ describe('ProjectCreator 类完整测试', () => {
         backupPath,
         '/mock/cwd/existing-project',
         true,
+      )
+    })
+
+    it('提交锁状态失败时应该保留备份并恢复原目录', async () => {
+      mockedEljs.isPathExists.mockResolvedValue(true)
+      targetLockMocks.updateTargetLockBackup
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error('Lock update failed'))
+        .mockResolvedValueOnce(undefined)
+
+      const create = new ProjectCreator({
+        template: 'test-template',
+        force: true,
+      })
+
+      await expect(create.run('existing-project')).rejects.toThrow(
+        'Lock update failed',
+      )
+      const backupPath = mockedEljs.move.mock.calls[0][1]
+      expect(mockedEljs.move).toHaveBeenNthCalledWith(
+        2,
+        backupPath,
+        '/mock/cwd/existing-project',
+        true,
+      )
+    })
+
+    it('备份移动失败但原目标仍在时不应该删除原目标', async () => {
+      const moveError = new Error('Backup move failed')
+      mockedEljs.isPathExists
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(true)
+      mockedEljs.move.mockRejectedValueOnce(moveError)
+
+      const create = new ProjectCreator({
+        template: 'test-template',
+        force: true,
+      })
+
+      await expect(create.run('existing-project')).rejects.toBe(moveError)
+      expect(mockedEljs.remove).not.toHaveBeenCalledWith(
+        '/mock/cwd/existing-project',
+      )
+      expect(targetLockMocks.updateTargetLockBackup).toHaveBeenLastCalledWith(
+        expect.anything(),
+        undefined,
       )
     })
 
@@ -661,6 +771,21 @@ describe('ProjectCreator 类完整测试', () => {
           cleanupError,
         ])
       }
+    })
+
+    it('应该把目标锁清理失败转换为稳定清理错误', async () => {
+      const lockError = new Error('Lock cleanup failed')
+      targetLockMocks.releaseTargetLock.mockRejectedValueOnce(lockError)
+
+      const create = new ProjectCreator({ template: 'test-template' })
+
+      await expect(create.run('test-project')).rejects.toMatchObject({
+        code: 'CREATE_CLEANUP_FAILED',
+        details: {
+          lockPath: '/mock/cwd/.eljs-create-target.lock',
+          targetDir: '/mock/cwd/test-project',
+        },
+      })
     })
   })
 

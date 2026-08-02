@@ -7,7 +7,11 @@ import { logger } from '@eljs/utils/logger'
  * @throws {@link AppError} 始终抛出用户取消错误
  */
 export function onCancel(): never {
-  logger.event('Cancel create template')
+  try {
+    logger.event('Cancel create template')
+  } catch {
+    // 交互取消必须保留稳定错误语义，不能被日志实现覆盖
+  }
   throw new AppError('Create template operation was cancelled by the user', {
     code: 'CREATE_OPERATION_CANCELLED',
   })

@@ -10,6 +10,8 @@ export interface RemoteTemplate {
   readonly description: string
   /** npm 模板使用的 registry */
   readonly registry?: string
+  /** npm 模板压缩包的 Subresource Integrity 摘要 */
+  readonly integrity?: string
   /** 是否由内置目录确认来源可信 */
   readonly trusted?: boolean
 }
@@ -36,7 +38,7 @@ export interface TemplateConfig {
  * @remarks
  * 官方目录使用精确版本，避免已信任模版的 `latest` 在未升级 CLI 时改变可执行代码
  */
-const OFFICIAL_TEMPLATE_VERSION = '0.12.2'
+const OFFICIAL_TEMPLATE_VERSION = '0.12.1'
 
 /**
  * create-template 内置的官方场景和模版目录
@@ -55,6 +57,8 @@ export const defaultConfig = Object.freeze({
         description: 'Web Common Template',
         value: `@eljs/create-plugin-npm-web@${OFFICIAL_TEMPLATE_VERSION}`,
         registry: 'https://registry.npmjs.org/',
+        integrity:
+          'sha512-PnCXo/ZbnGnQqdFQjG9jI1jXRn9ZV8l4DWE6Txxjmu40PkCF6MRfqCGpCBd4PN2flAKCph+DUaNrKM+6lKrrww==',
         trusted: true,
       }),
       'template-npm-node': Object.freeze({
@@ -62,6 +66,8 @@ export const defaultConfig = Object.freeze({
         description: 'Node Common Template',
         value: `@eljs/create-plugin-npm-node@${OFFICIAL_TEMPLATE_VERSION}`,
         registry: 'https://registry.npmjs.org/',
+        integrity:
+          'sha512-51zCeHJUTzpp0Gxpnn2LcWAPJOeKi1d9HUF5TIQ2pZDzrdnyuSm5quViki9kMKiYTzwf6HckEvw5I5rD3yQm8A==',
         trusted: true,
       }),
     }),
