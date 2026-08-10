@@ -27,10 +27,6 @@ export type AppData<
   Extensions extends Record<string, unknown> = Record<string, unknown>,
 > = {
   /**
-   * 场景
-   */
-  scene: 'node' | 'web'
-  /**
    * 当前 Cli 版本
    */
   cliVersion: string
@@ -118,6 +114,10 @@ export enum CreateRunnerStage {
    * 正在收集交互输入
    */
   CollectingPrompts = 'collectingPrompts',
+  /**
+   * 正在收集 TypeScript 配置
+   */
+  CollectingTsConfig = 'collectingTsConfig',
   /**
    * 正在生成文件
    */

@@ -1,9 +1,13 @@
-import { fileLoaders, fileLoadersSync } from '@eljs/utils/file'
+import { fileLoaders, fileLoadersSync } from '@eljs/utils/loader'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { extname } from 'node:path'
 
-import { PluginHostError, PluginHostErrorCode } from '../errors'
+import {
+  getPluginHostErrorMessage,
+  PluginHostError,
+  PluginHostErrorCode,
+} from '../errors'
 import { isOptionsSchema } from './options-schema'
 import type { PluginInitializer, PluginType } from './types'
 
@@ -127,7 +131,7 @@ export async function loadPluginInitializer(
 
     throw new PluginHostError(
       PluginHostErrorCode.PluginLoadFailed,
-      `Load \`${type}\` failed in ${path}: ${(error as Error).message}`,
+      `Load \`${type}\` failed in ${path}: ${getPluginHostErrorMessage(error)}`,
       {
         cause: error,
         details: { path, pluginType: type },

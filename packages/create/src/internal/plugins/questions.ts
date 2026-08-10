@@ -63,6 +63,7 @@ export default definePlugin(async context => {
             { title: 'npm', value: 'npm' },
             { title: 'yarn', value: 'yarn' },
             { title: 'pnpm', value: 'pnpm' },
+            { title: 'bun', value: 'bun' },
           ],
           initial: 2,
         },

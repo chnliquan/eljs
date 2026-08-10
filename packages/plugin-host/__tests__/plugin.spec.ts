@@ -17,6 +17,7 @@ const requiredUtils = vi.mocked(importedUtils, { deep: true })
 
 // Mock dependencies
 vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
+vi.mock('@eljs/utils/loader', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils/module', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils/path', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils/string', async () => import('@eljs/utils'))

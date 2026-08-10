@@ -1,7 +1,7 @@
 import { readJson } from '@eljs/utils/file'
 import { createDebugger, logger } from '@eljs/utils/logger'
 import type { PackageJson } from '@eljs/utils/types'
-import { program } from 'commander'
+import { Command } from 'commander'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -27,20 +27,39 @@ export function cli(): Promise<void> {
       if (isCancellation(error) || controller.signal.aborted) {
         process.exitCode = 130
       } else if (error instanceof AppError) {
-        logger.error(error.message)
         process.exitCode = 1
+        try {
+          logger.error(error.message)
+        } catch {
+          // 日志是辅助能力，领域错误仍需保持稳定退出语义
+        }
       } else {
-        console.error(error)
         process.exitCode = 1
+        try {
+          console.error(error)
+        } catch {
+          // 控制台异常不能让 CLI 错误处理再次失败
+        }
       }
     })
     .finally(disposeSignalHandlers)
 }
 
+/**
+ * 注册 CLI 进程信号并返回对称的清理函数
+ *
+ * @param controller - 当前创建流程的取消控制器
+ * @returns 移除本次注册信号监听器的函数
+ * @internal
+ */
 function registerSignalHandlers(controller: AbortController): () => void {
   const handleSignal = (signal: NodeJS.Signals) => {
     if (!controller.signal.aborted) {
-      logger.event(`Cancelling create after ${signal}`)
+      try {
+        logger.event(`Cancelling create after ${signal}`)
+      } catch {
+        // 日志失败不能阻止信号触发实际取消
+      }
       controller.abort(
         new AppError(`Create operation received ${signal}`, {
           code: 'CREATE_OPERATION_CANCELLED',
@@ -79,13 +98,19 @@ async function main(signal: AbortSignal) {
   const pkg = await readJson<Required<PackageJson>>(packageJsonPath)
 
   if (shouldCheckForUpdates(process.argv)) {
-    const { default: updateNotifier } = await import('update-notifier')
-    updateNotifier({ pkg }).notify()
+    // 更新提示是辅助能力，加载或检查失败不能阻止创建主路径
+    void import('update-notifier')
+      .then(({ default: updateNotifier }) => {
+        updateNotifier({ pkg }).notify()
+      })
+      .catch(error => {
+        debug?.('update notification failed:%O', error)
+      })
   }
 
-  program
-    .name('create')
-    .description('Create a project from a remote template')
+  const command = new Command()
+    .name('eljs-create')
+    .description('Generate a project from a local, npm, or Git template')
     .version(pkg.version, '-v, --version', 'Output the current version')
     .arguments('<template> <project-name>')
     .option('--cwd <cwd>', 'Specify the working directory')
@@ -115,8 +140,8 @@ async function main(signal: AbortSignal) {
       }).run(projectName)
     })
 
-  program.showHelpAfterError()
-  await program.parseAsync(process.argv)
+  command.showHelpAfterError()
+  await command.parseAsync(process.argv)
 }
 
 /**

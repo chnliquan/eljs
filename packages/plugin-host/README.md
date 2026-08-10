@@ -10,7 +10,6 @@ A type-safe plugin host for Node.js tools with presets, ordered hooks, and exten
 
 - 🔧 **Flexible Architecture** - Support for plugins and presets with nested registration
 - 🔒 **Type Safety** - Hook Schema drives runtime behavior and TypeScript contracts
-- 📊 **Debug Diagnostics** - Bounded hook timing samples and failure counts
 - 🎯 **Hook System** - Multiple hook types: Add, Modify, Get, and Event
 - 🛡️ **Guarded Lifecycle** - Single-load state validation and failed-load cleanup
 - 🔌 **Extensible** - Easy to extend with custom APIs and methods

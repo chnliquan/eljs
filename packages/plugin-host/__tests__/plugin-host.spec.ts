@@ -567,7 +567,7 @@ describe('插件宿主', () => {
     })
 
     it('校验器异常时应该保留 cause 并阻止初始化', async () => {
-      const validationError = new Error('schema crashed')
+      const validationError = 'schema crashed'
       const initialize = vi.fn()
       const validate = vi.fn().mockRejectedValue(validationError)
       definePlugin({
@@ -859,6 +859,24 @@ describe('插件宿主', () => {
       )
     })
 
+    it('应该拒绝覆盖 PluginApi 运行时内部字段的扩展', () => {
+      class ConflictingInternalFieldHost extends TestablePluginHost {
+        protected override getPluginContextExtensions() {
+          return { _plugin: vi.fn() }
+        }
+      }
+
+      const conflictingHost = new ConflictingInternalFieldHost({ cwd: mockCwd })
+
+      expect(() =>
+        conflictingHost.testCreatePluginContext(
+          createTestPlugin(mockCwd, 'test-plugin'),
+        ),
+      ).toThrow(
+        'getPluginContextExtensions() failed, property `_plugin` conflicts with a reserved Plugin API name.',
+      )
+    })
+
     it('应该在全部插件上下文中保留已经出现的扩展属性名', () => {
       class ScopedExtensionHost extends TestablePluginHost {
         protected override getPluginContextExtensions(plugin: Plugin) {
@@ -1005,6 +1023,24 @@ describe('插件宿主', () => {
 
       expect(result).toBeUndefined()
       expect(mockFn).toHaveBeenCalledWith({ eventData: 'test' })
+    })
+
+    it('Hook 拒绝非 Error 值时应该保留可读原因', async () => {
+      const mockFn = vi.fn().mockRejectedValue('hook failed')
+      const plugin = createTestPlugin(mockCwd, 'plugin1')
+      const hook = {
+        fn: mockFn,
+        plugin,
+        constructorOptions: { plugin, key: 'onStart', fn: mockFn },
+        key: 'onStart',
+      } as Hook
+      host.testRegisterHooks(hook)
+
+      await expect(host.runHook('onStart')).rejects.toMatchObject({
+        cause: 'hook failed',
+        code: PluginHostErrorCode.HookExecutionFailed,
+        message: expect.stringContaining('hook failed'),
+      })
     })
   })
 

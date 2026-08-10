@@ -1,6 +1,6 @@
 {
   "name": "@eljs/config",
-  "version": "1.3.2-alpha.0",
+  "version": "2.0.0-alpha.0",
   "description": "Configuration file loader with layered merging and runtime validation hooks.",
   "keywords": [
     "eljs",
@@ -44,8 +44,8 @@
     "build": "rslib build",
     "clean": "rimraf dist",
     "dev": "rslib build --watch",
-    "test": "vitest run --config ../../vitest.config.ts packages/config/__tests__",
-    "test:watch": "vitest --config ../../vitest.config.ts packages/config/__tests__",
+    "test": "vitest run --config ../../vitest.config.mts packages/config/__tests__",
+    "test:watch": "vitest --config ../../vitest.config.mts packages/config/__tests__",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json"
   },
   "dependencies": {

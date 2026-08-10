@@ -43,6 +43,8 @@ export interface PackageJson {
   'lint-staged'?: Record<string, string | string[]>
   dependencies?: Record<string, string>
   devDependencies?: Record<string, string>
+  /** 安装失败时不阻断主依赖安装的可选运行时依赖 */
+  optionalDependencies?: Record<string, string>
   peerDependencies?: Record<string, string>
   publishConfig?: {
     registry: string

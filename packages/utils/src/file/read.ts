@@ -1,6 +1,19 @@
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
-import parseJson from 'parse-json'
+
+import { loadParseJson } from './loader-dependencies'
+
+let parseJson: typeof import('parse-json').default
+
+/**
+ * 惰性加载并复用 JSON 解析器，避免纯文本读取提前初始化解析依赖
+ * @returns JSON 解析函数
+ * @internal
+ */
+function getParseJson(): typeof import('parse-json').default {
+  parseJson ||= loadParseJson()
+  return parseJson
+}
 
 /**
  * 读取文件内容
@@ -48,7 +61,7 @@ export async function readJson<T extends object>(file: string): Promise<T> {
   const content = await readFile(file)
 
   try {
-    const json = parseJson(content)
+    const json = getParseJson()(content)
     return json as T
   } catch (error) {
     const err = error as Error
@@ -66,7 +79,7 @@ export function readJsonSync<T extends object>(file: string): T {
   const content = readFileSync(file)
 
   try {
-    const json = parseJson(content)
+    const json = getParseJson()(content)
     return json as T
   } catch (error) {
     const err = error as Error

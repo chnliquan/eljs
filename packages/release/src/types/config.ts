@@ -175,6 +175,13 @@ export interface Config extends UserConfig {
      * @defaultValue `'GITHUB_TOKEN'`
      */
     tokenEnv?: string
+    /**
+     * 允许 API 模式发送令牌的 GitHub Enterprise 主机名
+     *
+     * @remarks
+     * 仅填写不含协议、端口和路径的小写主机名；公共 `github.com` 无需配置
+     */
+    enterpriseHost?: string
   }
 }
 
@@ -260,5 +267,7 @@ export interface ResolvedConfig extends UserConfig {
     mode: GithubReleaseMode
     /** API 模式读取访问令牌的环境变量名 */
     tokenEnv: string
+    /** 允许 API 模式发送令牌的 GitHub Enterprise 主机名 */
+    enterpriseHost?: string
   }
 }

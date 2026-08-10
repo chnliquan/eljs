@@ -48,6 +48,13 @@ describe('release 配置运行时校验', () => {
     expect(validateResolvedConfig(config)).toBe(config)
   })
 
+  it('应该允许显式配置 GitHub Enterprise 主机名', () => {
+    const config = createConfig()
+    config.github.enterpriseHost = 'github.corp.example.com'
+
+    expect(validateResolvedConfig(config)).toBe(config)
+  })
+
   it.each(['latest', '123', 'preview.1', 'preview tag'])(
     '应该拒绝不能安全用作 dist-tag 的预发布标识 %s',
     prereleaseId => {
@@ -132,6 +139,18 @@ describe('release 配置运行时校验', () => {
       config =>
         ((config.github as unknown as Record<string, unknown>).tokenEnv =
           'INVALID-NAME'),
+    ],
+    [
+      'github.enterpriseHost',
+      config => (config.github.enterpriseHost = 'https://github.corp.test'),
+    ],
+    [
+      'github.enterpriseHost',
+      config => (config.github.enterpriseHost = 'github.corp.test/api/v3'),
+    ],
+    [
+      'github.enterpriseHost',
+      config => (config.github.enterpriseHost = 'github.com'),
     ],
   ] satisfies Array<[string, (config: ResolvedConfig) => void]>)(
     '应该拒绝无效字段 %s',

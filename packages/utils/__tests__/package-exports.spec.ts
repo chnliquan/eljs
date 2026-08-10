@@ -27,6 +27,7 @@ describe('package exports contract', () => {
       './git',
       './guards',
       './http',
+      './loader',
       './logger',
       './module',
       './npm',
@@ -40,6 +41,24 @@ describe('package exports contract', () => {
     expect(manifest.exports).not.toHaveProperty('./file/loader')
     expect(manifest.exports).not.toHaveProperty('./*')
     expect(manifest.sideEffects).toBe(false)
+  })
+
+  it('exposes the loader domain without widening internal file paths', async () => {
+    const manifest = JSON.parse(
+      await readFile(path.resolve('packages/utils/package.json'), 'utf8'),
+    ) as PackageManifest
+
+    expect(manifest.exports['./loader']).toEqual({
+      import: {
+        default: './dist/loader/index.js',
+        types: './dist/loader/index.d.ts',
+      },
+      require: {
+        default: './dist/loader/index.cjs',
+        types: './dist/loader/index.d.cts',
+      },
+    })
+    expect(manifest.exports).not.toHaveProperty('./file/loader')
   })
 
   it('provides ESM, CommonJS and type targets for every domain', async () => {

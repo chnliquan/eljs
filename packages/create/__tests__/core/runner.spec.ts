@@ -85,6 +85,9 @@ describe('CreateRunner 类完整测试', () => {
           if (name === 'modifyPrompts') {
             return Promise.resolve(options.initialValue)
           }
+          if (name === 'modifyTsConfig') {
+            return Promise.resolve(options.initialValue)
+          }
           return Promise.resolve(undefined)
         })
     })
@@ -119,6 +122,9 @@ describe('CreateRunner 类完整测试', () => {
       expect(() => runner.prompts).toThrow(
         expect.objectContaining({ code: 'PLUGIN_HOST_INVALID_STATE' }),
       )
+      expect(() => runner.tsConfig).toThrow(
+        expect.objectContaining({ code: 'PLUGIN_HOST_INVALID_STATE' }),
+      )
     })
 
     it('应该拒绝在配置解析前读取最终配置', () => {
@@ -144,6 +150,7 @@ describe('CreateRunner 类完整测试', () => {
       expect(() => runner.paths).toThrow('modifyPaths')
       expect(() => runner.appData).toThrow('modifyAppData')
       expect(() => runner.prompts).toThrow('modifyPrompts')
+      expect(() => runner.tsConfig).toThrow('modifyTsConfig')
     })
 
     it('应该有所有必需的公共方法', () => {
@@ -163,6 +170,7 @@ describe('CreateRunner 类完整测试', () => {
       expect(() => runner.paths).toThrow()
       expect(() => runner.appData).toThrow()
       expect(() => runner.prompts).toThrow()
+      expect(() => runner.tsConfig).toThrow()
     })
 
     it('应该正确传递配置到 PluginHost 基类', () => {
@@ -252,10 +260,11 @@ describe('CreateRunner 类完整测试', () => {
       expect(runHookCalls[1][0]).toBe('modifyAppData')
       expect(runHookCalls[2][0]).toBe('addQuestions')
       expect(runHookCalls[3][0]).toBe('modifyPrompts')
-      expect(runHookCalls[4][0]).toBe('onStart')
-      expect(runHookCalls[5][0]).toBe('onBeforeGenerateFiles')
-      expect(runHookCalls[6][0]).toBe('onGenerateFiles')
-      expect(runHookCalls[7][0]).toBe('onGenerateDone')
+      expect(runHookCalls[4][0]).toBe('modifyTsConfig')
+      expect(runHookCalls[5][0]).toBe('onStart')
+      expect(runHookCalls[6][0]).toBe('onBeforeGenerateFiles')
+      expect(runHookCalls[7][0]).toBe('onGenerateFiles')
+      expect(runHookCalls[8][0]).toBe('onGenerateDone')
     })
 
     it('应该正确设置 modifyPaths 的初始值', async () => {
@@ -291,7 +300,6 @@ describe('CreateRunner 类完整测试', () => {
 
       expect(modifyAppDataCall?.[1]).toEqual({
         initialValue: {
-          scene: 'web',
           cliVersion: packageJson.version,
           pkg: {},
           projectName,
@@ -342,7 +350,6 @@ describe('CreateRunner 类完整测试', () => {
       const target = '/test/project'
       const projectName = 'test-project'
       const expectedAppData = {
-        scene: 'web',
         cliVersion: '1.3.1',
         pkg: { name: 'test' },
         projectName,
@@ -707,7 +714,6 @@ describe('CreateRunner 类完整测试', () => {
       }
 
       const detailedAppData: DetailedAppData = {
-        scene: 'web',
         cliVersion: '1.3.1',
         pkg: {
           name: 'detailed-project',
@@ -894,6 +900,7 @@ describe('CreateRunner 类完整测试', () => {
         'collectingPaths',
         'collectingAppData',
         'collectingPrompts',
+        'collectingTsConfig',
         'generatingFiles',
         'completed',
         'failed',
@@ -917,7 +924,6 @@ describe('CreateRunner 类完整测试', () => {
       }
 
       const mockAppData = {
-        scene: 'web' as const,
         cliVersion: '1.3.1',
         pkg: {
           name: 'my-react-app',
@@ -969,6 +975,7 @@ describe('CreateRunner 类完整测试', () => {
       expect(runner.paths).toEqual(mockPaths)
       expect(runner.appData).toEqual(mockAppData)
       expect(runner.prompts).toEqual(mockPrompts)
+      expect(runner.tsConfig).toEqual({})
 
       // 验证所有插件钩子都被调用
       expect((runner as any).runHook).toHaveBeenCalledWith('onStart')
@@ -1017,7 +1024,6 @@ describe('CreateRunner 类完整测试', () => {
 
       const enterpriseConfig: EnterpriseConfig = {
         appData: {
-          scene: 'web',
           cliVersion: '1.3.1',
           pkg: {
             name: '@enterprise/corporate-app',

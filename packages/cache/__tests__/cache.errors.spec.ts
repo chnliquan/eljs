@@ -1,35 +1,21 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as fs from 'node:fs'
-import * as os from 'node:os'
 import * as path from 'node:path'
 
 import { Cache, CacheKeyGenerator, CacheSerializer } from '../src'
-
-// 测试工具函数
-const createTempDir = () => {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'cache-error-test-'))
-}
-
-const createTempFile = (dir: string, filename: string, content: string) => {
-  const filePath = path.join(dir, filename)
-  fs.writeFileSync(filePath, content)
-  return filePath
-}
-
-const cleanupDir = (dir: string) => {
-  try {
-    fs.rmSync(dir, { recursive: true, force: true })
-  } catch {
-    // 忽略清理错误
-  }
-}
+import {
+  cleanupDir,
+  createBlockedDirectoryPath,
+  createTempDir,
+  createTempFile,
+} from './test-utils'
 
 describe('Cache 错误处理和边界情况测试', () => {
   let tempDir: string
 
   beforeEach(() => {
-    tempDir = createTempDir()
+    tempDir = createTempDir('cache-error-test-')
   })
 
   afterEach(() => {
@@ -38,9 +24,10 @@ describe('Cache 错误处理和边界情况测试', () => {
 
   describe('文件系统错误处理', () => {
     it('应该处理无法创建缓存目录的情况', async () => {
+      const blockedCacheDir = createBlockedDirectoryPath(tempDir)
       const cache = new Cache<string>({
         enabled: true,
-        cacheDir: '/root/forbidden/path', // 无权限路径
+        cacheDir: blockedCacheDir,
         autoCleanup: false,
       })
 
@@ -49,7 +36,8 @@ describe('Cache 错误处理和边界情况测试', () => {
       expect(result).toBeNull()
 
       // 缓存应该被禁用
-      expect(cache.options.enabled).toBe(false)
+      expect(cache.options.enabled).toBe(true)
+      expect(cache.enabled).toBe(false)
     })
 
     it('应该处理文件读取错误', async () => {
@@ -70,28 +58,26 @@ describe('Cache 错误处理和边界情况测试', () => {
       expect(result).toBeNull()
     })
 
-    it('应该处理磁盘空间不足的情况', async () => {
+    it('应该处理磁盘写入失败的情况', async () => {
       const cache = new Cache<string>({
         enabled: true,
         cacheDir: path.join(tempDir, '.cache'),
         autoCleanup: false,
       })
 
-      // Mock writeJson 来模拟磁盘空间不足
-      const originalConsoleWarn = console.warn
-      const warnings: string[] = []
-      console.warn = (msg: string) => warnings.push(msg)
-
       const testFile = createTempFile(tempDir, 'test.txt', 'content')
+      await cache.getStats()
 
-      // 这个测试比较难模拟真实的磁盘空间不足
-      // 但缓存应该能够处理写入失败
+      // 用普通文件占据缓存目录路径，稳定触发后续原子写入失败
+      fs.rmSync(cache.cacheDir, { recursive: true, force: true })
+      fs.writeFileSync(cache.cacheDir, 'not a directory')
+      const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
       await cache.set(testFile, 'data')
 
-      console.warn = originalConsoleWarn
-
-      // 缓存设置可能失败，但不应该崩溃
-      expect(() => cache.set(testFile, 'data')).not.toThrow()
+      expect(warning).toHaveBeenCalled()
+      expect(cache.memoryCache.size).toBe(1)
+      expect(await cache.get(testFile)).toBe('data')
     })
   })
 
@@ -105,7 +91,7 @@ describe('Cache 错误处理和边界情况测试', () => {
         serialize: () => {
           throw new Error('Serialization failed')
         },
-        deserialize: data => data,
+        deserialize: data => data as CircularObject,
       }
 
       const cache = new Cache<CircularObject>({
@@ -344,8 +330,13 @@ describe('Cache 错误处理和边界情况测试', () => {
 
       await Promise.all(promises)
 
-      // 内存缓存大小应该合理
-      expect(cache.memoryCache.size).toBeLessThanOrEqual(150)
+      // 内存和磁盘都应持续满足配置上限
+      expect(cache.memoryCache.size).toBeLessThanOrEqual(100)
+      expect(
+        fs
+          .readdirSync(cache.cacheDir)
+          .filter(file => /^[a-f0-9]{64}\.json$/u.test(file)),
+      ).toHaveLength(100)
     })
 
     it('应该正确清理已删除文件的缓存', async () => {
@@ -364,6 +355,12 @@ describe('Cache 错误处理和边界情况测试', () => {
       // 尝试获取应该返回null
       const result = await cache.get(testFile)
       expect(result).toBeNull()
+      expect(cache.memoryCache.size).toBe(0)
+      expect(
+        fs
+          .readdirSync(cache.cacheDir)
+          .filter(file => /^[a-f0-9]{64}\.json$/u.test(file)),
+      ).toHaveLength(0)
     })
   })
 
@@ -386,6 +383,15 @@ describe('Cache 错误处理和边界情况测试', () => {
           maxFiles: 1000000, // 非常大的文件数量
         })
       }).not.toThrow()
+    })
+
+    it('应该拒绝无效的TTL和文件数量限制', () => {
+      expect(() => new Cache({ ttlDays: 0 })).toThrow(RangeError)
+      expect(() => new Cache({ ttlDays: Number.NaN })).toThrow(RangeError)
+      expect(() => new Cache({ ttlDays: Number.MAX_VALUE })).toThrow(RangeError)
+      expect(() => new Cache({ maxFiles: 0 })).toThrow(RangeError)
+      expect(() => new Cache({ maxFiles: 1.5 })).toThrow(RangeError)
+      expect(() => new Cache({ cacheDir: '' })).toThrow(TypeError)
     })
   })
 })

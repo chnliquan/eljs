@@ -7,10 +7,7 @@ import {
   vi,
   type MockedFunction,
 } from 'vitest'
-import * as importedModule7 from '../../src/file/is'
 import * as importedModule4 from '../../src/file/read'
-import * as importedModule6 from '../../src/file/remove'
-import * as importedModule5 from '../../src/file/write'
 
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
@@ -29,17 +26,16 @@ import {
   resolveTsConfig,
 } from '../../src/file/loader'
 
-const requiredModule7 = vi.mocked(importedModule7, { deep: true })
 const requiredModule4 = vi.mocked(importedModule4, { deep: true })
-const requiredModule6 = vi.mocked(importedModule6, { deep: true })
-const requiredModule5 = vi.mocked(importedModule5, { deep: true })
 
 const loaderDependencies = vi.hoisted(() => ({
+  addHook: vi.fn(),
   importFresh: vi.fn(),
   parseJson: vi.fn(),
+  revertHook: vi.fn(),
   typescript: {
-    ModuleKind: { NodeNext: 199 },
-    ModuleResolutionKind: { NodeNext: 3 },
+    ModuleKind: { CommonJS: 1 },
+    ModuleResolutionKind: { Node10: 2 },
     ScriptTarget: { ES2022: 9 },
     transpileModule: vi.fn(),
     findConfigFile: vi.fn(),
@@ -63,10 +59,10 @@ vi.mock('../../src/file/loader-dependencies', () => ({
   loadTypeScript: () => loaderDependencies.typescript,
   loadYaml: () => loaderDependencies.yaml,
 }))
+vi.mock('pirates', () => ({
+  addHook: loaderDependencies.addHook,
+}))
 vi.mock('../../src/file/read')
-vi.mock('../../src/file/write')
-vi.mock('../../src/file/remove')
-vi.mock('../../src/file/is')
 
 describe('文件加载器工具 - 完整测试', () => {
   const mockParseJson = loaderDependencies.parseJson as MockedFunction<
@@ -82,8 +78,8 @@ describe('文件加载器工具 - 完整测试', () => {
 
   // TypeScript 模块的类型定义
   interface MockTypeScriptModule {
-    ModuleKind: { NodeNext: number }
-    ModuleResolutionKind: { NodeNext: number }
+    ModuleKind: { CommonJS: number }
+    ModuleResolutionKind: { Node10: number }
     ScriptTarget: { ES2022: number }
     transpileModule: MockedFunction<
       (
@@ -132,20 +128,11 @@ describe('文件加载器工具 - 完整测试', () => {
   const mockReadFileSync = requiredModule4.readFileSync as MockedFunction<
     (filePath: string) => string
   >
-  const mockWriteFileSync = requiredModule5.writeFileSync as MockedFunction<
-    (filePath: string, content: string) => void
-  >
-  const mockRemoveSync = requiredModule6.removeSync as MockedFunction<
-    (filePath: string) => boolean
-  >
-  const mockPathExistsSync = requiredModule7.pathExistsSync as MockedFunction<
-    (filePath: string) => boolean
-  >
-
   let tempDir: string
 
   beforeEach(async () => {
     vi.clearAllMocks()
+    loaderDependencies.addHook.mockReturnValue(loaderDependencies.revertHook)
     mockTypeScript.parseJsonConfigFileContent.mockReturnValue({
       options: {},
       errors: [],
@@ -375,12 +362,18 @@ describe('文件加载器工具 - 完整测试', () => {
   })
 
   describe('TypeScript 文件加载', () => {
+    const getTransformHook = () => {
+      return loaderDependencies.addHook.mock.calls.at(-1)?.[0] as (
+        content: string,
+        filename: string,
+      ) => string
+    }
+
     it('应该异步编译和加载 TS 文件', async () => {
       const mockTsContent = 'const test: string = "hello"; export default test'
       const mockCompiledContent = 'const test = "hello"; module.exports = test;'
       const mockResult = { default: 'hello' }
 
-      mockReadFile.mockResolvedValue(mockTsContent)
       mockTypeScript.transpileModule.mockReturnValue({
         outputText: mockCompiledContent,
         diagnostics: [],
@@ -388,31 +381,39 @@ describe('文件加载器工具 - 完整测试', () => {
       mockImportFresh.mockReturnValue(mockResult)
 
       const result = await loadTs('/test.ts')
+      const transpiledContent = getTransformHook()(mockTsContent, '/test.ts')
 
-      expect(mockReadFile).toHaveBeenCalledWith('/test.ts')
       expect(mockTypeScript.transpileModule).toHaveBeenCalledWith(
         mockTsContent,
         expect.objectContaining({
+          fileName: '/test.ts',
           compilerOptions: expect.objectContaining({
-            module: 199, // typescript.ModuleKind.NodeNext
+            module: 1, // typescript.ModuleKind.CommonJS
+            moduleResolution: 2, // typescript.ModuleResolutionKind.Node10
             target: 9, // typescript.ScriptTarget.ES2022
           }),
         }),
       )
+      expect(transpiledContent).toBe(mockCompiledContent)
+      expect(mockImportFresh).toHaveBeenCalledWith('/test.ts')
+      expect(loaderDependencies.revertHook).toHaveBeenCalledOnce()
       expect(result).toEqual(mockResult)
     })
 
     it('应该处理异步 TypeScript 编译错误', async () => {
       const mockTsContent = 'invalid typescript code'
 
-      mockReadFile.mockResolvedValue(mockTsContent)
       mockTypeScript.transpileModule.mockImplementation(() => {
         throw new Error('TypeScript compilation failed')
+      })
+      mockImportFresh.mockImplementation(filePath => {
+        getTransformHook()(mockTsContent, filePath)
       })
 
       await expect(loadTs('/test.ts')).rejects.toThrow(
         'TypeScript Error in /test.ts: TypeScript compilation failed',
       )
+      expect(loaderDependencies.revertHook).toHaveBeenCalledOnce()
     })
 
     it('应该同步编译和加载 TS 文件', () => {
@@ -420,57 +421,58 @@ describe('文件加载器工具 - 完整测试', () => {
       const mockCompiledContent = 'const test = "hello"; module.exports = test;'
       const mockResult = { default: 'hello' }
 
-      mockReadFileSync.mockReturnValue(mockTsContent)
       mockTypeScript.transpileModule.mockReturnValue({
         outputText: mockCompiledContent,
         diagnostics: [],
       })
       mockImportFresh.mockReturnValue(mockResult)
-      mockPathExistsSync.mockReturnValue(true) // 模拟文件存在，需要清理
 
       const result = loadTsSync('/test.ts')
+      const transpiledContent = getTransformHook()(mockTsContent, '/test.ts')
 
-      expect(mockReadFileSync).toHaveBeenCalledWith('/test.ts')
       expect(mockTypeScript.transpileModule).toHaveBeenCalledWith(
         mockTsContent,
         expect.objectContaining({
+          fileName: '/test.ts',
           compilerOptions: expect.objectContaining({
-            module: 199, // typescript.ModuleKind.NodeNext
+            module: 1, // typescript.ModuleKind.CommonJS
+            moduleResolution: 2, // typescript.ModuleResolutionKind.Node10
             target: 9, // typescript.ScriptTarget.ES2022
           }),
         }),
       )
-      expect(mockWriteFileSync).toHaveBeenCalledWith(
-        expect.stringMatching(/^\/\.test\.eljs-\d+-[0-9a-f-]{36}\.cjs$/),
-        mockCompiledContent,
-      )
-      expect(mockRemoveSync).toHaveBeenCalledWith(
-        mockWriteFileSync.mock.calls[0][0],
-      )
+      expect(transpiledContent).toBe(mockCompiledContent)
+      expect(mockImportFresh).toHaveBeenCalledWith('/test.ts')
+      expect(loaderDependencies.revertHook).toHaveBeenCalledOnce()
       expect(result).toEqual(mockResult)
     })
 
     it('应该处理 TypeScript 编译错误', () => {
       const mockTsContent = 'invalid typescript code'
 
-      mockReadFileSync.mockReturnValue(mockTsContent)
       mockTypeScript.transpileModule.mockImplementation(() => {
         throw new Error('TypeScript compilation failed')
+      })
+      mockImportFresh.mockImplementation(filePath => {
+        getTransformHook()(mockTsContent, filePath)
       })
 
       expect(() => loadTsSync('/test.ts')).toThrow(
         'TypeScript Error in /test.ts: TypeScript compilation failed',
       )
+      expect(loaderDependencies.revertHook).toHaveBeenCalledOnce()
     })
 
     it('应该延迟加载 typescript 模块', () => {
       const mockResult = { lazy: 'typescript' }
 
-      mockReadFileSync.mockReturnValue('export default "test"')
       mockTypeScript.transpileModule.mockReturnValue({
         outputText: 'module.exports = "test"',
       })
-      mockImportFresh.mockReturnValue(mockResult)
+      mockImportFresh.mockImplementation(filePath => {
+        getTransformHook()('export default "test"', filePath)
+        return mockResult
+      })
 
       loadTsSync('/test.ts')
 
@@ -478,43 +480,31 @@ describe('文件加载器工具 - 完整测试', () => {
       expect(mockTypeScript.transpileModule).toHaveBeenCalled()
     })
 
-    it('应该使用唯一临时路径，避免覆盖同名 CJS 文件', () => {
-      const mockTsContent = 'export const test = "hello"'
-      const mockCompiledContent = 'exports.test = "hello";'
-
-      mockReadFileSync.mockReturnValue(mockTsContent)
-      mockTypeScript.transpileModule.mockReturnValue({
-        outputText: mockCompiledContent,
-      })
+    it('应该直接加载源文件且不生成临时文件', () => {
       mockImportFresh.mockReturnValue({ test: 'hello' })
 
       loadTsSync('/path/to/file.ts')
 
-      const compiledPath = mockWriteFileSync.mock.calls[0][0]
-
-      expect(compiledPath).toMatch(
-        /^\/path\/to\/\.file\.eljs-\d+-[0-9a-f-]{36}\.cjs$/,
+      expect(mockImportFresh).toHaveBeenCalledWith('/path/to/file.ts')
+      expect(loaderDependencies.addHook).toHaveBeenCalledWith(
+        expect.any(Function),
+        {
+          exts: ['.ts'],
+          ignoreNodeModules: true,
+        },
       )
-      expect(compiledPath).not.toBe('/path/to/file.cjs')
-      expect(mockImportFresh).toHaveBeenCalledWith(compiledPath)
-      expect(mockRemoveSync).toHaveBeenCalledWith(compiledPath)
+      expect(loaderDependencies.revertHook).toHaveBeenCalledOnce()
     })
 
-    it('并发加载同一个 TS 文件时应该使用不同的临时路径', async () => {
-      mockReadFile.mockResolvedValue('export default "test"')
-      mockTypeScript.transpileModule.mockReturnValue({
-        outputText: 'module.exports = "test"',
-      })
+    it('并发调用应该分别安装并释放短生命周期 Hook', async () => {
       mockImportFresh.mockReturnValue({ default: 'test' })
 
       await Promise.all([loadTs('/config.ts'), loadTs('/config.ts')])
 
-      const compiledPaths = requiredModule5.writeFile.mock.calls.map(
-        ([filePath]) => filePath,
-      )
-
-      expect(new Set(compiledPaths).size).toBe(2)
-      expect(compiledPaths).not.toContain('/config.cjs')
+      expect(loaderDependencies.addHook).toHaveBeenCalledTimes(2)
+      expect(loaderDependencies.revertHook).toHaveBeenCalledTimes(2)
+      expect(mockImportFresh).toHaveBeenNthCalledWith(1, '/config.ts')
+      expect(mockImportFresh).toHaveBeenNthCalledWith(2, '/config.ts')
     })
   })
 

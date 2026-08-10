@@ -1,6 +1,12 @@
 import { move, pathExists, remove } from '@eljs/utils/file'
 import { createHash, randomUUID } from 'node:crypto'
-import { open, readFile, rename, type FileHandle } from 'node:fs/promises'
+import {
+  mkdir,
+  open,
+  readFile,
+  rename,
+  type FileHandle,
+} from 'node:fs/promises'
 import { hostname } from 'node:os'
 import path from 'node:path'
 
@@ -25,6 +31,32 @@ interface TargetLockMetadata {
   readonly targetExisted: boolean
   readonly createdAt: string
   backupPath?: string
+}
+
+/**
+ * 持久化到目标锁获取互斥目录的所有者信息
+ *
+ * @remarks
+ * 所有锁获取与遗留恢复都必须先持有该互斥目录，避免多个进程同时恢复时删除新锁
+ *
+ * @internal
+ */
+interface TargetLockMutexMetadata {
+  readonly version: 1
+  readonly ownerId: string
+  readonly pid: number
+  readonly hostname: string
+  readonly createdAt: string
+}
+
+/**
+ * 当前进程持有的目标锁获取互斥目录
+ *
+ * @internal
+ */
+interface TargetLockMutex {
+  readonly path: string
+  readonly metadata: TargetLockMutexMetadata
 }
 
 /**
@@ -59,6 +91,24 @@ export async function acquireTargetLock(
     resolveProspectiveCanonicalPath(targetDir),
   ])
   const lockPath = getTargetLockPath(canonicalCwd, canonicalTargetDir)
+  const mutex = await acquireTargetLockMutex(lockPath, canonicalTargetDir)
+
+  try {
+    return await acquireTargetLockExclusive(
+      canonicalCwd,
+      canonicalTargetDir,
+      lockPath,
+    )
+  } finally {
+    await releaseTargetLockMutex(mutex, canonicalTargetDir)
+  }
+}
+
+async function acquireTargetLockExclusive(
+  canonicalCwd: string,
+  canonicalTargetDir: string,
+  lockPath: string,
+): Promise<TargetLock> {
   const metadata: TargetLockMetadata = {
     version: 1,
     ownerId: randomUUID(),
@@ -92,7 +142,11 @@ export async function acquireTargetLock(
     await recoverAbandonedTarget(canonicalCwd, existing)
     await remove(getTargetLockUpdatePath(lockPath, existing.ownerId))
     await remove(lockPath)
-    return acquireTargetLock(canonicalCwd, canonicalTargetDir)
+    return acquireTargetLockExclusive(
+      canonicalCwd,
+      canonicalTargetDir,
+      lockPath,
+    )
   }
 
   try {
@@ -111,6 +165,120 @@ export async function acquireTargetLock(
   }
 
   return { path: lockPath, cwd: canonicalCwd, metadata }
+}
+
+async function acquireTargetLockMutex(
+  lockPath: string,
+  targetDir: string,
+): Promise<TargetLockMutex> {
+  const mutexPath = `${lockPath}.acquire`
+  const metadata: TargetLockMutexMetadata = {
+    version: 1,
+    ownerId: randomUUID(),
+    pid: process.pid,
+    hostname: hostname(),
+    createdAt: new Date().toISOString(),
+  }
+  const candidatePath = `${mutexPath}.${metadata.ownerId}.tmp`
+  const candidateMetadataPath = path.join(candidatePath, 'owner.json')
+
+  await mkdir(candidatePath, { mode: 0o700 })
+  try {
+    const handle = await open(candidateMetadataPath, 'wx', 0o600)
+    try {
+      await handle.writeFile(JSON.stringify(metadata))
+      await handle.sync()
+    } finally {
+      await handle.close()
+    }
+
+    try {
+      await rename(candidatePath, mutexPath)
+      return {
+        path: mutexPath,
+        metadata,
+      }
+    } catch (error) {
+      if (!isExistingPathError(error)) {
+        throw error
+      }
+    }
+  } finally {
+    await remove(candidatePath).catch(() => undefined)
+  }
+
+  const metadataPath = path.join(mutexPath, 'owner.json')
+  const existing = await readTargetLockMutex(metadataPath, targetDir)
+  if (isOwnerRunning(existing)) {
+    throw new AppError('Target directory lock is being acquired', {
+      code: 'CREATE_TARGET_LOCKED',
+      details: {
+        lockPath,
+        ownerPid: existing.pid,
+        targetDir,
+      },
+    })
+  }
+
+  const abandonedPath = `${mutexPath}.${existing.ownerId}.abandoned`
+  try {
+    // 保留不可变墓碑，使读取了旧 ownerId 的延迟竞争者不能把后继互斥目录改到同一路径并误删
+    await rename(mutexPath, abandonedPath)
+  } catch (error) {
+    if (hasCode(error, 'ENOENT') || isExistingPathError(error)) {
+      return acquireTargetLockMutex(lockPath, targetDir)
+    }
+    throw error
+  }
+
+  return acquireTargetLockMutex(lockPath, targetDir)
+}
+
+async function releaseTargetLockMutex(
+  mutex: TargetLockMutex,
+  targetDir: string,
+): Promise<void> {
+  const current = await readTargetLockMutex(
+    path.join(mutex.path, 'owner.json'),
+    targetDir,
+  )
+  if (current.ownerId !== mutex.metadata.ownerId) {
+    throw new AppError('Target lock acquisition ownership changed', {
+      code: 'CREATE_TARGET_LOCKED',
+      details: { lockPath: mutex.path, targetDir },
+    })
+  }
+
+  const releasedPath = `${mutex.path}.${mutex.metadata.ownerId}.released`
+
+  // 原子改名先释放公共互斥路径，延迟清理只能作用于当前 owner 的私有墓碑
+  await rename(mutex.path, releasedPath)
+  await remove(releasedPath).catch(() => undefined)
+}
+
+async function readTargetLockMutex(
+  metadataPath: string,
+  targetDir: string,
+): Promise<TargetLockMutexMetadata> {
+  let value: unknown
+  try {
+    value = JSON.parse(await readFile(metadataPath, 'utf8'))
+  } catch (cause) {
+    throw new AppError('Target lock acquisition metadata is unreadable', {
+      cause,
+      code: 'CREATE_TARGET_LOCKED',
+      details: { lockPath: path.dirname(metadataPath), targetDir },
+    })
+  }
+
+  if (!isTargetLockMutexMetadata(value)) {
+    throw new AppError('Target lock acquisition metadata is invalid', {
+      code: 'CREATE_TARGET_LOCKED',
+      details: { lockPath: path.dirname(metadataPath), targetDir },
+    })
+  }
+
+  return value
 }
 
 /**
@@ -265,7 +433,9 @@ function getTargetLockUpdatePath(lockPath: string, ownerId: string): string {
   return `${lockPath}.${ownerId}.tmp`
 }
 
-function isOwnerRunning(metadata: TargetLockMetadata): boolean {
+function isOwnerRunning(
+  metadata: Pick<TargetLockMetadata, 'hostname' | 'pid'>,
+): boolean {
   if (metadata.hostname !== hostname()) {
     return true
   }
@@ -295,6 +465,32 @@ function isTargetLockMetadata(value: unknown): value is TargetLockMetadata {
     typeof metadata.createdAt === 'string' &&
     (metadata.backupPath === undefined ||
       typeof metadata.backupPath === 'string')
+  )
+}
+
+function isTargetLockMutexMetadata(
+  value: unknown,
+): value is TargetLockMutexMetadata {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const metadata = value as Partial<TargetLockMutexMetadata>
+  return (
+    metadata.version === 1 &&
+    typeof metadata.ownerId === 'string' &&
+    Number.isSafeInteger(metadata.pid) &&
+    (metadata.pid as number) > 0 &&
+    typeof metadata.hostname === 'string' &&
+    typeof metadata.createdAt === 'string'
+  )
+}
+
+function isExistingPathError(error: unknown): boolean {
+  return (
+    hasCode(error, 'EEXIST') ||
+    hasCode(error, 'ENOTEMPTY') ||
+    hasCode(error, 'EPERM')
   )
 }
 

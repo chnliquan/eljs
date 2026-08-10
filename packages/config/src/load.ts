@@ -1,6 +1,7 @@
-import { fileLoaders, fileLoadersSync, loadJsSync } from '@eljs/utils/file'
+import { fileLoaders, fileLoadersSync, loadJsSync } from '@eljs/utils/loader'
 import { deepMerge } from '@eljs/utils/object'
 import { randomUUID } from 'node:crypto'
+import { createRequire } from 'node:module'
 import { extname } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
@@ -78,32 +79,28 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-function isEsmRequireError(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    (('code' in error && error.code === 'ERR_REQUIRE_ESM') ||
-      error.message.includes('require() of ES Module'))
-  )
-}
-
 /**
  * 绕过 Node.js 模块缓存重新加载 JavaScript 配置
  *
  * @remarks
- * CommonJS 使用同步 fresh require，原生 ESM 使用带唯一查询参数的动态导入
+ * `.cjs` 使用同步 fresh require，`.mjs` 使用带唯一查询参数的动态导入
+ * 格式不明确的 `.js` 只清除可能存在的 CommonJS 缓存条目，再通过动态导入兼容 package-scoped ESM
+ * 清除缓存时不执行模块，避免支持同步 `require(esm)` 的 Node.js 重复求值 ESM 入口
+ * 这里只重新求值入口文件，入口引用的传递依赖仍遵循 Node.js 模块缓存
  */
 async function loadJavaScriptFresh(
   configFile: string,
   format: string,
 ): Promise<unknown> {
-  if (format !== '.mjs') {
-    try {
-      return loadJsSync(configFile)
-    } catch (error) {
-      if (!isEsmRequireError(error)) {
-        throw error
-      }
-    }
+  if (format === '.cjs') {
+    return loadJsSync(configFile)
+  }
+
+  if (format === '.js') {
+    const localRequire = createRequire(pathToFileURL(configFile))
+
+    // 只删除缓存而不执行入口；动态导入会按文件所属 package scope 选择 CJS 或 ESM
+    delete localRequire.cache[localRequire.resolve(configFile)]
   }
 
   const url = pathToFileURL(configFile)
@@ -153,17 +150,21 @@ function mergeConfigObjects(
  */
 function validateConfigObject<T extends object>(
   config: T | null,
-  configFiles: readonly string[],
+  inputConfigFiles: readonly string[],
+  loadedConfigFiles: readonly string[],
   validate?: ConfigValidator,
 ): T | null {
   if (!config || !validate) {
     return config
   }
 
-  const validationTarget = configFiles.at(-1) ?? '<default>'
+  const validationTarget = loadedConfigFiles.at(-1) ?? '<default>'
 
   try {
-    const validatedConfig = validate(config, { configFiles })
+    const validatedConfig = validate(config, {
+      configFiles: inputConfigFiles,
+      loadedConfigFiles,
+    })
 
     if (
       !isObject(validatedConfig) ||
@@ -222,6 +223,7 @@ export async function loadConfigFiles<T extends object>(
   options: ConfigLoadOptions = {},
 ): Promise<T | null> {
   const inputConfigFiles = Object.freeze([...configFiles])
+  const loadedConfigFiles: string[] = []
   const { merge, reload, validate } = options
   let config: T | null = defaultConfig ? ({ ...defaultConfig } as T) : null
 
@@ -237,25 +239,14 @@ export async function loadConfigFiles<T extends object>(
       throw createUnsupportedFormatError(configFile, false)
     }
 
+    let content: unknown
+
     try {
-      const content: unknown =
+      content =
         reload && JAVASCRIPT_EXTENSIONS.has(format)
           ? await loadJavaScriptFresh(configFile, format)
           : await loader(configFile)
-      const actualConfig = normalizeConfigExport(content, configFile)
-
-      if (actualConfig == null) {
-        continue
-      }
-
-      config = config
-        ? (mergeConfigObjects(config, actualConfig, configFile, merge) as T)
-        : (actualConfig as T)
     } catch (error) {
-      if (error instanceof ConfigLoadError) {
-        throw error
-      }
-
       throw new ConfigLoadError(
         `Load config ${configFile} failed: ${getErrorMessage(error)}`,
         {
@@ -266,9 +257,26 @@ export async function loadConfigFiles<T extends object>(
         },
       )
     }
+
+    const actualConfig = normalizeConfigExport(content, configFile)
+
+    if (actualConfig == null) {
+      continue
+    }
+
+    loadedConfigFiles.push(configFile)
+
+    config = config
+      ? (mergeConfigObjects(config, actualConfig, configFile, merge) as T)
+      : (actualConfig as T)
   }
 
-  return validateConfigObject(config, inputConfigFiles, validate)
+  return validateConfigObject(
+    config,
+    inputConfigFiles,
+    Object.freeze(loadedConfigFiles),
+    validate,
+  )
 }
 
 /**
@@ -285,6 +293,7 @@ export function loadConfigFilesSync<T extends object>(
   options: ConfigLoadOptions = {},
 ): T | null {
   const inputConfigFiles = Object.freeze([...configFiles])
+  const loadedConfigFiles: string[] = []
   const { merge, validate } = options
   let config: T | null = defaultConfig ? ({ ...defaultConfig } as T) : null
 
@@ -300,22 +309,11 @@ export function loadConfigFilesSync<T extends object>(
       throw createUnsupportedFormatError(configFile, true)
     }
 
+    let content: unknown
+
     try {
-      const content: unknown = loader(configFile)
-      const actualConfig = normalizeConfigExport(content, configFile)
-
-      if (actualConfig == null) {
-        continue
-      }
-
-      config = config
-        ? (mergeConfigObjects(config, actualConfig, configFile, merge) as T)
-        : (actualConfig as T)
+      content = loader(configFile)
     } catch (error) {
-      if (error instanceof ConfigLoadError) {
-        throw error
-      }
-
       throw new ConfigLoadError(
         `Load config ${configFile} failed: ${getErrorMessage(error)}`,
         {
@@ -326,7 +324,24 @@ export function loadConfigFilesSync<T extends object>(
         },
       )
     }
+
+    const actualConfig = normalizeConfigExport(content, configFile)
+
+    if (actualConfig == null) {
+      continue
+    }
+
+    loadedConfigFiles.push(configFile)
+
+    config = config
+      ? (mergeConfigObjects(config, actualConfig, configFile, merge) as T)
+      : (actualConfig as T)
   }
 
-  return validateConfigObject(config, inputConfigFiles, validate)
+  return validateConfigObject(
+    config,
+    inputConfigFiles,
+    Object.freeze(loadedConfigFiles),
+    validate,
+  )
 }

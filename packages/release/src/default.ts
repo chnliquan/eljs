@@ -91,5 +91,9 @@ export const defaultConfig: Config = {
      * API 令牌环境变量名
      */
     tokenEnv: 'GITHUB_TOKEN',
+    /**
+     * 默认不信任任何 GitHub Enterprise 主机
+     */
+    enterpriseHost: undefined,
   },
 }

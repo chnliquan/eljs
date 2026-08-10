@@ -260,6 +260,7 @@ describe('内部插件 questions', () => {
           { title: 'npm', value: 'npm' },
           { title: 'yarn', value: 'yarn' },
           { title: 'pnpm', value: 'pnpm' },
+          { title: 'bun', value: 'bun' },
         ],
         initial: 2,
       })

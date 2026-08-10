@@ -237,10 +237,19 @@ export class TemplateDownloader {
     projectName: string,
   ): Promise<void> {
     try {
-      const { dependencies }: PackageJson =
+      const manifest: PackageJson =
         (await readJson(path.join(cwd, './package.json'))) || {}
+      const installableDependencies = [
+        manifest.dependencies,
+        manifest.optionalDependencies,
+        manifest.peerDependencies,
+      ]
 
-      if (dependencies && Object.keys(dependencies).length > 0) {
+      if (
+        installableDependencies.some(
+          dependencies => dependencies && Object.keys(dependencies).length > 0,
+        )
+      ) {
         this._spinner.start(`Installing ${projectName}`)
         const installArgs = ['install', '--omit=dev']
         if (!this.constructorOptions.allowScripts) {

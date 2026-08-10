@@ -1,6 +1,7 @@
 # @eljs/create
 
-Powerful and flexible project creation tool from templates with comprehensive automation support.
+An extensible project generator for local, npm, and Git templates with guarded
+filesystem writes and both CLI and programmatic APIs.
 
 [![NPM Version](https://img.shields.io/npm/v/@eljs/create.svg)](https://www.npmjs.com/package/@eljs/create)
 [![NPM Downloads](https://img.shields.io/npm/dm/@eljs/create.svg)](https://www.npmjs.com/package/@eljs/create)
@@ -29,19 +30,22 @@ yarn global add @eljs/create
 npm install @eljs/create -g
 ```
 
+Global installations expose `eljs-create` as the preferred command and keep
+`create` as a compatibility alias.
+
 ## 🚀 Quick Start
 
 ### CLI Usage (Recommended)
 
 ```bash
 # Create from an npm template
-create my-template my-project
+eljs-create my-template my-project
 
 # Create from a git repository
-create https://github.com/user/template.git my-project
+eljs-create https://github.com/user/template.git my-project
 
 # Create from a local template
-create ./local-template my-project
+eljs-create ./local-template my-project
 
 # Using npx (no global installation needed)
 npx @eljs/create my-template my-project
@@ -78,7 +82,7 @@ await enterpriseCreator.run('enterprise-app')
 ### Commands
 
 ```bash
-create [options] <template> <project-name>
+eljs-create [options] <template> <project-name>
 ```
 
 ### Arguments
@@ -113,25 +117,25 @@ create [options] <template> <project-name>
 
 ```bash
 # Basic template creation
-create react-template my-react-app
+eljs-create react-template my-react-app
 
 # Force overwrite existing directory
-create vue-template my-vue-app --force
+eljs-create vue-template my-vue-app --force
 
 # Merge with existing directory
-create component-template my-component --merge
+eljs-create component-template my-component --merge
 
 # Custom working directory
-create context-template my-context --cwd ./projects
+eljs-create context-template my-context --cwd ./projects
 
 # From scoped npm package
-create @company/enterprise-template my-enterprise-app
+eljs-create @company/enterprise-template my-enterprise-app
 
 # From a Git repository branch or tag
-create https://github.com/templates/fullstack.git#main my-fullstack-app
+eljs-create https://github.com/templates/fullstack.git#main my-fullstack-app
 
 # Local template with custom options
-create ./templates/custom-template my-custom-app --no-install
+eljs-create ./templates/custom-template my-custom-app --no-install
 ```
 
 ## 📖 API Reference
@@ -230,9 +234,9 @@ template generator itself.
 NPM downloads inherit project and user `.npmrc` authentication, proxy, and
 `no-proxy` settings. Credentials are matched to the target host and path and are
 not forwarded to an unrelated tarball host. Tarballs are streamed with a 100 MiB
-download limit and a 20,000-entry extraction limit. npm templates always use
-registry-provided integrity verification; trusted catalogs can additionally
-provide `integrity` to reject registry metadata drift before downloading.
+download limit and a 20,000-entry extraction limit. A caller-provided
+`integrity` digest is used as the independent trust root for the downloaded
+archive; otherwise the registry integrity or shasum is used.
 
 ### API Examples
 
@@ -350,11 +354,17 @@ export default definePlugin(context => {
 
   // Modify package.json
   // The callback runs after prompts and app data are available.
-  context.extendPackage(pkg => ({
-    ...pkg,
-    author: context.prompts.authorName,
-    keywords: [context.prompts.framework.toLowerCase()],
-  }))
+  context.extendPackage(pkg => {
+    const framework = context.prompts.framework
+
+    return {
+      ...pkg,
+      author: context.prompts.authorName,
+      keywords: [
+        typeof framework === 'string' ? framework.toLowerCase() : 'unknown',
+      ],
+    }
+  })
 
   // Generate files
   context.onGenerateFiles(() => {
@@ -426,11 +436,11 @@ export default definePlugin(context => {
 
 ### Available Generator Methods
 
-| Method                                  | Description             | Example                                             |
-| --------------------------------------- | ----------------------- | --------------------------------------------------- |
-| `context.copyFile(from, to)`            | Copy single file        | `context.copyFile('template.txt', 'output.txt')`    |
-| `context.copyTpl(from, to, data)`       | Copy template with data | `context.copyTpl('src/**', target, prompts)`        |
-| `context.copyDirectory(from, to, data)` | Copy entire directory   | `context.copyDirectory('templates', target)`        |
-| `context.render(template, data)`        | Render template string  | `context.render('Hello {{name}}', {name: 'World'})` |
-| `context.extendPackage(extension)`      | Extend package.json     | `context.extendPackage({scripts: {test: 'jest'}})`  |
-| `context.install(deps, options)`        | Install dependencies    | `context.install(['react', 'react-dom'])`           |
+| Method                                            | Description                   | Example                                                                             |
+| ------------------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------- |
+| `context.copyFile(from, to, options?)`            | Copy single file              | `context.copyFile('template.txt', context.resolve('output.txt'))`                   |
+| `context.copyTpl(from, to, data, options?)`       | Copy template with data       | `context.copyTpl('index.ts.tpl', context.resolve('src/index.ts'), context.prompts)` |
+| `context.copyDirectory(from, to, data, options?)` | Copy and render directory     | `context.copyDirectory('templates', context.paths.target, context.prompts)`         |
+| `context.render(path, data, options?)`            | Render a template file or dir | `context.render('./templates', context.prompts)`                                    |
+| `context.extendPackage(extension)`                | Extend package.json           | `context.extendPackage({scripts: {test: 'vitest'}})`                                |
+| `context.install(args?, options?)`                | Install project dependencies  | `context.install()`                                                                 |

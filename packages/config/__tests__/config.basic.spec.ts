@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
+import * as fs from 'node:fs'
 import * as path from 'node:path'
 
 import { ConfigManager, type ConfigManagerOptions } from '../src'
@@ -102,6 +103,18 @@ describe('ConfigManager 基础功能测试', () => {
       expect(result).toBe(path.join(tempDir, 'config.ts'))
     })
 
+    it('应该跳过目录候选并继续查找普通文件', async () => {
+      fs.mkdirSync(path.join(tempDir, 'config.js'))
+      createConfigFile(tempDir, 'config.json', { test: true })
+
+      const result = await ConfigManager.getMainConfigFile(
+        ['config.js', 'config.json'],
+        tempDir,
+      )
+
+      expect(result).toBe(path.join(tempDir, 'config.json'))
+    })
+
     it('应该保持绝对候选路径并忽略 cwd', async () => {
       const absoluteFile = createConfigFile(tempDir, 'config.js', {
         test: true,
@@ -160,6 +173,18 @@ describe('ConfigManager 基础功能测试', () => {
       const result = ConfigManager.getMainConfigFileSync(configFiles, tempDir)
 
       expect(result).toBe(path.join(tempDir, 'config.ts'))
+    })
+
+    it('应该同步跳过目录候选并继续查找普通文件', () => {
+      fs.mkdirSync(path.join(tempDir, 'config.js'))
+      createConfigFile(tempDir, 'config.json', { test: true })
+
+      const result = ConfigManager.getMainConfigFileSync(
+        ['config.js', 'config.json'],
+        tempDir,
+      )
+
+      expect(result).toBe(path.join(tempDir, 'config.json'))
     })
 
     it('应该同步保持绝对候选路径并忽略 cwd', () => {

@@ -1,10 +1,10 @@
-# @eljs/changelog-preset
+# @eljs/conventional-changelog-preset
 
 Conventional changelog preset for @eljs/release.
 
-[![NPM Version](https://img.shields.io/npm/v/@eljs/changelog-preset.svg)](https://www.npmjs.com/package/@eljs/changelog-preset)
-[![NPM Downloads](https://img.shields.io/npm/dm/@eljs/changelog-preset.svg)](https://www.npmjs.com/package/@eljs/changelog-preset)
-[![License](https://img.shields.io/npm/l/@eljs/changelog-preset.svg)](https://github.com/chnliquan/eljs/blob/master/LICENSE)
+[![NPM Version](https://img.shields.io/npm/v/@eljs/conventional-changelog-preset.svg)](https://www.npmjs.com/package/@eljs/conventional-changelog-preset)
+[![NPM Downloads](https://img.shields.io/npm/dm/@eljs/conventional-changelog-preset.svg)](https://www.npmjs.com/package/@eljs/conventional-changelog-preset)
+[![License](https://img.shields.io/npm/l/@eljs/conventional-changelog-preset.svg)](https://github.com/chnliquan/eljs/blob/master/LICENSE)
 
 ## Angular Convention
 

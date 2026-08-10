@@ -21,7 +21,7 @@ export interface RemoteTemplate {
    * npm 模版压缩包的 Subresource Integrity 摘要
    *
    * @remarks
-   * 指定后会同时校验 registry 元数据与实际下载内容，Git 模版忽略此字段
+   * 指定后优先作为独立信任根校验实际下载内容，不依赖 registry 返回的摘要，Git 模版忽略此字段
    */
   integrity?: string
   /**

@@ -1,35 +1,20 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as fs from 'node:fs'
-import * as os from 'node:os'
 import * as path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Cache } from '../src'
-
-// 测试工具函数
-const createTempDir = () => {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'cache-concurrent-test-'))
-}
-
-const createTempFile = (dir: string, filename: string, content: string) => {
-  const filePath = path.join(dir, filename)
-  fs.writeFileSync(filePath, content)
-  return filePath
-}
-
-const cleanupDir = (dir: string) => {
-  try {
-    fs.rmSync(dir, { recursive: true, force: true })
-  } catch {
-    // 忽略清理错误
-  }
-}
+import {
+  cleanupDir,
+  createBlockedDirectoryPath,
+  createTempDir,
+  createTempFile,
+} from './test-utils'
 
 describe('Cache 并发初始化测试', () => {
   let tempDir: string
 
   beforeEach(() => {
-    tempDir = createTempDir()
+    tempDir = createTempDir('cache-concurrent-test-')
   })
 
   afterEach(() => {
@@ -85,9 +70,10 @@ describe('Cache 并发初始化测试', () => {
 
     it('应该在初始化失败后正确处理状态', async () => {
       // 使用无效路径强制初始化失败
+      const blockedCacheDir = createBlockedDirectoryPath(tempDir)
       const cache = new Cache<string>({
         enabled: true,
-        cacheDir: '/invalid/path/that/cannot/be/created',
+        cacheDir: blockedCacheDir,
         autoCleanup: false,
       })
 
@@ -109,9 +95,6 @@ describe('Cache 并发初始化测试', () => {
 
       // 构造完成后初始化应该还未完成
       expect(cache.initialized).toBe(false)
-
-      // 但初始化Promise应该已经存在
-      expect((cache as any)._initializationPromise).toBeDefined()
     })
 
     it('应该在禁用缓存时跳过初始化', async () => {
@@ -124,52 +107,31 @@ describe('Cache 并发初始化测试', () => {
 
       // 应该保持未初始化状态
       expect(cache.initialized).toBe(false)
-      expect((cache as any)._initializationPromise).toBeNull()
-    })
-
-    it('应该在多次调用_ensureInitialized时返回相同的Promise', async () => {
-      const cache = new Cache<string>({
-        enabled: true,
-        cacheDir: path.join(tempDir, '.cache'),
-        autoCleanup: false,
-      })
-
-      // 获取_ensureInitialized方法的引用
-      const ensureInit = (cache as any)._ensureInitialized.bind(cache)
-
-      // 多次调用应该返回相同的Promise
-      const promise1 = ensureInit()
-      const promise2 = ensureInit()
-      const promise3 = ensureInit()
-
-      const results = await Promise.all([promise1, promise2, promise3])
-
-      // 所有调用都应该成功完成
-      expect(results).toHaveLength(3)
-      expect(cache.initialized).toBe(true)
     })
   })
 
   describe('错误恢复', () => {
     it('应该在初始化错误后清理Promise状态', async () => {
+      const blockedCacheDir = createBlockedDirectoryPath(tempDir)
       const cache = new Cache<string>({
         enabled: true,
-        cacheDir: '/invalid/path/that/cannot/be/created',
+        cacheDir: blockedCacheDir,
         autoCleanup: false,
       })
 
       // 第一次调用会失败并禁用缓存
       await cache.get('/some/file.txt')
 
-      // 验证状态清理
-      expect((cache as any)._initializationPromise).toBeNull()
-      expect(cache.options.enabled).toBe(false)
+      // 验证公开状态
+      expect(cache.options.enabled).toBe(true)
+      expect(cache.enabled).toBe(false)
     })
 
     it('应该在初始化失败后所有后续调用都返回null', async () => {
+      const blockedCacheDir = createBlockedDirectoryPath(tempDir)
       const cache = new Cache<string>({
         enabled: true,
-        cacheDir: '/invalid/path',
+        cacheDir: blockedCacheDir,
         autoCleanup: false,
       })
 
@@ -186,7 +148,7 @@ describe('Cache 并发初始化测试', () => {
   })
 
   describe('内存和资源管理', () => {
-    it('应该在初始化完成后清理Promise引用', async () => {
+    it('应该在初始化完成后保持可用', async () => {
       const cache = new Cache<string>({
         enabled: true,
         cacheDir: path.join(tempDir, '.cache'),
@@ -196,9 +158,8 @@ describe('Cache 并发初始化测试', () => {
       // 确保初始化完成
       await cache.getStats()
 
-      // Promise引用应该被清理
-      expect((cache as any)._initializationPromise).toBeNull()
       expect(cache.initialized).toBe(true)
+      expect(cache.enabled).toBe(true)
     })
 
     it('应该支持重复的缓存操作而不重新初始化', async () => {
@@ -221,6 +182,173 @@ describe('Cache 并发初始化测试', () => {
       expect(result1).toBe('data1')
       expect(result2).toBe('data2')
       expect(cache.initialized).toBe(true)
+    })
+
+    it('应该保持同一键并发写入的发布顺序', async () => {
+      const cache = new Cache<string>({
+        enabled: true,
+        cacheDir: path.join(tempDir, '.cache-order'),
+        autoCleanup: false,
+        keyGenerator: () => 'shared-key',
+      })
+
+      await Promise.all(
+        Array.from({ length: 20 }, (_, index) =>
+          cache.setByData(`data-${index}`),
+        ),
+      )
+
+      expect(await cache.getByKey('shared-key')).toBe('data-19')
+
+      const reloaded = new Cache<string>({
+        enabled: true,
+        cacheDir: path.join(tempDir, '.cache-order'),
+        autoCleanup: false,
+        keyGenerator: () => 'shared-key',
+      })
+
+      expect(await reloaded.getByKey('shared-key')).toBe('data-19')
+    })
+
+    it('应该让clear覆盖已经发起但尚未完成的写入', async () => {
+      const cache = new Cache<string>({
+        enabled: true,
+        cacheDir: path.join(tempDir, '.cache-clear-race'),
+        autoCleanup: false,
+      })
+      const testFile = createTempFile(tempDir, 'clear-race.txt', 'content')
+
+      const setPromise = cache.set(testFile, 'data')
+      const clearPromise = cache.clear()
+
+      await Promise.all([setPromise, clearPromise])
+
+      expect(cache.memoryCache.size).toBe(0)
+      expect(
+        fs
+          .readdirSync(cache.cacheDir)
+          .filter(file => /^[a-f0-9]{64}\.json$/u.test(file)),
+      ).toHaveLength(0)
+    })
+
+    it('应该等待已经进入持久化阶段的写入后再完成clear', async () => {
+      const cacheDir = path.join(tempDir, '.cache-clear-persistence-race')
+      const cache = new Cache<string>({
+        cacheDir,
+        autoCleanup: false,
+        keyGenerator: data => data,
+        maxFiles: 1,
+      })
+      await cache.getStats()
+      await cache.setByData('existing-data')
+
+      let releaseAccess: (() => void) | undefined
+      let markAccessStarted: (() => void) | undefined
+      const accessStarted = new Promise<void>(resolve => {
+        markAccessStarted = resolve
+      })
+      const accessGate = new Promise<void>(resolve => {
+        releaseAccess = resolve
+      })
+      const accessError = Object.assign(new Error('not found'), {
+        code: 'ENOENT',
+      })
+      const accessSpy = vi
+        .spyOn(fs.promises, 'access')
+        .mockImplementationOnce(async () => {
+          markAccessStarted?.()
+          await accessGate
+          throw accessError
+        })
+
+      const setPromise = cache.setByData('new-data')
+      await accessStarted
+      const clearPromise = cache.clear()
+      releaseAccess?.()
+
+      await Promise.all([setPromise, clearPromise])
+      accessSpy.mockRestore()
+
+      expect(cache.memoryCache.size).toBe(0)
+      expect(
+        fs
+          .readdirSync(cacheDir)
+          .filter(file => /^[a-f0-9]{64}\.json$/u.test(file)),
+      ).toHaveLength(0)
+    })
+
+    it('cleanup 与 clear 同时启动时不应该循环等待', async () => {
+      const cache = new Cache<string>({
+        enabled: true,
+        cacheDir: path.join(tempDir, '.cache-cleanup-clear'),
+        autoCleanup: false,
+      })
+      const testFile = createTempFile(tempDir, 'cleanup-clear.txt', 'content')
+      await cache.set(testFile, 'data')
+
+      const cleanupPromise = cache.cleanup()
+      const clearPromise = cache.clear()
+      const [cleanupResult] = await Promise.all([cleanupPromise, clearPromise])
+
+      expect(cleanupResult.errors).toEqual([])
+      expect(cache.memoryCache.size).toBe(0)
+      expect(
+        fs
+          .readdirSync(cache.cacheDir)
+          .filter(file => /^[a-f0-9]{64}\.json$/u.test(file)),
+      ).toHaveLength(0)
+    })
+
+    it('应该让清理开始后的同实例写入等待目录扫描完成', async () => {
+      const serialize = vi.fn((data: string) => data)
+      const cache = new Cache<string>({
+        cacheDir: path.join(tempDir, '.cache-cleanup-write'),
+        autoCleanup: false,
+        keyGenerator: () => 'shared-key',
+        serializer: {
+          serialize,
+          deserialize: data => data as string,
+        },
+      })
+      await cache.setByData('expired-data', { timestamp: 0 })
+      serialize.mockClear()
+
+      let markReadStarted: (() => void) | undefined
+      let releaseRead: (() => void) | undefined
+      const readStarted = new Promise<void>(resolve => {
+        markReadStarted = resolve
+      })
+      const readGate = new Promise<void>(resolve => {
+        releaseRead = resolve
+      })
+      const readFileSpy = vi
+        .spyOn(fs.promises, 'readFile')
+        .mockImplementationOnce(async filePath => {
+          markReadStarted?.()
+          await readGate
+
+          if (typeof filePath !== 'string') {
+            throw new TypeError('Expected cleanup to read a string path')
+          }
+
+          return fs.readFileSync(filePath, 'utf8')
+        })
+      const cleanupPromise = cache.cleanup()
+      await readStarted
+      const setPromise = cache.setByData('fresh-data')
+
+      try {
+        await new Promise(resolve => setImmediate(resolve))
+        expect(serialize).not.toHaveBeenCalled()
+      } finally {
+        releaseRead?.()
+        await Promise.allSettled([cleanupPromise, setPromise])
+        readFileSpy.mockRestore()
+      }
+
+      expect(await setPromise).toBe('shared-key')
+      expect((await cleanupPromise).errors).toEqual([])
+      expect(await cache.getByKey('shared-key')).toBe('fresh-data')
     })
   })
 })

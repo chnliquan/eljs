@@ -10,6 +10,7 @@ const targets = [
   ['root', 'dist/index.js'],
   ['cp', 'dist/cp/index.js'],
   ['file', 'dist/file/index.js'],
+  ['loader', 'dist/loader/index.js'],
   ['string', 'dist/string/index.js'],
 ]
 const childScript = `

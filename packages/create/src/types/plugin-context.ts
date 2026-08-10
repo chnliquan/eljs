@@ -1,9 +1,11 @@
-import type { PluginContext } from '@eljs/plugin-host'
+import type { HookRegistrationOptions, PluginContext } from '@eljs/plugin-host'
+import type { prompts } from '@eljs/utils/cli'
 import type { RunCommandOptions } from '@eljs/utils/cp'
 import type { CopyFileOptions, RenderTemplateOptions } from '@eljs/utils/file'
-import type { PackageJson } from '@eljs/utils/types'
+import type { MaybePromise, PackageJson } from '@eljs/utils/types'
 
 import { createHookSchema, type CreatePluginCapabilities } from '../hooks'
+import type { AppData, Paths, Prompts } from './runner'
 
 /**
  * create preset 入口接收的上下文
@@ -29,13 +31,13 @@ export type CreatePluginContext = Omit<
    *
    * @param from - 源文件路径
    * @param to - 目标文件路径
-   * @param options - 拷贝选项
+   * @param options - 可选拷贝选项
    * @returns 拷贝完成后兑现的 Promise
    */
   copyFile: (
     from: string,
     to: string,
-    options: CopyFileOptions,
+    options?: CopyFileOptions,
   ) => Promise<void>
   /**
    * 拷贝模板文件
@@ -43,14 +45,14 @@ export type CreatePluginContext = Omit<
    * @param from - 源文件路径
    * @param to - 目标文件路径
    * @param data - 模板数据
-   * @param options - 拷贝选项
+   * @param options - 可选拷贝选项
    * @returns 拷贝完成后兑现的 Promise
    */
   copyTpl: (
     from: string,
     to: string,
     data: object,
-    options: CopyFileOptions,
+    options?: CopyFileOptions,
   ) => Promise<void>
   /**
    * 递归拷贝模板目录
@@ -58,14 +60,14 @@ export type CreatePluginContext = Omit<
    * @param from - 源目录路径
    * @param to - 目标目录路径
    * @param data - 模板数据
-   * @param options - 拷贝选项
+   * @param options - 可选拷贝选项
    * @returns 拷贝完成后兑现的 Promise
    */
   copyDirectory: (
     from: string,
     to: string,
     data: object,
-    options: CopyFileOptions,
+    options?: CopyFileOptions,
   ) => Promise<void>
   /**
    * 渲染模板
@@ -125,4 +127,81 @@ export type CreatePluginContext = Omit<
    */
   install(args: string[], option?: RunCommandOptions): Promise<void>
   // #endregion
+}
+
+/**
+ * 旧版 `Api` 允许模板自行扩展的宽松字段集合
+ *
+ * @remarks
+ * `any` 仅保留在废弃兼容层，新插件应改用 `CreatePluginContext` 并显式收窄未知字段
+ *
+ * @internal
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LegacyExtensionRecord = Record<string, any>
+
+/**
+ * 旧版 `Api` 使用的 Modify Hook 注册签名
+ *
+ * @typeParam Value - Hook 顺序传递的值
+ * @typeParam Args - Hook 附加参数
+ * @internal
+ */
+type LegacyModifyRegistration<Value, Args = void> = (
+  fn: (memo: Value, args: Args) => MaybePromise<Value>,
+  options?: HookRegistrationOptions,
+) => void
+
+/**
+ * 旧版 `Api` 使用的 Event Hook 注册签名
+ *
+ * @typeParam Args - 事件参数
+ * @internal
+ */
+type LegacyEventRegistration<Args> = (
+  fn: (args: Args) => MaybePromise<void | undefined>,
+  options?: HookRegistrationOptions,
+) => void
+
+/**
+ * create 插件入口上下文的兼容名称
+ *
+ * @remarks
+ * 保留旧版动态扩展字段的宽松读取能力以支持现有模板插件；宽松类型仅作用于
+ * 应用数据、交互结果、TypeScript 配置及其相关 Hook，新代码应使用
+ * {@link CreatePluginContext}
+ *
+ * @deprecated 使用 {@link CreatePluginContext}
+ */
+export type Api = Omit<
+  CreatePluginContext,
+  | 'appData'
+  | 'modifyAppData'
+  | 'modifyPrompts'
+  | 'modifyTsConfig'
+  | 'onBeforeGenerateFiles'
+  | 'onGenerateFiles'
+  | 'prompts'
+  | 'tsConfig'
+> & {
+  readonly appData: AppData<LegacyExtensionRecord>
+  readonly prompts: Prompts<LegacyExtensionRecord>
+  readonly tsConfig: Readonly<LegacyExtensionRecord>
+  modifyAppData: LegacyModifyRegistration<
+    AppData<LegacyExtensionRecord>,
+    { cwd: string }
+  >
+  modifyPrompts: LegacyModifyRegistration<
+    Prompts<LegacyExtensionRecord>,
+    { questions: prompts.PromptObject[] }
+  >
+  modifyTsConfig: LegacyModifyRegistration<LegacyExtensionRecord>
+  onBeforeGenerateFiles: LegacyEventRegistration<{
+    prompts: Prompts<LegacyExtensionRecord>
+    paths: Paths
+  }>
+  onGenerateFiles: LegacyEventRegistration<{
+    prompts: Prompts<LegacyExtensionRecord>
+    paths: Paths
+  }>
 }

@@ -11,7 +11,6 @@ import {
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import parseJson from 'parse-json'
 
 import {
   readFile,
@@ -20,11 +19,18 @@ import {
   readJsonSync,
 } from '../../src/file/read'
 
-// Mock 依赖项
-vi.mock('parse-json', () => ({ default: vi.fn() }))
+const loaderDependencies = vi.hoisted(() => ({
+  parseJson: vi.fn(),
+}))
+
+vi.mock('../../src/file/loader-dependencies', () => ({
+  loadParseJson: () => loaderDependencies.parseJson,
+}))
 
 describe('文件读取工具', () => {
-  const mockParseJson = parseJson as MockedFunction<typeof parseJson>
+  const mockParseJson = loaderDependencies.parseJson as MockedFunction<
+    typeof import('parse-json').default
+  >
 
   let tempDir: string
   let testFile: string

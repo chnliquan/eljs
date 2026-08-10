@@ -2,7 +2,11 @@ import { ConfigManager } from '@eljs/config'
 import { isDirectorySync } from '@eljs/utils/file'
 import { resolve as resolvePath } from 'node:path'
 
-import { PluginHostError, PluginHostErrorCode } from '../errors'
+import {
+  getPluginHostErrorMessage,
+  PluginHostError,
+  PluginHostErrorCode,
+} from '../errors'
 import type { Hook } from '../plugin/hook'
 import type {
   HookRunArguments,
@@ -483,9 +487,7 @@ export abstract class PluginHost<
 
       throw new PluginHostError(
         PluginHostErrorCode.PluginInitializationFailed,
-        `Initialize ${plugin.type} \`${plugin.id}\` from ${plugin.path} failed: ${
-          (error as Error).message
-        }`,
+        `Initialize ${plugin.type} \`${plugin.id}\` from ${plugin.path} failed: ${getPluginHostErrorMessage(error)}`,
         {
           cause: error,
           details: {

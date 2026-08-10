@@ -63,6 +63,10 @@ export class CreateRunner extends PluginHost<
    * 已完成 Hook 收集的用户交互输入
    */
   private _prompts: Prompts | null = null
+  /**
+   * 已完成 Hook 收集的 TypeScript 配置
+   */
+  private _tsConfig: Record<string, unknown> | null = null
 
   /**
    * 当前项目创建阶段
@@ -135,6 +139,23 @@ export class CreateRunner extends PluginHost<
   }
 
   /**
+   * 模板插件共同维护的 TypeScript 配置
+   *
+   * @remarks
+   * `modifyTsConfig` Hook 执行期间应通过其 `memo` 入参访问正在收集的数据
+   *
+   * @returns 已完成收集的 TypeScript 配置
+   * @throws {@link PluginHostError} `modifyTsConfig` Hook 尚未完成时抛出
+   */
+  public get tsConfig(): Readonly<Record<string, unknown>> {
+    return this._requireRuntimeData(
+      this._tsConfig,
+      'tsConfig',
+      'modifyTsConfig',
+    )
+  }
+
+  /**
    * 创建项目生成运行器
    *
    * @param options - 模版工作目录、create 配置、preset 和 plugin 声明
@@ -193,7 +214,6 @@ export class CreateRunner extends PluginHost<
       this._stage = CreateRunnerStage.CollectingAppData
       this._appData = await this.runHook('modifyAppData', {
         initialValue: {
-          scene: 'web',
           cliVersion: localRequire('../../package.json').version,
           pkg: {},
           projectName,
@@ -222,6 +242,11 @@ export class CreateRunner extends PluginHost<
           dateTime: '',
         },
         args: { questions },
+      })
+
+      this._stage = CreateRunnerStage.CollectingTsConfig
+      this._tsConfig = await this.runHook('modifyTsConfig', {
+        initialValue: {},
       })
 
       this._stage = CreateRunnerStage.GeneratingFiles
@@ -298,6 +323,7 @@ export class CreateRunner extends PluginHost<
     const getAppData = () => this.appData
     const getPaths = () => this.paths as Required<Paths>
     const getPrompts = () => this.prompts
+    const getTsConfig = () => this.tsConfig
 
     return {
       get config() {
@@ -311,6 +337,9 @@ export class CreateRunner extends PluginHost<
       },
       get prompts() {
         return getPrompts()
+      },
+      get tsConfig() {
+        return getTsConfig()
       },
     }
   }

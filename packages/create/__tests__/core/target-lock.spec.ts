@@ -9,7 +9,7 @@ import {
   symlink,
   writeFile,
 } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { hostname, tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -128,6 +128,64 @@ describe('目标目录锁', () => {
     await releaseTargetLock(recoveredLock)
   })
 
+  it('并发恢复遗留锁时只有一个流程能够获取新锁', async () => {
+    const targetDir = await createWorkspace()
+    const abandonedLock = await acquireTargetLock(cwd, targetDir)
+    await mkdir(targetDir)
+    await writeFile(path.join(targetDir, 'partial.txt'), 'partial\n')
+    await markOwnerDead(abandonedLock.path)
+
+    const results = await Promise.allSettled([
+      acquireTargetLock(cwd, targetDir),
+      acquireTargetLock(cwd, targetDir),
+    ])
+    const acquired = results.filter(
+      (
+        result,
+      ): result is PromiseFulfilledResult<
+        Awaited<ReturnType<typeof acquireTargetLock>>
+      > => result.status === 'fulfilled',
+    )
+    const rejected = results.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    )
+
+    expect(acquired).toHaveLength(1)
+    expect(rejected).toHaveLength(1)
+    expect(rejected[0].reason).toMatchObject({ code: 'CREATE_TARGET_LOCKED' })
+    await expect(pathExists(targetDir)).resolves.toBe(false)
+    await releaseTargetLock(acquired[0].value)
+  })
+
+  it('进程异常退出后可以接管遗留的锁获取互斥目录', async () => {
+    const targetDir = await createWorkspace()
+    const initialLock = await acquireTargetLock(cwd, targetDir)
+    await releaseTargetLock(initialLock)
+    const acquisitionPath = `${initialLock.path}.acquire`
+    const deadPid = 2_147_483_647
+    const deadOwnerId = randomUUID()
+    await mkdir(acquisitionPath)
+    await writeFile(
+      path.join(acquisitionPath, 'owner.json'),
+      JSON.stringify({
+        version: 1,
+        ownerId: deadOwnerId,
+        pid: deadPid,
+        hostname: hostname(),
+        createdAt: new Date().toISOString(),
+      }),
+    )
+    mockProcessDead(deadPid)
+
+    const recoveredLock = await acquireTargetLock(cwd, targetDir)
+
+    await expect(pathExists(acquisitionPath)).resolves.toBe(false)
+    await expect(
+      pathExists(`${acquisitionPath}.${deadOwnerId}.abandoned`),
+    ).resolves.toBe(true)
+    await releaseTargetLock(recoveredLock)
+  })
+
   it('拒绝遗留锁中的越界备份路径', async () => {
     const targetDir = await createWorkspace(true)
     const lock = await acquireTargetLock(cwd, targetDir)
@@ -222,10 +280,18 @@ describe('目标目录锁', () => {
     const metadata = JSON.parse(await readFile(lockPath, 'utf8')) as {
       pid: number
     }
-    metadata.pid = 2_147_483_647
+    const deadPid = 2_147_483_647
+    metadata.pid = deadPid
     await writeFile(lockPath, JSON.stringify(metadata))
-    vi.spyOn(process, 'kill').mockImplementation(() => {
-      throw Object.assign(new Error('No such process'), { code: 'ESRCH' })
+    mockProcessDead(deadPid)
+  }
+
+  function mockProcessDead(deadPid: number): void {
+    vi.spyOn(process, 'kill').mockImplementation(pid => {
+      if (pid === deadPid) {
+        throw Object.assign(new Error('No such process'), { code: 'ESRCH' })
+      }
+      return true
     })
   }
 })

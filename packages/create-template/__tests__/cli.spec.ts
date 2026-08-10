@@ -54,7 +54,7 @@ describe('create-template CLI', () => {
     mockedCreateDebugger.mockReturnValue(debug)
     mockedReadJson.mockResolvedValue({
       name: '@eljs/create-template',
-      version: '1.3.2-alpha.0',
+      version: '2.0.0-alpha.0',
     })
     mockedUpdateNotifier.mockReturnValue({
       notify,
@@ -77,8 +77,6 @@ describe('create-template CLI', () => {
       'orders-service',
       '--cwd',
       '/workspace',
-      '--scene',
-      'npm',
       '--template',
       'template-npm-node',
       '--force',
@@ -91,7 +89,6 @@ describe('create-template CLI', () => {
       allowTemplateScripts: true,
       cwd: '/workspace',
       force: true,
-      scene: 'npm',
       signal: expect.any(AbortSignal),
       template: 'template-npm-node',
     })
@@ -116,7 +113,7 @@ describe('create-template CLI', () => {
     expect(debug).toHaveBeenCalledWith('projectName:', 'debug-project')
     expect(debug).toHaveBeenCalledWith('options:%O', { merge: true })
     expect(mockedUpdateNotifier).toHaveBeenCalledWith({
-      pkg: { name: '@eljs/create-template', version: '1.3.2-alpha.0' },
+      pkg: { name: '@eljs/create-template', version: '2.0.0-alpha.0' },
     })
     await vi.waitFor(() => expect(notify).toHaveBeenCalledOnce())
   })
@@ -179,14 +176,29 @@ describe('create-template CLI', () => {
 
   it('领域错误输出简洁消息并设置退出码', async () => {
     run.mockRejectedValue(
-      new AppError('Unknown application scene', {
+      new AppError('Unknown application template', {
         code: 'CREATE_INVALID_OPTIONS',
       }),
     )
 
     await cli()
 
-    expect(logger.error).toHaveBeenCalledWith('Unknown application scene')
+    expect(logger.error).toHaveBeenCalledWith('Unknown application template')
+    expect(process.exitCode).toBe(1)
+  })
+
+  it('错误日志失败时仍保留领域退出码', async () => {
+    vi.mocked(logger.error).mockImplementationOnce(() => {
+      throw new Error('Logger failed')
+    })
+    run.mockRejectedValue(
+      new AppError('Unknown application template', {
+        code: 'CREATE_INVALID_OPTIONS',
+      }),
+    )
+
+    await expect(cli()).resolves.toBeUndefined()
+
     expect(process.exitCode).toBe(1)
   })
 

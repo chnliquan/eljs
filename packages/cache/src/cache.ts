@@ -1,16 +1,16 @@
-import {
-  mkdir,
-  pathExists,
-  pathExistsSync,
-  readFile,
-  remove,
-  writeJson,
-} from '@eljs/utils/file'
 import * as crypto from 'node:crypto'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 
+import {
+  CACHE_FILE_VERSION,
+  isCacheTemporaryFile,
+  readCacheFile,
+  STALE_CACHE_TEMP_FILE_AGE_MS,
+  writeCacheFileAtomic,
+} from './internal/cache-file'
+import { createDefaultCacheKey } from './internal/cache-key'
 import type {
   CacheEntry,
   CacheFile,
@@ -22,33 +22,80 @@ import type {
   CleanupResult,
 } from './types'
 
+const SMALL_FILE_HASH_LIMIT = 50 * 1024
+const FILE_OPERATION_CONCURRENCY = 32
+const FILE_LIMIT_ENFORCEMENT_ATTEMPTS = 3
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
+
 /**
- * 缓存类
+ * 清理扫描中已完成文件系统检查的候选文件
+ *
+ * @remarks
+ * `countsTowardFileLimit` 区分正式缓存与崩溃遗留临时文件，避免临时文件删除数量污染磁盘缓存统计
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export class Cache<T = any> {
+interface CleanupCandidate {
+  cacheData: CacheFile<unknown> | null
+  cacheKey: string | undefined
+  countsTowardFileLimit: boolean
+  file: string
+  filePath: string
+  size: number
+  timestamp: number
+  ttl: number
+}
+
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  mapper: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length)
+  let nextIndex = 0
+
+  const workers = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    async () => {
+      while (nextIndex < items.length) {
+        const index = nextIndex++
+        const item = items[index]
+
+        if (item !== undefined) {
+          results[index] = await mapper(item, index)
+        }
+      }
+    },
+  )
+
+  await Promise.all(workers)
+  return results
+}
+
+/**
+ * 提供内存 LRU 与原子磁盘持久化的双层缓存
+ *
+ * @remarks
+ * 实例支持文件关联缓存和逻辑键缓存，同一实例内的同键读写按调用顺序执行
+ * 磁盘异常按 best-effort 语义降级，不会阻断调用方继续计算源数据
+ *
+ * @typeParam T - 缓存中的业务数据类型
+ */
+export class Cache<T = unknown> {
   /**
    * 构造函数选项
    */
-  public constructorOptions: CacheOptions<T>
+  public readonly constructorOptions: Readonly<CacheOptions<T>>
   /**
    * 缓存配置选项（已解析包含默认值）
    */
-  public options: Required<
-    Omit<CacheOptions<T>, 'keyGenerator' | 'serializer' | 'validator'>
+  public readonly options: Readonly<
+    Required<Omit<CacheOptions<T>, 'keyGenerator' | 'serializer' | 'validator'>>
   >
   /**
    * 缓存目录路径
    */
-  public cacheDir: string
-  /**
-   * 内存缓存存储
-   */
-  public memoryCache: Map<string, CacheEntry<T>> = new Map()
-  /**
-   * 缓存统计信息
-   */
-  public stats: CacheStats = {
+  public readonly cacheDir: string
+  private readonly _memoryCache: Map<string, CacheEntry<T>> = new Map()
+  private readonly _stats: CacheStats = {
     hits: 0,
     misses: 0,
     files: 0,
@@ -60,21 +107,45 @@ export class Cache<T = any> {
    */
   private _initialized = false
   /**
+   * 当前实例是否仍可用，初始化失败后变为 `false`
+   */
+  private _enabled: boolean
+  /**
    * 初始化Promise，用于防止重复初始化
    */
   private _initializationPromise: Promise<void> | null = null
   /**
    * 数据序列化器
    */
-  private _serializer: CacheSerializer<T>
+  private readonly _serializer: CacheSerializer<T>
   /**
    * 键生成器函数
    */
-  private _keyGenerator: CacheKeyGenerator<T>
+  private readonly _keyGenerator: CacheKeyGenerator<T>
   /**
    * 缓存验证器
    */
-  private _validator?: CacheValidator<T>
+  private readonly _validator?: CacheValidator<T>
+  /**
+   * 已完成边界校验并按毫秒取整的条目存活时间
+   */
+  private readonly _ttlMilliseconds: number
+  /**
+   * 当前清理任务，同一实例同时只扫描一次缓存目录
+   */
+  private _cleanupPromise: Promise<CleanupResult> | null = null
+  /**
+   * 当前清空任务，后续写入必须等待清空完成后再进入新生命周期
+   */
+  private _clearPromise: Promise<void> | null = null
+  /**
+   * 按缓存键串行的读写任务，保证同一键的校验、删除与磁盘发布互不覆盖
+   */
+  private readonly _keyOperations: Map<string, Promise<void>> = new Map()
+  /**
+   * 清空操作递增的生命周期代次，旧代次中尚未落盘的写入必须放弃发布
+   */
+  private _generation = 0
 
   /**
    * 缓存是否已初始化
@@ -84,30 +155,134 @@ export class Cache<T = any> {
   }
 
   /**
+   * 当前实例是否可执行缓存读写
+   *
+   * @remarks
+   * 该值同时受构造配置和初始化结果影响，初始化失败时会自动变为 `false`
+   */
+  public get enabled(): boolean {
+    return this._enabled
+  }
+
+  /**
+   * 当前只读的内存缓存快照
+   *
+   * @remarks
+   * 该视图用于诊断和观测，条目数量受 `maxFiles` 的 LRU 约束
+   */
+  public get memoryCache(): ReadonlyMap<string, Readonly<CacheEntry<T>>> {
+    return new Map(
+      [...this._memoryCache].map(([cacheKey, cacheEntry]) => [
+        cacheKey,
+        Object.freeze({ ...cacheEntry }),
+      ]),
+    )
+  }
+
+  /**
+   * 当前缓存统计快照
+   *
+   * @remarks
+   * 命中统计会实时更新，磁盘文件数和空间使用量由 `getStats` 刷新为权威值
+   */
+  public get stats(): Readonly<CacheStats> {
+    return { ...this._stats }
+  }
+
+  /**
    * 创建新的缓存实例
+   *
+   * @remarks
+   * 启用缓存时会立即启动异步初始化，首次调用异步方法会等待初始化完成
+   * 初始化失败后实例会自动降级为禁用状态，读取返回未命中且写入不生效
+   *
    * @param options - 缓存配置选项，包括自定义函数
+   * @throws `cacheDir` 为空、TTL 无法安全转换为正毫秒数或最大文件数不是正安全整数时抛出
    */
   public constructor(options: CacheOptions<T> = {}) {
-    this.constructorOptions = options
+    this.constructorOptions = Object.freeze({ ...options })
+
+    const cacheDir = options.cacheDir ?? this._getDefaultCacheDir()
+    const ttlDays = options.ttlDays ?? 7
+    const maxFiles = options.maxFiles ?? 1000
+    const ttlMilliseconds = ttlDays * MILLISECONDS_PER_DAY
+
+    if (typeof cacheDir !== 'string' || cacheDir.trim().length === 0) {
+      throw new TypeError('cacheDir must be a non-empty string')
+    }
+
+    if (options.enabled !== undefined && typeof options.enabled !== 'boolean') {
+      throw new TypeError('enabled must be a boolean')
+    }
+
+    if (
+      options.autoCleanup !== undefined &&
+      typeof options.autoCleanup !== 'boolean'
+    ) {
+      throw new TypeError('autoCleanup must be a boolean')
+    }
+
+    if (
+      !Number.isFinite(ttlDays) ||
+      ttlDays <= 0 ||
+      !Number.isFinite(ttlMilliseconds) ||
+      ttlMilliseconds <= 0 ||
+      ttlMilliseconds > Number.MAX_SAFE_INTEGER
+    ) {
+      throw new RangeError(
+        'ttlDays must produce a finite positive TTL no greater than Number.MAX_SAFE_INTEGER milliseconds',
+      )
+    }
+
+    if (!Number.isSafeInteger(maxFiles) || maxFiles <= 0) {
+      throw new RangeError('maxFiles must be a positive safe integer')
+    }
+
+    if (
+      options.keyGenerator !== undefined &&
+      typeof options.keyGenerator !== 'function'
+    ) {
+      throw new TypeError('keyGenerator must be a function')
+    }
+
+    if (
+      options.validator !== undefined &&
+      typeof options.validator !== 'function'
+    ) {
+      throw new TypeError('validator must be a function')
+    }
+
+    if (
+      options.serializer !== undefined &&
+      (typeof options.serializer !== 'object' ||
+        options.serializer === null ||
+        typeof options.serializer.serialize !== 'function' ||
+        typeof options.serializer.deserialize !== 'function')
+    ) {
+      throw new TypeError(
+        'serializer must define serialize and deserialize functions',
+      )
+    }
 
     // 使用默认值设置选项（扁平化选项结构）
-    this.options = {
+    this.options = Object.freeze({
       enabled: options.enabled ?? true,
-      cacheDir: options.cacheDir ?? this._getDefaultCacheDir(),
-      ttlDays: options.ttlDays ?? 7,
+      cacheDir,
+      ttlDays,
       autoCleanup: options.autoCleanup ?? true,
-      maxFiles: options.maxFiles ?? 1000,
-    }
+      maxFiles,
+    })
+    this._enabled = this.options.enabled
+    this._ttlMilliseconds = Math.max(1, Math.round(ttlMilliseconds))
 
     this.cacheDir = path.resolve(this.options.cacheDir)
 
     // 设置自定义函数或使用默认值
     this._serializer = options.serializer ?? this._defaultSerializer
-    this._keyGenerator =
-      options.keyGenerator ?? this._defaultKeyGenerator.bind(this)
+    this._keyGenerator = options.keyGenerator ?? createDefaultCacheKey
     this._validator = options.validator
 
-    if (this.options.enabled) {
+    if (this.enabled) {
       // 延迟初始化以避免阻塞启动，但缓存Promise以防止重复执行
       this._initializationPromise = this._initializeAsync()
     }
@@ -115,57 +290,100 @@ export class Cache<T = any> {
 
   /**
    * 通过文件路径获取缓存数据
+   *
+   * @remarks
+   * 文件身份按绝对路径归一化；源文件不存在、条目过期、校验失败或发生 I/O 错误时均返回 `null`
+   * 命中对象数据时返回内存中的同一引用，调用方不应直接修改该对象
+   *
    * @param filePath - 要获取缓存的文件路径
    * @returns 缓存的数据，如果未找到或无效则返回 null
    */
   public async get(filePath: string): Promise<T | null> {
-    if (!this.options.enabled) {
+    if (!this.enabled) {
       return null
     }
 
     await this._ensureInitialized()
 
+    if (!this.enabled) {
+      return null
+    }
+
+    await this._waitForClear()
+
+    const normalizedPath = path.resolve(filePath)
+    const cacheKey = this._getCacheKey(normalizedPath)
+    const generation = this._generation
+
     try {
-      // 检查文件是否存在
-      if (!(await pathExists(filePath))) {
+      return await this._runKeyOperation(cacheKey, async () => {
+        if (generation !== this._generation) {
+          this._recordMiss()
+          return null
+        }
+
+        let fileStats: fs.Stats
+
+        try {
+          fileStats = await fs.promises.stat(normalizedPath)
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+            throw error
+          }
+
+          if (generation === this._generation) {
+            this._memoryCache.delete(cacheKey)
+            await this._removeFromDisk(cacheKey)
+          }
+
+          this._recordMiss()
+          return null
+        }
+
+        // 首先检查内存缓存
+        let cacheEntry = this._memoryCache.get(cacheKey)
+
+        // 如果不在内存中，尝试从磁盘加载
+        if (!cacheEntry) {
+          const diskEntry = await this._loadFromDisk(cacheKey)
+          if (diskEntry && generation === this._generation) {
+            cacheEntry = diskEntry
+            this._setMemoryEntry(cacheKey, cacheEntry)
+          }
+        }
+
+        // 验证缓存
+        if (
+          cacheEntry &&
+          generation === this._generation &&
+          (await this._isCacheValid(cacheEntry, fileStats, normalizedPath))
+        ) {
+          if (generation !== this._generation) {
+            this._recordMiss()
+            return null
+          }
+
+          this._setMemoryEntry(cacheKey, cacheEntry)
+          this._recordHit()
+          return cacheEntry.data
+        }
+
+        if (generation !== this._generation) {
+          this._recordMiss()
+          return null
+        }
+
+        // 缓存无效，清理
+        if (cacheEntry) {
+          this._memoryCache.delete(cacheKey)
+          await this._removeFromDisk(cacheKey)
+        }
+
         this._recordMiss()
         return null
-      }
-
-      const fileStats = await fs.promises.stat(filePath)
-
-      const cacheKey = this._getCacheKey(filePath)
-      // 首先检查内存缓存
-      let cacheEntry = this.memoryCache.get(cacheKey)
-
-      // 如果不在内存中，尝试从磁盘加载
-      if (!cacheEntry) {
-        const diskEntry = await this._loadFromDisk(cacheKey)
-        if (diskEntry) {
-          cacheEntry = diskEntry
-          this.memoryCache.set(cacheKey, cacheEntry)
-        }
-      }
-
-      // 验证缓存
-      if (
-        cacheEntry &&
-        (await this._isCacheValid(cacheEntry, fileStats, filePath))
-      ) {
-        this._recordHit()
-        return cacheEntry.data
-      }
-
-      // 缓存无效，清理
-      if (cacheEntry) {
-        this.memoryCache.delete(cacheKey)
-        await this._removeFromDisk(cacheKey)
-      }
-
-      this._recordMiss()
-      return null
+      })
     } catch (error) {
-      console.warn(`Failed to get cache for ${filePath}:`, error)
+      console.warn(`Failed to get cache for ${normalizedPath}:`, error)
       this._recordMiss()
       return null
     }
@@ -173,120 +391,226 @@ export class Cache<T = any> {
 
   /**
    * 为文件路径设置缓存数据
+   *
+   * @remarks
+   * 同一缓存键的写入按调用顺序串行，内存写入成功但磁盘持久化失败时方法仍会正常结束并输出警告
+   * 若执行期间发生 `clear`，该次旧生命周期写入会被放弃
+   *
    * @param filePath - 要缓存数据的文件路径
    * @param data - 要缓存的数据
    */
   public async set(filePath: string, data: T): Promise<void> {
-    if (!this.options.enabled) {
+    if (!this.enabled) {
       return
     }
 
+    const generation = this._generation
     await this._ensureInitialized()
 
+    if (!this.enabled) {
+      return
+    }
+
+    await this._waitForClear()
+
+    if (generation !== this._generation) {
+      return
+    }
+
+    const normalizedPath = path.resolve(filePath)
+    const cacheKey = this._getCacheKey(normalizedPath)
+    let shouldCleanup = false
+
     try {
-      const fileStats = await fs.promises.stat(filePath)
-      const fileHash = await this._getFileHash(filePath)
+      await this._runKeyOperation(cacheKey, async () => {
+        const fileStats = await fs.promises.stat(normalizedPath)
+        const fileHash =
+          fileStats.size < SMALL_FILE_HASH_LIMIT
+            ? await this._getFileHash(normalizedPath)
+            : ''
 
-      const cacheKey = this._getCacheKey(filePath)
-      const cacheEntry: CacheEntry<T> = {
-        data,
-        timestamp: Date.now(),
-        mtime: fileStats.mtimeMs,
-        size: fileStats.size,
-        hash: fileHash,
-        key: cacheKey,
-      }
+        if (generation !== this._generation) {
+          return
+        }
 
-      // 保存到内存缓存
-      this.memoryCache.set(cacheKey, cacheEntry)
+        const cacheEntry: CacheEntry<T> = {
+          data,
+          timestamp: Date.now(),
+          ttl: this._ttlMilliseconds,
+          mtime: fileStats.mtimeMs,
+          size: fileStats.size,
+          hash: fileHash,
+          key: cacheKey,
+        }
 
-      // 保存到磁盘缓存
-      await this._saveToDisk(cacheKey, cacheEntry)
+        this._setMemoryEntry(cacheKey, cacheEntry)
+        const saved = await this._saveToDisk(cacheKey, cacheEntry)
 
-      this._updateStats()
+        shouldCleanup =
+          saved &&
+          this._stats.files > this.options.maxFiles &&
+          generation === this._generation
+      })
     } catch (error) {
-      console.warn(`Failed to cache data for ${filePath}:`, error)
+      console.warn(`Failed to cache data for ${normalizedPath}:`, error)
+    }
+
+    if (shouldCleanup) {
+      await this._enforceFileLimit()
     }
   }
 
   /**
    * 通过数据设置缓存（非基于文件）
+   *
+   * @remarks
+   * 返回的键可直接传给 `getByKey`，同一生成键的后续写入会覆盖先前数据
+   * 若缓存已禁用或写入被并发的 `clear` 取消，则返回 `null`
+   *
    * @param data - 要缓存的数据
    * @param metadata - 可选的元数据
+   * @returns 实际使用的缓存键，未写入时返回 `null`
+   * @throws 键生成器抛错、返回空键或时间戳无效时抛出
    */
   public async setByData(
     data: T,
     metadata?: { timestamp?: number },
-  ): Promise<void> {
-    if (!this.options.enabled) {
-      return
+  ): Promise<string | null> {
+    if (!this.enabled) {
+      return null
     }
 
+    const generation = this._generation
     await this._ensureInitialized()
 
+    if (!this.enabled) {
+      return null
+    }
+
+    await this._waitForClear()
+
+    if (generation !== this._generation) {
+      return null
+    }
+
+    const timestamp = metadata?.timestamp ?? Date.now()
+
+    if (!Number.isFinite(timestamp) || timestamp < 0) {
+      throw new RangeError(
+        'metadata.timestamp must be a finite non-negative number',
+      )
+    }
+
     const cacheKey = this._keyGenerator(data)
+    this._validateCacheKey(cacheKey)
+    let stored = false
+    let shouldCleanup = false
 
     try {
-      const cacheEntry: CacheEntry<T> = {
-        data,
-        timestamp: metadata?.timestamp ?? Date.now(),
-        mtime: Date.now(),
-        size: 0,
-        hash: '',
-        key: cacheKey,
-      }
+      await this._runKeyOperation(cacheKey, async () => {
+        if (generation !== this._generation) {
+          return
+        }
 
-      // 保存到内存缓存
-      this.memoryCache.set(cacheKey, cacheEntry)
+        const cacheEntry: CacheEntry<T> = {
+          data,
+          timestamp,
+          ttl: this._ttlMilliseconds,
+          mtime: Date.now(),
+          size: 0,
+          hash: '',
+          key: cacheKey,
+        }
 
-      // 保存到磁盘缓存
-      await this._saveToDisk(cacheKey, cacheEntry)
+        this._setMemoryEntry(cacheKey, cacheEntry)
+        const saved = await this._saveToDisk(cacheKey, cacheEntry)
+        stored = true
 
-      this._updateStats()
+        shouldCleanup =
+          saved &&
+          this._stats.files > this.options.maxFiles &&
+          generation === this._generation
+      })
     } catch (error) {
       console.warn(`Failed to cache data:`, error)
     }
+
+    if (shouldCleanup) {
+      await this._enforceFileLimit()
+    }
+
+    return stored ? cacheKey : null
   }
 
   /**
    * 通过键获取缓存数据
+   *
+   * @remarks
+   * 同一键存在进行中的写入时会等待写入结束，过期条目会同时从内存和磁盘删除
+   *
    * @param key - 缓存键
    * @returns 缓存的数据，如果未找到或无效则返回 null
+   * @throws 键为空或不是字符串时抛出
    */
   public async getByKey(key: string): Promise<T | null> {
-    if (!this.options.enabled) {
+    if (!this.enabled) {
       return null
     }
 
     await this._ensureInitialized()
 
-    try {
-      // 首先检查内存缓存
-      let cacheEntry = this.memoryCache.get(key)
-
-      // 如果不在内存中，尝试从磁盘加载
-      if (!cacheEntry) {
-        const diskEntry = await this._loadFromDisk(key)
-        if (diskEntry) {
-          cacheEntry = diskEntry
-          this.memoryCache.set(key, cacheEntry)
-        }
-      }
-
-      // 验证缓存（基于键的缓存使用时间验证）
-      if (cacheEntry && this._isTimeValid(cacheEntry)) {
-        this._recordHit()
-        return cacheEntry.data
-      }
-
-      // 缓存无效，清理
-      if (cacheEntry) {
-        this.memoryCache.delete(key)
-        await this._removeFromDisk(key)
-      }
-
-      this._recordMiss()
+    if (!this.enabled) {
       return null
+    }
+
+    this._validateCacheKey(key)
+    await this._waitForClear()
+    const generation = this._generation
+
+    try {
+      return await this._runKeyOperation(key, async () => {
+        if (generation !== this._generation) {
+          this._recordMiss()
+          return null
+        }
+
+        // 首先检查内存缓存
+        let cacheEntry = this._memoryCache.get(key)
+
+        // 如果不在内存中，尝试从磁盘加载
+        if (!cacheEntry) {
+          const diskEntry = await this._loadFromDisk(key)
+          if (diskEntry && generation === this._generation) {
+            cacheEntry = diskEntry
+            this._setMemoryEntry(key, cacheEntry)
+          }
+        }
+
+        // 验证缓存（基于键的缓存使用时间验证）
+        if (
+          cacheEntry &&
+          generation === this._generation &&
+          this._isTimeValid(cacheEntry)
+        ) {
+          this._setMemoryEntry(key, cacheEntry)
+          this._recordHit()
+          return cacheEntry.data
+        }
+
+        if (generation !== this._generation) {
+          this._recordMiss()
+          return null
+        }
+
+        // 缓存无效，清理
+        if (cacheEntry) {
+          this._memoryCache.delete(key)
+          await this._removeFromDisk(key)
+        }
+
+        this._recordMiss()
+        return null
+      })
     } catch (error) {
       console.warn(`Failed to get cache for key ${key}:`, error)
       this._recordMiss()
@@ -296,99 +620,182 @@ export class Cache<T = any> {
 
   /**
    * 清理过期和无效的缓存文件
+   *
+   * @remarks
+   * TTL 以缓存条目的创建时间为准，超过数量上限时按最旧条目优先淘汰
+   * 超过 24 小时的原子写临时文件会一并回收，新近临时文件保留给可能仍在执行的写入
+   * 同一实例的并发调用共享一次目录扫描，扫描开始后的按键读写会等待清理完成，单文件操作使用有限并发
+   *
    * @returns 包含统计信息的清理结果
    */
-  public async cleanup(): Promise<CleanupResult> {
+  public cleanup(): Promise<CleanupResult> {
+    if (this._cleanupPromise) {
+      return this._cleanupPromise
+    }
+
+    const activeClear = this._clearPromise
+    const activeOperations = [...this._keyOperations.values()]
+    this._cleanupPromise = this._cleanupInternal(
+      activeClear,
+      activeOperations,
+    ).finally(() => {
+      this._cleanupPromise = null
+    })
+
+    return this._cleanupPromise
+  }
+
+  /**
+   * 等待初始化和已开始的按键读写结束后执行一次清理扫描
+   *
+   * @remarks
+   * 初始化预加载与清理不能并发修改同一目录，否则删除计数和磁盘统计会因竞争失真
+   * 只等待调用开始前已经存在的清空任务；后启动的 `clear` 会反向等待本次清理，避免循环等待
+   *
+   * @param activeClear - 调用 `cleanup` 时已经存在的清空任务
+   * @param activeOperations - 调用 `cleanup` 时已经存在的按键读写任务
+   * @returns 本次扫描实际删除的文件和错误信息
+   */
+  private async _cleanupInternal(
+    activeClear: Promise<void> | null,
+    activeOperations: readonly Promise<void>[],
+  ): Promise<CleanupResult> {
     const result: CleanupResult = {
       removed: 0,
       totalSize: 0,
       errors: [],
     }
 
-    if (!this.options.enabled || !(await pathExists(this.cacheDir))) {
+    await this._ensureInitialized()
+
+    if (!this.enabled) {
       return result
     }
 
+    await activeClear
+    await Promise.allSettled(activeOperations)
+
     try {
-      const files = await fs.promises.readdir(this.cacheDir)
+      let files: string[]
+
+      try {
+        files = await fs.promises.readdir(this.cacheDir)
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          return result
+        }
+
+        throw error
+      }
+
       const cacheFiles = files.filter(file => this._isManagedCacheFile(file))
-
+      const temporaryFiles = files.filter(isCacheTemporaryFile)
       const now = Date.now()
-      const ttlMs = this.options.ttlDays * 24 * 60 * 60 * 1000
+      const candidates = await mapWithConcurrency<
+        string,
+        CleanupCandidate | null
+      >(cacheFiles, FILE_OPERATION_CONCURRENCY, async file => {
+        try {
+          const filePath = path.join(this.cacheDir, file)
+          const [stat, cacheData] = await Promise.all([
+            fs.promises.stat(filePath),
+            readCacheFile(filePath),
+          ])
 
-      // 按修改时间排序，优先清理旧文件
-      const fileStats = await Promise.all(
-        cacheFiles.map(async file => {
-          try {
-            const filePath = path.join(this.cacheDir, file)
-            const stat = await fs.promises.stat(filePath)
-            return { file, filePath, mtime: stat.mtimeMs, size: stat.size }
-          } catch (error) {
-            result.errors.push(`Failed to stat ${file}: ${error}`)
-            return null
+          return {
+            cacheData,
+            cacheKey: cacheData?.metadata.key,
+            file,
+            filePath,
+            size: stat.size,
+            timestamp: cacheData?.metadata.timestamp ?? stat.mtimeMs,
+            ttl: cacheData?.metadata.ttl ?? this._ttlMilliseconds,
+            countsTowardFileLimit: true,
           }
-        }),
+        } catch (error) {
+          result.errors.push(`Failed to inspect ${file}: ${error}`)
+          return null
+        }
+      })
+      const staleTemporaryFiles = (
+        await mapWithConcurrency<string, CleanupCandidate | null>(
+          temporaryFiles,
+          FILE_OPERATION_CONCURRENCY,
+          async file => {
+            try {
+              const filePath = path.join(this.cacheDir, file)
+              const stat = await fs.promises.stat(filePath)
+
+              if (now - stat.mtimeMs <= STALE_CACHE_TEMP_FILE_AGE_MS) {
+                return null
+              }
+
+              return {
+                cacheData: null,
+                cacheKey: undefined,
+                file,
+                filePath,
+                size: stat.size,
+                timestamp: stat.mtimeMs,
+                ttl: STALE_CACHE_TEMP_FILE_AGE_MS,
+                countsTowardFileLimit: false,
+              }
+            } catch (error) {
+              result.errors.push(`Failed to inspect ${file}: ${error}`)
+              return null
+            }
+          },
+        )
+      ).filter((candidate): candidate is CleanupCandidate => candidate !== null)
+      const inspectedFiles = candidates.filter(
+        (candidate): candidate is CleanupCandidate => candidate !== null,
+      )
+      const removalCandidates = new Set(
+        inspectedFiles.filter(
+          candidate =>
+            !candidate.cacheData || now - candidate.timestamp > candidate.ttl,
+        ),
+      )
+      const retainedCandidates = inspectedFiles
+        .filter(candidate => !removalCandidates.has(candidate))
+        .sort((a, b) => a.timestamp - b.timestamp)
+      const overflow = Math.max(
+        0,
+        retainedCandidates.length - this.options.maxFiles,
       )
 
-      const validFiles = fileStats.filter(Boolean) as NonNullable<
-        (typeof fileStats)[0]
-      >[]
-      validFiles.sort((a, b) => a.mtime - b.mtime)
+      for (const candidate of retainedCandidates.slice(0, overflow)) {
+        removalCandidates.add(candidate)
+      }
 
-      // 删除过期文件
-      for (const { file, filePath, mtime, size } of validFiles) {
-        let shouldRemove = false
-        let cacheKey: string | undefined
-
-        // 检查TTL
-        if (now - mtime > ttlMs) {
-          shouldRemove = true
-        }
-
-        // 检查数量限制
-        if (
-          !shouldRemove &&
-          cacheFiles.length - result.removed > this.options.maxFiles
-        ) {
-          shouldRemove = true
-        }
-
-        // 检查缓存文件是否有效
-        if (!shouldRemove) {
+      let removedCacheFiles = 0
+      await mapWithConcurrency(
+        [...removalCandidates, ...staleTemporaryFiles],
+        FILE_OPERATION_CONCURRENCY,
+        async ({ cacheKey, countsTowardFileLimit, file, filePath, size }) => {
           try {
-            const cacheData = await this._readCacheFile(filePath)
-            if (!cacheData) {
-              shouldRemove = true
-            } else {
-              cacheKey = cacheData.metadata.key
-            }
-          } catch {
-            shouldRemove = true
-          }
-        }
-
-        if (shouldRemove) {
-          try {
-            if (!cacheKey) {
-              const cacheData = await this._readCacheFile(filePath)
-              cacheKey = cacheData?.metadata.key
-            }
-
             await fs.promises.unlink(filePath)
             result.removed++
             result.totalSize += size
 
-            // 同时从内存缓存中删除
-            if (cacheKey) {
-              this.memoryCache.delete(cacheKey)
+            if (countsTowardFileLimit) {
+              removedCacheFiles++
+            }
+
+            if (cacheKey !== undefined) {
+              this._memoryCache.delete(cacheKey)
+            } else if (countsTowardFileLimit) {
+              this._removeMemoryEntryForFile(file)
             }
           } catch (error) {
-            result.errors.push(`Failed to remove ${file}: ${error}`)
+            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+              result.errors.push(`Failed to remove ${file}: ${error}`)
+            }
           }
-        }
-      }
+        },
+      )
 
-      this._updateStats()
+      this._stats.files = cacheFiles.length - removedCacheFiles
     } catch (error) {
       result.errors.push(`Cleanup failed: ${error}`)
     }
@@ -398,12 +805,16 @@ export class Cache<T = any> {
 
   /**
    * 获取缓存统计信息
+   *
+   * @remarks
+   * `files` 和 `diskUsage` 只统计当前库管理的缓存文件，不包含同目录下的其他文件
+   *
    * @returns 包括命中率和磁盘使用量的缓存统计信息
    */
   public async getStats(): Promise<CacheStats> {
     await this._ensureInitialized()
 
-    if (!this.options.enabled) {
+    if (!this.enabled) {
       return {
         hits: 0,
         misses: 0,
@@ -413,65 +824,122 @@ export class Cache<T = any> {
       }
     }
 
-    // 计算磁盘使用量
+    await this._waitForClear()
+
     let diskUsage = 0
+    let fileCount = 0
 
     try {
-      if (await pathExists(this.cacheDir)) {
-        const files = await fs.promises.readdir(this.cacheDir)
-        for (const file of files) {
+      const files = (await fs.promises.readdir(this.cacheDir)).filter(file =>
+        this._isManagedCacheFile(file),
+      )
+      const fileSizes = await mapWithConcurrency(
+        files,
+        FILE_OPERATION_CONCURRENCY,
+        async file => {
           try {
             const stat = await fs.promises.stat(path.join(this.cacheDir, file))
-            diskUsage += stat.size
+            return stat.size
           } catch {
-            // 忽略错误
+            return null
           }
+        },
+      )
+
+      for (const size of fileSizes) {
+        if (size !== null) {
+          fileCount++
+          diskUsage += size
         }
       }
     } catch {
       // 忽略错误
     }
 
-    return {
-      ...this.stats,
-      files: this.memoryCache.size,
-      diskUsage,
-    }
+    this._stats.files = fileCount
+    this._stats.diskUsage = diskUsage
+
+    return { ...this._stats }
   }
 
   /**
    * 清空所有缓存数据
+   *
+   * @remarks
+   * 清空操作会取消尚未发布的旧生命周期写入，并等待已经开始的按键读写结束后删除受管理文件
+   * 同一实例的并发调用共享同一个清空任务
    */
-  public async clear(): Promise<void> {
-    this.memoryCache.clear()
-
-    if (!this.options.enabled || !pathExistsSync(this.cacheDir)) {
-      return
+  public clear(): Promise<void> {
+    if (this._clearPromise) {
+      return this._clearPromise
     }
+
+    const activeCleanup = this._cleanupPromise
+    const activeOperations = [...this._keyOperations.values()]
+    this._generation++
+    this._clearPromise = this._clearInternal(
+      activeCleanup,
+      activeOperations,
+    ).finally(() => {
+      this._clearPromise = null
+    })
+
+    return this._clearPromise
+  }
+
+  /**
+   * 执行一次生命周期隔离的清空操作
+   *
+   * @remarks
+   * 先等待调用开始前已经存在的清理和按键读写，再删除受管理文件
+   * `clear` 已提前递增代次，因此旧代次中尚未进入发布阶段的写入会主动放弃
+   *
+   * @param activeCleanup - 调用 `clear` 时已经存在的清理任务
+   * @param activeOperations - 调用 `clear` 时已经存在的按键读写任务
+   * @returns 内存和磁盘中的受管理缓存均完成清空后结束
+   */
+  private async _clearInternal(
+    activeCleanup: Promise<CleanupResult> | null,
+    activeOperations: readonly Promise<void>[],
+  ): Promise<void> {
+    if (this._initializationPromise) {
+      await this._initializationPromise
+    }
+
+    await activeCleanup
+    await Promise.allSettled(activeOperations)
+    this._memoryCache.clear()
 
     try {
       const files = await fs.promises.readdir(this.cacheDir)
-      await Promise.all(
-        files
-          .filter(file => this._isManagedCacheFile(file))
-          .map(file =>
-            fs.promises.unlink(path.join(this.cacheDir, file)).catch(() => {}),
-          ),
+      const cacheFiles = files.filter(
+        file => this._isManagedCacheFile(file) || isCacheTemporaryFile(file),
+      )
+
+      await mapWithConcurrency(
+        cacheFiles,
+        FILE_OPERATION_CONCURRENCY,
+        async file => {
+          await fs.promises
+            .unlink(path.join(this.cacheDir, file))
+            .catch(() => {})
+        },
       )
     } catch {
       // 忽略错误
     }
 
-    this._updateStats()
+    this._memoryCache.clear()
+    this._stats.files = 0
+    this._stats.diskUsage = 0
   }
 
   /**
    * 默认序列化器实现
    */
-  private _defaultSerializer: CacheSerializer<T> = {
+  private readonly _defaultSerializer: CacheSerializer<T> = {
     serialize: (data: T) => data,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    deserialize: (data: any) => data as T,
+    deserialize: (data: unknown) => data as T,
   }
 
   /**
@@ -479,17 +947,6 @@ export class Cache<T = any> {
    */
   private _getDefaultCacheDir(): string {
     return path.join(process.env.CACHE_DIR || os.tmpdir(), '.eljs-cache')
-  }
-
-  /**
-   * 默认键生成器实现
-   * @param data - 要生成键的数据
-   * @returns 生成的缓存键
-   */
-  private _defaultKeyGenerator(data: T): string {
-    const dataStr =
-      typeof data === 'object' ? JSON.stringify(data) : String(data)
-    return crypto.createHash('md5').update(dataStr).digest('hex')
   }
 
   /**
@@ -501,26 +958,22 @@ export class Cache<T = any> {
     }
 
     try {
-      // 确保缓存目录存在
-      if (!(await pathExists(this.cacheDir))) {
-        await mkdir(this.cacheDir)
-      }
-
-      // 自动清理过期文件
-      if (this.options.autoCleanup) {
-        setImmediate(() => {
-          void this.cleanup()
-        })
-      }
+      await fs.promises.mkdir(this.cacheDir, { recursive: true, mode: 0o700 })
 
       // 预加载有效缓存
       await this._preloadValidCache()
 
       this._initialized = true
+
+      if (this.options.autoCleanup) {
+        setImmediate(() => {
+          void this.cleanup()
+        })
+      }
     } catch (error) {
       console.warn('Cache initialization failed:', error)
       // 初始化失败时禁用缓存
-      this.options.enabled = false
+      this._enabled = false
     } finally {
       // 初始化完成（无论成功或失败），清空Promise引用
       this._initializationPromise = null
@@ -537,7 +990,7 @@ export class Cache<T = any> {
   }
 
   /**
-   * Convert an arbitrary logical cache key to a fixed, path-safe filename
+   * 将任意逻辑键转换为固定长度且路径安全的文件名
    */
   private _getCacheFilePath(cacheKey: string): string {
     const fileName = crypto.createHash('sha256').update(cacheKey).digest('hex')
@@ -546,8 +999,7 @@ export class Cache<T = any> {
   }
 
   /**
-   * Cache cleanup only owns files produced by the current hashed format or the
-   * legacy MD5 file-key format
+   * 判断文件是否属于当前哈希格式或历史 MD5 文件键格式
    */
   private _isManagedCacheFile(fileName: string): boolean {
     return /^(?:[a-f0-9]{32}|[a-f0-9]{64})\.json$/u.test(fileName)
@@ -559,12 +1011,8 @@ export class Cache<T = any> {
    * @returns 文件内容哈希值
    */
   private async _getFileHash(filePath: string): Promise<string> {
-    try {
-      const content = await readFile(filePath)
-      return crypto.createHash('md5').update(content).digest('hex')
-    } catch {
-      return ''
-    }
+    const content = await fs.promises.readFile(filePath)
+    return crypto.createHash('sha256').update(content).digest('hex')
   }
 
   /**
@@ -584,29 +1032,30 @@ export class Cache<T = any> {
       return false
     }
 
-    // 检查文件修改时间
-    if (Math.abs(cacheEntry.mtime - fileStats.mtimeMs) > 1000) {
-      // 允许1秒容差
-      return false
-    }
-
     // 检查文件大小
     if (cacheEntry.size !== fileStats.size) {
       return false
     }
 
-    // 对于小文件，检查内容哈希值
-    if (fileStats.size < 50 * 1024) {
-      // 50KB以下的文件
+    if (fileStats.size < SMALL_FILE_HASH_LIMIT) {
+      // 小文件以内容哈希为准，避免低精度文件系统时间戳造成误判
       const currentHash = await this._getFileHash(filePath)
       if (cacheEntry.hash !== currentHash) {
         return false
       }
+    } else if (cacheEntry.mtime !== fileStats.mtimeMs) {
+      // 大文件不重复读取全文，任何修改时间变化都必须使缓存失效
+      return false
     }
 
     // 如果提供了自定义验证器，运行验证
     if (this._validator) {
-      return await this._validator(cacheEntry, filePath)
+      try {
+        return await this._validator(Object.freeze({ ...cacheEntry }), filePath)
+      } catch (error) {
+        console.warn(`Cache validator failed for ${filePath}:`, error)
+        return false
+      }
     }
 
     return true
@@ -619,53 +1068,51 @@ export class Cache<T = any> {
    */
   private _isTimeValid(cacheEntry: CacheEntry<T>): boolean {
     const now = Date.now()
-    const ttlMs = this.options.ttlDays * 24 * 60 * 60 * 1000
-    return now - cacheEntry.timestamp <= ttlMs
+    return now - cacheEntry.timestamp <= cacheEntry.ttl
   }
 
   /**
    * 从磁盘预加载有效的缓存条目到内存
+   *
+   * @remarks
+   * 损坏或无法反序列化的条目只跳过，统一由显式或自动清理统计并删除
    */
   private async _preloadValidCache(): Promise<void> {
-    if (!(await pathExists(this.cacheDir))) {
-      return
-    }
-
     try {
       const files = await fs.promises.readdir(this.cacheDir)
-      const cacheFiles = files
-        .filter(file => this._isManagedCacheFile(file))
-        .slice(0, 50)
+      const managedFiles = files.filter(file => this._isManagedCacheFile(file))
+      const cacheFiles = managedFiles.slice(
+        0,
+        Math.min(50, this.options.maxFiles),
+      )
 
-      await Promise.all(
-        cacheFiles.map(async file => {
+      this._stats.files = managedFiles.length
+
+      await mapWithConcurrency(
+        cacheFiles,
+        FILE_OPERATION_CONCURRENCY,
+        async file => {
+          const filePath = path.join(this.cacheDir, file)
+
           try {
-            const filePath = path.join(this.cacheDir, file)
-            const cacheData = await this._readCacheFile(filePath)
+            const cacheData = await readCacheFile(filePath)
 
             if (!cacheData) {
               return
             }
 
-            const cacheEntry: CacheEntry<T> = {
-              data: this._serializer.deserialize(cacheData.data),
-              timestamp: cacheData.metadata.timestamp,
-              mtime: cacheData.metadata.mtime,
-              size: cacheData.metadata.size,
-              hash: cacheData.metadata.hash,
-              key: cacheData.metadata.key,
-            }
+            const cacheEntry = this._deserializeCacheFile(cacheData)
 
-            if (cacheEntry && this._isTimeValid(cacheEntry)) {
-              this.memoryCache.set(cacheEntry.key, cacheEntry)
-            } else if (cacheEntry) {
-              // 过期的缓存，删除磁盘文件
-              await fs.promises.unlink(filePath)
+            if (this._isTimeValid(cacheEntry)) {
+              await this._migrateCacheFile(cacheEntry.key, cacheEntry, filePath)
+              this._setMemoryEntry(cacheEntry.key, cacheEntry)
+            } else {
+              await this._unlinkManagedFile(filePath)
             }
           } catch {
-            // 忽略单个文件加载错误
+            // 反序列化失败的条目留给 cleanup 统一统计并删除
           }
-        }),
+        },
       )
     } catch {
       // 忽略预加载错误
@@ -673,23 +1120,24 @@ export class Cache<T = any> {
   }
 
   /**
-   * 从磁盘读取缓存文件
-   * @param filePath - 缓存文件路径
-   * @returns 缓存文件数据或 null
+   * 将已校验的磁盘结构反序列化为内存条目
+   *
+   * @param cacheData - 已通过运行时格式校验的缓存文件
+   * @returns 可放入内存层的缓存条目
    */
-  private async _readCacheFile(filePath: string): Promise<CacheFile<T> | null> {
-    try {
-      const content = await fs.promises.readFile(filePath, 'utf-8')
-      const data = JSON.parse(content) as CacheFile<T>
+  private _deserializeCacheFile(cacheData: CacheFile<unknown>): CacheEntry<T> {
+    const serializedData = cacheData.metadata.dataUndefined
+      ? undefined
+      : cacheData.data
 
-      // 验证缓存文件格式
-      if (!data.version || !data.data || !data.metadata) {
-        return null
-      }
-
-      return data
-    } catch {
-      return null
+    return {
+      data: this._serializer.deserialize(serializedData),
+      timestamp: cacheData.metadata.timestamp,
+      ttl: cacheData.metadata.ttl,
+      mtime: cacheData.metadata.mtime,
+      size: cacheData.metadata.size,
+      hash: cacheData.metadata.hash,
+      key: cacheData.metadata.key,
     }
   }
 
@@ -699,30 +1147,65 @@ export class Cache<T = any> {
    * @returns 缓存条目或 null
    */
   private async _loadFromDisk(cacheKey: string): Promise<CacheEntry<T> | null> {
-    const filePath = this._getCacheFilePath(cacheKey)
-    const cacheData = await this._readCacheFile(filePath)
+    const currentPath = this._getCacheFilePath(cacheKey)
+    const candidatePaths = [currentPath]
 
-    if (!cacheData) {
-      return null
+    if (/^[a-f0-9]{32}$/u.test(cacheKey)) {
+      candidatePaths.push(path.join(this.cacheDir, `${cacheKey}.json`))
     }
 
-    try {
-      // 反序列化数据
-      const data = this._serializer.deserialize(cacheData.data)
+    for (const filePath of candidatePaths) {
+      const cacheData = await readCacheFile(filePath)
 
-      return {
-        data,
-        timestamp: cacheData.metadata.timestamp,
-        mtime: cacheData.metadata.mtime,
-        size: cacheData.metadata.size,
-        hash: cacheData.metadata.hash,
-        key: cacheData.metadata.key,
+      if (!cacheData) {
+        await this._unlinkManagedFile(filePath)
+        continue
       }
-    } catch {
-      // 反序列化失败，清理缓存文件
-      await this._removeFromDisk(cacheKey)
-      return null
+
+      if (cacheData.metadata.key !== cacheKey) {
+        await this._unlinkManagedFile(filePath)
+        continue
+      }
+
+      try {
+        const cacheEntry = this._deserializeCacheFile(cacheData)
+
+        await this._migrateCacheFile(cacheKey, cacheEntry, filePath)
+
+        return cacheEntry
+      } catch {
+        await this._unlinkManagedFile(filePath)
+      }
     }
+
+    return null
+  }
+
+  /**
+   * 将历史文件名迁移到当前哈希命名格式
+   *
+   * @remarks
+   * 只有新文件原子发布成功后才删除旧文件，避免迁移失败造成有效缓存丢失
+   *
+   * @param cacheKey - 未哈希的逻辑缓存键
+   * @param cacheEntry - 已完成格式校验和反序列化的条目
+   * @param sourcePath - 当前读取到的磁盘文件绝对路径
+   * @returns 无需迁移或迁移尝试结束后完成
+   */
+  private async _migrateCacheFile(
+    cacheKey: string,
+    cacheEntry: CacheEntry<T>,
+    sourcePath: string,
+  ): Promise<void> {
+    if (sourcePath === this._getCacheFilePath(cacheKey)) {
+      return
+    }
+
+    if (!(await this._saveToDisk(cacheKey, cacheEntry))) {
+      return
+    }
+
+    await this._unlinkManagedFile(sourcePath)
   }
 
   /**
@@ -733,26 +1216,39 @@ export class Cache<T = any> {
   private async _saveToDisk(
     cacheKey: string,
     cacheEntry: CacheEntry<T>,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const filePath = this._getCacheFilePath(cacheKey)
 
-    const cacheFile: CacheFile<T> = {
-      version: '2.0',
-      data: this._serializer.serialize(cacheEntry.data),
-      metadata: {
-        timestamp: cacheEntry.timestamp,
-        mtime: cacheEntry.mtime,
-        size: cacheEntry.size,
-        hash: cacheEntry.hash,
-        ttl: this.options.ttlDays * 24 * 60 * 60 * 1000,
-        key: cacheEntry.key,
-      },
-    }
-
     try {
-      await writeJson(filePath, cacheFile)
+      const serializedData = this._serializer.serialize(cacheEntry.data)
+      const dataUndefined = serializedData === undefined
+      const cacheFile: CacheFile<unknown> = {
+        version: CACHE_FILE_VERSION,
+        data: dataUndefined ? null : serializedData,
+        metadata: {
+          timestamp: cacheEntry.timestamp,
+          mtime: cacheEntry.mtime,
+          size: cacheEntry.size,
+          hash: cacheEntry.hash,
+          ttl: cacheEntry.ttl,
+          key: cacheEntry.key,
+          dataUndefined: dataUndefined || undefined,
+        },
+      }
+      const existed = await fs.promises
+        .access(filePath)
+        .then(() => true)
+        .catch(() => false)
+      await writeCacheFileAtomic(filePath, cacheFile)
+
+      if (!existed) {
+        this._stats.files++
+      }
+
+      return true
     } catch (error) {
       console.warn(`Failed to save cache file ${filePath}:`, error)
+      return false
     }
   }
 
@@ -761,22 +1257,159 @@ export class Cache<T = any> {
    * @param cacheKey - 缓存键
    */
   private async _removeFromDisk(cacheKey: string): Promise<void> {
-    const filePath = this._getCacheFilePath(cacheKey)
+    const filePaths = [this._getCacheFilePath(cacheKey)]
+
+    if (/^[a-f0-9]{32}$/u.test(cacheKey)) {
+      filePaths.push(path.join(this.cacheDir, `${cacheKey}.json`))
+    }
+
+    for (const filePath of filePaths) {
+      await this._unlinkManagedFile(filePath)
+    }
+  }
+
+  /**
+   * 删除单个受管理缓存文件并同步实例文件计数
+   *
+   * @remarks
+   * 文件已经不存在时视为成功收敛，其他删除错误只记录警告并按 best-effort 语义降级
+   *
+   * @param filePath - 受管理缓存文件的绝对路径
+   * @returns 删除完成或按 best-effort 降级后结束
+   */
+  private async _unlinkManagedFile(filePath: string): Promise<void> {
+    try {
+      await fs.promises.unlink(filePath)
+      this._stats.files = Math.max(0, this._stats.files - 1)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        console.warn(`Failed to remove cache file ${filePath}:`, error)
+      }
+    }
+  }
+
+  /**
+   * 写入内存层并按访问顺序执行 LRU 淘汰
+   *
+   * @param cacheKey - 逻辑缓存键
+   * @param cacheEntry - 要写入的缓存条目
+   */
+  private _setMemoryEntry(cacheKey: string, cacheEntry: CacheEntry<T>): void {
+    this._memoryCache.delete(cacheKey)
+    this._memoryCache.set(cacheKey, cacheEntry)
+
+    while (this._memoryCache.size > this.options.maxFiles) {
+      const oldestKey = this._memoryCache.keys().next().value as
+        string | undefined
+
+      if (oldestKey === undefined) {
+        break
+      }
+
+      this._memoryCache.delete(oldestKey)
+    }
+  }
+
+  /**
+   * 在有限轮次内收敛磁盘文件数量
+   *
+   * @remarks
+   * 并发写入可能共享同一次清理扫描，因此每轮清理后重新读取权威磁盘计数
+   * 该复查避免预加载上限和清理期间的新写入使实例统计低估实际文件数
+   * 最多执行三轮，避免持续外部写入或删除失败使单次缓存写入长期阻塞
+   */
+  private async _enforceFileLimit(): Promise<void> {
+    for (
+      let attempt = 0;
+      attempt < FILE_LIMIT_ENFORCEMENT_ATTEMPTS;
+      attempt++
+    ) {
+      await this.cleanup()
+      const { files } = await this.getStats()
+
+      if (files <= this.options.maxFiles) {
+        return
+      }
+    }
+  }
+
+  /**
+   * 在缓存文件无法解析出逻辑键时按文件名清理对应内存条目
+   *
+   * @param fileName - 受管理的缓存文件名
+   */
+  private _removeMemoryEntryForFile(fileName: string): void {
+    for (const cacheKey of this._memoryCache.keys()) {
+      if (
+        path.basename(this._getCacheFilePath(cacheKey)) === fileName ||
+        `${cacheKey}.json` === fileName
+      ) {
+        this._memoryCache.delete(cacheKey)
+      }
+    }
+  }
+
+  /**
+   * 校验来自自定义键生成器或调用方的不可信逻辑键
+   *
+   * @param cacheKey - 待校验的逻辑键
+   * @throws 缓存键不是非空字符串时抛出
+   */
+  private _validateCacheKey(cacheKey: unknown): asserts cacheKey is string {
+    if (typeof cacheKey !== 'string' || cacheKey.length === 0) {
+      throw new TypeError('cache key must be a non-empty string')
+    }
+  }
+
+  /**
+   * 将同一键的读写追加到串行任务链
+   *
+   * @remarks
+   * 调用开始时已有的目录清理会先完成，避免清理依据旧快照删除随后发布的新条目
+   *
+   * @typeParam R - 缓存任务的返回值类型
+   * @param cacheKey - 逻辑缓存键
+   * @param operation - 需要串行执行的缓存任务
+   * @returns 缓存任务的返回值
+   */
+  private async _runKeyOperation<R>(
+    cacheKey: string,
+    operation: () => Promise<R>,
+  ): Promise<R> {
+    const previous = this._keyOperations.get(cacheKey) ?? Promise.resolve()
+    const activeCleanup = this._cleanupPromise
+    const current = previous
+      .catch(() => {})
+      .then(() => activeCleanup)
+      .then(operation)
+    const completion = current.then(
+      () => {},
+      () => {},
+    )
+
+    this._keyOperations.set(cacheKey, completion)
 
     try {
-      if (await pathExists(filePath)) {
-        await remove(filePath)
+      return await current
+    } finally {
+      if (this._keyOperations.get(cacheKey) === completion) {
+        this._keyOperations.delete(cacheKey)
       }
-    } catch {
-      // 忽略删除错误
     }
+  }
+
+  /**
+   * 等待当前清空生命周期完成
+   */
+  private async _waitForClear(): Promise<void> {
+    await this._clearPromise
   }
 
   /**
    * 确保缓存已初始化
    */
   private async _ensureInitialized(): Promise<void> {
-    if (!this._initialized && this.options.enabled) {
+    if (!this._initialized && this.enabled) {
       // 如果已有初始化Promise，等待它完成；否则创建新的
       if (this._initializationPromise) {
         await this._initializationPromise
@@ -791,7 +1424,7 @@ export class Cache<T = any> {
    * 记录缓存命中
    */
   private _recordHit(): void {
-    this.stats.hits++
+    this._stats.hits++
     this._updateHitRate()
   }
 
@@ -799,15 +1432,7 @@ export class Cache<T = any> {
    * 记录缓存未命中
    */
   private _recordMiss(): void {
-    this.stats.misses++
-    this._updateHitRate()
-  }
-
-  /**
-   * 更新缓存统计信息
-   */
-  private _updateStats(): void {
-    this.stats.files = this.memoryCache.size
+    this._stats.misses++
     this._updateHitRate()
   }
 
@@ -815,7 +1440,7 @@ export class Cache<T = any> {
    * 更新命中率计算
    */
   private _updateHitRate(): void {
-    const total = this.stats.hits + this.stats.misses
-    this.stats.hitRate = total > 0 ? this.stats.hits / total : 0
+    const total = this._stats.hits + this._stats.misses
+    this._stats.hitRate = total > 0 ? this._stats.hits / total : 0
   }
 }

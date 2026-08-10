@@ -1,36 +1,21 @@
+import * as crypto from 'node:crypto'
 import * as fs from 'node:fs'
-import * as os from 'node:os'
 import * as path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { Cache, CacheValidator } from '../src'
-
-// 测试工具函数
-const createTempDir = () => {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'cache-validation-test-'))
-}
-
-const createTempFile = (dir: string, filename: string, content: string) => {
-  const filePath = path.join(dir, filename)
-  fs.writeFileSync(filePath, content)
-  return filePath
-}
-
-const cleanupDir = (dir: string) => {
-  try {
-    fs.rmSync(dir, { recursive: true, force: true })
-  } catch {
-    // 忽略清理错误
-  }
-}
-
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+import {
+  cleanupDir,
+  createTempDir,
+  createTempFile,
+  waitForCondition,
+} from './test-utils'
 
 describe('Cache 验证和 TTL 测试', () => {
   let tempDir: string
 
   beforeEach(() => {
-    tempDir = createTempDir()
+    tempDir = createTempDir('cache-validation-test-')
   })
 
   afterEach(() => {
@@ -45,7 +30,7 @@ describe('Cache 验证和 TTL 测试', () => {
         autoCleanup: false,
       })
 
-      const testContent = 'original content' // 小于50KB
+      const testContent = 'a'.repeat(16) // 小于50KB
       const testFile = createTempFile(tempDir, 'small.txt', testContent)
 
       // 设置缓存
@@ -56,9 +41,8 @@ describe('Cache 验证和 TTL 测试', () => {
       expect(result).toBe('cached data')
       expect(cache.stats.hits).toBe(1)
 
-      // 修改文件内容（保持相同大小和修改时间）
-      await sleep(10) // 确保时间戳不同
-      fs.writeFileSync(testFile, 'changed content') // 相同长度，但内容不同
+      // 修改文件内容但保持相同大小
+      fs.writeFileSync(testFile, 'b'.repeat(16))
 
       // 缓存应该失效，因为内容哈希值改变
       result = await cache.get(testFile)
@@ -82,15 +66,11 @@ describe('Cache 验证和 TTL 测试', () => {
       let result = await cache.get(testFile)
       expect(result).toBe('cached large data')
 
-      // 改变文件大小，这应该能被检测到
-      const smallerContent = 'y'.repeat(30 * 1024) // 明显不同的大小
-      fs.writeFileSync(testFile, smallerContent)
-
-      // 清空内存缓存强制验证
-      cache.memoryCache.clear()
+      // 在短时间内写入同样大小的新内容
+      fs.writeFileSync(testFile, 'y'.repeat(60 * 1024))
 
       result = await cache.get(testFile)
-      expect(result).toBeNull() // 因为文件大小变化
+      expect(result).toBeNull() // 因为大文件修改时间变化
     })
 
     it('应该在文件大小变化时使缓存失效', async () => {
@@ -112,7 +92,7 @@ describe('Cache 验证和 TTL 测试', () => {
       expect(result).toBeNull()
     })
 
-    it('应该容忍1秒的修改时间差异', async () => {
+    it('应该在小文件内容未变时忽略单独的修改时间变化', async () => {
       const cache = new Cache<string>({
         enabled: true,
         cacheDir: path.join(tempDir, '.cache'),
@@ -122,16 +102,15 @@ describe('Cache 验证和 TTL 测试', () => {
       const testFile = createTempFile(tempDir, 'test.txt', 'content')
       await cache.set(testFile, 'cached data')
 
-      // 手动调整缓存条目的mtime，模拟轻微的时间差异
-      const cacheEntry = Array.from(cache.memoryCache.values())[0]
-      if (cacheEntry) {
-        // 设置999ms的差异（应该被容忍）
-        const currentStat = fs.statSync(testFile)
-        cacheEntry.mtime = currentStat.mtimeMs - 999
+      const currentStat = fs.statSync(testFile)
+      fs.utimesSync(
+        testFile,
+        currentStat.atime,
+        new Date(currentStat.mtimeMs + 999),
+      )
 
-        const result = await cache.get(testFile)
-        expect(result).toBe('cached data') // 应该仍然有效
-      }
+      const result = await cache.get(testFile)
+      expect(result).toBe('cached data')
     })
   })
 
@@ -151,8 +130,10 @@ describe('Cache 验证和 TTL 测试', () => {
       let result = await cacheWithCustomKey.getByKey('fixed-key')
       expect(result).toBe('test data')
 
-      // 等待TTL过期
-      await sleep(50)
+      await waitForCondition(() => {
+        const entry = cacheWithCustomKey.memoryCache.get('fixed-key')
+        return entry !== undefined && Date.now() - entry.timestamp > entry.ttl
+      })
 
       // 现在应该失效
       result = await cacheWithCustomKey.getByKey('fixed-key')
@@ -170,13 +151,43 @@ describe('Cache 验证和 TTL 测试', () => {
       const testFile = createTempFile(tempDir, 'test.txt', 'content')
       await cache.set(testFile, 'data')
 
-      // 等待过期
-      await sleep(10)
+      await waitForCondition(() =>
+        [...cache.memoryCache.values()].every(
+          entry => Date.now() - entry.timestamp > entry.ttl,
+        ),
+      )
 
       const cleanupResult = await cache.cleanup()
 
       expect(cleanupResult.removed).toBeGreaterThan(0)
       expect(cache.memoryCache.size).toBe(0)
+    })
+
+    it('应该跨实例保留写入时的TTL而不套用读取实例配置', async () => {
+      const cacheDir = path.join(tempDir, '.cache-entry-ttl')
+      const keyGenerator = () => 'entry-ttl-key'
+      const writer = new Cache<string>({
+        cacheDir,
+        ttlDays: 1 / (24 * 60 * 60 * 100), // 10毫秒
+        keyGenerator,
+        autoCleanup: false,
+      })
+
+      await writer.setByData('short lived')
+
+      await waitForCondition(() => {
+        const entry = writer.memoryCache.get('entry-ttl-key')
+        return entry !== undefined && Date.now() - entry.timestamp > entry.ttl
+      })
+
+      const reader = new Cache<string>({
+        cacheDir,
+        ttlDays: 365,
+        keyGenerator,
+        autoCleanup: false,
+      })
+
+      expect(await reader.getByKey('entry-ttl-key')).toBeNull()
     })
 
     it('应该保留未过期的缓存', async () => {
@@ -217,13 +228,28 @@ describe('Cache 验证和 TTL 测试', () => {
       // 设置数据
       await cache.set(testFile, 'test data')
 
-      // 清空内存缓存强制从磁盘读取并验证
-      cache.memoryCache.clear()
-
       const result = await cache.get(testFile)
 
       expect(result).toBe('test data')
       expect(validatorCalled).toBe(true)
+    })
+
+    it('应该向自定义验证器提供冻结的条目快照', async () => {
+      let entryFrozen = false
+      const cache = new Cache<string>({
+        cacheDir: path.join(tempDir, '.cache-validator-snapshot'),
+        autoCleanup: false,
+        validator: entry => {
+          entryFrozen = Object.isFrozen(entry)
+          return true
+        },
+      })
+      const testFile = createTempFile(tempDir, 'snapshot.txt', 'content')
+
+      await cache.set(testFile, 'data')
+
+      expect(await cache.get(testFile)).toBe('data')
+      expect(entryFrozen).toBe(true)
     })
 
     it('应该处理验证器抛出的异常', async () => {
@@ -246,6 +272,12 @@ describe('Cache 验证和 TTL 测试', () => {
 
       // 验证器异常应该被捕获，缓存被视为无效
       expect(result).toBeNull()
+      expect(cache.memoryCache.size).toBe(0)
+      expect(
+        fs
+          .readdirSync(cache.cacheDir)
+          .filter(file => /^[a-f0-9]{64}\.json$/u.test(file)),
+      ).toHaveLength(0)
     })
 
     it('应该支持同步验证器', async () => {
@@ -305,7 +337,7 @@ describe('Cache 验证和 TTL 测试', () => {
       fs.mkdirSync(cacheDir, { recursive: true })
 
       // 创建损坏的缓存文件
-      const corruptFile = path.join(cacheDir, 'corrupt.json')
+      const corruptFile = path.join(cacheDir, `${'a'.repeat(64)}.json`)
       fs.writeFileSync(corruptFile, 'invalid json content')
 
       const cache = new Cache<string>({
@@ -317,6 +349,98 @@ describe('Cache 验证和 TTL 测试', () => {
       // 应该能正常初始化，跳过损坏的文件
       const stats = await cache.getStats()
       expect(stats).toBeDefined()
+    })
+
+    it('应该拒绝未知版本的缓存文件', async () => {
+      const cacheDir = path.join(tempDir, '.cache-version')
+      const key = 'versioned-key'
+      const fileName = `${crypto.createHash('sha256').update(key).digest('hex')}.json`
+
+      fs.mkdirSync(cacheDir, { recursive: true })
+      fs.writeFileSync(
+        path.join(cacheDir, fileName),
+        JSON.stringify({
+          version: '999.0',
+          data: 'foreign data',
+          metadata: {
+            timestamp: Date.now(),
+            mtime: 0,
+            size: 0,
+            hash: '',
+            ttl: 1000,
+            key,
+          },
+        }),
+      )
+
+      const cache = new Cache<string>({ cacheDir, autoCleanup: false })
+
+      expect(await cache.getByKey(key)).toBeNull()
+    })
+
+    it('应该跨实例持久化falsy数据', async () => {
+      type FalsyValue = false | 0 | '' | null | undefined
+      const cacheDir = path.join(tempDir, '.cache-falsy')
+      const keyGenerator = (data: FalsyValue) => {
+        if (data === undefined) return 'undefined'
+        if (data === null) return 'null'
+        return `${typeof data}:${String(data)}`
+      }
+      const values: FalsyValue[] = [false, 0, '', null, undefined]
+      const first = new Cache<FalsyValue>({
+        cacheDir,
+        keyGenerator,
+        autoCleanup: false,
+      })
+      const keys: string[] = []
+
+      for (const value of values) {
+        const key = await first.setByData(value)
+        expect(key).not.toBeNull()
+        keys.push(key as string)
+      }
+
+      const second = new Cache<FalsyValue>({
+        cacheDir,
+        keyGenerator,
+        autoCleanup: false,
+      })
+
+      for (let index = 0; index < values.length; index++) {
+        const key = keys[index]
+
+        expect(key).toBeDefined()
+        expect(await second.getByKey(key as string)).toBe(values[index])
+        expect(second.memoryCache.get(key as string)?.data).toBe(values[index])
+      }
+    })
+
+    it('应该读取并迁移旧版MD5文件名的文件缓存', async () => {
+      const cacheDir = path.join(tempDir, '.cache-legacy-name')
+      const testFile = createTempFile(tempDir, 'legacy.txt', 'content')
+      const normalizedPath = path.resolve(testFile)
+      const logicalKey = crypto
+        .createHash('md5')
+        .update(normalizedPath)
+        .digest('hex')
+      const currentFileName = `${crypto
+        .createHash('sha256')
+        .update(logicalKey)
+        .digest('hex')}.json`
+      const legacyFileName = `${logicalKey}.json`
+      const first = new Cache<string>({ cacheDir, autoCleanup: false })
+
+      await first.set(testFile, 'legacy data')
+      fs.renameSync(
+        path.join(cacheDir, currentFileName),
+        path.join(cacheDir, legacyFileName),
+      )
+
+      const second = new Cache<string>({ cacheDir, autoCleanup: false })
+
+      expect(await second.get(testFile)).toBe('legacy data')
+      expect(fs.existsSync(path.join(cacheDir, currentFileName))).toBe(true)
+      expect(fs.existsSync(path.join(cacheDir, legacyFileName))).toBe(false)
     })
   })
 })

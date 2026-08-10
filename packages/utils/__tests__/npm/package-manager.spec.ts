@@ -9,10 +9,7 @@ import {
 import * as importedModule0 from '../../src/env'
 import * as importedModule1 from '../../src/path/workspace-lock'
 
-import {
-  clearPackageManagerCache,
-  getPackageManager,
-} from '../../src/npm/package-manager'
+import { getPackageManager } from '../../src/npm/package-manager'
 
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
 const requiredModule1 = vi.mocked(importedModule1, { deep: true })
@@ -45,9 +42,6 @@ describe('Package Manager 工具', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-
-    // 清除模块内部缓存
-    clearPackageManagerCache()
 
     // 设置默认 mock 行为
     mockHasGlobalInstallation.mockResolvedValue(false)
@@ -162,22 +156,7 @@ describe('Package Manager 工具', () => {
       expect(result).toBe('pnpm')
     })
 
-    it('应该缓存 lock 文件检测结果', async () => {
-      const testDir = '/cache-test'
-      mockGetPnpmWorkspaceRoot.mockResolvedValue(testDir)
-
-      // 第一次调用
-      const result1 = await getPackageManager(testDir)
-      expect(result1).toBe('pnpm')
-      expect(mockGetPnpmWorkspaceRoot).toHaveBeenCalledTimes(1)
-
-      // 第二次调用应该使用缓存
-      const result2 = await getPackageManager(testDir)
-      expect(result2).toBe('pnpm')
-      expect(mockGetPnpmWorkspaceRoot).toHaveBeenCalledTimes(1) // 没有新的调用
-    })
-
-    it('应该为不同目录分别缓存', async () => {
+    it('应该为不同目录分别检测', async () => {
       // 第一个目录有 pnpm
       mockGetPnpmWorkspaceRoot.mockResolvedValueOnce('/dir1')
       mockGetYarnWorkspaceRoot.mockResolvedValueOnce(null)
@@ -269,45 +248,34 @@ describe('Package Manager 工具', () => {
     })
   })
 
-  describe('缓存机制', () => {
-    it('应该正确处理缓存键', async () => {
-      // 清除缓存确保测试的独立性
-      clearPackageManagerCache()
+  describe('文件状态变化', () => {
+    it('同一目录的锁文件变化后应该重新检测', async () => {
+      const testDir = '/changing-workspace'
+      mockGetPnpmWorkspaceRoot
+        .mockResolvedValueOnce(testDir)
+        .mockResolvedValueOnce(null)
+      mockGetYarnWorkspaceRoot
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(testDir)
 
-      const testDir = '/cache-test'
+      await expect(getPackageManager(testDir)).resolves.toBe('pnpm')
+      await expect(getPackageManager(testDir)).resolves.toBe('yarn')
 
-      // 第一次调用 - 应该执行实际检测
-      mockGetPnpmWorkspaceRoot.mockResolvedValueOnce(testDir)
-      const result1 = await getPackageManager(testDir)
-      expect(result1).toBe('pnpm')
-
-      // 第二次调用同一目录 - 应该使用缓存
-      const result2 = await getPackageManager(testDir)
-      expect(result2).toBe('pnpm')
-
-      // 验证只调用了一次检测
-      expect(mockGetPnpmWorkspaceRoot).toHaveBeenCalledTimes(1)
+      expect(mockGetPnpmWorkspaceRoot).toHaveBeenCalledTimes(2)
+      expect(mockGetYarnWorkspaceRoot).toHaveBeenCalledTimes(2)
     })
 
-    it('应该处理缓存的null值', async () => {
-      const testDir = '/no-workspace'
-
-      // 设置所有检测都返回null
-      mockGetPnpmWorkspaceRoot.mockResolvedValue(null)
-      mockGetYarnWorkspaceRoot.mockResolvedValue(null)
-      mockGetNpmWorkspaceRoot.mockResolvedValue(null)
+    it('同一目录新增锁文件后不应该沿用全局检测结果', async () => {
+      const testDir = '/new-lockfile-workspace'
+      mockGetPnpmWorkspaceRoot
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(testDir)
       mockHasGlobalInstallation.mockResolvedValue(false)
 
-      // 第一次调用
-      const result1 = await getPackageManager(testDir)
-      expect(result1).toBe('npm')
+      await expect(getPackageManager(testDir)).resolves.toBe('npm')
+      await expect(getPackageManager(testDir)).resolves.toBe('pnpm')
 
-      // 第二次调用应该使用缓存的null值
-      const result2 = await getPackageManager(testDir)
-      expect(result2).toBe('npm')
-
-      // 验证 workspace 检测只调用了一次
-      expect(mockGetPnpmWorkspaceRoot).toHaveBeenCalledTimes(1)
+      expect(mockHasGlobalInstallation).toHaveBeenCalledTimes(3)
     })
   })
 

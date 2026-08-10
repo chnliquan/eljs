@@ -333,6 +333,9 @@ describe('ProjectCreator 类完整测试', () => {
       expect(mockedEljs.remove).toHaveBeenCalledWith(
         expect.stringMatching(/^\/mock\/cwd\/\.eljs-backup-/u),
       )
+      expect(mockedEljs.remove.mock.invocationCallOrder[0]).toBeLessThan(
+        targetLockMocks.updateTargetLockBackup.mock.invocationCallOrder[1],
+      )
     })
 
     it('备份日志失败时仍然执行可恢复覆盖', async () => {
@@ -458,8 +461,17 @@ describe('ProjectCreator 类完整测试', () => {
       )
     })
 
-    it('提交锁状态失败时应该保留备份并恢复原目录', async () => {
-      mockedEljs.pathExists.mockResolvedValue(true)
+    it('备份删除后提交锁状态失败时应该保留已生成目标', async () => {
+      let backupRemoved = false
+      mockedEljs.pathExists.mockImplementation(async filePath =>
+        String(filePath).includes('.eljs-backup-') ? !backupRemoved : true,
+      )
+      mockedEljs.remove.mockImplementation(async filePath => {
+        if (String(filePath).includes('.eljs-backup-')) {
+          backupRemoved = true
+        }
+        return true
+      })
       targetLockMocks.updateTargetLockBackup
         .mockResolvedValueOnce(undefined)
         .mockRejectedValueOnce(new Error('Lock update failed'))
@@ -473,12 +485,34 @@ describe('ProjectCreator 类完整测试', () => {
       await expect(create.run('existing-project')).rejects.toThrow(
         'Lock update failed',
       )
-      const backupPath = mockedEljs.move.mock.calls[0][1]
-      expect(mockedEljs.move).toHaveBeenNthCalledWith(
-        2,
-        backupPath,
+      expect(mockedEljs.move).toHaveBeenCalledTimes(1)
+      expect(mockedEljs.remove).toHaveBeenCalledWith(
+        expect.stringMatching(/^\/mock\/cwd\/\.eljs-backup-/u),
+      )
+      expect(targetLockMocks.updateTargetLockBackup).toHaveBeenLastCalledWith(
+        expect.anything(),
+        undefined,
+      )
+    })
+
+    it('提交阶段备份删除失败时不应该用可能不完整的备份覆盖生成结果', async () => {
+      mockedEljs.pathExists.mockResolvedValue(true)
+      mockedEljs.remove.mockRejectedValueOnce(
+        new Error('Backup cleanup failed'),
+      )
+
+      const create = new ProjectCreator({
+        template: './local-template',
+        force: true,
+      })
+
+      await expect(create.run('existing-project')).rejects.toMatchObject({
+        code: 'CREATE_CLEANUP_FAILED',
+        message: expect.stringContaining('Backup cleanup failed'),
+      })
+      expect(mockedEljs.move).toHaveBeenCalledTimes(1)
+      expect(mockedEljs.remove).not.toHaveBeenCalledWith(
         '/mock/cwd/existing-project',
-        true,
       )
     })
 
@@ -775,6 +809,21 @@ describe('ProjectCreator 类完整测试', () => {
           cleanupError,
         ])
       }
+    })
+
+    it('远程清理拒绝非 Error 值时应该保留可读原因', async () => {
+      mockedEljs.pathExists
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true)
+      mockedEljs.remove.mockRejectedValueOnce('Cleanup failed')
+
+      const create = new ProjectCreator({ template: 'test-template' })
+
+      await expect(create.run('test-project')).rejects.toMatchObject({
+        cause: 'Cleanup failed',
+        code: 'CREATE_CLEANUP_FAILED',
+        message: expect.stringContaining('Cleanup failed'),
+      })
     })
 
     it('应该把目标锁清理失败转换为稳定清理错误', async () => {

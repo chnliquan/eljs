@@ -9,6 +9,7 @@ describe('Create Hook Schema', () => {
       'modifyPaths',
       'modifyAppData',
       'modifyPrompts',
+      'modifyTsConfig',
       'onStart',
       'onBeforeGenerateFiles',
       'onGenerateFiles',

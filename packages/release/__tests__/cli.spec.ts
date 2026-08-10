@@ -107,7 +107,8 @@ describe('CLI 命令行接口综合测试', () => {
   const mockPackageJson = {
     name: '@eljs/release',
     version: '1.3.1',
-    description: 'Release npm package easily.',
+    description:
+      'Programmable npm release workflow for versioning, changelogs, GitHub, and ordered workspace publishing.',
   }
   let exitSpy: MockInstance<typeof process.exit>
 
@@ -157,9 +158,9 @@ describe('CLI 命令行接口综合测试', () => {
     it('应该正确设置 program 基本信息', async () => {
       await cli()
 
-      expect(mockProgram.name).toHaveBeenCalledWith('release')
+      expect(mockProgram.name).toHaveBeenCalledWith('eljs-release')
       expect(mockProgram.description).toHaveBeenCalledWith(
-        'Release npm package easily',
+        'Run a programmable npm release workflow',
       )
       expect(mockProgram.version).toHaveBeenCalledWith(
         '1.3.1',

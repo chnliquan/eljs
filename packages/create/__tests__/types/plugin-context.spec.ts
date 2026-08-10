@@ -6,9 +6,52 @@ import type {
 } from '@eljs/utils'
 import { describe, expect, it, vi } from 'vitest'
 
-import type { CreatePluginContext } from '../../src/types/plugin-context'
+import type { Api, CreatePluginContext } from '../../src'
 
 describe('CreatePluginContext 类型', () => {
+  it('应该保留 Api 兼容类型', () => {
+    const context = {} as CreatePluginContext
+    const legacyContext = context as Api
+
+    expect(legacyContext).toBe(context)
+  })
+
+  it('Api 兼容类型应该允许旧模板读取动态字段', () => {
+    const verifyLegacyTemplate = (context: Api) => {
+      context.modifyTsConfig(memo => {
+        const libraries = new Set([...(memo.compilerOptions?.lib ?? []), 'dom'])
+
+        return {
+          ...memo,
+          compilerOptions: {
+            ...memo.compilerOptions,
+            lib: [...libraries],
+          },
+        }
+      })
+
+      context.onStart(() => {
+        const { unscopedName } = context.prompts
+        const bins: Record<string, string> = {
+          [unscopedName]: `bin/${unscopedName}.js`,
+        }
+        expect(bins).toBeDefined()
+      })
+    }
+
+    expect(verifyLegacyTemplate).toBeTypeOf('function')
+  })
+
+  it('CreatePluginContext 应该要求调用方收窄未知扩展字段', () => {
+    const verifyStrictContext = (context: CreatePluginContext) => {
+      // @ts-expect-error 新上下文不会把未声明的模板扩展字段隐式视为 string
+      const framework: string = context.prompts.framework
+      return framework
+    }
+
+    expect(verifyStrictContext).toBeTypeOf('function')
+  })
+
   it('应该具有正确的 CreatePluginContext 类型结构', () => {
     // Test that CreatePluginContext type extends the expected base types
     const mockContext: Partial<CreatePluginContext> = {
@@ -38,6 +81,10 @@ describe('CreatePluginContext 类型', () => {
       mockCopyFile('source', 'destination', mockOptions)
     }).not.toThrow()
 
+    expect(() => {
+      mockCopyFile('source', 'destination')
+    }).not.toThrow()
+
     expect(mockCopyFile).toHaveBeenCalledWith(
       'source',
       'destination',
@@ -52,6 +99,10 @@ describe('CreatePluginContext 类型', () => {
 
     expect(() => {
       mockCopyTpl('source', 'destination', mockData, mockOptions)
+    }).not.toThrow()
+
+    expect(() => {
+      mockCopyTpl('source', 'destination', mockData)
     }).not.toThrow()
 
     expect(mockCopyTpl).toHaveBeenCalledWith(
@@ -69,6 +120,10 @@ describe('CreatePluginContext 类型', () => {
 
     expect(() => {
       mockCopyDirectory('source', 'destination', mockData, mockOptions)
+    }).not.toThrow()
+
+    expect(() => {
+      mockCopyDirectory('source', 'destination', mockData)
     }).not.toThrow()
 
     expect(mockCopyDirectory).toHaveBeenCalledWith(

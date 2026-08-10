@@ -169,7 +169,7 @@ export class ProjectCreator {
       }
 
       throw new AppError(
-        `Project was created, but remote template cleanup failed: ${(cleanupFailure.error as Error).message}`,
+        `Project was created, but remote template cleanup failed: ${getErrorMessage(cleanupFailure.error)}`,
         {
           cause: cleanupFailure.error,
           code: 'CREATE_CLEANUP_FAILED',
@@ -232,10 +232,21 @@ export class ProjectCreator {
     }
 
     const targetExists = await pathExists(targetDir)
+    const targetIsDirectory = targetExists && (await isDirectory(targetDir))
     let shouldOverwrite = false
     let shouldMergeExisting = Boolean(
       targetExists && this.constructorOptions.merge,
     )
+
+    if (shouldMergeExisting && !targetIsDirectory) {
+      throw new AppError(
+        `Target ${chalk.cyan(targetDir)} must be a directory when merge is enabled.`,
+        {
+          code: 'CREATE_INVALID_OPTIONS',
+          details: { targetDir },
+        },
+      )
+    }
 
     if (targetExists && !this.constructorOptions.merge) {
       if (this.constructorOptions.force) {
@@ -249,7 +260,9 @@ export class ProjectCreator {
             message: `Target directory ${chalk.cyan(targetDir)} already exists, pick an action:`,
             choices: [
               { title: 'Overwrite', value: 'overwrite' },
-              { title: 'Merge', value: 'merge' },
+              ...(targetIsDirectory
+                ? [{ title: 'Merge', value: 'merge' }]
+                : []),
               { title: 'Cancel', value: false },
             ],
           },
@@ -266,6 +279,7 @@ export class ProjectCreator {
     }
 
     let backupPath: string | undefined
+    let commitStarted = false
     const ownsTarget = !targetExists || shouldOverwrite || shouldMergeExisting
 
     try {
@@ -314,11 +328,24 @@ export class ProjectCreator {
       this._throwIfAborted('commit-target')
 
       if (backupPath) {
-        await updateTargetLockBackup(targetLock, undefined)
+        // 锁元数据在备份删除前始终保留恢复路径，避免进程崩溃后留下无主备份
+        commitStarted = true
         await remove(backupPath)
+        await updateTargetLockBackup(targetLock, undefined)
         backupPath = undefined
       }
     } catch (error) {
+      if (commitStarted) {
+        throw new AppError(
+          `Project was created, but target transaction commit failed: ${getErrorMessage(error)}`,
+          {
+            cause: error,
+            code: 'CREATE_CLEANUP_FAILED',
+            details: { backupPath, targetDir },
+          },
+        )
+      }
+
       try {
         if (backupPath) {
           if (await pathExists(backupPath)) {
@@ -336,7 +363,7 @@ export class ProjectCreator {
         }
       } catch (recoveryError) {
         throw new AppError(
-          `Create project failed and target recovery also failed${backupPath ? `; the original target is preserved at ${chalk.cyan(backupPath)}` : ''}: ${(recoveryError as Error).message}`,
+          `Create project failed and target recovery also failed${backupPath ? `; the original target is preserved at ${chalk.cyan(backupPath)}` : ''}: ${getErrorMessage(recoveryError)}`,
           {
             cause: new AggregateError(
               [error, recoveryError],
@@ -359,11 +386,22 @@ export class ProjectCreator {
    * 对尚不存在的路径解析最近存在父目录的真实位置，从而识别父目录中的符号链接
    *
    * @param projectName - 相对工作目录的项目名称
-   * @returns 通过边界校验的目标绝对路径
-   * @throws {@link AppError} 项目名为空、指向工作目录本身或解析到工作目录外时抛出
+   * @returns 通过边界校验的目标规范物理路径
+   * @throws {@link AppError} 工作目录无效，或项目名指向工作目录本身及其外部时抛出
    */
   private async _resolveTargetDir(projectName: string): Promise<string> {
     const cwd = path.resolve(this.cwd)
+
+    if (!(await isDirectory(cwd))) {
+      throw new AppError(
+        `Invalid cwd ${chalk.cyan(cwd)}: expected an existing directory.`,
+        {
+          code: 'CREATE_INVALID_OPTIONS',
+          details: { cwd },
+        },
+      )
+    }
+
     const targetDir = path.resolve(cwd, projectName)
     const relativeTarget = path.relative(cwd, targetDir)
 
@@ -403,7 +441,8 @@ export class ProjectCreator {
       )
     }
 
-    return targetDir
+    // 后续备份、生成和锁恢复必须使用同一物理路径身份，避免末级符号链接被移动后锁指向变化
+    return canonicalTarget
   }
 
   /**
@@ -601,4 +640,8 @@ function isSameOrDescendant(parent: string, candidate: string): boolean {
       relativePath !== '..' &&
       !path.isAbsolute(relativePath))
   )
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }

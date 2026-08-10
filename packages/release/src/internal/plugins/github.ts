@@ -12,10 +12,11 @@ const GITHUB_API_VERSION = '2022-11-28'
  * 从不可信 Git remote URL 中校验并提取的 GitHub 仓库坐标
  *
  * @remarks
- * 只有 `github.com` 和 `github.*` 主机且路径严格为 owner/repo 时才会构造该值
+ * 只有公共 GitHub、`github.*` 主机或显式配置的企业主机且路径严格为 owner/repo 时才会构造该值
  */
 interface GithubRepository {
-  readonly apiUrl: string
+  /** 仅在公共 GitHub 或显式信任的企业主机上提供 */
+  readonly apiUrl?: string
   readonly owner: string
   readonly repo: string
   readonly url: string
@@ -24,19 +25,33 @@ interface GithubRepository {
 export default definePlugin(context => {
   context.describe({
     enable() {
-      return Boolean(getGithubRepository(getGitUrlSync(context.cwd)))
+      return Boolean(
+        getGithubRepository(
+          getGitUrlSync(context.cwd),
+          context.config.github.enterpriseHost,
+        ),
+      )
     },
   })
 
   context.onCheck(async () => {
-    const { mode, release, tokenEnv } = context.config.github
+    const { enterpriseHost, mode, release, tokenEnv } = context.config.github
 
-    if (
-      release &&
-      mode === 'api' &&
-      !context.config.dryRun &&
-      !process.env[tokenEnv]
-    ) {
+    if (!release || mode !== 'api' || context.config.dryRun) {
+      return
+    }
+
+    const repository = getGithubRepository(
+      getGitUrlSync(context.cwd),
+      enterpriseHost,
+    )
+    if (repository && !repository.apiUrl) {
+      throw new AppError(
+        `GitHub API release for enterprise host \`${new URL(repository.url).hostname}\` requires an explicit \`github.enterpriseHost\` configuration.`,
+      )
+    }
+
+    if (!process.env[tokenEnv]) {
       throw new AppError(
         `GitHub API release requires a token in the \`${tokenEnv}\` environment variable.`,
       )
@@ -58,7 +73,10 @@ export default definePlugin(context => {
       if (!gitUrl) {
         return
       }
-      const repository = getGithubRepository(gitUrl)
+      const repository = getGithubRepository(
+        gitUrl,
+        context.config.github.enterpriseHost,
+      )
 
       if (!repository) {
         return
@@ -73,6 +91,12 @@ export default definePlugin(context => {
 
       for (const tag of tags) {
         if (context.config.github.mode === 'api') {
+          const apiUrl = repository.apiUrl
+          if (!apiUrl) {
+            throw new AppError(
+              `GitHub API release for enterprise host \`${new URL(repository.url).hostname}\` requires an explicit \`github.enterpriseHost\` configuration.`,
+            )
+          }
           const token = process.env[context.config.github.tokenEnv]
 
           if (!token) {
@@ -83,6 +107,7 @@ export default definePlugin(context => {
 
           await createGithubRelease(
             repository,
+            apiUrl,
             tag,
             changelog,
             isPrerelease,
@@ -124,12 +149,13 @@ async function openGithubReleasePage(
 
 async function createGithubRelease(
   repository: GithubRepository,
+  apiUrl: string,
   tag: string,
   body: string,
   isPrerelease: boolean,
   token: string,
 ): Promise<void> {
-  const releasesUrl = `${repository.apiUrl}/repos/${encodeURIComponent(
+  const releasesUrl = `${apiUrl}/repos/${encodeURIComponent(
     repository.owner,
   )}/${encodeURIComponent(repository.repo)}/releases`
   const headers = {
@@ -199,7 +225,10 @@ async function createGithubApiError(
   )
 }
 
-function getGithubRepository(gitUrl: string): GithubRepository | undefined {
+function getGithubRepository(
+  gitUrl: string,
+  enterpriseHost?: string,
+): GithubRepository | undefined {
   const href = parseGitRemoteUrl(gitUrl)?.href
 
   if (!href) {
@@ -209,7 +238,11 @@ function getGithubRepository(gitUrl: string): GithubRepository | undefined {
   try {
     const url = new URL(href)
 
-    if (url.hostname !== 'github.com' && !url.hostname.startsWith('github.')) {
+    if (
+      url.hostname !== 'github.com' &&
+      !url.hostname.startsWith('github.') &&
+      url.hostname !== enterpriseHost
+    ) {
       return undefined
     }
 
@@ -231,7 +264,9 @@ function getGithubRepository(gitUrl: string): GithubRepository | undefined {
       apiUrl:
         url.hostname === 'github.com'
           ? 'https://api.github.com'
-          : `${url.origin}/api/v3`,
+          : url.hostname === enterpriseHost
+            ? `${url.origin}/api/v3`
+            : undefined,
       owner,
       repo,
       url: `${url.origin}/${owner}/${repo}`,

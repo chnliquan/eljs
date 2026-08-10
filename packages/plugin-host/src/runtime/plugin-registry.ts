@@ -1,6 +1,10 @@
 import type { MaybePromiseFunction } from '@eljs/utils/types'
 
-import { PluginHostError, PluginHostErrorCode } from '../errors'
+import {
+  getPluginHostErrorMessage,
+  PluginHostError,
+  PluginHostErrorCode,
+} from '../errors'
 import type { Plugin } from '../plugin/plugin'
 
 /**
@@ -262,9 +266,7 @@ export class PluginRegistry {
     } catch (error) {
       throw new PluginHostError(
         PluginHostErrorCode.HookEnablementFailed,
-        `Evaluate Hook enablement for plugin \`${plugin.key}\` failed: ${
-          (error as Error).message
-        }`,
+        `Evaluate Hook enablement for plugin \`${plugin.key}\` failed: ${getPluginHostErrorMessage(error)}`,
         {
           cause: error,
           details: {

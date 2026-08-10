@@ -1,35 +1,16 @@
 import * as fs from 'node:fs'
-import * as os from 'node:os'
 import * as path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { Cache, CacheOptions } from '../src'
-
-// 测试工具函数
-const createTempDir = () => {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'cache-test-'))
-}
-
-const createTempFile = (dir: string, filename: string, content: string) => {
-  const filePath = path.join(dir, filename)
-  fs.writeFileSync(filePath, content)
-  return filePath
-}
-
-const cleanupDir = (dir: string) => {
-  try {
-    fs.rmSync(dir, { recursive: true, force: true })
-  } catch {
-    // 忽略清理错误
-  }
-}
+import { cleanupDir, createTempDir, createTempFile } from './test-utils'
 
 describe('Cache 基础功能测试', () => {
   let tempDir: string
   let cache: Cache<string>
 
   beforeEach(() => {
-    tempDir = createTempDir()
+    tempDir = createTempDir('cache-test-')
     cache = new Cache<string>({
       enabled: true,
       cacheDir: path.join(tempDir, '.cache'),
@@ -79,6 +60,7 @@ describe('Cache 基础功能测试', () => {
         hitRate: 0,
         diskUsage: 0,
       })
+      expect(Object.isFrozen(cache.options)).toBe(true)
     })
 
     it('初始时应该未初始化', () => {
@@ -135,9 +117,106 @@ describe('Cache 基础功能测试', () => {
         keyGenerator: () => testKey,
       })
 
-      await customCache.setByData(testData)
+      const generatedKey = await customCache.setByData(testData)
+      expect(generatedKey).toBe(testKey)
       const customResult = await customCache.getByKey(testKey)
       expect(customResult).toBe(testData)
+    })
+
+    it('默认键应该区分值类型并忽略对象属性插入顺序', async () => {
+      type KeyData = number | string | { first: number; second: number }
+      const defaultKeyCache = new Cache<KeyData>({
+        cacheDir: path.join(tempDir, '.cache-default-key'),
+        autoCleanup: false,
+      })
+
+      const numberKey = await defaultKeyCache.setByData(1)
+      const stringKey = await defaultKeyCache.setByData('1')
+      const firstObjectKey = await defaultKeyCache.setByData({
+        first: 1,
+        second: 2,
+      })
+      const reorderedObjectKey = await defaultKeyCache.setByData({
+        second: 2,
+        first: 1,
+      })
+
+      expect(numberKey).not.toBe(stringKey)
+      expect(firstObjectKey).toBe(reorderedObjectKey)
+      expect(await defaultKeyCache.getByKey(numberKey as string)).toBe(1)
+      expect(await defaultKeyCache.getByKey(stringKey as string)).toBe('1')
+    })
+
+    it('默认键应该明确拒绝循环引用', async () => {
+      interface CircularData {
+        self?: CircularData
+      }
+
+      const defaultKeyCache = new Cache<CircularData>({
+        cacheDir: path.join(tempDir, '.cache-circular-key'),
+        autoCleanup: false,
+      })
+      const circularData: CircularData = {}
+      circularData.self = circularData
+
+      await expect(defaultKeyCache.setByData(circularData)).rejects.toThrow(
+        TypeError,
+      )
+    })
+
+    it('默认键应该覆盖特殊值并拒绝不可确定的数据', async () => {
+      const defaultKeyCache = new Cache<unknown>({
+        cacheDir: path.join(tempDir, '.cache-special-key'),
+        autoCleanup: false,
+        serializer: {
+          serialize: data =>
+            typeof data === 'bigint' ? { bigint: String(data) } : data,
+          deserialize: data => data,
+        },
+      })
+      const sparseArray = new Array<unknown>(1)
+      const explicitUndefined = [undefined]
+      const keys = await Promise.all([
+        defaultKeyCache.setByData(undefined),
+        defaultKeyCache.setByData(null),
+        defaultKeyCache.setByData(true),
+        defaultKeyCache.setByData(-0),
+        defaultKeyCache.setByData(Number.NaN),
+        defaultKeyCache.setByData(1n),
+        defaultKeyCache.setByData(sparseArray),
+        defaultKeyCache.setByData(explicitUndefined),
+        defaultKeyCache.setByData(new Date('2026-01-01T00:00:00.000Z')),
+      ])
+
+      expect(new Set(keys).size).toBe(keys.length)
+      await expect(defaultKeyCache.setByData(() => undefined)).rejects.toThrow(
+        TypeError,
+      )
+      await expect(
+        defaultKeyCache.setByData(Symbol('unsupported')),
+      ).rejects.toThrow(TypeError)
+
+      const symbolProperty = { visible: true } as Record<
+        string | symbol,
+        boolean
+      >
+      symbolProperty[Symbol('unsupported')] = true
+      await expect(defaultKeyCache.setByData(symbolProperty)).rejects.toThrow(
+        TypeError,
+      )
+      await expect(
+        defaultKeyCache.setByData(new Map([['key', 'value']])),
+      ).rejects.toThrow(TypeError)
+    })
+
+    it('应该将同一文件的相对路径和绝对路径视为同一缓存', async () => {
+      const testFile = createTempFile(tempDir, 'normalized.txt', 'content')
+      const relativePath = path.relative(process.cwd(), testFile)
+
+      await cache.set(relativePath, 'normalized data')
+
+      expect(await cache.get(testFile)).toBe('normalized data')
+      expect(cache.memoryCache.size).toBe(1)
     })
 
     it('应该在缓存禁用时返回null', async () => {
@@ -164,8 +243,6 @@ describe('Cache 基础功能测试', () => {
       let result = await cache.get(testFile)
       expect(result).toBe(testData)
 
-      // 等待一段时间后修改文件
-      await new Promise(resolve => setTimeout(resolve, 10))
       fs.writeFileSync(testFile, 'modified content')
 
       // 缓存应该失效

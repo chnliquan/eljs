@@ -54,8 +54,8 @@ async function main() {
   updateNotifier({ pkg }).notify()
 
   program
-    .name('release')
-    .description('Release npm package easily')
+    .name('eljs-release')
+    .description('Run a programmable npm release workflow')
     .version(pkg.version, '-v, --version', 'Output the current version')
     .argument('[version]', 'Specify the bump version', checkVersion)
     .option('--cwd <cwd>', 'Specify the working directory')

@@ -214,6 +214,23 @@ describe('GitHub 插件测试', () => {
 
       expect(describeCall.enable({ cwd: '/it/project' })).toBe(true)
     })
+
+    it('应该支持显式配置且不以 github 开头的企业仓库', () => {
+      mockContext.config.github!.enterpriseHost = 'git.corp.example.com'
+      ;(getGitUrlSync as MockedFunction<typeof getGitUrlSync>).mockReturnValue(
+        'https://git.corp.example.com/user/repo.git',
+      )
+      ;(
+        parseGitRemoteUrl as MockedFunction<typeof parseGitRemoteUrl>
+      ).mockReturnValue({
+        href: 'https://git.corp.example.com/user/repo',
+      } as ReturnType<typeof parseGitRemoteUrl>)
+
+      githubPlugin(mockContext as unknown as ReleasePluginContext)
+      const describeCall = mockContext.describe.mock.calls[0][0]
+
+      expect(describeCall.enable({ cwd: '/it/project' })).toBe(true)
+    })
   })
 
   describe('onRelease 钩子测试', () => {
@@ -573,13 +590,14 @@ describe('GitHub 插件测试', () => {
       ;(
         parseGitRemoteUrl as MockedFunction<typeof parseGitRemoteUrl>
       ).mockReturnValue({
-        href: 'https://github.corp.example.com/team/repo',
+        href: 'https://git.corp.example.com/team/repo',
       } as ReturnType<typeof parseGitRemoteUrl>)
       const fetchMock = vi
         .fn<typeof fetch>()
         .mockResolvedValue(new Response('{}', { status: 200 }))
       vi.stubGlobal('fetch', fetchMock)
       const { onReleaseHandler } = enableApiMode()
+      mockContext.config.github!.enterpriseHost = 'git.corp.example.com'
 
       await onReleaseHandler({
         version: '1.1.0',
@@ -589,9 +607,32 @@ describe('GitHub 插件测试', () => {
       })
 
       expect(fetchMock).toHaveBeenCalledWith(
-        'https://github.corp.example.com/api/v3/repos/team/repo/releases/tags/v1.1.0',
+        'https://git.corp.example.com/api/v3/repos/team/repo/releases/tags/v1.1.0',
         expect.any(Object),
       )
+    })
+
+    it('未显式信任企业主机时不应该向其发送令牌', async () => {
+      process.env.RELEASE_TEST_GITHUB_TOKEN = 'secret-token'
+      ;(
+        parseGitRemoteUrl as MockedFunction<typeof parseGitRemoteUrl>
+      ).mockReturnValue({
+        href: 'https://github.corp.example.com/team/repo',
+      } as ReturnType<typeof parseGitRemoteUrl>)
+      const fetchMock = vi.fn<typeof fetch>()
+      vi.stubGlobal('fetch', fetchMock)
+      const { onCheckHandler, onReleaseHandler } = enableApiMode()
+
+      await expect(onCheckHandler()).rejects.toThrow('github.enterpriseHost')
+      await expect(
+        onReleaseHandler({
+          version: '1.1.0',
+          isPrerelease: false,
+          prereleaseId: null,
+          changelog: '## Changes',
+        }),
+      ).rejects.toThrow('github.enterpriseHost')
+      expect(fetchMock).not.toHaveBeenCalled()
     })
   })
 

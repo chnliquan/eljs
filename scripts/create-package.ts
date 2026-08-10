@@ -7,13 +7,13 @@ import {
   writeFileAtomicSync,
   writeJsonSync,
 } from '@eljs/utils/file'
-import { logger } from '@eljs/utils/logger'
-import { getWorkspacePackageRoots } from '@eljs/utils/path'
+import { chalk, logger } from '@eljs/utils/logger'
 import { camelCase } from '@eljs/utils/string'
 import type { PackageJson } from '@eljs/utils/types'
+import { lstatSync, readdirSync } from 'node:fs'
 import { EOL } from 'node:os'
 import path from 'node:path'
-import { argv, chalk } from 'zx'
+import { parseArgs as parseNodeArgs } from 'node:util'
 
 const step = logger.step('Create package')
 const preservedPackageFields = [
@@ -43,6 +43,7 @@ interface CreatePackageManifestOptions {
   version: string
   dirname: string
   shortName: string
+  description?: string
   existingPackageJson?: PackageJson
 }
 
@@ -52,17 +53,43 @@ interface PackageManifest extends PackageJson {
   }
 }
 
+interface CreatePackageArguments {
+  directories: string[]
+  description?: string
+  force: boolean
+}
+
+function parseArguments(args: string[]): CreatePackageArguments {
+  const { positionals: directories, values } = parseNodeArgs({
+    allowPositionals: true,
+    args,
+    options: {
+      description: { type: 'string' },
+      force: { type: 'boolean', default: false },
+    },
+    strict: true,
+  })
+  const description = values.description?.trim()
+
+  if (values.description !== undefined && !description) {
+    throw new Error('`--description` must be a non-empty string')
+  }
+
+  return { description, directories, force: values.force }
+}
+
 function createPackageManifest({
   name,
   version,
   dirname,
   shortName,
+  description,
   existingPackageJson,
 }: CreatePackageManifestOptions): PackageManifest {
   const manifest: PackageManifest = {
     name,
     version,
-    description: name,
+    description: description || name,
     keywords: ['eljs', shortName],
     homepage: `https://github.com/chnliquan/eljs/tree/master/${dirname}#readme`,
     bugs: {
@@ -163,43 +190,120 @@ main()
   })
 
 async function main(): Promise<void> {
+  const cliArguments = parseArguments(process.argv.slice(2))
   const rootPath = path.resolve(__dirname, '../')
-  const pkgPaths = await getWorkspacePackageRoots(rootPath, true)
+  const pkgPaths = getPackageDirectories(rootPath)
   const { version } = await readJson<PackageJson>(
     path.resolve(rootPath, 'package.json'),
   )
 
-  const dirs = argv._.length ? argv._ : pkgPaths
+  const dirs = cliArguments.directories.length
+    ? cliArguments.directories
+    : pkgPaths
+  const { description } = cliArguments
 
-  dirs.forEach(dirname => {
-    const pairs = dirname.split('/')
-    const shortName =
-      pairs.length > 1 ? dirname.replace(`${pairs[0]}/`, '') : dirname
+  if (description && dirs.length !== 1) {
+    throw new Error('`--description` can only be used with one package path')
+  }
+
+  dirs.forEach(directory => {
+    const { dirname, pkgDir, shortName } = resolvePackageDirectory(
+      rootPath,
+      directory,
+    )
     const name = `@eljs/${shortName}`
     step(`Initializing ${chalk.cyan(name)}`)
     console.log()
 
-    const pkgDir = path.resolve(rootPath, dirname)
+    const packageJsonPath = path.join(pkgDir, 'package.json')
+
+    if (!pathExistsSync(packageJsonPath) && !description) {
+      throw new Error(
+        `New package ${name} requires a non-empty \`--description\``,
+      )
+    }
 
     if (!pathExistsSync(pkgDir)) {
       mkdirSync(pkgDir)
     }
 
-    ensurePackageJson(name, version as string, dirname, shortName)
-    ensureReadme(name, dirname, shortName)
-    ensureSrcIndex(dirname)
-    ensureRslibConfig(dirname)
-    ensureTsconfig(dirname)
+    ensurePackageJson(
+      pkgDir,
+      name,
+      version as string,
+      dirname,
+      shortName,
+      description,
+      cliArguments.force,
+    )
+    ensureReadme(pkgDir, name, shortName)
+    ensureSrcIndex(pkgDir)
+    ensureRslibConfig(pkgDir)
+    ensureTsconfig(pkgDir)
   })
 }
 
+/**
+ * 枚举仓库约定的单层 `packages/*` 包目录，避免脚手架为固定布局加载包管理器探测链路
+ *
+ * @param rootPath - 仓库根目录
+ * @returns 相对仓库根目录的包路径
+ */
+function getPackageDirectories(rootPath: string): string[] {
+  return readdirSync(path.resolve(rootPath, 'packages'), {
+    withFileTypes: true,
+  })
+    .filter(entry => entry.isDirectory())
+    .map(entry => `packages/${entry.name}`)
+}
+
+/**
+ * 将输入路径收敛为 `packages/*` 的单层 kebab-case 包目录
+ *
+ * @param rootPath - 仓库根目录
+ * @param directory - 调用方传入的相对或绝对路径
+ * @returns 已完成边界校验的包目录信息
+ * @throws 路径逃逸工作区、嵌套多层或名称不符合约定时抛出
+ */
+function resolvePackageDirectory(rootPath: string, directory: string) {
+  const packagesDir = path.resolve(rootPath, 'packages')
+  const pkgDir = path.resolve(rootPath, directory)
+  const shortName = path.relative(packagesDir, pkgDir)
+
+  if (
+    !shortName ||
+    shortName === '..' ||
+    shortName.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(shortName) ||
+    shortName.includes(path.sep) ||
+    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(shortName)
+  ) {
+    throw new Error(
+      `Package path must be a direct kebab-case child of \`packages/\`: ${directory}`,
+    )
+  }
+
+  if (pathExistsSync(pkgDir) && lstatSync(pkgDir).isSymbolicLink()) {
+    throw new Error(`Package directory cannot be a symbolic link: ${directory}`)
+  }
+
+  return {
+    dirname: path.posix.join('packages', shortName),
+    pkgDir,
+    shortName,
+  }
+}
+
 function ensurePackageJson(
+  pkgDir: string,
   name: string,
   version: string,
   dirname: string,
   shortName: string,
+  description?: string,
+  force = false,
 ): void {
-  const pkgJSONPath = path.resolve(dirname, `package.json`)
+  const pkgJSONPath = path.join(pkgDir, 'package.json')
   const pkgJSONExists = pathExistsSync(pkgJSONPath)
   let pkgJSON: PackageJson = Object.create(null)
 
@@ -211,12 +315,13 @@ function ensurePackageJson(
     }
   }
 
-  if (argv.force || !pkgJSONExists) {
+  if (force || !pkgJSONExists) {
     const json = createPackageManifest({
       name,
       version,
       dirname,
       shortName,
+      description,
       existingPackageJson: pkgJSONExists ? pkgJSON : undefined,
     })
 
@@ -225,32 +330,35 @@ function ensurePackageJson(
   }
 }
 
-function ensureReadme(name: string, dirname: string, shortName: string): void {
-  const readmePath = path.resolve(dirname, `README.md`)
+function ensureReadme(pkgDir: string, name: string, shortName: string): void {
+  const readmePath = path.join(pkgDir, 'README.md')
 
   if (!pathExistsSync(readmePath)) {
+    const packageJson = readJsonSync<PackageJson>(
+      path.join(pkgDir, 'package.json'),
+    )
     step('Generate README.md')
     writeFileAtomicSync(
       readmePath,
       `
 # ${name}
 
-${name}
+${packageJson.description || name}
 
 ## Installation
 
 \`\`\`bash
-$ pnpm add ${name}
-// or
-$ yarn add ${name}
-// or
-$ npm i ${name} -S
+pnpm add ${name}
+# or
+yarn add ${name}
+# or
+npm install ${name}
 \`\`\`
 
 ## Usage
 
 \`\`\`ts
-import ${camelCase(shortName)} from '${name}'
+import * as ${camelCase(shortName)} from '${name}'
 \`\`\`
 
 ## API
@@ -259,46 +367,17 @@ import ${camelCase(shortName)} from '${name}'
 ## Development
 
 \`\`\`bash
-$ pnpm run dev --filter ${name}
-// or
-$ pnpm -F ${name} run dev
-\`\`\`
-
-## Publish
-
-### 1. [Conventional Commit](https://www.conventionalcommits.org/en/v1.0.0/#summary) 
-
-\`\`\`bash
-$ git commit -m 'feat(${shortName}): add some feature'
-$ git commit -m 'fix(${shortName}): fix some bug'
-\`\`\`
-
-### 2. Compile（optional）
-
-\`\`\`bash
-$ pnpm run build --filter ${name}
-// or
-$ pnpm -F ${name} run build
-\`\`\`
-
-### 3. Release
-
-\`\`\`bash
-$ pnpm run release
-
-Options:
-  --skipTests             Skip unit tests.
-  --skipBuild             Skip package build.
-  --skipRequireClean      Skip git working tree check.
+pnpm --filter ${name} dev
+pnpm --filter ${name} typecheck
 \`\`\`
   `.trim() + '\n',
     )
   }
 }
 
-function ensureSrcIndex(dirname: string): void {
-  const srcDir = path.resolve(dirname, `src`)
-  const indexPath = path.resolve(dirname, `src/index.ts`)
+function ensureSrcIndex(pkgDir: string): void {
+  const srcDir = path.join(pkgDir, 'src')
+  const indexPath = path.join(srcDir, 'index.ts')
 
   if (!pathExistsSync(indexPath)) {
     if (!pathExistsSync(srcDir)) {
@@ -314,8 +393,8 @@ export {}
   }
 }
 
-function ensureRslibConfig(dirname: string): void {
-  const rslibConfigPath = path.resolve(dirname, 'rslib.config.ts')
+function ensureRslibConfig(pkgDir: string): void {
+  const rslibConfigPath = path.join(pkgDir, 'rslib.config.ts')
 
   if (!pathExistsSync(rslibConfigPath)) {
     step('Generate rslib.config.ts')
@@ -328,9 +407,9 @@ export { default } from '../../rslib.base.config.ts'
   }
 }
 
-function ensureTsconfig(dirname: string): void {
-  const ensureTsconfigPath = path.resolve(dirname, `tsconfig.json`)
-  const ensureBuildTsconfigPath = path.resolve(dirname, `tsconfig.build.json`)
+function ensureTsconfig(pkgDir: string): void {
+  const ensureTsconfigPath = path.join(pkgDir, 'tsconfig.json')
+  const ensureBuildTsconfigPath = path.join(pkgDir, 'tsconfig.build.json')
   const tsconfigFiles = createTsconfigFiles()
 
   if (!pathExistsSync(ensureTsconfigPath)) {

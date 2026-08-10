@@ -127,6 +127,7 @@ describe('默认配置测试', () => {
     it('应该默认使用浏览器模式和 GITHUB_TOKEN', () => {
       expect(defaultConfig.github?.mode).toBe('browser')
       expect(defaultConfig.github?.tokenEnv).toBe('GITHUB_TOKEN')
+      expect(defaultConfig.github?.enterpriseHost).toBeUndefined()
     })
   })
 

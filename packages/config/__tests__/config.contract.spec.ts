@@ -2,6 +2,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
+import type { ConfigMerge, ConfigValidator } from '../src'
 import { ConfigErrorCode, ConfigLoadError, ConfigManager } from '../src'
 import {
   cleanupDir,
@@ -64,11 +65,12 @@ describe('ConfigManager 加载契约测试', () => {
     expect(syncResult).toEqual(asyncResult)
   })
 
-  it('TypeScript 临时转译文件应该在加载后清理', async () => {
+  it('TypeScript 加载不应该生成临时文件并应支持相对依赖', async () => {
+    createRawConfigFile(tempDir, 'helper.ts', 'export const enabled = true')
     const configFile = createRawConfigFile(
       tempDir,
       'config.ts',
-      'export default { enabled: true as boolean }',
+      "import { enabled } from './helper'\nexport default { enabled }",
     )
 
     await expect(ConfigManager.getConfig([configFile])).resolves.toEqual({
@@ -78,6 +80,34 @@ describe('ConfigManager 加载契约测试', () => {
       fs.readdirSync(tempDir).filter(file => file.includes('.eljs-')),
     ).toEqual([])
   })
+
+  it.skipIf(process.platform === 'win32')(
+    'TypeScript 配置应该可以从只读目录加载',
+    async () => {
+      createRawConfigFile(
+        tempDir,
+        'readonly-helper.ts',
+        'export const port = 3000',
+      )
+      const configFile = createRawConfigFile(
+        tempDir,
+        'readonly-config.ts',
+        "import { port } from './readonly-helper'\nexport default { port }",
+      )
+      fs.chmodSync(tempDir, 0o555)
+
+      try {
+        await expect(ConfigManager.getConfig([configFile])).resolves.toEqual({
+          port: 3000,
+        })
+        expect(ConfigManager.getConfigSync([configFile])).toEqual({
+          port: 3000,
+        })
+      } finally {
+        fs.chmodSync(tempDir, 0o700)
+      }
+    },
+  )
 
   it('配置文件导出原始值时应该抛出结构化错误', async () => {
     const configFile = createRawConfigFile(tempDir, 'config.json', '"text"')
@@ -184,6 +214,55 @@ describe('ConfigManager 加载契约测试', () => {
     ).resolves.toEqual({ version: 2 })
   })
 
+  it('reload 应该刷新 package-scoped ESM JavaScript 入口', async () => {
+    createRawConfigFile(tempDir, 'package.json', '{"type":"module"}')
+    const counterName = '__eljsConfigReloadEvaluationCount'
+    const configFile = createRawConfigFile(
+      tempDir,
+      'reload.js',
+      `globalThis.${counterName} = (globalThis.${counterName} ?? 0) + 1; export default { evaluationCount: globalThis.${counterName}, version: 1 }`,
+    )
+
+    try {
+      await expect(ConfigManager.getConfig([configFile])).resolves.toEqual({
+        evaluationCount: 1,
+        version: 1,
+      })
+      createRawConfigFile(
+        tempDir,
+        'reload.js',
+        `globalThis.${counterName} = (globalThis.${counterName} ?? 0) + 1; export default { evaluationCount: globalThis.${counterName}, version: 2 }`,
+      )
+
+      await expect(
+        ConfigManager.getConfig([configFile], undefined, { reload: true }),
+      ).resolves.toEqual({ evaluationCount: 2, version: 2 })
+    } finally {
+      Reflect.deleteProperty(globalThis, counterName)
+    }
+  })
+
+  it('reload 应该刷新 CommonJS 入口', async () => {
+    const configFile = createRawConfigFile(
+      tempDir,
+      'reload.cjs',
+      'module.exports = { version: 1 }',
+    )
+
+    await expect(ConfigManager.getConfig([configFile])).resolves.toEqual({
+      version: 1,
+    })
+    createRawConfigFile(
+      tempDir,
+      'reload.cjs',
+      'module.exports = { version: 2 }',
+    )
+
+    await expect(
+      ConfigManager.getConfig([configFile], undefined, { reload: true }),
+    ).resolves.toEqual({ version: 2 })
+  })
+
   it('解析失败时应该保留原始异常作为 cause', async () => {
     const configFile = path.join(tempDir, 'invalid.json')
     createRawConfigFile(tempDir, 'invalid.json', '{ invalid')
@@ -212,7 +291,7 @@ describe('ConfigManager 加载契约测试', () => {
     const overrideFile = createConfigFile(tempDir, 'override.json', {
       plugins: ['override'],
     })
-    const merge = (baseConfig: object, overrideConfig: object): object => ({
+    const merge: ConfigMerge = (baseConfig, overrideConfig) => ({
       ...baseConfig,
       ...overrideConfig,
     })
@@ -242,14 +321,42 @@ describe('ConfigManager 加载契约测试', () => {
       validate: (config, context) => ({
         ...config,
         sources: context.configFiles.map(file => path.basename(file)),
+        loadedSources: context.loadedConfigFiles.map(file =>
+          path.basename(file),
+        ),
         validated: true,
       }),
     })
 
     await expect(manager.getConfig()).resolves.toEqual({
       port: 3000,
+      loadedSources: ['config.json'],
       sources: ['config.json'],
       validated: true,
+    })
+  })
+
+  it('验证错误应该指向最后一个实际加载的配置文件', async () => {
+    const loadedFile = createConfigFile(tempDir, 'loaded.json', {
+      enabled: true,
+    })
+    const missingFile = path.join(tempDir, 'missing.json')
+    let validationContext: Parameters<ConfigValidator>[1] | undefined
+
+    await expect(
+      ConfigManager.getConfig([loadedFile, missingFile], undefined, {
+        validate: (config, context) => {
+          validationContext = context
+          throw new Error('invalid configuration')
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: ConfigErrorCode.ValidationFailed,
+      configFile: loadedFile,
+    })
+    expect(validationContext).toEqual({
+      configFiles: [loadedFile, missingFile],
+      loadedConfigFiles: [loadedFile],
     })
   })
 

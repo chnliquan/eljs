@@ -24,7 +24,7 @@ export default definePlugin(context => {
   // 拷贝模板文件
   context.registerCapability(
     'copyTpl',
-    async (from, to, data, options: CopyFileOptions) => {
+    async (from, to, data, options?: CopyFileOptions) => {
       await copyTemplate(from, to, data, {
         ...options,
         basedir: context.paths.target,
@@ -35,7 +35,7 @@ export default definePlugin(context => {
   // 拷贝文件夹
   context.registerCapability(
     'copyDirectory',
-    async (from, to, data, options: CopyFileOptions) => {
+    async (from, to, data, options?: CopyFileOptions) => {
       await copyDirectory(from, to, data, {
         ...options,
         basedir: context.paths.target,

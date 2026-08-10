@@ -1,6 +1,6 @@
 {
   "name": "@eljs/conventional-changelog-preset",
-  "version": "1.3.2-alpha.0",
+  "version": "2.0.0-alpha.0",
   "description": "Conventional changelog preset for @eljs/release.",
   "keywords": [
     "eljs",
@@ -38,7 +38,7 @@
   "dependencies": {
     "@conventional-changelog/template": "^1.2.1",
     "conventional-changelog-writer": "^9.2.0",
-    "conventional-commits-parser": "^7.1.1"
+    "conventional-commits-parser": "^7.1.2"
   },
   "engines": {
     "node": ">=22.14.0"

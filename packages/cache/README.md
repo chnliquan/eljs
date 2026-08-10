@@ -1,6 +1,7 @@
 # @eljs/cache
 
-An intelligent caching system with zero-configuration setup and smart cleanup capabilities.
+Persistent memory-and-disk caching for Node.js tools with TTL validation,
+atomic persistence, file invalidation, and bounded cleanup.
 
 [![NPM Version](https://img.shields.io/npm/v/@eljs/cache.svg)](https://www.npmjs.com/package/@eljs/cache)
 [![NPM Downloads](https://img.shields.io/npm/dm/@eljs/cache.svg)](https://www.npmjs.com/package/@eljs/cache)
@@ -9,12 +10,12 @@ An intelligent caching system with zero-configuration setup and smart cleanup ca
 ## ✨ Features
 
 - 🚀 **Zero Configuration** - Works out of the box with sensible defaults
-- ⚡ **High Performance** - Memory + disk dual-layer caching
-- 🧹 **Smart Cleanup** - Automatic cleanup of expired and invalid caches
+- ⚡ **High Performance** - Memory LRU + disk dual-layer caching
+- 🧹 **Smart Cleanup** - Continuous file-count limits and startup cleanup
 - 🔒 **Type Safety** - Full TypeScript support with generics
-- 📊 **Observable** - Built-in statistics and monitoring
+- 📊 **Observable** - Built-in hit-rate and disk-usage statistics
 - 🎯 **Flexible** - Customizable key generation, serialization, and validation
-- 🛡️ **Robust** - Intelligent cache invalidation and error handling
+- 🛡️ **Robust** - Atomic disk writes, version validation, and safe cache invalidation
 
 ## 📦 Installation
 
@@ -43,9 +44,9 @@ const cache = new Cache<string>()
 await cache.set('./config.json', 'cached data')
 const data = await cache.get('./config.json')
 
-// Data-based caching
-await cache.setByData('my data')
-const result = await cache.getByKey('generated-key')
+// Data-based caching: setByData returns the generated key
+const key = await cache.setByData('my data')
+const result = key ? await cache.getByKey(key) : null
 ```
 
 ### Type-Safe Caching (Recommended)
@@ -72,8 +73,8 @@ const userData: UserData = {
   lastUpdated: Date.now(),
 }
 
-await userCache.setByData(userData)
-const cachedUser = await userCache.getByKey('user-123') // Type: UserData | null
+const userKey = await userCache.setByData(userData)
+const cachedUser = userKey ? await userCache.getByKey(userKey) : null // Type: UserData | null
 ```
 
 ## 📖 API Reference
@@ -88,11 +89,11 @@ interface CacheOptions<T> {
   enabled?: boolean
   /** Cache directory path (default: os.tmpdir() + '/.eljs-cache') */
   cacheDir?: string
-  /** Cache time-to-live in days (default: 7) */
+  /** Positive TTL in days, safely representable in milliseconds (default: 7) */
   ttlDays?: number
   /** Whether to automatically clean up expired files on startup (default: true) */
   autoCleanup?: boolean
-  /** Maximum number of cache files (default: 1000) */
+  /** Maximum disk files and in-memory LRU entries (default: 1000) */
   maxFiles?: number
   /** Custom serializer for data persistence */
   serializer?: CacheSerializer<T>
@@ -147,17 +148,20 @@ async getByKey(key: string): Promise<T | null>
 #### `setByData()` - Cache Arbitrary Data
 
 ```typescript
-async setByData(data: T, metadata?: { timestamp?: number }): Promise<void>
+async setByData(
+  data: T,
+  metadata?: { timestamp?: number },
+): Promise<string | null>
 ```
 
 **Example:**
 
 ```typescript
-// Cache arbitrary data
-await cache.setByData({ userId: '123', preferences: {...} })
+// Cache arbitrary data and retain the generated key
+const key = await cache.setByData({ userId: '123', preferences: {...} })
 
-// Get data by generated key
-const cachedData = await cache.getByKey('generated-key')
+// Read with exactly the key returned by setByData
+const cachedData = key ? await cache.getByKey(key) : null
 ```
 
 ### Cache Management Methods
@@ -190,7 +194,7 @@ console.log(`Disk usage: ${(stats.diskUsage / 1024 / 1024).toFixed(2)}MB`)
 async cleanup(): Promise<CleanupResult>
 
 interface CleanupResult {
-  removed: number      // Number of files removed
+  removed: number      // Cache and stale atomic temporary files removed
   totalSize: number    // Space freed in bytes
   errors: string[]     // Error messages
 }
@@ -202,7 +206,8 @@ interface CleanupResult {
 async clear(): Promise<void>
 ```
 
-Clears both memory and disk cache completely.
+Clears memory, managed disk cache files, and atomic-write temporary files. Other
+files in the cache directory are left untouched.
 
 ## 🎯 Customization
 
@@ -220,9 +225,9 @@ const cache = new Cache<UserData>({
 ### Custom Serializer
 
 ```typescript
-import { deflateSync, inflateSync } from 'zlib'
+import { deflateSync, inflateSync } from 'node:zlib'
 
-const cache = new Cache<any>({
+const cache = new Cache<Record<string, unknown>>({
   serializer: {
     serialize: data => {
       // Compress data before saving
@@ -230,10 +235,14 @@ const cache = new Cache<any>({
       return deflateSync(json).toString('base64')
     },
     deserialize: compressed => {
+      if (typeof compressed !== 'string') {
+        throw new TypeError('Expected a base64 string')
+      }
+
       // Decompress data after loading
       const buffer = Buffer.from(compressed, 'base64')
       const json = inflateSync(buffer).toString()
-      return JSON.parse(json)
+      return JSON.parse(json) as Record<string, unknown>
     },
   },
 })
@@ -250,4 +259,46 @@ const cache = new Cache<ApiResponse>({
     return isRecent && hasValidData
   },
 })
+```
+
+Validators receive a read-only entry snapshot and should remain side-effect
+free. Do not await another cache operation on the same `Cache` instance from
+inside a validator, because same-key operations and global cleanup are
+intentionally ordered.
+
+## Persistence and Consistency
+
+- Cache files use a versioned JSON envelope and are published with an atomic rename. Readers never consume a partially written JSON file.
+- Cleanup removes atomic-write temporary files older than 24 hours and leaves newer temporary files alone; `clear()` removes both managed cache and temporary files immediately.
+- `false`, `0`, empty strings, `null`, and `undefined` are preserved across process restarts. When `T` includes `null`, use hit statistics or a domain wrapper if your application must distinguish a cached `null` from a miss.
+- File paths are normalized to absolute paths. Files smaller than 50KB are validated by content hash; larger files are validated by size and exact modification time.
+- TTL is stored per entry. Changing `ttlDays` affects new writes and does not rewrite the lifetime of existing entries. Configuration must convert to a positive millisecond value no greater than `Number.MAX_SAFE_INTEGER`.
+- Reads and writes to the same key are ordered within one `Cache` instance. Multiple processes can safely publish whole files, but the last completed rename wins; there is no distributed lock.
+- Persistence is best effort. A disk write failure is logged and the in-memory value remains available for the lifetime of the instance.
+- The default serializer is intended for JSON-compatible values. Use a custom serializer for `Date`, `Map`, class instances, `BigInt`, or other values that need explicit reconstruction.
+- The default data key uses SHA-256 over a type-tagged canonical representation. Primitive types remain distinct, and plain-object property insertion order does not affect the key. Functions, symbols, circular references, unsupported non-plain objects, and failing `toJSON` implementations are rejected. Provide both a custom serializer and `keyGenerator` for values such as `Map`, `Set`, or class instances without `toJSON`.
+- Always retain the key returned by `setByData`. The default key is an implementation detail and can change between package versions; use a custom deterministic `keyGenerator` when a domain key must remain stable across implementations or deployments.
+
+## Runtime Requirements
+
+- Node.js 22.14 or newer
+- No runtime package dependencies
+
+## Development
+
+```bash
+# Run this package's tests once
+pnpm --filter @eljs/cache test
+
+# Watch this package's tests
+pnpm --filter @eljs/cache test:watch
+
+# Run package-scoped coverage with repository thresholds
+pnpm --filter @eljs/cache test:coverage
+
+# Check this package's source and tests
+pnpm --filter @eljs/cache lint
+
+# Type-check source and tests
+pnpm --filter @eljs/cache typecheck
 ```

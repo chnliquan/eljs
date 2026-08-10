@@ -50,26 +50,16 @@ describe('CreateRunner 类型', () => {
       }
 
       const appData: AppData = {
-        scene: 'web',
         cliVersion: '2.1.0',
         pkg: mockPackageJson,
         projectName: 'my-project',
         packageManager: 'npm',
       }
 
-      expect(appData.scene).toBe('web')
       expect(appData.cliVersion).toBe('2.1.0')
       expect(appData.pkg).toBe(mockPackageJson)
       expect(appData.projectName).toBe('my-project')
       expect(appData.packageManager).toBe('npm')
-    })
-
-    it('应该只允许有效的场景值', () => {
-      const webScene: AppData['scene'] = 'web'
-      const nodeScene: AppData['scene'] = 'node'
-
-      expect(['web', 'node']).toContain(webScene)
-      expect(['web', 'node']).toContain(nodeScene)
     })
 
     it('应该允许有效的包管理器值', () => {
@@ -77,7 +67,6 @@ describe('CreateRunner 类型', () => {
 
       packageManagers.forEach(pm => {
         const appData: AppData = {
-          scene: 'web',
           cliVersion: '1.0.0',
           pkg: { name: 'test' },
           projectName: 'test',
@@ -90,7 +79,6 @@ describe('CreateRunner 类型', () => {
 
     it('应该允许任意类型的其他属性', () => {
       const appData: AppData = {
-        scene: 'node',
         cliVersion: '1.0.0',
         pkg: { name: 'test' },
         projectName: 'test',
@@ -111,7 +99,6 @@ describe('CreateRunner 类型', () => {
 
     it('应该允许通过泛型精确约束扩展字段', () => {
       const appData: AppData<{ deploymentRegion: string }> = {
-        scene: 'node',
         cliVersion: '1.0.0',
         pkg: { name: 'test' },
         projectName: 'test',
@@ -224,6 +211,7 @@ describe('CreateRunner 类型', () => {
         'collectingPaths',
         'collectingAppData',
         'collectingPrompts',
+        'collectingTsConfig',
         'generatingFiles',
         'completed',
         'failed',
@@ -241,6 +229,7 @@ describe('CreateRunner 类型', () => {
       expect(CreateRunnerStage.CollectingPaths).toBe('collectingPaths')
       expect(CreateRunnerStage.CollectingAppData).toBe('collectingAppData')
       expect(CreateRunnerStage.CollectingPrompts).toBe('collectingPrompts')
+      expect(CreateRunnerStage.CollectingTsConfig).toBe('collectingTsConfig')
       expect(CreateRunnerStage.GeneratingFiles).toBe('generatingFiles')
       expect(CreateRunnerStage.Completed).toBe('completed')
       expect(CreateRunnerStage.Failed).toBe('failed')
@@ -268,7 +257,7 @@ describe('CreateRunner 类型', () => {
 
     it('应该有正确数量的枚举值', () => {
       const enumValues = Object.values(CreateRunnerStage)
-      expect(enumValues).toHaveLength(9)
+      expect(enumValues).toHaveLength(10)
     })
 
     it('应该为工作流程维护枚举顺序', () => {
@@ -280,6 +269,7 @@ describe('CreateRunner 类型', () => {
         'collectingPaths',
         'collectingAppData',
         'collectingPrompts',
+        'collectingTsConfig',
         'generatingFiles',
         'completed',
         'failed',

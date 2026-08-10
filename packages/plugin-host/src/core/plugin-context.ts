@@ -2,7 +2,11 @@ import { PluginHostError, PluginHostErrorCode } from '../errors'
 import type { Hook } from '../plugin/hook'
 import type { HookRegistrationApi, HookSchema } from '../plugin/hook-schema'
 import { Plugin } from '../plugin/plugin'
-import { PluginApi, type PluginApiHostContext } from '../plugin/plugin-api'
+import {
+  PLUGIN_API_INSTANCE_PROPERTY_NAMES,
+  PluginApi,
+  type PluginApiHostContext,
+} from '../plugin/plugin-api'
 import { PluginRegistry } from '../runtime/plugin-registry'
 import type { ResolvedPlugin } from './types'
 
@@ -30,7 +34,7 @@ export type PluginContext<
  * @internal
  */
 export const PLUGIN_API_RESERVED_PROPERTY_NAMES: ReadonlySet<string> = (() => {
-  const names = new Set<string>()
+  const names = new Set<string>(PLUGIN_API_INSTANCE_PROPERTY_NAMES)
   let prototype: object | null = PluginApi.prototype
 
   while (prototype) {

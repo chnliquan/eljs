@@ -16,6 +16,22 @@ import {
 } from './types'
 
 /**
+ * `PluginApi` 实例自身占用且不能被 Hook、扩展或 capability 遮蔽的属性名
+ *
+ * @remarks
+ * TypeScript `private` 字段在运行时仍是普通字符串属性，代理上下文必须显式保留这些名称
+ *
+ * @internal
+ */
+export const PLUGIN_API_INSTANCE_PROPERTY_NAMES: ReadonlySet<string> = new Set([
+  '_host',
+  '_plugin',
+  '_remainingPlugins',
+  '_remainingPresets',
+  '_reservedMethodNames',
+])
+
+/**
  * `PluginApi` 访问插件宿主所需的最小上下文
  *
  * @internal
@@ -137,13 +153,7 @@ export class PluginApi {
     this._remainingPresets = options.remainingPresets || []
     this._remainingPlugins = options.remainingPlugins || []
 
-    for (const name of [
-      '_host',
-      '_plugin',
-      '_remainingPlugins',
-      '_remainingPresets',
-      '_reservedMethodNames',
-    ] as const) {
+    for (const name of PLUGIN_API_INSTANCE_PROPERTY_NAMES) {
       const descriptor = Object.getOwnPropertyDescriptor(this, name)
       if (descriptor) {
         Object.defineProperty(this, name, {

@@ -1,29 +1,21 @@
 import { AppError, ProjectCreator, type Config } from '@eljs/create'
 import { prompts } from '@eljs/utils/cli'
+import { logger } from '@eljs/utils/logger'
 
-import {
-  defaultConfig,
-  type RemoteTemplate,
-  type TemplateConfig,
-} from './config'
-import { onCancel } from './utils'
+import { officialTemplates, type OfficialTemplate } from './official-templates'
 
 /**
  * 构造函数选项
  */
 export interface CreateTemplateOptions extends Omit<Config, 'template'> {
   /**
-   * 应用场景
-   */
-  scene?: string
-  /**
-   * 应用模版
+   * 内置模板标识
    */
   template?: string
 }
 
 /**
- * 通过场景和模版选择创建项目
+ * 从内置官方模板中选择并创建项目
  */
 export class CreateTemplate {
   /**
@@ -36,9 +28,9 @@ export class CreateTemplate {
   public readonly cwd: string
 
   /**
-   * 创建模版选择器
+   * 创建模板选择器
    *
-   * @param options - 工作目录和默认场景、模版
+   * @param options - 项目创建选项和默认模板
    */
   public constructor(options: CreateTemplateOptions = {}) {
     if (options.force && options.merge) {
@@ -53,18 +45,14 @@ export class CreateTemplate {
   }
 
   /**
-   * 解析模版并运行项目创建流程
+   * 解析模板并运行项目创建流程
    *
    * @param projectName - 项目名称
    * @returns 创建流程结束后兑现的 Promise
    */
   public async run(projectName: string): Promise<void> {
     const template = await this._getTemplate()
-    const {
-      scene: _scene,
-      template: _template,
-      ...creatorOptions
-    } = this.constructorOptions
+    const { template: _template, ...creatorOptions } = this.constructorOptions
     const { description: _description, ...templateSource } = template
     const create = new ProjectCreator({
       ...creatorOptions,
@@ -75,67 +63,22 @@ export class CreateTemplate {
   }
 
   /**
-   * 解析交互选择后的远程模版
+   * 解析交互选择后的远程模板
    *
-   * @returns 远程模版配置
+   * @returns 远程模板配置
    */
-  private async _getTemplate(): Promise<RemoteTemplate> {
-    this._throwIfAborted('select-scene')
-    const { scenes, templates }: TemplateConfig = defaultConfig
-    let sceneAnswer = this.constructorOptions.scene
+  private async _getTemplate(): Promise<OfficialTemplate> {
+    this._throwIfAborted('select-template')
     let templateAnswer = this.constructorOptions.template
-
-    if (sceneAnswer !== undefined && !Object.hasOwn(scenes, sceneAnswer)) {
-      throw new AppError(`Unknown application scene \`${sceneAnswer}\``, {
-        code: 'CREATE_INVALID_OPTIONS',
-        details: { scene: sceneAnswer },
-      })
-    }
-
-    if (sceneAnswer === undefined) {
-      const sceneKeys = Object.keys(scenes)
-
-      if (sceneKeys.length === 1) {
-        sceneAnswer = sceneKeys[0]
-      } else {
-        const answer = await prompts(
-          {
-            type: 'select',
-            name: 'scene',
-            message: 'Select the application scene',
-            choices: Object.entries(scenes).map(([value, title]) => ({
-              title,
-              value,
-            })),
-          },
-          {
-            onCancel,
-          },
-        )
-        sceneAnswer = answer.scene
-        this._throwIfAborted('select-scene')
-      }
-    }
-
-    if (!sceneAnswer || !Object.hasOwn(scenes, sceneAnswer)) {
-      throw new AppError('Expected an application scene', {
-        code: 'CREATE_INVALID_OPTIONS',
-      })
-    }
-
-    const sceneTemplates = templates[sceneAnswer]
 
     if (
       templateAnswer !== undefined &&
-      !Object.hasOwn(sceneTemplates, templateAnswer)
+      !Object.hasOwn(officialTemplates, templateAnswer)
     ) {
-      throw new AppError(
-        `Unknown application template \`${templateAnswer}\` for scene \`${sceneAnswer}\``,
-        {
-          code: 'CREATE_INVALID_OPTIONS',
-          details: { scene: sceneAnswer, template: templateAnswer },
-        },
-      )
+      throw new AppError(`Unknown application template \`${templateAnswer}\``, {
+        code: 'CREATE_INVALID_OPTIONS',
+        details: { template: templateAnswer },
+      })
     }
 
     if (templateAnswer === undefined) {
@@ -144,27 +87,28 @@ export class CreateTemplate {
           type: 'select',
           name: 'template',
           message: 'Select the application template',
-          choices: Object.entries(sceneTemplates).map(([value, template]) => ({
-            title: template.description,
-            value,
-          })),
+          choices: Object.entries(officialTemplates).map(
+            ([value, template]) => ({
+              title: template.description,
+              value,
+            }),
+          ),
         },
         {
-          onCancel,
+          onCancel: handleTemplateSelectionCancel,
         },
       )
       templateAnswer = answer.template
       this._throwIfAborted('select-template')
     }
 
-    if (!templateAnswer || !Object.hasOwn(sceneTemplates, templateAnswer)) {
-      throw new AppError(
-        `Expected an application template for scene \`${sceneAnswer}\``,
-        { code: 'CREATE_INVALID_OPTIONS', details: { scene: sceneAnswer } },
-      )
+    if (!templateAnswer || !Object.hasOwn(officialTemplates, templateAnswer)) {
+      throw new AppError('Expected an application template', {
+        code: 'CREATE_INVALID_OPTIONS',
+      })
     }
 
-    return sceneTemplates[templateAnswer]
+    return officialTemplates[templateAnswer]
   }
 
   /**
@@ -186,4 +130,15 @@ export class CreateTemplate {
       )
     }
   }
+}
+
+function handleTemplateSelectionCancel(): never {
+  try {
+    logger.event('Cancel create template')
+  } catch {
+    // 交互取消必须保留稳定错误语义，不能被日志实现覆盖
+  }
+  throw new AppError('Create template operation was cancelled by the user', {
+    code: 'CREATE_OPERATION_CANCELLED',
+  })
 }

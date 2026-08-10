@@ -1,80 +1,98 @@
 # @eljs/utils
 
-面向 Node.js 工具链、脚手架和自动化任务的 TypeScript 基础能力包。提供文件系统、子进程、HTTP 下载、Git、包管理器、模板生成、路径、日志与通用类型等能力。
+[简体中文](./README.zh-CN.md)
+
+Domain-based TypeScript primitives for Node.js tooling, project generators,
+and automation. The package covers files, child processes, HTTP downloads,
+Git, package managers, loaders, paths, logging, and shared types.
 
 [![NPM Version](https://img.shields.io/npm/v/@eljs/utils.svg)](https://www.npmjs.com/package/@eljs/utils)
 [![License](https://img.shields.io/npm/l/@eljs/utils.svg)](https://github.com/chnliquan/eljs/blob/master/LICENSE)
 
-## 运行要求
+## Runtime Requirements
 
 - Node.js `>=22.14.0`
-- 支持 Windows、macOS 和 Linux
-- 同时发布 ESM、CommonJS 与 TypeScript 声明文件
+- Windows, macOS, and Linux
+- ESM, CommonJS, and TypeScript declarations
 
-`sudo()` 依赖系统的 `sudo` 可执行文件，因此不支持 Windows；Windows 调用会得到 `ERR_UNSUPPORTED_PLATFORM`。其他跨平台能力由 CI 在 Windows、macOS 和 Linux 上验证。
+`sudo()` requires the system `sudo` executable and is therefore unavailable on
+Windows, where it returns `ERR_UNSUPPORTED_PLATFORM`. CI verifies the remaining
+cross-platform APIs on Windows, macOS, and Linux.
 
-## 安装
+## Installation
 
 ```bash
 pnpm add @eljs/utils
 ```
 
-也可以使用 npm 或 Yarn 安装。
+npm and Yarn are also supported.
 
-## 推荐导入方式
+## Preferred Imports
 
-新代码优先从领域子路径导入，只加载当前功能需要的模块：
+New code should import from a domain subpath so it loads only the relevant
+module graph:
 
 ```ts
-import { readJson, writeJsonAtomic } from '@eljs/utils/file'
 import { run } from '@eljs/utils/cp'
+import { readJson, writeJsonAtomic } from '@eljs/utils/file'
 import { downloadTo } from '@eljs/utils/http'
 import type { PackageJson } from '@eljs/utils/types'
 ```
 
-根入口继续提供兼容导出：
+The root entry remains available for compatibility:
 
 ```ts
 import { logger, readJson, run } from '@eljs/utils'
 ```
 
-第三方库应直接从其所属包导入，不建议通过 `@eljs/utils` 间接使用。
+Import third-party libraries from their owning packages instead of relying on
+indirect re-exports from `@eljs/utils`.
 
-## 领域入口
+## Public Entry Points
 
-| 子路径                  | 主要能力                                      |
-| ----------------------- | --------------------------------------------- |
-| `@eljs/utils/cli`       | 确认、暂停与交互提示                          |
-| `@eljs/utils/cp`        | 命令执行、可执行文件解析、PID 查询与 sudo     |
-| `@eljs/utils/env`       | 全局安装检测与环境能力                        |
-| `@eljs/utils/error`     | `UtilsError` 与稳定错误码                     |
-| `@eljs/utils/file`      | 读写、复制、移动、删除、模板渲染与配置加载    |
-| `@eljs/utils/generator` | 模板生成器生命周期                            |
-| `@eljs/utils/git`       | Git 元信息、状态和常用操作                    |
-| `@eljs/utils/guards`    | 运行时类型守卫                                |
-| `@eljs/utils/http`      | 有界缓冲下载与流式落盘、解压                  |
-| `@eljs/utils/logger`    | CLI 日志与 debug 适配                         |
-| `@eljs/utils/module`    | Node 模块查找与同步加载                       |
-| `@eljs/utils/npm`       | npm 元数据、包管理器检测、安装和 tarball 下载 |
-| `@eljs/utils/object`    | 对象合并                                      |
-| `@eljs/utils/path`      | 跨平台路径和工作区解析                        |
-| `@eljs/utils/promise`   | deferred、重试和计时器                        |
-| `@eljs/utils/string`    | 常用字符串格式转换                            |
-| `@eljs/utils/types`     | 公共 TypeScript 类型                          |
+| Subpath                 | Responsibility                                        |
+| ----------------------- | ----------------------------------------------------- |
+| `@eljs/utils/cli`       | Confirmation, pauses, and interactive prompts         |
+| `@eljs/utils/cp`        | Commands, executable lookup, PID lookup, and sudo     |
+| `@eljs/utils/env`       | Global installation and environment capabilities      |
+| `@eljs/utils/error`     | `UtilsError` and stable error codes                   |
+| `@eljs/utils/file`      | File reads, writes, copies, moves, and templates      |
+| `@eljs/utils/generator` | Template generator lifecycle                          |
+| `@eljs/utils/git`       | Git metadata, status, and common operations           |
+| `@eljs/utils/guards`    | Runtime type guards                                   |
+| `@eljs/utils/http`      | Bounded downloads, streaming writes, and extraction   |
+| `@eljs/utils/loader`    | JavaScript, TypeScript, JSON, and YAML loading        |
+| `@eljs/utils/logger`    | CLI logging and debug adapters                        |
+| `@eljs/utils/module`    | Module lookup and synchronous loading                 |
+| `@eljs/utils/npm`       | npm metadata, package managers, and tarball downloads |
+| `@eljs/utils/object`    | Object merging                                        |
+| `@eljs/utils/path`      | Cross-platform paths and workspace lookup             |
+| `@eljs/utils/promise`   | Deferred values, retries, and timers                  |
+| `@eljs/utils/string`    | Common string conversions                             |
+| `@eljs/utils/types`     | Shared public TypeScript types                        |
 
-包只公开上述领域入口，不承诺 `file/loader` 等内部文件路径的兼容性。
+Only these domain entries are public. Internal file paths such as
+`file/loader` are not compatibility contracts.
 
-## 常用示例
+## Scope Boundaries
 
-### 文件与配置
+`@eljs/utils` contains reusable mechanisms for multiple Node.js tools, not
+product workflows or domain policy.
+
+- General file, process, download, Git, npm, and path primitives belong here
+- Project generation, release orchestration, plugin lifecycle, and config
+  policy stay in their owning domain packages
+- Third-party dependencies are not re-exported merely to create one import path
+- A domain should become a separate package when it gains independent
+  consumers, a security boundary, or its own release cadence
+
+## Common Examples
+
+### Files and Loaders
 
 ```ts
-import {
-  copyDirectory,
-  loadYaml,
-  readJson,
-  writeJsonAtomic,
-} from '@eljs/utils/file'
+import { copyDirectory, readJson, writeJsonAtomic } from '@eljs/utils/file'
+import { loadYaml } from '@eljs/utils/loader'
 
 interface Config {
   output: string
@@ -89,9 +107,13 @@ await copyDirectory('./template', config.output, {
 await writeJsonAtomic('./generated/meta.json', { generated: true })
 ```
 
-`loadTs()`、`loadTsSync()` 与 `resolveTsConfig()` 会按需加载 TypeScript；普通文件工具不会主动加载 TypeScript 编译器。
+`loadTs()`, `loadTsSync()`, and `resolveTsConfig()` load TypeScript on demand.
+The loader installs a short-lived CommonJS hook to synchronously transpile an
+entry and its relative `.ts` dependencies. It does not write generated files or
+resolve `paths` aliases. Ordinary file helpers do not load the TypeScript
+compiler.
 
-### 子进程
+### Child Processes
 
 ```ts
 import { findExecutable, run } from '@eljs/utils/cp'
@@ -110,13 +132,16 @@ const result = await run(git, ['status', '--short'], {
 console.log(result.stdout)
 ```
 
-命令和参数应分开传递。`runCommandLine()` 只处理空白分隔与反斜杠转义，不是完整的 shell 解析器；不支持 shell 管道、重定向或变量展开。
+Pass a command and its arguments separately. `runCommandLine()` supports only
+whitespace separation and backslash escaping; it is not a shell parser and
+does not implement pipes, redirects, or variable expansion.
 
-## API 命名迁移
+## API Naming Changes
 
-为使函数名直接表达行为，原兼容名称已经移除。升级旧代码时使用下列替代关系：
+Compatibility aliases with ambiguous behavior have been removed. Use the
+current names when upgrading older code:
 
-| 当前名称                    | 已移除名称              |
+| Current name                | Removed name            |
 | --------------------------- | ----------------------- |
 | `createTempDir`             | `tmpdir`                |
 | `createTempDirSync`         | `tmpdirSync`            |
@@ -136,19 +161,20 @@ console.log(result.stdout)
 | `getCallerDirectory`        | `extractCallDir`        |
 | `toPosixPath`               | `winPath`               |
 
-`createTempDirSync()` 是同步 API；若旧代码曾对 `tmpdirSync()` 使用 `await`，迁移时同时删除 `await`。
+`createTempDirSync()` is synchronous. Remove any `await` that older code used
+with `tmpdirSync()`.
 
-### 有界下载与流式解压
+### Bounded Downloads and Streaming Extraction
 
 ```ts
 import { download, downloadTo } from '@eljs/utils/http'
 
-// 小响应：返回 Buffer，默认最多 100 MiB
+// Small response: return a Buffer with a 100 MiB default limit
 const manifest = await download('https://example.com/manifest.json', {
   maxBytes: 1024 * 1024,
 })
 
-// 大文件：直接流入 tar 解压管道，不把完整响应保存在内存中
+// Large response: stream directly into extraction without buffering it all
 await downloadTo('https://example.com/package.tgz', './package', {
   extract: true,
   strip: 1,
@@ -161,9 +187,11 @@ await downloadTo('https://example.com/package.tgz', './package', {
 console.log(manifest.byteLength)
 ```
 
-`maxBytes: 0` 和 `maxEntries: 0` 表示不限制，只有在上层已经限制资源规模时才建议使用。`integrity` 使用 SRI 格式；不匹配时返回 `ERR_DOWNLOAD_INTEGRITY`。
+`maxBytes: 0` and `maxEntries: 0` disable their limits and should be used only
+when the caller already controls resource size. `integrity` uses SRI format and
+returns `ERR_DOWNLOAD_INTEGRITY` on mismatch.
 
-### 结构化错误
+### Structured Errors
 
 ```ts
 import { run } from '@eljs/utils/cp'
@@ -179,11 +207,12 @@ try {
 }
 ```
 
-下载和 sudo 已提供稳定错误码；底层第三方异常在尚未归一化时仍可能原样抛出。
+Downloads and sudo expose stable error codes. Lower-level third-party errors
+may still propagate unchanged when an API has not normalized them.
 
-## 本地开发
+## Development
 
-在仓库根目录执行：
+Run from the repository root:
 
 ```bash
 pnpm install --frozen-lockfile
@@ -192,21 +221,24 @@ pnpm exec vitest run packages/utils
 pnpm --filter @eljs/utils build
 ```
 
-构建产物位于 `packages/utils/dist`，包含 ESM、CommonJS 和声明文件。提交前还应执行：
+Build output is written to `packages/utils/dist` with ESM, CommonJS, and type
+declaration files. Before submitting changes, also run:
 
 ```bash
 pnpm exec eslint packages/utils/src packages/utils/__tests__ --max-warnings=0
 pnpm exec prettier --check packages/utils
 ```
 
-## 设计约定
+## Design Rules
 
-- 新的公共 API 必须提供中文 TSDoc 和回归测试
-- 异步 API 完成时代表底层 I/O 或子进程生命周期已经结束
-- Windows 路径不得假设 `/` 或 `:` 为平台分隔符
-- 下载、进程与外部输入边界优先返回带稳定错误码的 `UtilsError`
-- 观测能力保持厂商中立，由具体运行环境注入适配器
-- 新能力通过领域入口公开，避免新增内部文件级导出
+- New public APIs require Chinese TSDoc and regression tests
+- An async API resolves only after its underlying I/O or process lifecycle ends
+- Windows paths must not assume `/` or `:` as platform separators
+- Downloads, processes, and external inputs should prefer stable
+  `UtilsError` codes at trust boundaries
+- Logging remains lightweight and does not embed a monitoring backend or
+  transport layer
+- New capabilities are exposed through domain entries, not internal file paths
 
 ## License
 

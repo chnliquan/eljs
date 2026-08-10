@@ -1,4 +1,5 @@
 import {
+  lstat,
   mkdir,
   mkdtemp,
   readFile,
@@ -216,6 +217,73 @@ module.exports = context => {
         force: true,
       }).run('linked/project'),
     ).rejects.toMatchObject({ code: 'CREATE_INVALID_PROJECT_NAME' })
+  })
+
+  it('通过目标符号链接覆盖时应该保持锁与事务使用同一物理路径', async () => {
+    cwd = await mkdtemp(path.join(tmpdir(), 'eljs-project-alias-'))
+    const targetRoot = path.join(cwd, 'physical-project')
+    const targetAlias = path.join(cwd, 'project')
+    const templateRoot = path.join(cwd, 'template')
+    const originalFile = path.join(targetRoot, 'original.txt')
+    await Promise.all([mkdir(targetRoot), mkdir(templateRoot)])
+    await writeFile(originalFile, 'original\n')
+    await writeFile(
+      path.join(templateRoot, 'create.config.js'),
+      'module.exports = { defaultQuestions: false, gitInit: false, install: false }\n',
+    )
+    await symlink(
+      targetRoot,
+      targetAlias,
+      process.platform === 'win32' ? 'junction' : 'dir',
+    )
+
+    await new ProjectCreator({
+      cwd,
+      template: templateRoot,
+      force: true,
+    }).run('project')
+
+    expect((await lstat(targetAlias)).isSymbolicLink()).toBe(true)
+    await expect(readFile(originalFile, 'utf8')).rejects.toMatchObject({
+      code: 'ENOENT',
+    })
+  })
+
+  it('merge 目标不是目录时应该拒绝并保留原文件', async () => {
+    cwd = await mkdtemp(path.join(tmpdir(), 'eljs-project-file-'))
+    const targetFile = path.join(cwd, 'project')
+    const templateRoot = path.join(cwd, 'template')
+    await mkdir(templateRoot)
+    await writeFile(targetFile, 'original\n')
+    await writeFile(
+      path.join(templateRoot, 'create.config.js'),
+      'module.exports = { defaultQuestions: false, gitInit: false, install: false }\n',
+    )
+
+    await expect(
+      new ProjectCreator({
+        cwd,
+        template: templateRoot,
+        merge: true,
+      }).run('project'),
+    ).rejects.toMatchObject({ code: 'CREATE_INVALID_OPTIONS' })
+
+    await expect(readFile(targetFile, 'utf8')).resolves.toBe('original\n')
+  })
+
+  it('工作目录不存在时应该抛出稳定领域错误', async () => {
+    cwd = await mkdtemp(path.join(tmpdir(), 'eljs-project-cwd-'))
+    const missingCwd = path.join(cwd, 'missing')
+
+    await expect(
+      new ProjectCreator({
+        cwd: missingCwd,
+        template: './template',
+      }).run('project'),
+    ).rejects.toMatchObject({
+      code: 'CREATE_INVALID_OPTIONS',
+      details: { cwd: missingCwd },
+    })
   })
 
   async function createFixture(): Promise<{

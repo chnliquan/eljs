@@ -6,7 +6,12 @@ import { Command } from 'commander'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export async function cli() {
+/**
+ * 启动 create-template 命令行程序
+ *
+ * @returns 命令行流程 Promise
+ */
+export async function cli(): Promise<void> {
   const controller = new AbortController()
   const disposeSignalHandlers = registerSignalHandlers(controller)
 
@@ -19,11 +24,19 @@ export async function cli() {
     if (isCancellation(error) || controller.signal.aborted) {
       process.exitCode = 130
     } else if (error instanceof AppError) {
-      logger.error(error.message)
       process.exitCode = 1
+      try {
+        logger.error(error.message)
+      } catch {
+        // 日志是辅助能力，领域错误仍需保持稳定退出语义
+      }
     } else {
-      console.error(error)
       process.exitCode = 1
+      try {
+        console.error(error)
+      } catch {
+        // 控制台异常不能让 CLI 错误处理再次失败
+      }
     }
   } finally {
     disposeSignalHandlers()
@@ -97,13 +110,12 @@ async function main(signal: AbortSignal) {
   }
 
   const command = new Command()
-    .name('create-template')
-    .description('Create a new project powered by @eljs/create')
+    .name('eljs-create-template')
+    .description('Initialize a project from an official template')
     .version(pkg.version, '-v, --version', 'Output the current version')
     .argument('<project-name>', 'Project name')
     .option('--cwd <cwd>', 'Specify the working directory')
-    .option('-s, --scene <scene>', 'Specify a application scene')
-    .option('-t, --template <template>', 'Specify a application template')
+    .option('-t, --template <template>', 'Specify an application template')
     .option('-f, --force', 'Overwrite target directory if it exists')
     .option('-m, --merge', 'Merge target directory if it exists')
     .option(

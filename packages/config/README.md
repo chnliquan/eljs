@@ -108,9 +108,9 @@ interface ConfigManagerOptions {
   cwd?: string
   /** Optional custom merge function */
   merge?: (baseConfig: object, overrideConfig: object) => object
-  /** Bypass the async JavaScript module cache */
+  /** Bypass the async JavaScript entry-module cache */
   reload?: boolean
-  /** Synchronous final validation and normalization */
+  /** Synchronous final validation and compatible-shape normalization */
   validate?: (config: object, context: ConfigValidationContext) => object
 }
 ```
@@ -223,7 +223,7 @@ getAbsFiles(['config.js', '/abs/path.js']) // => ['/cwd/config.js', '/abs/path.j
 | -------------- | --------------- | ----- | ---- | ---------------------------------------- |
 | **JavaScript** | `.js`, `.cjs`   | Yes   | Yes  | Supports CommonJS and package-scoped ESM |
 | **ES Module**  | `.mjs`          | Yes   | No   | Native ESM requires dynamic import       |
-| **TypeScript** | `.ts`           | Yes   | Yes  | Compiles to a temporary CommonJS file    |
+| **TypeScript** | `.ts`           | Yes   | Yes  | Transpiles through a scoped require hook |
 | **JSON**       | `.json`         | Yes   | Yes  | Standard JSON format                     |
 | **YAML**       | `.yaml`, `.yml` | Yes   | Yes  | Parsed with js-yaml                      |
 
@@ -366,9 +366,11 @@ const configManager = new ConfigManager({
 })
 ```
 
-Arrays are concatenated by the default deep merge. Provide `merge` when arrays should be replaced or another domain-specific policy is required. The callback must return a new object and must not mutate its inputs.
+`context.configFiles` contains every declared input path, while `context.loadedConfigFiles` contains only files that produced configuration objects and participated in merging.
 
-Node.js caches imported JavaScript modules. Set `reload: true` to bypass that cache in asynchronous watch or development workflows. Synchronous CommonJS loading is already fresh. Each native ESM reload creates a new module instance, so avoid unbounded reload loops in long-running production processes.
+Arrays are concatenated by the default deep merge. Provide `merge` when arrays should be replaced or another domain-specific policy is required. The callback must return a shape compatible with the caller's declared configuration type and must not mutate its inputs. TypeScript cannot verify that runtime callback contract automatically.
+
+Node.js caches imported JavaScript modules. Set `reload: true` to re-evaluate the JavaScript entry module in asynchronous watch or development workflows. Imported dependencies still follow the Node.js module cache. Synchronous CommonJS entry loading is already fresh. Each ESM entry reload creates a new module instance, so avoid unbounded reload loops in long-running production processes.
 
 ## Error Handling
 
@@ -393,8 +395,8 @@ try {
 ## Security and Runtime Constraints
 
 - Load JavaScript and TypeScript configuration only from trusted locations; those files execute with the current process privileges
-- TypeScript loading writes a uniquely named temporary CommonJS file beside the source and removes it in a `finally` block, so the source directory must be writable
-- Missing candidate files are skipped, while existing files that cannot be parsed or executed fail the load
+- TypeScript loading installs a short-lived CommonJS transform hook and supports relative `.ts` dependencies without writing generated files; TypeScript path aliases are not resolved by this package
+- Missing candidates and non-file paths are skipped, while existing files that cannot be parsed or executed fail the load
 - Environment variables are read only when user configuration code accesses `process.env`; this package does not load `.env` files or interpolate values
 
 ## Development

@@ -1,6 +1,7 @@
 # @eljs/release
 
-Powerful and flexible npm package release tool with comprehensive automation support.
+A programmable npm release workflow for versioning, changelogs, GitHub, and
+ordered workspace publishing.
 
 [![NPM Version](https://img.shields.io/npm/v/@eljs/release.svg)](https://www.npmjs.com/package/@eljs/release)
 [![NPM Downloads](https://img.shields.io/npm/dm/@eljs/release.svg)](https://www.npmjs.com/package/@eljs/release)
@@ -30,6 +31,9 @@ yarn add @eljs/release -D
 # Using npm
 npm install @eljs/release -D
 ```
+
+When installed globally, use `eljs-release`. The shorter `release` command is
+retained as a compatibility alias.
 
 ## 🚀 Quick Start
 
@@ -90,7 +94,7 @@ await release('1.2.3', {
 ### Commands
 
 ```bash
-release [options] [version]
+eljs-release [options] [version]
 ```
 
 ### Arguments
@@ -127,22 +131,22 @@ release [options] [version]
 
 ```bash
 # Standard patch release
-release patch
+eljs-release patch
 
 # Validate the entire plan without modifying files or publishing
-release patch --dry-run
+eljs-release patch --dry-run
 
 # Major release with custom working directory
-release major --cwd ./packages/core
+eljs-release major --cwd ./packages/core
 
 # Prerelease with beta tag
-release --npm.prerelease --npm.prereleaseId beta
+eljs-release --npm.prerelease --npm.prereleaseId beta
 
 # Release without git operations
-release minor --no-git.commit --no-git.push
+eljs-release minor --no-git.commit --no-git.push
 
 # Release on specific branch with custom settings
-release patch --git.requireBranch main --no-npm.confirm
+eljs-release patch --git.requireBranch main --no-npm.confirm
 ```
 
 ## 📖 API Reference
@@ -330,6 +334,10 @@ export default defineConfig({
 })
 ```
 
+API mode sends tokens to `github.com` by default. For GitHub Enterprise, set
+`github.enterpriseHost` to the remote's exact lowercase hostname (for example,
+`git.corp.example.com`); protocols, ports, and paths are rejected.
+
 ## 🔌 Plugin System
 
 Extend release functionality with plugin entry modules. Plugin-specific options are passed as the
@@ -505,8 +513,8 @@ prints the prefilled URL and keeps the completed publication successful.
 
 The release commit and tags stay local until every package is published. If a
 workspace publish stops partway through, rerun the exact target version from
-the unchanged release commit, for example `release 1.2.3`. Do not rerun a
-relative bump such as `release patch`, because it may calculate a newer
+the unchanged release commit, for example `eljs-release 1.2.3`. Do not rerun a
+relative bump such as `eljs-release patch`, because it may calculate a newer
 version. This also works when the first package failed before any package was
 published. Packages already present in the registry are verified against the
 local tag and skipped; the remaining packages are then published before the

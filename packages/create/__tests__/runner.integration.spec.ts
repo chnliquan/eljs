@@ -90,4 +90,38 @@ describe('CreateRunner 集成', () => {
     expect(runner.appData.pkg).toMatchObject(packageJson)
     expect(runner.appData.packageManager).toBe('npm')
   })
+
+  it('应该为已发布模板保留 TypeScript 配置 Hook', async () => {
+    cwd = await mkdtemp(path.join(tmpdir(), 'eljs-create-runner-'))
+    const target = path.join(cwd, 'ts-config-project')
+    const pluginPath = path.join(cwd, 'ts-config-plugin.cjs')
+
+    await mkdir(target)
+    await writeFile(
+      path.join(cwd, 'create.config.js'),
+      'module.exports = { defaultQuestions: false, gitInit: false, install: false }\n',
+    )
+    await writeFile(
+      pluginPath,
+      `module.exports = context => {
+  context.modifyTsConfig(memo => ({
+    ...memo,
+    compilerOptions: { strict: true },
+  }))
+  context.onGenerateFiles(() => {
+    if (context.tsConfig.compilerOptions?.strict !== true) {
+      throw new Error('TypeScript config is unavailable')
+    }
+  })
+}
+`,
+    )
+
+    const runner = new CreateRunner({ cwd, plugins: [pluginPath] })
+    await runner.run(target, 'ts-config-project')
+
+    expect(runner.tsConfig).toEqual({
+      compilerOptions: { strict: true },
+    })
+  })
 })

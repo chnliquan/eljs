@@ -54,7 +54,7 @@ describe('内部插件 app-data', () => {
   })
 
   it('应该处理来自 prompts 的不同包管理器', () => {
-    const testCases = ['npm', 'yarn', 'pnpm'] as const
+    const testCases = ['npm', 'yarn', 'pnpm', 'bun'] as const
 
     testCases.forEach(packageManager => {
       mockContext.prompts.packageManager = packageManager

@@ -7,20 +7,6 @@ import {
 } from '../path/workspace-lock'
 import type { PackageManager } from '../types'
 
-const packageManagerCache = new Map<string, PackageManager | null>()
-
-/**
- * 清除包管理器锁文件检测缓存
- *
- * @remarks
- * 仅用于测试隔离，不通过 npm 公共入口导出
- *
- * @internal
- */
-export function clearPackageManagerCache(): void {
-  packageManagerCache.clear()
-}
-
 /**
  * 获取包管理器
  *
@@ -69,31 +55,28 @@ export async function getPackageManager(
 async function detectLockfilePackageManager(
   cwd = process.cwd(),
 ): Promise<PackageManager | null> {
-  const key = `has_lockfile_${cwd}`
-
-  if (packageManagerCache.has(key)) {
-    return Promise.resolve(packageManagerCache.get(key) ?? null)
-  }
-
-  return Promise.all([
+  const [isPnpm, isYarn, isBun, isNpm] = await Promise.all([
     getPnpmWorkspaceRoot(cwd),
     getYarnWorkspaceRoot(cwd),
     getBunWorkspaceRoot(cwd),
     getNpmWorkspaceRoot(cwd),
-  ]).then(([isPnpm, isYarn, isBun, isNpm]) => {
-    let value: PackageManager | null = null
+  ])
 
-    if (isPnpm) {
-      value = 'pnpm'
-    } else if (isYarn) {
-      value = 'yarn'
-    } else if (isBun) {
-      value = 'bun'
-    } else if (isNpm) {
-      value = 'npm'
-    }
+  if (isPnpm) {
+    return 'pnpm'
+  }
 
-    packageManagerCache.set(key, value)
-    return value
-  })
+  if (isYarn) {
+    return 'yarn'
+  }
+
+  if (isBun) {
+    return 'bun'
+  }
+
+  if (isNpm) {
+    return 'npm'
+  }
+
+  return null
 }

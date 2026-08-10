@@ -20,6 +20,7 @@ export const createHookSchema = defineHooks({
     Prompts,
     { questions: prompts.PromptObject[] }
   >(),
+  modifyTsConfig: defineModifyHook<Record<string, unknown>>(),
   onStart: defineEventHook(),
   onBeforeGenerateFiles: defineEventHook<{
     prompts: Prompts
@@ -64,4 +65,11 @@ export interface CreatePluginCapabilities {
    * 插件初始化及 `modifyPrompts` Hook 执行期间不可读取；Hook 应使用其 `memo` 入参
    */
   readonly prompts: Prompts
+  /**
+   * 已完成 Hook 收集的 TypeScript 配置
+   *
+   * @remarks
+   * 插件初始化及 `modifyTsConfig` Hook 执行期间不可读取；Hook 应使用其 `memo` 入参
+   */
+  readonly tsConfig: Readonly<Record<string, unknown>>
 }

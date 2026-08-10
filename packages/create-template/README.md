@@ -1,15 +1,20 @@
 # @eljs/create-template
 
-Create a new project with standard templates powered by @eljs/create.
+An opinionated project initializer backed by version-pinned official templates
+and `@eljs/create`.
 
 [![NPM Version](https://img.shields.io/npm/v/@eljs/create-template.svg)](https://www.npmjs.com/package/@eljs/create-template)
 [![NPM Downloads](https://img.shields.io/npm/dm/@eljs/create-template.svg)](https://www.npmjs.com/package/@eljs/create-template)
 [![License](https://img.shields.io/npm/l/@eljs/create-template.svg)](https://github.com/chnliquan/eljs/blob/master/LICENSE)
 
+The historical name means "create a project from a template." This package
+does not author or publish template packages. Use `@eljs/create` when you need
+to supply an arbitrary local, npm, or Git template source.
+
 ## ✨ Features
 
 - 🚀 **Quick Setup** - Instantly create projects with predefined templates
-- 🎯 **Scene-Based Selection** - Select from the built-in application templates
+- 🎯 **Template Selection** - Select directly from the built-in application templates
 - 📦 **Official Templates** - Built-in web and Node.js project templates
 - 💬 **Interactive Mode** - User-friendly CLI with smart prompts
 - 🔧 **Configurable** - Support for custom working directory and merge options
@@ -27,17 +32,20 @@ yarn global add @eljs/create-template
 npm install @eljs/create-template -g
 ```
 
+Global installations expose `eljs-create-template` as the preferred command
+and keep `create-template` as a compatibility alias.
+
 ## 🚀 Quick Start
 
 ```bash
 # Create a new project with interactive prompts
-create-template my-project
+eljs-create-template my-project
 
-# Create with a specific scene and template
-create-template my-web-app --scene npm --template template-npm-web
+# Create with a specific template
+eljs-create-template my-web-app --template template-npm-web
 
 # Force overwrite existing directory
-create-template my-project --force
+eljs-create-template my-project --force
 
 # Using npx (no global installation needed)
 npx @eljs/create-template my-project
@@ -48,7 +56,7 @@ npx @eljs/create-template my-project
 ### Command
 
 ```bash
-create-template [options] <project-name>
+eljs-create-template [options] <project-name>
 ```
 
 ### Arguments
@@ -63,18 +71,15 @@ create-template [options] <project-name>
 | --------------------------- | ------------------------------------------------ | --------------- |
 | `-v, --version`             | Output the current version                       | -               |
 | `--cwd <cwd>`               | Specify the working directory                    | `process.cwd()` |
-| `-s, --scene <scene>`       | Specify the application scene                    | Interactive     |
 | `-t, --template <template>` | Specify the application template                 | Interactive     |
 | `-f, --force`               | Overwrite target directory if it exists          | `false`         |
 | `-m, --merge`               | Merge with target directory if it exists         | `false`         |
 | `--allow-template-scripts`  | Allow lifecycle scripts in template dependencies | `false`         |
 | `-h, --help`                | Display help for command                         | -               |
 
-## 🎯 Available Scenes & Templates
+## 🎯 Available Templates
 
-Based on the current configuration, the following scenes and templates are available:
-
-### NPM Scene
+The following built-in templates are available:
 
 | Template            | Description          | Type | Source                                |
 | ------------------- | -------------------- | ---- | ------------------------------------- |
@@ -87,10 +92,9 @@ Based on the current configuration, the following scenes and templates are avail
 
 ```bash
 # Start with interactive prompts
-create-template my-awesome-project
+eljs-create-template my-awesome-project
 
-# The built-in template list has one scene, so the CLI selects it automatically and
-# prompts you to choose from available templates:
+# The CLI prompts you to choose from available templates:
 #    - Web Common Template
 #    - Node Common Template
 ```
@@ -99,26 +103,26 @@ create-template my-awesome-project
 
 ```bash
 # Create a web project
-create-template my-web-app --scene npm --template template-npm-web
+eljs-create-template my-web-app --template template-npm-web
 
 # Create a Node.js project
-create-template my-node-api --scene npm --template template-npm-node
+eljs-create-template my-node-api --template template-npm-node
 ```
 
 ### Advanced Usage
 
 ```bash
 # Force overwrite existing directory
-create-template existing-project --force
+eljs-create-template existing-project --force
 
 # Merge with existing directory
-create-template existing-project --merge
+eljs-create-template existing-project --merge
 
 # Custom working directory
-create-template new-project --cwd ./workspace
+eljs-create-template new-project --cwd ./workspace
 
 # Combine multiple options
-create-template my-project --scene npm --template template-npm-web --force --cwd ./projects
+eljs-create-template my-project --template template-npm-web --force --cwd ./projects
 ```
 
 ## Programmatic API
@@ -127,7 +131,6 @@ create-template my-project --scene npm --template template-npm-web --force --cwd
 import { CreateTemplate } from '@eljs/create-template'
 
 const creator = new CreateTemplate({
-  scene: 'npm',
   template: 'template-npm-web',
   cwd: '/workspace/projects',
 })
@@ -135,7 +138,7 @@ const creator = new CreateTemplate({
 await creator.run('orders-service')
 ```
 
-The built-in template list pins official templates to exact versions. All
+The internal built-in template list pins official templates to exact versions. All
 `ProjectCreator` options, including `force`, `merge`, and `signal`, are passed
 through.
 

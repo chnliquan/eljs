@@ -87,6 +87,17 @@ export interface PluginHostErrorOptions extends ErrorOptions {
 }
 
 /**
+ * 将插件边界抛出的任意值转换为可读错误信息
+ *
+ * @param error - 插件、Hook、加载器或 Schema 抛出的值
+ * @returns `Error` 的 message，其他值使用字符串表示
+ * @internal
+ */
+export function getPluginHostErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+/**
  * 插件系统抛出的领域错误
  *
  * @remarks

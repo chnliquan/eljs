@@ -5,7 +5,11 @@ import {
 } from 'tapable'
 
 import { HookKind, type LooseHookRunOptions } from '../core/types'
-import { PluginHostError, PluginHostErrorCode } from '../errors'
+import {
+  getPluginHostErrorMessage,
+  PluginHostError,
+  PluginHostErrorCode,
+} from '../errors'
 import type { Hook } from '../plugin/hook'
 import type { HookSchema } from '../plugin/hook-schema'
 import { HookRegistry } from './hook-registry'
@@ -289,9 +293,7 @@ export class HookExecutor {
 
       throw new PluginHostError(
         PluginHostErrorCode.HookExecutionFailed,
-        `Run hook \`${key}\` from plugin \`${hook.plugin.key}\` failed: ${
-          (error as Error).message
-        }`,
+        `Run hook \`${key}\` from plugin \`${hook.plugin.key}\` failed: ${getPluginHostErrorMessage(error)}`,
         {
           cause: error,
           details: {

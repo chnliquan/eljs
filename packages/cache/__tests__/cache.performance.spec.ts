@@ -1,36 +1,21 @@
+import * as crypto from 'node:crypto'
 import * as fs from 'node:fs'
-import * as os from 'node:os'
 import * as path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { Cache } from '../src'
-
-// 测试工具函数
-const createTempDir = () => {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'cache-performance-test-'))
-}
-
-const createTempFile = (dir: string, filename: string, content: string) => {
-  const filePath = path.join(dir, filename)
-  fs.writeFileSync(filePath, content)
-  return filePath
-}
-
-const cleanupDir = (dir: string) => {
-  try {
-    fs.rmSync(dir, { recursive: true, force: true })
-  } catch {
-    // 忽略清理错误
-  }
-}
-
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+import {
+  cleanupDir,
+  createTempDir,
+  createTempFile,
+  waitForCondition,
+} from './test-utils'
 
 describe('Cache 性能和清理功能测试', () => {
   let tempDir: string
 
   beforeEach(() => {
-    tempDir = createTempDir()
+    tempDir = createTempDir('cache-performance-test-')
   })
 
   afterEach(() => {
@@ -78,26 +63,33 @@ describe('Cache 性能和清理功能测试', () => {
       expect(cache.stats.hits).toBe(operations)
     }, 10000)
 
-    it('内存缓存应该比磁盘缓存快', async () => {
-      const cache = new Cache<string>({
+    it('应该在首次磁盘读取后复用内存缓存', async () => {
+      const cacheDir = path.join(tempDir, '.cache')
+      const reader = new Cache<string>({
         enabled: true,
-        cacheDir: path.join(tempDir, '.cache'),
+        cacheDir,
+        autoCleanup: false,
+      })
+      await reader.getStats()
+
+      const writer = new Cache<string>({
+        enabled: true,
+        cacheDir,
         autoCleanup: false,
       })
 
       const testFile = createTempFile(tempDir, 'speed-test.txt', 'content')
-      await cache.set(testFile, 'test data')
+      await writer.set(testFile, 'test data')
 
-      // 第一次get（从磁盘加载）
-      cache.memoryCache.clear() // 清空内存缓存
-      await cache.get(testFile)
+      // reader 在写入前已经初始化，第一次获取只能从磁盘加载
+      expect(reader.memoryCache.size).toBe(0)
+      await reader.get(testFile)
 
       // 第二次get（从内存）
-      const result = await cache.get(testFile)
+      const result = await reader.get(testFile)
 
-      // 验证数据正确性
       expect(result).toBe('test data')
-      // 注意：在测试环境中时间差异可能很小，我们主要验证功能正确性
+      expect(reader.memoryCache.size).toBe(1)
     })
 
     it('应该高效处理大文件的哈希计算', async () => {
@@ -150,8 +142,11 @@ describe('Cache 性能和清理功能测试', () => {
 
       expect(cache.memoryCache.size).toBe(5)
 
-      // 等待过期
-      await sleep(10)
+      await waitForCondition(() =>
+        [...cache.memoryCache.values()].every(
+          entry => Date.now() - entry.timestamp > entry.ttl,
+        ),
+      )
 
       const cleanupResult = await cache.cleanup()
 
@@ -177,14 +172,51 @@ describe('Cache 性能和清理功能测试', () => {
           `content-${i}`,
         )
         await cache.set(testFile, `data-${i}`)
-        // 添加延迟以确保不同的修改时间
-        await sleep(1)
       }
 
       const cleanupResult = await cache.cleanup()
 
-      // 应该删除最旧的文件，保留最新的3个
-      expect(cleanupResult.removed).toBe(2)
+      // 写入阶段已经持续执行数量限制，手动清理无需再次删除
+      expect(cleanupResult.removed).toBe(0)
+      expect(cache.memoryCache.size).toBe(3)
+      expect(
+        fs
+          .readdirSync(cache.cacheDir)
+          .filter(file => /^[a-f0-9]{64}\.json$/u.test(file)),
+      ).toHaveLength(3)
+    })
+
+    it('磁盘文件多于预加载上限时仍应该持续执行数量限制', async () => {
+      const cacheDir = path.join(tempDir, '.cache-preload-limit')
+      const keyGenerator = (data: string) => data
+      const writer = new Cache<string>({
+        cacheDir,
+        maxFiles: 100,
+        keyGenerator,
+        autoCleanup: false,
+      })
+
+      for (let index = 0; index < 51; index++) {
+        await writer.setByData(`existing-${index}`)
+      }
+
+      const reader = new Cache<string>({
+        cacheDir,
+        maxFiles: 51,
+        keyGenerator,
+        autoCleanup: false,
+      })
+
+      expect((await reader.getStats()).files).toBe(51)
+      expect(reader.memoryCache.size).toBe(50)
+
+      await reader.setByData('new-entry')
+
+      expect(
+        fs
+          .readdirSync(cacheDir)
+          .filter(file => /^[a-f0-9]{64}\.json$/u.test(file)),
+      ).toHaveLength(51)
     })
 
     it('应该清理无效的缓存文件', async () => {
@@ -213,6 +245,35 @@ describe('Cache 性能和清理功能测试', () => {
       expect(cleanupResult.errors).toHaveLength(0) // 应该成功清理
     })
 
+    it('应该回收过旧的原子写入临时文件并保留新文件', async () => {
+      const cacheDir = path.join(tempDir, '.cache-temporary-files')
+      fs.mkdirSync(cacheDir, { recursive: true })
+      const staleFile = path.join(
+        cacheDir,
+        `${'a'.repeat(64)}.json.${process.pid}.${crypto.randomUUID()}.tmp`,
+      )
+      const freshFile = path.join(
+        cacheDir,
+        `${'b'.repeat(64)}.json.${process.pid}.${crypto.randomUUID()}.tmp`,
+      )
+
+      fs.writeFileSync(staleFile, 'stale')
+      fs.writeFileSync(freshFile, 'fresh')
+      const staleTime = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+      fs.utimesSync(staleFile, staleTime, staleTime)
+
+      const cache = new Cache<string>({ cacheDir, autoCleanup: false })
+      const cleanupResult = await cache.cleanup()
+
+      expect(cleanupResult.removed).toBe(1)
+      expect(fs.existsSync(staleFile)).toBe(false)
+      expect(fs.existsSync(freshFile)).toBe(true)
+      expect((await cache.getStats()).files).toBe(0)
+
+      await cache.clear()
+      expect(fs.existsSync(freshFile)).toBe(false)
+    })
+
     it('应该在cleanup中处理文件访问错误', async () => {
       const cache = new Cache<string>({
         enabled: true,
@@ -239,22 +300,43 @@ describe('Cache 性能和清理功能测试', () => {
     })
 
     it('应该在自动清理启用时自动执行清理', async () => {
-      const cache = new Cache<string>({
+      const cacheDir = path.join(tempDir, '.cache')
+      const writer = new Cache<string>({
         enabled: true,
-        cacheDir: path.join(tempDir, '.cache'),
-        autoCleanup: true,
+        cacheDir,
+        autoCleanup: false,
         ttlDays: 1 / (24 * 60 * 60 * 1000), // 1毫秒
       })
 
-      // 创建过期的缓存文件
       const testFile = createTempFile(tempDir, 'auto-clean.txt', 'content')
-      await cache.set(testFile, 'data')
+      await writer.set(testFile, 'data')
+      await waitForCondition(() =>
+        [...writer.memoryCache.values()].every(
+          entry => Date.now() - entry.timestamp > entry.ttl,
+        ),
+      )
 
-      // 等待自动清理执行
-      await sleep(100)
+      const reader = new Cache<string>({
+        enabled: true,
+        cacheDir,
+        autoCleanup: true,
+        ttlDays: 1 / (24 * 60 * 60 * 1000),
+      })
 
-      // 自动清理应该已经执行，但这个测试可能不够可靠
-      // 因为自动清理是异步的且使用setImmediate
+      await reader.getStats()
+      await waitForCondition(
+        () =>
+          fs
+            .readdirSync(cacheDir)
+            .filter(file => /^[a-f0-9]{64}\.json$/u.test(file)).length === 0,
+      )
+
+      expect(reader.memoryCache.size).toBe(0)
+      expect(
+        fs
+          .readdirSync(cacheDir)
+          .filter(file => /^[a-f0-9]{64}\.json$/u.test(file)),
+      ).toHaveLength(0)
     })
   })
 
@@ -272,10 +354,23 @@ describe('Cache 性能和清理功能测试', () => {
 
       await cache.set(testFile1, 'data1')
       await cache.set(testFile2, 'data2')
+      fs.writeFileSync(
+        path.join(cache.cacheDir, 'foreign.bin'),
+        'x'.repeat(1000),
+      )
 
       const stats = await cache.getStats()
+      const managedDiskUsage = fs
+        .readdirSync(cache.cacheDir)
+        .filter(file => /^[a-f0-9]{64}\.json$/u.test(file))
+        .reduce(
+          (total, file) =>
+            total + fs.statSync(path.join(cache.cacheDir, file)).size,
+          0,
+        )
 
-      expect(stats.diskUsage).toBeGreaterThan(0)
+      expect(stats.diskUsage).toBe(managedDiskUsage)
+      expect(cache.stats.diskUsage).toBe(managedDiskUsage)
       expect(stats.files).toBe(2)
     })
 

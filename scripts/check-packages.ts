@@ -361,6 +361,79 @@ try {
     }
   }
 
+  const configFixtureRoot = path.join(smokeRoot, 'config-fixture')
+  mkdirSync(configFixtureRoot, { recursive: true })
+  mkdirSync(path.join(configFixtureRoot, 'directory.js'))
+  writeFileSync(
+    path.join(configFixtureRoot, 'package.json'),
+    `${JSON.stringify({ name: 'config-fixture', type: 'module' })}\n`,
+  )
+  writeFileSync(
+    path.join(configFixtureRoot, 'helper.ts'),
+    'export const value = 42\n',
+  )
+  writeFileSync(
+    path.join(configFixtureRoot, 'config.ts'),
+    "import { value } from './helper'\nexport default { value }\n",
+  )
+  writeFileSync(
+    path.join(configFixtureRoot, 'reload.js'),
+    'globalThis.__eljsConfigReloadCount = (globalThis.__eljsConfigReloadCount ?? 0) + 1; export default { evaluationCount: globalThis.__eljsConfigReloadCount, version: 1 }\n',
+  )
+  writeFileSync(
+    path.join(configFixtureRoot, 'reload.cjs'),
+    'module.exports = { version: 1 }\n',
+  )
+  writeFileSync(
+    path.join(configFixtureRoot, 'fallback.json'),
+    '{"fallback":true}\n',
+  )
+
+  // 使用发布 tarball 和纯 Node 进程验证配置加载，避免测试转换器掩盖模块解析问题
+  run(process.execPath, [
+    '--input-type=module',
+    '-e',
+    [
+      "import assert from 'node:assert/strict'",
+      "import { writeFileSync } from 'node:fs'",
+      "import path from 'node:path'",
+      "import { ConfigManager } from '@eljs/config'",
+      `const fixtureRoot = ${JSON.stringify(configFixtureRoot)}`,
+      "const tsFile = path.join(fixtureRoot, 'config.ts')",
+      'assert.deepEqual(await ConfigManager.getConfig([tsFile]), { value: 42 })',
+      'assert.deepEqual(ConfigManager.getConfigSync([tsFile]), { value: 42 })',
+      "const esmFile = path.join(fixtureRoot, 'reload.js')",
+      'assert.deepEqual(await ConfigManager.getConfig([esmFile]), { evaluationCount: 1, version: 1 })',
+      "writeFileSync(esmFile, 'globalThis.__eljsConfigReloadCount = (globalThis.__eljsConfigReloadCount ?? 0) + 1; export default { evaluationCount: globalThis.__eljsConfigReloadCount, version: 2 }\\n')",
+      'assert.deepEqual(await ConfigManager.getConfig([esmFile], undefined, { reload: true }), { evaluationCount: 2, version: 2 })',
+      "const cjsFile = path.join(fixtureRoot, 'reload.cjs')",
+      'assert.deepEqual(await ConfigManager.getConfig([cjsFile]), { version: 1 })',
+      "writeFileSync(cjsFile, 'module.exports = { version: 2 }\\n')",
+      'assert.deepEqual(await ConfigManager.getConfig([cjsFile], undefined, { reload: true }), { version: 2 })',
+      "const selectedFile = await ConfigManager.getMainConfigFile(['directory.js', 'fallback.json'], fixtureRoot)",
+      "assert.equal(selectedFile, path.join(fixtureRoot, 'fallback.json'))",
+    ].join(';'),
+  ])
+  run(process.execPath, [
+    '-e',
+    [
+      "const assert = require('node:assert/strict')",
+      "const { writeFileSync } = require('node:fs')",
+      "const path = require('node:path')",
+      "const { ConfigManager } = require('@eljs/config')",
+      `const fixtureRoot = ${JSON.stringify(configFixtureRoot)}`,
+      'void (async () => {',
+      "const tsFile = path.join(fixtureRoot, 'config.ts')",
+      'assert.deepEqual(await ConfigManager.getConfig([tsFile]), { value: 42 })',
+      'assert.deepEqual(ConfigManager.getConfigSync([tsFile]), { value: 42 })',
+      "const esmFile = path.join(fixtureRoot, 'reload.js')",
+      'assert.deepEqual(await ConfigManager.getConfig([esmFile]), { evaluationCount: 1, version: 2 })',
+      "writeFileSync(esmFile, 'globalThis.__eljsConfigReloadCount = (globalThis.__eljsConfigReloadCount ?? 0) + 1; export default { evaluationCount: globalThis.__eljsConfigReloadCount, version: 3 }\\n')",
+      'assert.deepEqual(await ConfigManager.getConfig([esmFile], undefined, { reload: true }), { evaluationCount: 2, version: 3 })',
+      '})().catch(error => { console.error(error); process.exitCode = 1 })',
+    ].join(';'),
+  ])
+
   const releaseFixtureRoot = path.join(smokeRoot, 'release-fixture')
   mkdirSync(releaseFixtureRoot, { recursive: true })
   writeFileSync(

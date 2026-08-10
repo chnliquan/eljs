@@ -80,12 +80,37 @@ export function validateResolvedConfig(input: unknown): ResolvedConfig {
   requireBoolean(github.release, 'github.release')
   requireEnum(github.mode, 'github.mode', ['browser', 'api'])
   requireString(github.tokenEnv, 'github.tokenEnv')
+  optionalString(github.enterpriseHost, 'github.enterpriseHost')
 
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(github.tokenEnv)) {
     throw invalidConfig('github.tokenEnv', 'a valid environment variable name')
   }
 
+  if (
+    typeof github.enterpriseHost === 'string' &&
+    !isBareHostname(github.enterpriseHost)
+  ) {
+    throw invalidConfig(
+      'github.enterpriseHost',
+      'a lowercase hostname without protocol, port, or path',
+    )
+  }
+
   return input as ResolvedConfig
+}
+
+function isBareHostname(value: string): boolean {
+  try {
+    const url = new URL(`https://${value}`)
+    return (
+      url.hostname === value &&
+      !url.port &&
+      url.pathname === '/' &&
+      value !== 'github.com'
+    )
+  } catch {
+    return false
+  }
 }
 
 function requireEnum<const T extends string>(

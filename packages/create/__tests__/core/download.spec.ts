@@ -521,6 +521,32 @@ describe('TemplateDownloader 类测试', () => {
         )
       })
 
+      it.each([
+        ['optionalDependencies', { optionalDependency: '^1.0.0' }],
+        ['peerDependencies', { peerDependency: '^1.0.0' }],
+      ] as const)(
+        '当package.json仅有%s时也应该安装依赖',
+        async (field, value) => {
+          mockReadJson.mockResolvedValue({
+            name: 'test-package',
+            version: '1.0.0',
+            [field]: value,
+          })
+
+          const download = new TemplateDownloader({
+            type: 'npm',
+            value: mockPackageName,
+          })
+          await download.download()
+
+          expect(mockRun).toHaveBeenCalledWith(
+            'npm',
+            ['install', '--omit=dev', '--ignore-scripts'],
+            { cwd: mockDownloadPath },
+          )
+        },
+      )
+
       it('应该把调用方项目的 npmrc 作为模板安装用户配置', async () => {
         mockReadJson.mockResolvedValue(mockPackageJson)
         mockFindUp.mockResolvedValue('/test/cwd/.npmrc')

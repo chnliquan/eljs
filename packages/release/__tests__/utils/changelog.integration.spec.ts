@@ -44,7 +44,7 @@ describe('更新日志真实集成', () => {
 
     expect(changelog).toContain('✨ Features')
     expect(changelog).toContain('initial feature')
-  })
+  }, 30_000)
 
   it('应该在独立模式下使用包名标签生成正确的提交范围', async () => {
     repositoryPath = mkdtempSync(path.join(tmpdir(), 'eljs-changelog-'))
@@ -80,7 +80,7 @@ describe('更新日志真实集成', () => {
     expect(changelog).toContain(
       'integration-package%401.0.0...integration-package%401.1.0',
     )
-  })
+  }, 30_000)
 })
 
 function runGit(cwd: string, args: string[]): void {

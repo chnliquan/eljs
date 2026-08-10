@@ -6,19 +6,29 @@ import {
   parsePackageSpecifier,
 } from '@eljs/utils/npm'
 import type { PackageJson } from '@eljs/utils/types'
+import { mkdtemp } from 'node:fs/promises'
+import { createRequire } from 'node:module'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-import { defaultConfig } from '../src/config'
+import { CreateTemplate } from '../src/create'
+import { officialTemplates } from '../src/official-templates'
 
-const officialTemplates = Object.values(defaultConfig.templates).flatMap(
-  templates => Object.values(templates),
-)
+interface InjectablePrompts {
+  inject(answers: readonly unknown[]): void
+}
+
+const localRequire = createRequire(import.meta.url)
+const utilsRoot = fileURLToPath(new URL('../../utils', import.meta.url))
+const promptsPath = localRequire.resolve('prompts', { paths: [utilsRoot] })
+const injectablePrompts = localRequire(promptsPath) as InjectablePrompts
 
 describe.runIf(process.env.ELJS_TEST_OFFICIAL_TEMPLATES === '1')(
   'create-template 官方模板发布契约',
   () => {
-    it.each(officialTemplates)(
+    it.each(Object.values(officialTemplates))(
       '$value 包含当前创建器需要的入口文件',
       async template => {
         const { name, version } = parsePackageSpecifier(template.value)
@@ -61,6 +71,34 @@ describe.runIf(process.env.ELJS_TEST_OFFICIAL_TEMPLATES === '1')(
           if (templateRoot) {
             await remove(templateRoot)
           }
+        }
+      },
+      120_000,
+    )
+
+    it.each(Object.keys(officialTemplates))(
+      '%s 可以完成真实项目生成',
+      async template => {
+        const cwd = await mkdtemp(
+          path.join(tmpdir(), 'eljs-official-template-'),
+        )
+        const projectName = 'contract-project'
+
+        try {
+          injectablePrompts.inject(['monorepo'])
+          await new CreateTemplate({
+            cwd,
+            defaultQuestions: false,
+            gitInit: false,
+            install: false,
+            template,
+          }).run(projectName)
+
+          await expect(
+            pathExists(path.join(cwd, projectName, 'package.json')),
+          ).resolves.toBe(true)
+        } finally {
+          await remove(cwd)
         }
       },
       120_000,

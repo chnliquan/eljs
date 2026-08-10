@@ -1,6 +1,10 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
-import { PluginHostError, PluginHostErrorCode } from '../errors'
+import {
+  getPluginHostErrorMessage,
+  PluginHostError,
+  PluginHostErrorCode,
+} from '../errors'
 import type { Plugin } from '../plugin/plugin'
 import type { PluginInitializer } from '../plugin/types'
 import type { PluginOrigin } from './types'
@@ -37,7 +41,7 @@ export async function parsePluginOptions(
   } catch (error) {
     throw new PluginHostError(
       PluginHostErrorCode.InvalidPluginOptions,
-      `Validate ${plugin.type} \`${plugin.key}\` options failed: ${(error as Error).message}`,
+      `Validate ${plugin.type} \`${plugin.key}\` options failed: ${getPluginHostErrorMessage(error)}`,
       {
         cause: error,
         details: {

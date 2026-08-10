@@ -1,11 +1,12 @@
 {
   "name": "@eljs/utils",
-  "version": "1.3.2-alpha.0",
-  "description": "A comprehensive collection of Node.js utilities for modern development workflows.",
+  "version": "2.0.0-alpha.0",
+  "description": "Domain-based Node.js primitives for files, processes, downloads, Git, npm, paths, and automation.",
   "keywords": [
     "eljs",
     "node",
-    "utils"
+    "tooling",
+    "automation"
   ],
   "homepage": "https://github.com/chnliquan/eljs/tree/master/packages/utils#readme",
   "bugs": {
@@ -13,7 +14,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/chnliquan/eljs",
+    "url": "https://github.com/chnliquan/eljs.git",
     "directory": "packages/utils"
   },
   "license": "MIT",
@@ -122,6 +123,16 @@
         "default": "./dist/http/index.cjs"
       }
     },
+    "./loader": {
+      "import": {
+        "types": "./dist/loader/index.d.ts",
+        "default": "./dist/loader/index.js"
+      },
+      "require": {
+        "types": "./dist/loader/index.d.cts",
+        "default": "./dist/loader/index.cjs"
+      }
+    },
     "./logger": {
       "import": {
         "types": "./dist/logger/index.d.ts",
@@ -208,6 +219,7 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
+    "README.zh-CN.md",
     "dist"
   ],
   "scripts": {
@@ -234,7 +246,7 @@
     "glob": "^13.0.6",
     "import-fresh": "^3.3.1",
     "ini": "^6.0.0",
-    "js-yaml": "^5.2.2",
+    "js-yaml": "^5.2.3",
     "mkdirp": "^3.0.1",
     "mustache": "^4.2.0",
     "parse-json": "^8.3.0",

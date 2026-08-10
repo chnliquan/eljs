@@ -108,5 +108,15 @@ describe('工具函数模块', () => {
 
       expect(mockedEljs.logger.event).toHaveBeenCalledWith('Cancel create')
     })
+
+    it('日志失败时仍然抛出取消领域错误', () => {
+      vi.mocked(mockedEljs.logger.event).mockImplementationOnce(() => {
+        throw new Error('Logger failed')
+      })
+
+      expect(() => onCancel()).toThrow(
+        expect.objectContaining({ code: 'CREATE_OPERATION_CANCELLED' }),
+      )
+    })
   })
 })
