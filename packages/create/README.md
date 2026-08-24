@@ -284,29 +284,12 @@ await cancellableCreate.run('cancellable-project')
 
 ## ⚙️ Configuration
 
-Create a **create.config.ts** file in your project root for persistent configuration:
+Create a **create.config.ts** file in the template root to configure template generation. It is loaded after the template and target directory have already been resolved, so source selection and target-directory options belong to `ProjectCreatorOptions`, not this file.
 
 ```typescript
 import { defineConfig } from '@eljs/create'
 
 export default defineConfig({
-  /**
-   * Working directory
-   * @default process.cwd()
-   */
-  cwd: process.cwd(),
-
-  /**
-   * Default template source
-   */
-  template: '@company/default-template',
-
-  /**
-   * Directory handling options
-   */
-  force: false,
-  merge: false,
-
   /**
    * Post-creation options
    */

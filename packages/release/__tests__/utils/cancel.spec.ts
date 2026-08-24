@@ -1,139 +1,45 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-  type MockedFunction,
-} from 'vitest'
-/**
- * @file packages/release utils/cancel 模块单元测试
- * @description 测试 cancel.ts 取消功能
- */
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { logger } from '@eljs/utils'
+import { logger } from '@eljs/utils/logger'
+
 import { onCancel } from '../../src/utils/cancel'
+import { AppError } from '../../src/utils/error'
 
-// 模拟 @eljs/utils 的 logger
-vi.mock('@eljs/utils', () => ({
+vi.mock('@eljs/utils/logger', () => ({
   logger: {
     event: vi.fn(),
   },
 }))
-vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
 
-describe('用户取消功能测试', () => {
+describe('发布取消处理', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.spyOn(process, 'exit').mockImplementation(() => undefined as never)
   })
 
-  afterEach(() => {
-    vi.restoreAllMocks()
+  it('应该记录事件并抛出可由发布清理边界接收的错误', () => {
+    const exit = vi
+      .spyOn(process, 'exit')
+      .mockImplementation(() => undefined as never)
+
+    expect(() => onCancel()).toThrow(
+      expect.objectContaining({
+        message: 'Release cancelled',
+        name: 'AppError',
+      }),
+    )
+    expect(logger.event).toHaveBeenCalledWith('Cancel release')
+    expect(exit).not.toHaveBeenCalled()
   })
 
-  describe('onCancel 函数基本功能', () => {
-    it('应该记录取消发布事件', () => {
-      const mockLoggerEvent = logger.event as MockedFunction<
-        typeof logger.event
-      >
-
-      onCancel()
-
-      expect(mockLoggerEvent).toHaveBeenCalledWith('Cancel release')
-      expect(mockLoggerEvent).toHaveBeenCalledTimes(1)
-    })
-
-    it('应该调用 process.exit(0)', () => {
-      onCancel()
-
-      expect(process.exit).toHaveBeenCalledWith(0)
-    })
+  it('应该抛出公开的 AppError 类型', () => {
+    expect(() => onCancel()).toThrow(AppError)
   })
 
-  describe('onCancel 函数类型安全', () => {
-    it('应该是一个无参数无返回值的函数', () => {
-      expect(typeof onCancel).toBe('function')
-      expect(onCancel.length).toBe(0) // 参数个数为 0
+  it('日志记录失败时仍应该保留取消语义', () => {
+    vi.mocked(logger.event).mockImplementation(() => {
+      throw new Error('日志记录失败')
     })
 
-    it('调用时不应该需要任何参数', () => {
-      expect(() => onCancel()).not.toThrow()
-    })
-  })
-
-  describe('onCancel 函数行为验证', () => {
-    it('应该使用正确的退出码', () => {
-      onCancel()
-
-      expect(process.exit).toHaveBeenCalledWith(0)
-      expect(process.exit).not.toHaveBeenCalledWith(1)
-    })
-
-    it('应该记录正确的事件消息', () => {
-      const mockLoggerEvent = logger.event as MockedFunction<
-        typeof logger.event
-      >
-
-      onCancel()
-
-      expect(mockLoggerEvent).toHaveBeenCalledWith('Cancel release')
-      expect(mockLoggerEvent).not.toHaveBeenCalledWith('Cancel')
-      expect(mockLoggerEvent).not.toHaveBeenCalledWith('release canceled')
-    })
-  })
-
-  describe('onCancel 函数集成行为', () => {
-    it('应该能够在信号处理器中正确工作', () => {
-      const signalHandler = () => {
-        onCancel()
-      }
-
-      signalHandler()
-
-      expect(logger.event).toHaveBeenCalledWith('Cancel release')
-      expect(process.exit).toHaveBeenCalledWith(0)
-    })
-
-    it('应该能够多次调用而不出现副作用', () => {
-      const mockLoggerEvent = logger.event as MockedFunction<
-        typeof logger.event
-      >
-
-      // 第一次调用
-      onCancel()
-      expect(mockLoggerEvent).toHaveBeenCalledTimes(1)
-      expect(process.exit).toHaveBeenCalledTimes(1)
-
-      // 清除模拟调用记录
-      vi.clearAllMocks()
-
-      // 第二次调用
-      onCancel()
-      expect(mockLoggerEvent).toHaveBeenCalledTimes(1)
-      expect(process.exit).toHaveBeenCalledTimes(1)
-    })
-  })
-
-  describe('onCancel 函数错误处理', () => {
-    it('当 logger.event 抛出错误时函数应该抛出错误', () => {
-      const mockLoggerEvent = logger.event as MockedFunction<
-        typeof logger.event
-      >
-      mockLoggerEvent.mockImplementation(() => {
-        throw new Error('日志记录失败')
-      })
-
-      expect(() => onCancel()).toThrow('日志记录失败')
-      expect(mockLoggerEvent).toHaveBeenCalledWith('Cancel release')
-    })
-  })
-
-  describe('onCancel 函数模块导出', () => {
-    it('应该正确导出 onCancel 函数', () => {
-      expect(onCancel).toBeDefined()
-      expect(typeof onCancel).toBe('function')
-    })
+    expect(() => onCancel()).toThrow(AppError)
   })
 })

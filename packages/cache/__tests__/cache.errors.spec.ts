@@ -141,6 +141,29 @@ describe('Cache 错误处理和边界情况测试', () => {
   })
 
   describe('键生成器错误处理', () => {
+    it('读取异常日志不应该暴露原始逻辑键', async () => {
+      const cache = new Cache<string>({
+        cacheDir: path.join(tempDir, '.cache-redacted-key'),
+        autoCleanup: false,
+      })
+      await cache.getStats()
+      const cacheWithLoadFailure = cache as unknown as {
+        _loadFromDisk: (key: string) => Promise<null>
+      }
+      vi.spyOn(cacheWithLoadFailure, '_loadFromDisk').mockRejectedValueOnce(
+        new Error('read failed'),
+      )
+      const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const sensitiveKey = 'token=user-secret'
+
+      expect(await cache.getByKey(sensitiveKey)).toBeNull()
+      expect(warning).toHaveBeenCalledWith(
+        'Failed to get cache by key:',
+        expect.any(Error),
+      )
+      expect(warning.mock.calls.flat().join(' ')).not.toContain(sensitiveKey)
+    })
+
     it('应该处理键生成器抛出异常', async () => {
       const faultyKeyGenerator: CacheKeyGenerator<string> = () => {
         throw new Error('Key generation failed')
@@ -202,6 +225,26 @@ describe('Cache 错误处理和边界情况测试', () => {
       expect(fs.readdirSync(cacheDir)).toEqual([
         expect.stringMatching(/^[a-f0-9]{64}\.json$/u),
       ])
+    })
+  })
+
+  describe('统计错误处理', () => {
+    it('单文件统计失败时仍应按目录快照计算文件数', async () => {
+      const cache = new Cache<string>({
+        cacheDir: path.join(tempDir, '.cache-stat-failure'),
+        autoCleanup: false,
+        keyGenerator: data => data,
+      })
+      await cache.setByData('first')
+      await cache.setByData('second')
+      const statSpy = vi
+        .spyOn(fs.promises, 'stat')
+        .mockRejectedValueOnce(new Error('stat failed'))
+
+      const stats = await cache.getStats()
+
+      expect(stats.files).toBe(2)
+      statSpy.mockRestore()
     })
   })
 
@@ -365,6 +408,24 @@ describe('Cache 错误处理和边界情况测试', () => {
   })
 
   describe('配置验证', () => {
+    it('应该拒绝不能安全持久化的数据时间戳', async () => {
+      const cache = new Cache<string>({
+        cacheDir: path.join(tempDir, '.cache-invalid-timestamp'),
+        autoCleanup: false,
+      })
+
+      for (const timestamp of [
+        -1,
+        1.5,
+        Number.MAX_SAFE_INTEGER + 1,
+        Number.POSITIVE_INFINITY,
+      ]) {
+        await expect(cache.setByData('data', { timestamp })).rejects.toThrow(
+          'metadata.timestamp must be a non-negative safe integer',
+        )
+      }
+    })
+
     it('应该接受合理的配置值', () => {
       expect(() => {
         new Cache({

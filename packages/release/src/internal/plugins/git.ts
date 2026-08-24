@@ -24,6 +24,7 @@ export default definePlugin(context => {
       if (
         !(await isGitClean({
           cwd: context.cwd,
+          signal: context.signal,
           verbose: true,
         }))
       ) {
@@ -33,6 +34,7 @@ export default definePlugin(context => {
       if (
         await isGitBehindRemote({
           cwd: context.cwd,
+          signal: context.signal,
           verbose: true,
         })
       ) {
@@ -135,6 +137,7 @@ export default definePlugin(context => {
         [...normalizeArgs(commitArgs)].filter(Boolean),
         {
           cwd: context.cwd,
+          signal: context.signal,
           verbose: true,
         },
       )
@@ -147,6 +150,7 @@ export default definePlugin(context => {
         try {
           await gitTag(tagName, {
             cwd: context.cwd,
+            signal: context.signal,
             verbose: true,
           })
         } catch (error) {
@@ -159,6 +163,7 @@ export default definePlugin(context => {
             tagExists &&
             (await isGitTagAtHead(tagName, {
               cwd: context.cwd,
+              signal: context.signal,
               verbose: false,
             }))
           ) {
@@ -186,6 +191,7 @@ export default definePlugin(context => {
       context.step('Pushing release commit and tags ...')
       await gitPush([...normalizeArgs(pushArgs)].filter(Boolean), {
         cwd: context.cwd,
+        signal: context.signal,
         verbose: true,
       })
     },

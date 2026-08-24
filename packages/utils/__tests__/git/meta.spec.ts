@@ -146,6 +146,17 @@ describe('Git Meta 工具', () => {
       expect(result).toBeNull()
     })
 
+    it('不应该把取消误判为未配置上游分支', async () => {
+      const controller = new AbortController()
+      const cancellation = new Error('cancelled')
+      controller.abort(cancellation)
+      mockRun.mockRejectedValue(new Error('terminated'))
+
+      await expect(
+        getGitUpstreamBranch({ signal: controller.signal }),
+      ).rejects.toBe(cancellation)
+    })
+
     it('应该传递选项', async () => {
       const options = { verbose: false }
       mockRun.mockResolvedValue({ stdout: 'origin/develop' })
@@ -286,6 +297,18 @@ describe('Git Meta 工具', () => {
       const result = await getGitLatestTag()
 
       expect(result).toBeNull()
+    })
+
+    it('不应该把取消误判为没有标签', async () => {
+      const controller = new AbortController()
+      const cancellation = new Error('cancelled')
+      controller.abort(cancellation)
+      mockIsObject.mockReturnValueOnce(true)
+      mockRun.mockRejectedValue(new Error('terminated'))
+
+      await expect(getGitLatestTag({ signal: controller.signal })).rejects.toBe(
+        cancellation,
+      )
     })
 
     it('应该处理args作为第二个参数', async () => {

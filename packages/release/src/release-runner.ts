@@ -327,7 +327,8 @@ export class ReleaseRunner extends PluginHost<
 
       if (pluginsLoaded) {
         try {
-          await this.runHook('onError', {
+          // 主信号已经取消时仍要允许插件完成失败清理，但清理 Hook 不应继续发布副作用
+          await this.runCleanupHook('onError', {
             args: {
               error,
               stage: failedStage,
@@ -377,11 +378,15 @@ export class ReleaseRunner extends PluginHost<
    * @returns 配置解析完成后兑现的 Promise
    */
   private async _resolveConfig(): Promise<void> {
+    const releaseOptions = { ...this._releaseOptions }
+    const userConfig = { ...(this.userConfig || {}) } as Config
+    delete releaseOptions.signal
+    delete userConfig.signal
     const mergedConfig = deepMerge(
       {},
       defaultConfig,
-      this.userConfig || {},
-      this._releaseOptions,
+      userConfig,
+      releaseOptions,
     ) as ResolvedConfig
 
     debug?.(mergedConfig)
@@ -413,6 +418,7 @@ export class ReleaseRunner extends PluginHost<
     const getAppData = () => this.appData
 
     return {
+      signal: this.constructorOptions.signal,
       get config() {
         return getConfig()
       },

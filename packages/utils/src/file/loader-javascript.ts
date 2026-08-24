@@ -7,33 +7,17 @@ import { loadImportFresh } from './loader-dependencies'
  * 加载 JavaScript 文件
  * @param path - 文件路径
  * @returns 模块默认导出或 CommonJS 导出
- * @throws 动态导入和 CommonJS 加载均失败时抛出带路径上下文的错误
+ * @throws 动态导入失败时抛出带路径上下文的原错误
  */
 export async function loadJs<T>(path: string): Promise<T> {
   try {
     const { href } = pathToFileURL(path)
     const content = await import(href)
     return isESModule<T>(content) ? content.default : content
-  } catch (dynamicImportError) {
-    const dynamicImportErr = dynamicImportError as Error
-    try {
-      return loadJsSync(path)
-    } catch (requireError) {
-      const requireErr = requireError as NodeJS.ErrnoException
-      if (
-        requireErr.code === 'ERR_REQUIRE_ESM' ||
-        (requireErr instanceof SyntaxError &&
-          requireErr
-            .toString()
-            .includes('Cannot use import statement outside a module'))
-      ) {
-        dynamicImportErr.message = `Load ${path} failed: ${dynamicImportErr.message}`
-        throw dynamicImportErr
-      }
-
-      requireErr.message = `Load ${path} failed: ${dynamicImportErr.message}`
-      throw requireError
-    }
+  } catch (error) {
+    const err = error as Error
+    err.message = `Load ${path} failed: ${err.message}`
+    throw err
   }
 }
 

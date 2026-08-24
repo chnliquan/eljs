@@ -27,6 +27,12 @@ export interface MustacheRenderTemplateOptions {
  * ejs 模版渲染选项
  */
 export interface EjsRenderTemplateOptions {
+  /**
+   * 启用 EJS 渲染器
+   *
+   * @remarks
+   * EJS 模板可执行 JavaScript，仅应用于可信模板
+   */
   type?: 'ejs'
   options?: Options
 }
@@ -36,6 +42,8 @@ export interface EjsRenderTemplateOptions {
  * @param template - 模版内容
  * @param data - 模版数据
  * @param options - 选项
+ * @returns 渲染后的文本
+ * @throws 模板渲染失败时抛出不包含模板源文的错误
  */
 export function renderTemplate(
   template: string,
@@ -57,9 +65,9 @@ export function renderTemplate(
     } else {
       return Mustache.render(template, data, partials, tagsOrOptions)
     }
-  } catch (error) {
-    const err = error as Error
-    err.message = `Render ${template} failed: ${err.message}`
-    throw err
+  } catch {
+    throw new Error(
+      `Render ${type === 'ejs' ? 'EJS' : 'Mustache'} template failed`,
+    )
   }
 }

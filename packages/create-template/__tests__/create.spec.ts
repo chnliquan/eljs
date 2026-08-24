@@ -121,6 +121,7 @@ describe('CreateTemplate 类功能测试', () => {
 
     it('应该拒绝显式传入的无效模板', async () => {
       createTemplate = new CreateTemplate({
+        // @ts-expect-error 验证 JavaScript 调用方绕过静态类型后的运行时防御
         template: 'invalid-template',
       })
 
@@ -213,6 +214,7 @@ describe('CreateTemplate 类功能测试', () => {
 
       it('应该拒绝显式提供的无效模板', async () => {
         const createTemplate = new CreateTemplate({
+          // @ts-expect-error 验证 JavaScript 调用方绕过静态类型后的运行时防御
           template: 'invalid-template',
         })
 
@@ -227,6 +229,7 @@ describe('CreateTemplate 类功能测试', () => {
     describe('断言验证测试', () => {
       it('应该在直接提供空模板时抛出错误', async () => {
         const createTemplate = new CreateTemplate({
+          // @ts-expect-error 验证 JavaScript 调用方绕过静态类型后的运行时防御
           template: '',
         })
 
@@ -245,6 +248,7 @@ describe('CreateTemplate 类功能测试', () => {
 
       it('应该在找不到对应配置时抛出错误', async () => {
         const createTemplate = new CreateTemplate({
+          // @ts-expect-error 验证 JavaScript 调用方绕过静态类型后的运行时防御
           template: 'nonexistent-template',
         })
 

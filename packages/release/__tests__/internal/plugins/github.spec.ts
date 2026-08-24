@@ -55,6 +55,7 @@ interface GitHubTestApi {
     }>
   }
   cwd: string
+  signal?: AbortSignal
 }
 
 // 全局类型定义
@@ -583,6 +584,44 @@ describe('GitHub 插件测试', () => {
       expect(error).toBeInstanceOf(Error)
       expect((error as Error).message).toContain('HTTP 500')
       expect((error as Error).message).not.toContain('secret-token')
+    })
+
+    it('应该使用发布取消信号终止 API 请求', async () => {
+      process.env.RELEASE_TEST_GITHUB_TOKEN = 'secret-token'
+      const controller = new AbortController()
+      const cancellation = new Error('cancelled')
+      mockContext.signal = controller.signal
+      const fetchMock = vi.fn<typeof fetch>().mockImplementation(
+        (_input, init) =>
+          new Promise((_resolve, reject) => {
+            if (init?.signal?.aborted) {
+              reject(init.signal.reason)
+              return
+            }
+
+            init?.signal?.addEventListener(
+              'abort',
+              () => reject(init.signal?.reason),
+              { once: true },
+            )
+          }),
+      )
+      vi.stubGlobal('fetch', fetchMock)
+      const { onReleaseHandler } = enableApiMode()
+
+      const release = onReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: '## Changes',
+      })
+      controller.abort(cancellation)
+
+      await expect(release).rejects.toBe(cancellation)
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      )
     })
 
     it('企业 GitHub 应该使用 /api/v3 端点', async () => {

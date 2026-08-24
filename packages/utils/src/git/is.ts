@@ -3,6 +3,8 @@ import { run, type RunCommandOptions } from '../cp'
 /**
  * git 是否干净
  * @param options - 选项
+ * @returns Git 工作区是否没有未提交变更
+ * @throws 检查期间收到取消信号时抛出取消原因
  */
 export async function isGitClean(
   options?: RunCommandOptions,
@@ -10,7 +12,11 @@ export async function isGitClean(
   try {
     const rawStatus = await run('git', ['status', '--porcelain'], options)
     return rawStatus.stdout.trim().length === 0
-  } catch (err) {
+  } catch (error) {
+    if (options?.signal?.aborted) {
+      throw options.signal.reason ?? error
+    }
+
     return false
   }
 }

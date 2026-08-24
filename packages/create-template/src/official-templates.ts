@@ -29,24 +29,28 @@ const OFFICIAL_TEMPLATE_VERSION = '0.12.1'
  *
  * @internal
  */
-export const officialTemplates: Readonly<Record<string, OfficialTemplate>> =
-  Object.freeze({
-    'template-npm-web': Object.freeze({
-      type: 'npm' as const,
-      description: 'Web Common Template',
-      value: `@eljs/create-plugin-npm-web@${OFFICIAL_TEMPLATE_VERSION}`,
-      registry: 'https://registry.npmjs.org/',
-      integrity:
-        'sha512-PnCXo/ZbnGnQqdFQjG9jI1jXRn9ZV8l4DWE6Txxjmu40PkCF6MRfqCGpCBd4PN2flAKCph+DUaNrKM+6lKrrww==',
-      trusted: true,
-    }),
-    'template-npm-node': Object.freeze({
-      type: 'npm' as const,
-      description: 'Node Common Template',
-      value: `@eljs/create-plugin-npm-node@${OFFICIAL_TEMPLATE_VERSION}`,
-      registry: 'https://registry.npmjs.org/',
-      integrity:
-        'sha512-51zCeHJUTzpp0Gxpnn2LcWAPJOeKi1d9HUF5TIQ2pZDzrdnyuSm5quViki9kMKiYTzwf6HckEvw5I5rD3yQm8A==',
-      trusted: true,
-    }),
-  })
+export const officialTemplates = Object.freeze({
+  'template-npm-web': Object.freeze({
+    type: 'npm' as const,
+    description: 'Web Common Template',
+    value: `@eljs/create-plugin-npm-web@${OFFICIAL_TEMPLATE_VERSION}`,
+    registry: 'https://registry.npmjs.org/',
+    integrity:
+      'sha512-PnCXo/ZbnGnQqdFQjG9jI1jXRn9ZV8l4DWE6Txxjmu40PkCF6MRfqCGpCBd4PN2flAKCph+DUaNrKM+6lKrrww==',
+    trusted: true,
+  }),
+  'template-npm-node': Object.freeze({
+    type: 'npm' as const,
+    description: 'Node Common Template',
+    value: `@eljs/create-plugin-npm-node@${OFFICIAL_TEMPLATE_VERSION}`,
+    registry: 'https://registry.npmjs.org/',
+    integrity:
+      'sha512-51zCeHJUTzpp0Gxpnn2LcWAPJOeKi1d9HUF5TIQ2pZDzrdnyuSm5quViki9kMKiYTzwf6HckEvw5I5rD3yQm8A==',
+    trusted: true,
+  }),
+} satisfies Record<string, OfficialTemplate>)
+
+/**
+ * `create-template` 支持的内置官方模板标识
+ */
+export type OfficialTemplateName = keyof typeof officialTemplates

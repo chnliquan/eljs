@@ -1,4 +1,4 @@
-import { PluginHostState } from '@eljs/plugin-host'
+import { PluginHostErrorCode, PluginHostState } from '@eljs/plugin-host'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -32,5 +32,51 @@ describe('ReleaseRunner 集成', () => {
     await runner.testLoad()
 
     expect(runner.state).toBe(PluginHostState.Ready)
+  })
+
+  it('取消正常生命周期后仍应该执行 onError 清理 Hook', async () => {
+    cwd = await mkdtemp(path.join(tmpdir(), 'eljs-release-runner-abort-'))
+    await writeFile(
+      path.join(cwd, 'package.json'),
+      JSON.stringify({ name: 'release-abort-fixture', version: '1.0.0' }),
+    )
+    const controller = new AbortController()
+    const controllerKey = `__eljsReleaseAbortController${Date.now()}`
+    const cleanupKey = `__eljsReleaseAbortCleanup${Date.now()}`
+    const pluginPath = path.join(cwd, 'abort-plugin.mjs')
+    Reflect.set(globalThis, controllerKey, controller)
+    Reflect.set(globalThis, cleanupKey, false)
+    await writeFile(
+      pluginPath,
+      [
+        'export default context => {',
+        '  context.modifyConfig(config => {',
+        `    Reflect.get(globalThis, ${JSON.stringify(controllerKey)}).abort(new Error('fixture cancelled'))`,
+        '    return config',
+        '  })',
+        '  context.onError(() => {',
+        `    Reflect.set(globalThis, ${JSON.stringify(cleanupKey)}, true)`,
+        '  })',
+        '}',
+      ].join('\n'),
+    )
+
+    try {
+      const runner = new ReleaseRunner({
+        cwd,
+        dryRun: true,
+        signal: controller.signal,
+        plugins: [pluginPath],
+      })
+
+      await expect(runner.run()).rejects.toMatchObject({
+        code: PluginHostErrorCode.OperationAborted,
+      })
+      expect(Reflect.get(globalThis, cleanupKey)).toBe(true)
+      expect(runner.stage).toBe('failed')
+    } finally {
+      Reflect.deleteProperty(globalThis, controllerKey)
+      Reflect.deleteProperty(globalThis, cleanupKey)
+    }
   })
 })

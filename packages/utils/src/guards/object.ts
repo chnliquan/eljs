@@ -44,13 +44,14 @@ export function isPromise<T>(target: unknown): target is Promise<T> {
  * @param module - 目标模块
  * @returns 目标值是否为包含默认导出的 ES 模块对象
  */
-export function isESModule<T>(
-  module: unknown,
-): module is { __esModule: true; default: T } {
+export function isESModule<T>(module: unknown): module is { default: T } {
+  const candidate = module as Record<PropertyKey, unknown> | null
+
   return (
-    Boolean(module) &&
-    typeof module === 'object' &&
-    (module as Record<string, unknown>).__esModule === true &&
-    'default' in (module as Record<string, unknown>)
+    candidate !== null &&
+    typeof candidate === 'object' &&
+    (candidate.__esModule === true ||
+      candidate[Symbol.toStringTag] === 'Module') &&
+    'default' in candidate
   )
 }

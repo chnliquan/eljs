@@ -535,6 +535,28 @@ describe('CreateRunner 类完整测试', () => {
       expect(runner.config).toEqual(mergedConfig)
     })
 
+    it.each(['defaultQuestions', 'gitInit', 'install'] as const)(
+      '应该拒绝非布尔类型的 %s 行为开关',
+      async option => {
+        const { deepMerge } = requiredObjectModule
+        deepMerge.mockReturnValue({
+          cwd: '/test',
+          defaultQuestions: true,
+          gitInit: true,
+          install: true,
+          [option]: 'false',
+        })
+        const runner = new CreateRunner({ cwd: '/test' })
+
+        await expect(
+          runner.run('/test/target', 'test-project'),
+        ).rejects.toMatchObject({
+          code: 'CREATE_INVALID_OPTIONS',
+          details: { option, value: 'false' },
+        })
+      },
+    )
+
     it('应该保留 AbortSignal 实例而不是深合并其内部状态', async () => {
       const controller = new AbortController()
       const runner = new CreateRunner({

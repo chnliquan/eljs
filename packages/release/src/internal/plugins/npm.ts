@@ -37,10 +37,12 @@ export default definePlugin(context => {
         ? (
             await run('npm', ['whoami', ...registryArgs], {
               cwd: context.cwd,
+              signal: context.signal,
             })
           ).stdout.trim()
         : await getNpmUser({
             cwd: context.cwd,
+            signal: context.signal,
           })
 
       await mapWithConcurrency(
@@ -56,6 +58,7 @@ export default definePlugin(context => {
           const owners = (
             await run('npm', ['owner', 'ls', pkgName, ...registryArgs], {
               cwd: context.cwd,
+              signal: context.signal,
             })
           ).stdout
             .trim()
@@ -208,6 +211,7 @@ export default definePlugin(context => {
           ...(publishEnv ? { env: publishEnv } : {}),
           verbose: true,
           stdin: 'inherit',
+          signal: context.signal,
         })
 
         logger.ready(

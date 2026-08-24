@@ -8,9 +8,12 @@ import semver, { type ReleaseType } from 'semver'
 import updateNotifier from 'update-notifier'
 
 import { release } from './release'
-import { AppError, onCancel } from './utils'
+import { AppError } from './utils'
 
 const { RELEASE_TYPES } = semver
+
+/** 首次终止信号后等待异步清理完成的最长时间 */
+const FORCE_EXIT_GRACE_PERIOD_MS = 5_000
 
 /**
  * 启动 release 命令行程序
@@ -18,31 +21,74 @@ const { RELEASE_TYPES } = semver
  * @returns 命令行流程 Promise
  */
 export function cli(): Promise<void> {
-  registerSignalHandler()
+  const controller = new AbortController()
+  const disposeSignalHandlers = registerSignalHandlers(controller)
 
-  return main()
-    .then(() => process.exit(0))
+  return main(controller.signal)
+    .then(() => {
+      if (controller.signal.aborted) {
+        throw controller.signal.reason
+      }
+    })
     .catch(error => {
-      if (error instanceof AppError) {
+      if (controller.signal.aborted) {
+        process.exitCode = 130
+      } else if (error instanceof AppError) {
+        process.exitCode = 1
         logger.error(error.message)
       } else {
+        process.exitCode = 1
         console.error(error)
       }
-      process.exit(1)
     })
+    .finally(disposeSignalHandlers)
 }
 
-function registerSignalHandler() {
-  if (!process.listeners('SIGINT').includes(handleSigint)) {
-    process.on('SIGINT', handleSigint)
+/**
+ * 注册当前发布流程的进程信号并返回清理函数
+ *
+ * @param controller - 当前发布流程的取消控制器
+ * @returns 移除本次信号监听器的函数
+ * @internal
+ */
+function registerSignalHandlers(controller: AbortController): () => void {
+  let forceExitTimer: NodeJS.Timeout | undefined
+
+  const handleSignal = (signal: NodeJS.Signals) => {
+    if (!controller.signal.aborted) {
+      try {
+        logger.event(`Cancelling release after ${signal}`)
+      } catch {
+        // 日志失败不能阻止发布流程进入取消状态
+      }
+      // 即使插件返回不持有事件循环句柄的悬空 Promise，自然退出也必须保留取消语义
+      process.exitCode = 130
+      controller.abort(new AppError(`Release operation received ${signal}`))
+      // 第三方插件可能忽略 AbortSignal，宽限期后退出避免进程无限挂起
+      forceExitTimer = setTimeout(
+        () => process.exit(130),
+        FORCE_EXIT_GRACE_PERIOD_MS,
+      )
+      forceExitTimer.unref()
+      return
+    }
+
+    process.exit(130)
+  }
+
+  process.on('SIGINT', handleSignal)
+  process.on('SIGTERM', handleSignal)
+
+  return () => {
+    if (forceExitTimer) {
+      clearTimeout(forceExitTimer)
+    }
+    process.off('SIGINT', handleSignal)
+    process.off('SIGTERM', handleSignal)
   }
 }
 
-function handleSigint() {
-  onCancel()
-}
-
-async function main() {
+async function main(signal: AbortSignal) {
   const debug = createDebugger('release:cli')
   const packageJsonPath =
     typeof __dirname === 'string'
@@ -93,7 +139,7 @@ async function main() {
       debug?.(`opts:%O`, opts)
       const options = parseOptions(opts)
       debug?.(`options:%O`, options)
-      await release(version, options)
+      await release(version, { ...options, signal })
     })
 
   program.showHelpAfterError()

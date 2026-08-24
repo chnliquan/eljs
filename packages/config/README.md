@@ -121,10 +121,10 @@ interface ConfigManagerOptions {
 
 ```typescript
 // Without default configuration
-async getConfig<T extends Record<string, any> = Record<string, any>>(): Promise<T | null>
+async getConfig<T extends object = Record<string, unknown>>(): Promise<T | null>
 
 // With default configuration (recommended)
-async getConfig<T extends Record<string, any>>(defaultConfig: T): Promise<T>
+async getConfig<T extends object>(defaultConfig: T): Promise<T>
 ```
 
 **Features:**
@@ -152,10 +152,10 @@ console.log(config.server.port) // Guaranteed accessible, no null check needed
 
 ```typescript
 // Without default configuration
-getConfigSync<T extends Record<string, any> = Record<string, any>>(): T | null
+getConfigSync<T extends object = Record<string, unknown>>(): T | null
 
 // With default configuration
-getConfigSync<T extends Record<string, any>>(defaultConfig: T): T
+getConfigSync<T extends object>(defaultConfig: T): T
 ```
 
 The synchronous API supports `.cjs`, `.js`, `.ts`, `.json`, `.yaml`, and `.yml`. Native `.mjs` modules require the asynchronous API and produce `CONFIG_SYNC_FORMAT_UNSUPPORTED` when passed to the synchronous API.
@@ -166,12 +166,12 @@ The synchronous API supports `.cjs`, `.js`, `.ts`, `.json`, `.yaml`, and `.yml`.
 
 ```typescript
 // Without default configuration
-static async getConfig<T extends Record<string, any> = Record<string, any>>(
+static async getConfig<T extends object = Record<string, unknown>>(
   configFiles: string[]
 ): Promise<T | null>
 
 // With default configuration
-static async getConfig<T extends Record<string, any>>(
+static async getConfig<T extends object>(
   configFiles: string[],
   defaultConfig: T,
   options?: ConfigLoadOptions
@@ -369,6 +369,8 @@ const configManager = new ConfigManager({
 `context.configFiles` contains every declared input path, while `context.loadedConfigFiles` contains only files that produced configuration objects and participated in merging.
 
 Arrays are concatenated by the default deep merge. Provide `merge` when arrays should be replaced or another domain-specific policy is required. The callback must return a shape compatible with the caller's declared configuration type and must not mutate its inputs. TypeScript cannot verify that runtime callback contract automatically.
+
+The default configuration, resolved configuration root, custom `merge` result, and `validate` result must be plain objects. Arrays remain supported as nested configuration values, but arrays, class instances, and other non-record values cannot be used as the configuration root. Asynchronous JavaScript loading may resolve a promised export before this boundary; custom `merge` and `validate` callbacks must remain synchronous.
 
 Node.js caches imported JavaScript modules. Set `reload: true` to re-evaluate the JavaScript entry module in asynchronous watch or development workflows. Imported dependencies still follow the Node.js module cache. Synchronous CommonJS entry loading is already fresh. Each ESM entry reload creates a new module instance, so avoid unbounded reload loops in long-running production processes.
 

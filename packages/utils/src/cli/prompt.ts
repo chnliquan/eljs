@@ -2,18 +2,23 @@ import prompts, { type Answers, type PromptObject } from 'prompts'
 
 import { isNull } from '../guards'
 
+function throwPromptCancelled(): never {
+  throw new Error('Prompt was cancelled')
+}
+
 /**
  * 确认问询
- * @param message - 闻讯信息
+ * @param message - 问询信息
  * @param preferNo - 是否默认 false
  * @param onCancel - 取消回调函数
+ * @throws 用户取消且调用方没有提供取消回调时抛出错误
  */
 export function confirm(
   message: string,
   preferNo?: boolean,
   onCancel?: prompts.Options['onCancel'],
 ): Promise<boolean> {
-  onCancel = onCancel || (() => process.exit(1))
+  onCancel ??= throwPromptCancelled
 
   return prompts(
     {
@@ -35,6 +40,7 @@ export function confirm(
  * @param message - 问询信息
  * @param choices - 问询选项
  * @param initial - 初始数据
+ * @throws 用户取消时抛出错误
  */
 export function select<T extends string = string>(
   message: string,
@@ -51,15 +57,18 @@ export function select<T extends string = string>(
     },
   ]
 
-  return prompts(questions).then(answers => {
-    return answers.name
-  })
+  return prompts(questions, { onCancel: throwPromptCancelled }).then(
+    answers => {
+      return answers.name
+    },
+  )
 }
 
 /**
  * 问询
  * @param questions - 问题列表
  * @param initials - 初始数据
+ * @throws 用户取消时抛出错误
  */
 export function prompt<T extends string = string>(
   questions: PromptObject<T>[],
@@ -71,20 +80,21 @@ export function prompt<T extends string = string>(
 
     copied.type = copied.type || isNull(copied.type) ? copied.type : 'text'
 
-    if (initials?.[name]) {
+    if (initials && Object.hasOwn(initials, name)) {
       copied.initial = initials[name]
     }
 
     return copied
   })
 
-  return prompts(questions)
+  return prompts(questions, { onCancel: throwPromptCancelled })
 }
 
 /**
  * 循环问询
  * @param questions - 问题列表
  * @param initials - 初始数据
+ * @throws 任一轮问询被取消时抛出错误
  */
 export function loopPrompt<T extends string = string>(
   questions: PromptObject<T>[],

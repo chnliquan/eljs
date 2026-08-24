@@ -145,16 +145,13 @@ describe('Git 工具函数', () => {
         const controller = new AbortController()
         const cancellation = new Error('cancelled')
         let rejectChild: (error: Error) => void = () => {}
-        const child = Object.assign(
-          new Promise((_resolve, reject) => {
-            rejectChild = reject
-          }),
-          {
-            kill: vi.fn(() => {
-              rejectChild(new Error('terminated'))
-              return true
-            }),
-          },
+        const child = new Promise((_resolve, reject) => {
+          rejectChild = reject
+        })
+        controller.signal.addEventListener(
+          'abort',
+          () => rejectChild(new Error('terminated')),
+          { once: true },
         )
         mockExeca.mockReturnValue(child as unknown as ReturnType<typeof execa>)
 
@@ -164,7 +161,14 @@ describe('Git 工具函数', () => {
         controller.abort(cancellation)
 
         await expect(result).rejects.toBe(cancellation)
-        expect(child.kill).toHaveBeenCalledWith('SIGTERM')
+        expect(mockExeca).toHaveBeenCalledWith(
+          'git',
+          ['status'],
+          expect.objectContaining({
+            cancelSignal: controller.signal,
+            cwd: '/project/path',
+          }),
+        )
       })
     })
   })
@@ -206,6 +210,17 @@ describe('Git 工具函数', () => {
         const result = await isGitClean()
 
         expect(result).toBe(false)
+      })
+
+      it('不应该把取消误判为工作区不干净', async () => {
+        const controller = new AbortController()
+        const cancellation = new Error('cancelled')
+        controller.abort(cancellation)
+        mockRun.mockRejectedValue(new Error('terminated'))
+
+        await expect(isGitClean({ signal: controller.signal })).rejects.toBe(
+          cancellation,
+        )
       })
     })
 
@@ -533,6 +548,7 @@ describe('Git 工具函数', () => {
             '--quiet',
             '--depth',
             '1',
+            '--',
             'https://github.com/user/repo.git',
             'package',
           ],
@@ -563,6 +579,7 @@ describe('Git 工具函数', () => {
             '1',
             '--branch',
             'develop',
+            '--',
             'https://github.com/user/repo.git',
             'package',
           ],
@@ -592,6 +609,7 @@ describe('Git 工具函数', () => {
             '1',
             '--branch',
             'feature/create',
+            '--',
             'https://github.com/user/repo.git',
             'package',
           ],
@@ -610,6 +628,47 @@ describe('Git 工具函数', () => {
           'Download https://github.com/user/repo.git failed: 网络错误.',
         )
         expect(mockRemove).toHaveBeenCalledWith(tempDir)
+      })
+
+      it('应该防止仓库地址被解析为 Git 选项', async () => {
+        const tempDir = '/tmp/test-dir'
+        mockCreateTempDir.mockResolvedValue(tempDir)
+        mockRun.mockResolvedValue({
+          stdout: '',
+          stderr: '',
+          exitCode: 0,
+        } as Result)
+
+        await cloneGitRepository('--upload-pack=malicious-command')
+
+        expect(mockRun).toHaveBeenCalledWith(
+          'git',
+          [
+            'clone',
+            '--quiet',
+            '--depth',
+            '1',
+            '--',
+            '--upload-pack=malicious-command',
+            'package',
+          ],
+          { cwd: tempDir },
+        )
+      })
+
+      it('下载错误不应该包含 Git 地址凭据或查询参数', async () => {
+        const tempDir = '/tmp/test-dir'
+        mockCreateTempDir.mockResolvedValue(tempDir)
+        mockRun.mockRejectedValue(new Error('网络错误'))
+
+        const operation = cloneGitRepository(
+          'https://token:secret@github.com/user/repo.git?signature=private#main',
+        )
+
+        await expect(operation).rejects.toThrow(
+          'Download https://github.com/user/repo.git failed: 网络错误.',
+        )
+        await expect(operation).rejects.not.toThrow(/token|secret|signature/u)
       })
     })
   })

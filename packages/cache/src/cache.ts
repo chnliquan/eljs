@@ -76,6 +76,7 @@ async function mapWithConcurrency<T, R>(
  * @remarks
  * 实例支持文件关联缓存和逻辑键缓存，同一实例内的同键读写按调用顺序执行
  * 磁盘异常按 best-effort 语义降级，不会阻断调用方继续计算源数据
+ * 同一缓存目录应只服务于一套数据类型、序列化协议和缓存用途
  *
  * @typeParam T - 缓存中的业务数据类型
  */
@@ -130,6 +131,13 @@ export class Cache<T = unknown> {
    * 已完成边界校验并按毫秒取整的条目存活时间
    */
   private readonly _ttlMilliseconds: number
+  /**
+   * 当前磁盘文件计数是否来自一次成功的目录扫描
+   *
+   * @remarks
+   * 扫描失败时计数只能用于观测，后续成功写入必须触发清理重扫，不能把未知状态当成空目录
+   */
+  private _diskFileCountKnown = false
   /**
    * 当前清理任务，同一实例同时只扫描一次缓存目录
    */
@@ -448,7 +456,8 @@ export class Cache<T = unknown> {
 
         shouldCleanup =
           saved &&
-          this._stats.files > this.options.maxFiles &&
+          (!this._diskFileCountKnown ||
+            this._stats.files > this.options.maxFiles) &&
           generation === this._generation
       })
     } catch (error) {
@@ -470,7 +479,7 @@ export class Cache<T = unknown> {
    * @param data - 要缓存的数据
    * @param metadata - 可选的元数据
    * @returns 实际使用的缓存键，未写入时返回 `null`
-   * @throws 键生成器抛错、返回空键或时间戳无效时抛出
+   * @throws 键生成器抛错、返回空键或时间戳不是非负安全整数时抛出
    */
   public async setByData(
     data: T,
@@ -495,9 +504,9 @@ export class Cache<T = unknown> {
 
     const timestamp = metadata?.timestamp ?? Date.now()
 
-    if (!Number.isFinite(timestamp) || timestamp < 0) {
+    if (!Number.isSafeInteger(timestamp) || timestamp < 0) {
       throw new RangeError(
-        'metadata.timestamp must be a finite non-negative number',
+        'metadata.timestamp must be a non-negative safe integer',
       )
     }
 
@@ -528,7 +537,8 @@ export class Cache<T = unknown> {
 
         shouldCleanup =
           saved &&
-          this._stats.files > this.options.maxFiles &&
+          (!this._diskFileCountKnown ||
+            this._stats.files > this.options.maxFiles) &&
           generation === this._generation
       })
     } catch (error) {
@@ -612,7 +622,7 @@ export class Cache<T = unknown> {
         return null
       })
     } catch (error) {
-      console.warn(`Failed to get cache for key ${key}:`, error)
+      console.warn('Failed to get cache by key:', error)
       this._recordMiss()
       return null
     }
@@ -649,7 +659,7 @@ export class Cache<T = unknown> {
    * 等待初始化和已开始的按键读写结束后执行一次清理扫描
    *
    * @remarks
-   * 初始化预加载与清理不能并发修改同一目录，否则删除计数和磁盘统计会因竞争失真
+   * 初始化目录扫描与清理不能并发读取同一目录，否则删除计数和磁盘统计会因竞争失真
    * 只等待调用开始前已经存在的清空任务；后启动的 `clear` 会反向等待本次清理，避免循环等待
    *
    * @param activeClear - 调用 `cleanup` 时已经存在的清空任务
@@ -682,6 +692,8 @@ export class Cache<T = unknown> {
         files = await fs.promises.readdir(this.cacheDir)
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          this._stats.files = 0
+          this._diskFileCountKnown = true
           return result
         }
 
@@ -796,7 +808,9 @@ export class Cache<T = unknown> {
       )
 
       this._stats.files = cacheFiles.length - removedCacheFiles
+      this._diskFileCountKnown = true
     } catch (error) {
+      this._diskFileCountKnown = false
       result.errors.push(`Cleanup failed: ${error}`)
     }
 
@@ -827,8 +841,6 @@ export class Cache<T = unknown> {
     await this._waitForClear()
 
     let diskUsage = 0
-    let fileCount = 0
-
     try {
       const files = (await fs.promises.readdir(this.cacheDir)).filter(file =>
         this._isManagedCacheFile(file),
@@ -848,16 +860,18 @@ export class Cache<T = unknown> {
 
       for (const size of fileSizes) {
         if (size !== null) {
-          fileCount++
           diskUsage += size
         }
       }
-    } catch {
-      // 忽略错误
-    }
 
-    this._stats.files = fileCount
-    this._stats.diskUsage = diskUsage
+      // 单文件 stat 失败不能让文件上限低估，目录快照仍是数量的权威来源
+      this._stats.files = files.length
+      this._stats.diskUsage = diskUsage
+      this._diskFileCountKnown = true
+    } catch {
+      // 扫描失败时保留上一次观测值，并让后续成功写入重新触发权威扫描
+      this._diskFileCountKnown = false
+    }
 
     return { ...this._stats }
   }
@@ -932,6 +946,8 @@ export class Cache<T = unknown> {
     this._memoryCache.clear()
     this._stats.files = 0
     this._stats.diskUsage = 0
+    // 单文件删除采用 best-effort 语义，下一次写入重扫才能确认磁盘确实为空
+    this._diskFileCountKnown = false
   }
 
   /**
@@ -960,8 +976,17 @@ export class Cache<T = unknown> {
     try {
       await fs.promises.mkdir(this.cacheDir, { recursive: true, mode: 0o700 })
 
-      // 预加载有效缓存
-      await this._preloadValidCache()
+      try {
+        const files = await fs.promises.readdir(this.cacheDir)
+        this._stats.files = files.filter(file =>
+          this._isManagedCacheFile(file),
+        ).length
+        this._diskFileCountKnown = true
+      } catch {
+        // 内存层仍可使用，但下一次成功落盘必须通过清理重建权威计数
+        this._stats.files = 0
+        this._diskFileCountKnown = false
+      }
 
       this._initialized = true
 
@@ -1069,54 +1094,6 @@ export class Cache<T = unknown> {
   private _isTimeValid(cacheEntry: CacheEntry<T>): boolean {
     const now = Date.now()
     return now - cacheEntry.timestamp <= cacheEntry.ttl
-  }
-
-  /**
-   * 从磁盘预加载有效的缓存条目到内存
-   *
-   * @remarks
-   * 损坏或无法反序列化的条目只跳过，统一由显式或自动清理统计并删除
-   */
-  private async _preloadValidCache(): Promise<void> {
-    try {
-      const files = await fs.promises.readdir(this.cacheDir)
-      const managedFiles = files.filter(file => this._isManagedCacheFile(file))
-      const cacheFiles = managedFiles.slice(
-        0,
-        Math.min(50, this.options.maxFiles),
-      )
-
-      this._stats.files = managedFiles.length
-
-      await mapWithConcurrency(
-        cacheFiles,
-        FILE_OPERATION_CONCURRENCY,
-        async file => {
-          const filePath = path.join(this.cacheDir, file)
-
-          try {
-            const cacheData = await readCacheFile(filePath)
-
-            if (!cacheData) {
-              return
-            }
-
-            const cacheEntry = this._deserializeCacheFile(cacheData)
-
-            if (this._isTimeValid(cacheEntry)) {
-              await this._migrateCacheFile(cacheEntry.key, cacheEntry, filePath)
-              this._setMemoryEntry(cacheEntry.key, cacheEntry)
-            } else {
-              await this._unlinkManagedFile(filePath)
-            }
-          } catch {
-            // 反序列化失败的条目留给 cleanup 统一统计并删除
-          }
-        },
-      )
-    } catch {
-      // 忽略预加载错误
-    }
   }
 
   /**
@@ -1314,8 +1291,7 @@ export class Cache<T = unknown> {
    * 在有限轮次内收敛磁盘文件数量
    *
    * @remarks
-   * 并发写入可能共享同一次清理扫描，因此每轮清理后重新读取权威磁盘计数
-   * 该复查避免预加载上限和清理期间的新写入使实例统计低估实际文件数
+   * 并发写入可能共享同一次清理扫描，因此每轮根据清理结果判断是否继续收敛
    * 最多执行三轮，避免持续外部写入或删除失败使单次缓存写入长期阻塞
    */
   private async _enforceFileLimit(): Promise<void> {
@@ -1325,9 +1301,11 @@ export class Cache<T = unknown> {
       attempt++
     ) {
       await this.cleanup()
-      const { files } = await this.getStats()
 
-      if (files <= this.options.maxFiles) {
+      if (
+        this._diskFileCountKnown &&
+        this._stats.files <= this.options.maxFiles
+      ) {
         return
       }
     }

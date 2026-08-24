@@ -4,6 +4,7 @@ import * as path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { Cache, CacheValidator } from '../src'
+import { isCacheFile } from '../src/internal/cache-file'
 import {
   cleanupDir,
   createTempDir,
@@ -20,6 +21,39 @@ describe('Cache 验证和 TTL 测试', () => {
 
   afterEach(() => {
     cleanupDir(tempDir)
+  })
+
+  describe('磁盘格式校验', () => {
+    it('应该拒绝超出写入约束的缓存元数据', () => {
+      const metadata = {
+        timestamp: Date.now(),
+        mtime: Date.now(),
+        size: 0,
+        hash: '',
+        ttl: 1000,
+        key: 'validated-key',
+      }
+      const invalidMetadata: Array<Record<string, unknown>> = [
+        { ...metadata, timestamp: 1.5 },
+        { ...metadata, timestamp: Number.MAX_SAFE_INTEGER + 1 },
+        { ...metadata, size: 1.5 },
+        { ...metadata, size: Number.MAX_SAFE_INTEGER + 1 },
+        { ...metadata, ttl: 0 },
+        { ...metadata, ttl: 1.5 },
+        { ...metadata, ttl: Number.MAX_SAFE_INTEGER + 1 },
+        { ...metadata, hash: 'not-a-sha256-hash' },
+      ]
+
+      expect(isCacheFile({ version: '2.0', data: 'valid', metadata })).toBe(
+        true,
+      )
+
+      for (const invalid of invalidMetadata) {
+        expect(
+          isCacheFile({ version: '2.0', data: 'invalid', metadata: invalid }),
+        ).toBe(false)
+      }
+    })
   })
 
   describe('文件缓存验证', () => {

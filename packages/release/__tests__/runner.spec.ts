@@ -15,6 +15,7 @@ import {
  * @description 测试 ReleaseRunner 类的核心功能
  */
 
+import type { ReleasePluginCapabilities } from '../src/hooks'
 import { ReleaseRunner } from '../src/release-runner'
 import type { Config } from '../src/types'
 
@@ -80,6 +81,7 @@ describe('ReleaseRunner 类测试', () => {
       const target = this as unknown as {
         readonly cwd: string
         runHook: ReturnType<typeof vi.fn>
+        runCleanupHook: ReturnType<typeof vi.fn>
         constructorOptions: ConstructorParameters<typeof PluginHost>[0]
         load: ReturnType<typeof vi.fn>
         userConfig: Config | null
@@ -91,11 +93,13 @@ describe('ReleaseRunner 类测试', () => {
       })
       target.userConfig = null
       target.load = vi.fn().mockResolvedValue(undefined)
-      target.runHook = vi
+      const runHook = vi
         .fn()
         .mockImplementation((_key, options) =>
           Promise.resolve(options?.initialValue),
         )
+      target.runHook = runHook
+      target.runCleanupHook = runHook
     })
     pathExistsSync.mockReturnValue(true)
     getPackageManager.mockResolvedValue('npm')
@@ -443,6 +447,32 @@ describe('ReleaseRunner 类测试', () => {
           git: { commit: false },
         }),
       )
+    })
+
+    it('应该将取消信号传给 PluginHost 和插件运行时而不合入配置', async () => {
+      const { deepMerge } = requiredModule0
+      const { PluginHost } = requiredModule1
+      const controller = new AbortController()
+      const runner = new ReleaseRunner({ signal: controller.signal })
+
+      expect(PluginHost).toHaveBeenLastCalledWith(
+        expect.objectContaining({ signal: controller.signal }),
+        expect.any(Object),
+      )
+      expect(
+        (
+          runner as unknown as {
+            getPluginContextExtensions(): ReleasePluginCapabilities
+          }
+        ).getPluginContextExtensions().signal,
+      ).toBe(controller.signal)
+
+      deepMerge.mockClear()
+      await runner.run()
+
+      const mergeArguments = deepMerge.mock.calls[0]
+      expect(mergeArguments[2]).not.toHaveProperty('signal')
+      expect(mergeArguments[3]).not.toHaveProperty('signal')
     })
 
     it('应该拒绝配置 Hook 在初始化后切换工作目录', async () => {

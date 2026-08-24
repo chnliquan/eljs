@@ -16,6 +16,19 @@ import { HookRegistry } from './hook-registry'
 import { PluginRegistry } from './plugin-registry'
 
 /**
+ * Hook 执行器内部使用的生命周期选项
+ *
+ * @remarks
+ * `ignoreAbort` 仅供失败清理路径使用，普通业务 Hook 必须继续遵守宿主取消信号
+ *
+ * @internal
+ */
+interface HookExecutorRunOptions {
+  /** 是否允许在宿主取消后继续执行当前 Hook */
+  ignoreAbort?: boolean
+}
+
+/**
  * 根据 Hook 类型执行聚合逻辑
  *
  * @internal
@@ -41,6 +54,7 @@ export class HookExecutor {
    *
    * @param key - Hook key
    * @param options - 初始值、Hook 参数及 schema-less 类型信息
+   * @param executionOptions - 取消后的内部执行策略
    * @returns Hook 聚合结果
    * @throws {@link PluginHostError}
    * 当 Hook 类型或调用选项无效时抛出
@@ -48,8 +62,13 @@ export class HookExecutor {
   public async run(
     key: string,
     options: LooseHookRunOptions<unknown, unknown> = {},
+    executionOptions: HookExecutorRunOptions = {},
   ): Promise<unknown> {
-    this._throwIfAborted(key)
+    const { ignoreAbort = false } = executionOptions
+
+    if (!ignoreAbort) {
+      this._throwIfAborted(key)
+    }
 
     if (typeof key !== 'string' || !key.trim()) {
       throw new PluginHostError(
@@ -79,13 +98,27 @@ export class HookExecutor {
 
     switch (kind) {
       case HookKind.Add:
-        return this._runAdd(hooks, key, initialValue, args, options)
+        return this._runAdd(
+          hooks,
+          key,
+          initialValue,
+          args,
+          options,
+          ignoreAbort,
+        )
       case HookKind.Modify:
-        return this._runModify(hooks, key, initialValue, args, options)
+        return this._runModify(
+          hooks,
+          key,
+          initialValue,
+          args,
+          options,
+          ignoreAbort,
+        )
       case HookKind.Get:
-        return this._runGet(hooks, key, args)
+        return this._runGet(hooks, key, args, ignoreAbort)
       case HookKind.Event:
-        return this._runEvent(hooks, key, args)
+        return this._runEvent(hooks, key, args, ignoreAbort)
       default:
         throw new PluginHostError(
           PluginHostErrorCode.InvalidHook,
@@ -132,6 +165,7 @@ export class HookExecutor {
    * @param initialValue - 初始数组
    * @param args - Hook 参数
    * @param options - 原始执行选项
+   * @param ignoreAbort - 是否允许在宿主取消后执行
    * @returns 累加后的数组
    */
   private async _runAdd(
@@ -140,6 +174,7 @@ export class HookExecutor {
     initialValue: unknown,
     args: unknown,
     options: LooseHookRunOptions<unknown, unknown>,
+    ignoreAbort: boolean,
   ): Promise<unknown> {
     if ('initialValue' in options && !Array.isArray(initialValue)) {
       throw new PluginHostError(
@@ -155,7 +190,12 @@ export class HookExecutor {
         continue
       }
       tapable.tapPromise(this._tapOptions(hook), async memo => {
-        const result = await this._runHook(hook, key, () => hook.fn(args))
+        const result = await this._runHook(
+          hook,
+          key,
+          () => hook.fn(args),
+          ignoreAbort,
+        )
         return result == null ? memo : (memo as []).concat(result)
       })
     }
@@ -169,6 +209,7 @@ export class HookExecutor {
    * @param key - Hook key
    * @param initialValue - 初始值
    * @param args - Hook 参数
+   * @param ignoreAbort - 是否允许在宿主取消后执行
    * @returns 最终修改结果
    */
   private async _runModify(
@@ -177,6 +218,7 @@ export class HookExecutor {
     initialValue: unknown,
     args: unknown,
     options: LooseHookRunOptions<unknown, unknown>,
+    ignoreAbort: boolean,
   ): Promise<unknown> {
     if (!Object.hasOwn(options, 'initialValue')) {
       throw new PluginHostError(
@@ -192,7 +234,7 @@ export class HookExecutor {
         continue
       }
       tapable.tapPromise(this._tapOptions(hook), memo =>
-        this._runHook(hook, key, () => hook.fn(memo, args)),
+        this._runHook(hook, key, () => hook.fn(memo, args), ignoreAbort),
       )
     }
     return tapable.promise(initialValue)
@@ -204,12 +246,14 @@ export class HookExecutor {
    * @param hooks - Hook 记录
    * @param key - Hook key
    * @param args - Hook 参数
+   * @param ignoreAbort - 是否允许在宿主取消后执行
    * @returns 首个非空结果，未命中时返回 `undefined`
    */
   private async _runGet(
     hooks: readonly Hook[],
     key: string,
     args: unknown,
+    ignoreAbort: boolean,
   ): Promise<unknown> {
     const tapable = new AsyncSeriesBailHook(['_'])
     for (const hook of hooks) {
@@ -217,7 +261,12 @@ export class HookExecutor {
         continue
       }
       tapable.tapPromise(this._tapOptions(hook), async () => {
-        const result = await this._runHook(hook, key, () => hook.fn(args))
+        const result = await this._runHook(
+          hook,
+          key,
+          () => hook.fn(args),
+          ignoreAbort,
+        )
         return result == null ? undefined : result
       })
     }
@@ -230,12 +279,14 @@ export class HookExecutor {
    * @param hooks - Hook 记录
    * @param key - Hook key
    * @param args - Hook 参数
+   * @param ignoreAbort - 是否允许在宿主取消后执行
    * @returns 所有 Hook 完成后兑现的 Promise
    */
   private async _runEvent(
     hooks: readonly Hook[],
     key: string,
     args: unknown,
+    ignoreAbort: boolean,
   ): Promise<void> {
     const tapable = new AsyncSeriesHook(['_'])
     for (const hook of hooks) {
@@ -243,7 +294,7 @@ export class HookExecutor {
         continue
       }
       tapable.tapPromise(this._tapOptions(hook), async () => {
-        await this._runHook(hook, key, () => hook.fn(args))
+        await this._runHook(hook, key, () => hook.fn(args), ignoreAbort)
       })
     }
     await tapable.promise(0)
@@ -270,18 +321,25 @@ export class HookExecutor {
    * @param hook - Hook 记录
    * @param key - Hook key
    * @param fn - 实际执行函数
+   * @param ignoreAbort - 是否允许在宿主取消后执行
    * @returns Hook 返回值
    */
   private async _runHook<T>(
     hook: Hook,
     key: string,
     fn: () => T | Promise<T>,
+    ignoreAbort: boolean,
   ): Promise<T> {
-    this._throwIfAborted(key)
+    if (!ignoreAbort) {
+      this._throwIfAborted(key)
+    }
 
     try {
       const result = await fn()
-      this._throwIfAborted(key)
+
+      if (!ignoreAbort) {
+        this._throwIfAborted(key)
+      }
       return result
     } catch (error) {
       if (

@@ -112,6 +112,7 @@ export default definePlugin(context => {
             changelog,
             isPrerelease,
             token,
+            context.signal,
           )
         } else {
           await openGithubReleasePage(
@@ -147,6 +148,20 @@ async function openGithubReleasePage(
   }
 }
 
+/**
+ * 通过 GitHub API 幂等创建 Release
+ *
+ * @remarks
+ * 所有请求最多等待 30 秒，并继承发布流程的取消信号
+ *
+ * @param repository - 已校验的 GitHub 仓库坐标
+ * @param apiUrl - 已信任的 GitHub API 根地址
+ * @param tag - Git 标签
+ * @param body - Release 正文
+ * @param isPrerelease - 是否为预发布版本
+ * @param token - GitHub 访问令牌
+ * @param signal - 发布流程取消信号
+ */
 async function createGithubRelease(
   repository: GithubRepository,
   apiUrl: string,
@@ -154,6 +169,7 @@ async function createGithubRelease(
   body: string,
   isPrerelease: boolean,
   token: string,
+  signal?: AbortSignal,
 ): Promise<void> {
   const releasesUrl = `${apiUrl}/repos/${encodeURIComponent(
     repository.owner,
@@ -164,9 +180,13 @@ async function createGithubRelease(
     'Content-Type': 'application/json',
     'X-GitHub-Api-Version': GITHUB_API_VERSION,
   }
+  const timeoutSignal = AbortSignal.timeout(30_000)
+  const requestSignal = signal
+    ? AbortSignal.any([signal, timeoutSignal])
+    : timeoutSignal
   const existingResponse = await fetch(
     `${releasesUrl}/tags/${encodeURIComponent(tag)}`,
-    { headers },
+    { headers, signal: requestSignal },
   )
 
   if (existingResponse.ok) {
@@ -187,6 +207,7 @@ async function createGithubRelease(
     }),
     headers,
     method: 'POST',
+    signal: requestSignal,
   })
 
   if (response.ok) {
@@ -198,7 +219,7 @@ async function createGithubRelease(
   if (response.status === 422) {
     const retryResponse = await fetch(
       `${releasesUrl}/tags/${encodeURIComponent(tag)}`,
-      { headers },
+      { headers, signal: requestSignal },
     )
 
     if (retryResponse.ok) {

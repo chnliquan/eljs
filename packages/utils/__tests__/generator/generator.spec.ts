@@ -141,7 +141,9 @@ describe('Generator 生成器', () => {
       const generator = new Generator(options)
       await generator.run()
 
-      expect(mockPrompts).toHaveBeenCalledWith(options.questions)
+      expect(mockPrompts).toHaveBeenCalledWith(options.questions, {
+        onCancel: expect.any(Function),
+      })
       expect(onDone).toHaveBeenCalledWith({
         src: '/template', // 字符串形式直接使用
         dest: '/output', // 字符串形式直接使用

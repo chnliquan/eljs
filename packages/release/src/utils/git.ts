@@ -9,6 +9,7 @@ import { run, type RunCommandOptions } from '@eljs/utils/cp'
  * @param tagName - 待检查的 Git 标签
  * @param options - Git 命令执行选项
  * @returns 标签解析出的提交是否与 HEAD 相同
+ * @throws 检查期间收到取消信号时抛出取消原因
  */
 export async function isGitTagAtHead(
   tagName: string,
@@ -27,6 +28,10 @@ export async function isGitTagAtHead(
       tagCommit.stdout.trim() === headCommit.stdout.trim()
     )
   } catch (error) {
+    if (options?.signal?.aborted) {
+      throw options.signal.reason ?? error
+    }
+
     return false
   }
 }

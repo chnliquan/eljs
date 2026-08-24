@@ -171,6 +171,15 @@ describe('NPM Meta 工具', () => {
       )
     })
 
+    it('应该将版本或 dist-tag 作为单个 URL 路径段编码', async () => {
+      await getNpmPackage('test-package', { version: 'preview/next value' })
+
+      expect(mockUrllib.request).toHaveBeenCalledWith(
+        'https://registry.npmjs.org/test-package/preview%2Fnext%20value',
+        { timeout: 10000, dataType: 'json' },
+      )
+    })
+
     it('应该使用自定义 registry', async () => {
       await getNpmPackage('custom-package', {
         registry: 'https://custom.registry.com/',

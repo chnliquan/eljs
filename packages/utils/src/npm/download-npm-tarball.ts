@@ -51,6 +51,7 @@ export async function downloadNpmTarball(
   const downloadOptions = options ?? {}
   const headers = new Headers(downloadOptions.headers)
   headers.set('accept', 'application/tgz')
+  const diagnosticUrl = formatUrlForDiagnostics(url)
 
   try {
     await downloadTo(url, destination, {
@@ -66,16 +67,36 @@ export async function downloadNpmTarball(
       } catch (cleanupError) {
         throw new AggregateError(
           [error, cleanupError],
-          `Download ${url} failed and temporary directory cleanup also failed`,
+          `Download ${diagnosticUrl} failed and temporary directory cleanup also failed`,
           { cause: cleanupError },
         )
       }
     }
 
     const err = error as Error
-    err.message = `Download ${url} failed: ${err.message}`
+    err.message = `Download ${diagnosticUrl} failed: ${err.message}`
     throw err
   }
 
   return destination
+}
+
+/**
+ * 移除下载地址中不应进入日志的认证和签名信息
+ *
+ * @param url - 原始下载地址
+ * @returns 仅保留协议、主机和路径的诊断地址
+ * @internal
+ */
+function formatUrlForDiagnostics(url: string): string {
+  try {
+    const parsed = new URL(url)
+    parsed.username = ''
+    parsed.password = ''
+    parsed.search = ''
+    parsed.hash = ''
+    return parsed.href
+  } catch {
+    return '<invalid URL>'
+  }
 }

@@ -111,6 +111,53 @@ describe('Cache 并发初始化测试', () => {
   })
 
   describe('错误恢复', () => {
+    it('初始目录计数失败时仍应该保留内存缓存能力', async () => {
+      const cacheDir = path.join(tempDir, '.cache-count-failure')
+      const readdirSpy = vi
+        .spyOn(fs.promises, 'readdir')
+        .mockRejectedValueOnce(new Error('scan failed'))
+      const cache = new Cache<string>({ cacheDir, autoCleanup: false })
+
+      const key = await cache.setByData('memory data')
+
+      expect(cache.enabled).toBe(true)
+      expect(key).not.toBeNull()
+      expect(await cache.getByKey(key as string)).toBe('memory data')
+      readdirSpy.mockRestore()
+    })
+
+    it('初始目录计数失败后应该在首次写入时重新收敛文件上限', async () => {
+      const cacheDir = path.join(tempDir, '.cache-count-recovery')
+      const writer = new Cache<string>({
+        cacheDir,
+        maxFiles: 10,
+        keyGenerator: data => data,
+        autoCleanup: false,
+      })
+      await writer.setByData('existing-1')
+      await writer.setByData('existing-2')
+      await writer.setByData('existing-3')
+
+      const readdirSpy = vi
+        .spyOn(fs.promises, 'readdir')
+        .mockRejectedValueOnce(new Error('scan failed'))
+      const cache = new Cache<string>({
+        cacheDir,
+        maxFiles: 1,
+        keyGenerator: data => data,
+        autoCleanup: false,
+      })
+
+      await cache.setByData('new-entry')
+
+      const cacheFiles = (await fs.promises.readdir(cacheDir)).filter(file =>
+        file.endsWith('.json'),
+      )
+      expect(cacheFiles).toHaveLength(1)
+      expect(cache.stats.files).toBe(1)
+      readdirSpy.mockRestore()
+    })
+
     it('应该在初始化错误后清理Promise状态', async () => {
       const blockedCacheDir = createBlockedDirectoryPath(tempDir)
       const cache = new Cache<string>({

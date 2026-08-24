@@ -7,7 +7,6 @@ import {
   it,
   vi,
   type MockedFunction,
-  type MockInstance,
 } from 'vitest'
 import * as importedModule0 from '../src/cli'
 /**
@@ -87,7 +86,7 @@ vi.mock('semver', () => {
 vi.mock('update-notifier')
 vi.mock('../src/release')
 vi.mock('../src/utils', () => ({
-  onCancel: vi.fn(),
+  AppError: class AppError extends Error {},
 }))
 
 // 导入模块
@@ -110,13 +109,9 @@ describe('CLI 命令行接口综合测试', () => {
     description:
       'Programmable npm release workflow for versioning, changelogs, GitHub, and ordered workspace publishing.',
   }
-  let exitSpy: MockInstance<typeof process.exit>
-
   beforeEach(() => {
     vi.clearAllMocks()
-    exitSpy = vi
-      .spyOn(process, 'exit')
-      .mockImplementation(() => undefined as never)
+    process.exitCode = undefined
     ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue(
       mockPackageJson,
     )
@@ -139,7 +134,7 @@ describe('CLI 命令行接口综合测试', () => {
   })
 
   afterEach(() => {
-    exitSpy.mockRestore()
+    process.exitCode = undefined
   })
 
   afterAll(() => {
@@ -353,6 +348,48 @@ describe('CLI 命令行接口综合测试', () => {
         originalListeners.length,
       )
     })
+
+    it('首次信号应该立即保留取消退出码并在宽限期后退出', async () => {
+      vi.useFakeTimers()
+      const previousListeners = new Set(process.listeners('SIGTERM'))
+      let markParseStarted: (() => void) | undefined
+      let resolveParse: (() => void) | undefined
+      const parseStarted = new Promise<void>(resolve => {
+        markParseStarted = resolve
+      })
+      const exit = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((() => undefined) as never)
+      mockProgram.parseAsync.mockImplementationOnce(
+        () =>
+          new Promise<void>(resolve => {
+            resolveParse = resolve
+            markParseStarted?.()
+          }),
+      )
+
+      try {
+        const cliPromise = cli()
+        await parseStarted
+        const signalHandler = process
+          .listeners('SIGTERM')
+          .find(listener => !previousListeners.has(listener))
+
+        expect(signalHandler).toBeTypeOf('function')
+        ;(signalHandler as (signal: NodeJS.Signals) => void)('SIGTERM')
+        expect(process.exitCode).toBe(130)
+
+        await vi.advanceTimersByTimeAsync(5_000)
+        expect(exit).toHaveBeenCalledWith(130)
+
+        resolveParse?.()
+        await cliPromise
+        expect(process.listeners('SIGTERM')).not.toContain(signalHandler)
+      } finally {
+        exit.mockRestore()
+        vi.useRealTimers()
+      }
+    })
   })
 
   describe('CLI 依赖集成验证', () => {
@@ -417,7 +454,10 @@ describe('CLI 命令行接口综合测试', () => {
       await actionHandler('major', {})
 
       // 空选项会产生空的结果对象
-      expect(release).toHaveBeenCalledWith('major', {})
+      expect(release).toHaveBeenCalledWith(
+        'major',
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      )
     })
 
     it('应该处理混合的平级和嵌套选项', async () => {

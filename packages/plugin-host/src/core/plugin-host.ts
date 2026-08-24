@@ -617,6 +617,37 @@ export abstract class PluginHost<
   }
 
   /**
+   * 在失败清理路径执行一个不受宿主取消信号拦截的 Hook
+   *
+   * @remarks
+   * 该入口只跳过取消检查，仍会执行状态、Hook Schema、插件启用和错误转换校验
+   * 子类不得用它继续正常业务生命周期或产生新的外部副作用
+   *
+   * @typeParam Key - Hook Schema 中的 Hook key
+   * @param key - 清理 Hook key
+   * @param args - 由 Hook 定义推导出的执行选项
+   * @returns 由 Hook 类型和值类型推导出的执行结果
+   * @throws {@link PluginHostError} 当运行时状态或 Hook 调用无效时抛出
+   * @internal
+   */
+  protected async runCleanupHook<Key extends keyof Schema & string>(
+    key: Key,
+    ...args: HookRunArguments<Schema[NoInferCompat<Key>]>
+  ): Promise<HookRunResult<Schema[Key]>> {
+    if (this._state !== PluginHostState.Ready) {
+      throw new PluginHostError(
+        PluginHostErrorCode.InvalidState,
+        `PluginHost.runCleanupHook() can only be called from the \`${PluginHostState.Ready}\` state, current state is \`${this._state}\`.`,
+      )
+    }
+
+    const options = (args[0] || {}) as LooseHookRunOptions<unknown, unknown>
+    return (await this._hookExecutor.run(key, options, {
+      ignoreAbort: true,
+    })) as HookRunResult<Schema[Key]>
+  }
+
+  /**
    * 在异步生命周期边界将取消信号转换为稳定领域错误
    *
    * @param operation - 当前插件宿主操作

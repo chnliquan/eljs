@@ -30,13 +30,8 @@ export async function hasProjectGit(
 ): Promise<boolean> {
   const child = execa('git', ['status'], {
     cwd,
+    ...(options?.signal ? { cancelSignal: options.signal } : {}),
   })
-  const abortChild = () => child.kill('SIGTERM')
-  options?.signal?.addEventListener('abort', abortChild, { once: true })
-
-  if (options?.signal?.aborted) {
-    abortChild()
-  }
 
   try {
     const data = await child
@@ -45,9 +40,6 @@ export async function hasProjectGit(
     if (options?.signal?.aborted) {
       throw options.signal.reason ?? error
     }
-
     return false
-  } finally {
-    options?.signal?.removeEventListener('abort', abortChild)
   }
 }

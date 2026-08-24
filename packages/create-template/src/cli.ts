@@ -6,6 +6,9 @@ import { Command } from 'commander'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+/** 首次终止信号后等待异步清理完成的最长时间 */
+const FORCE_EXIT_GRACE_PERIOD_MS = 5_000
+
 /**
  * 启动 create-template 命令行程序
  *
@@ -51,6 +54,8 @@ export async function cli(): Promise<void> {
  * @internal
  */
 function registerSignalHandlers(controller: AbortController): () => void {
+  let forceExitTimer: NodeJS.Timeout | undefined
+
   const handleSignal = (signal: NodeJS.Signals) => {
     if (!controller.signal.aborted) {
       try {
@@ -58,12 +63,20 @@ function registerSignalHandlers(controller: AbortController): () => void {
       } catch {
         // 日志是辅助能力，不能阻止信号触发实际取消
       }
+      // 即使后续只剩不持有事件循环句柄的悬空 Promise，自然退出也必须保留取消语义
+      process.exitCode = 130
       controller.abort(
         new AppError(`Create template operation received ${signal}`, {
           code: 'CREATE_OPERATION_CANCELLED',
           details: { signal },
         }),
       )
+      // 某些交互依赖无法消费 AbortSignal，宽限期后退出可避免进程无限挂起
+      forceExitTimer = setTimeout(
+        () => process.exit(130),
+        FORCE_EXIT_GRACE_PERIOD_MS,
+      )
+      forceExitTimer.unref()
       return
     }
 
@@ -74,6 +87,9 @@ function registerSignalHandlers(controller: AbortController): () => void {
   process.on('SIGTERM', handleSignal)
 
   return () => {
+    if (forceExitTimer) {
+      clearTimeout(forceExitTimer)
+    }
     process.off('SIGINT', handleSignal)
     process.off('SIGTERM', handleSignal)
   }

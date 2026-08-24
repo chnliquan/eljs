@@ -1,9 +1,54 @@
+import { randomUUID } from 'node:crypto'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import { EOL } from 'node:os'
-import { v4 } from 'uuid'
 
-import { pathExists, pathExistsSync } from './is'
+/**
+ * 删除原子写入遗留的临时文件，同时保留写入失败和清理失败
+ *
+ * @param tmpFile - 临时文件路径
+ * @param writeError - 原始写入错误
+ */
+async function cleanupTemporaryFile(
+  tmpFile: string,
+  writeError: unknown,
+): Promise<void> {
+  try {
+    await fsp.unlink(tmpFile)
+  } catch (cleanupError) {
+    if ((cleanupError as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw new AggregateError(
+        [writeError, cleanupError],
+        'Atomic write failed and temporary file cleanup also failed',
+        { cause: cleanupError },
+      )
+    }
+  }
+}
+
+/**
+ * 同步删除原子写入遗留的临时文件，同时保留写入失败和清理失败
+ *
+ * @param tmpFile - 临时文件路径
+ * @param writeError - 原始写入错误
+ */
+function cleanupTemporaryFileSync(tmpFile: string, writeError: unknown): void {
+  try {
+    fs.unlinkSync(tmpFile)
+  } catch (cleanupError) {
+    if ((cleanupError as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw new AggregateError(
+        [writeError, cleanupError],
+        'Atomic write failed and temporary file cleanup also failed',
+        { cause: cleanupError },
+      )
+    }
+  }
+}
+
+function serializeJson(content: object): string {
+  return JSON.stringify(content, null, 2) + EOL
+}
 
 /**
  * 写入文件内容
@@ -57,17 +102,13 @@ export async function writeFileAtomic(
   content: string,
   encoding: BufferEncoding = 'utf8',
 ): Promise<void> {
-  const tmpFile = `${path}.${v4()}-tmp`
+  const tmpFile = `${path}.${randomUUID()}-tmp`
 
   try {
     await writeFile(tmpFile, content, encoding)
     await fsp.rename(tmpFile, path)
   } catch (error) {
-    // 如果发生异常, 就将 tmpFile 删除掉
-    if (await pathExists(tmpFile)) {
-      await fsp.unlink(tmpFile)
-    }
-
+    await cleanupTemporaryFile(tmpFile, error)
     throw error
   }
 }
@@ -83,17 +124,13 @@ export function writeFileAtomicSync(
   content: string,
   encoding: BufferEncoding = 'utf8',
 ): void {
-  const tmpFile = `${path}.${v4()}-tmp`
+  const tmpFile = `${path}.${randomUUID()}-tmp`
 
   try {
     writeFileSync(tmpFile, content, encoding)
     fs.renameSync(tmpFile, path)
   } catch (error) {
-    // 如果发生异常, 就将 tmpFile 删除掉
-    if (pathExistsSync(tmpFile)) {
-      fs.unlinkSync(tmpFile)
-    }
-
+    cleanupTemporaryFileSync(tmpFile, error)
     throw error
   }
 }
@@ -107,13 +144,7 @@ export async function writeJson<T extends object>(
   path: string,
   content: T,
 ): Promise<void> {
-  try {
-    await fsp.writeFile(path, JSON.stringify(content, null, 2) + EOL)
-  } catch (error) {
-    const err = error as Error
-    err.message = `Write ${path} failed: ${err.message}`
-    throw err
-  }
+  return writeFile(path, serializeJson(content))
 }
 
 /**
@@ -125,13 +156,7 @@ export function writeJsonSync<T extends object>(
   path: string,
   content: T,
 ): void {
-  try {
-    fs.writeFileSync(path, JSON.stringify(content, null, 2) + EOL)
-  } catch (error) {
-    const err = error as Error
-    err.message = `Write ${path} failed: ${err.message}`
-    throw err
-  }
+  writeFileSync(path, serializeJson(content))
 }
 
 /**
@@ -144,19 +169,7 @@ export async function writeJsonAtomic<T extends object>(
   path: string,
   data: T,
 ): Promise<void> {
-  const tmpFile = `${path}.${v4()}-tmp`
-
-  try {
-    await writeJson(tmpFile, data)
-    await fsp.rename(tmpFile, path)
-  } catch (error) {
-    // 如果发生异常, 就将 tmpFile 删除掉
-    if (await pathExists(tmpFile)) {
-      await fsp.unlink(tmpFile)
-    }
-
-    throw error
-  }
+  return writeFileAtomic(path, serializeJson(data))
 }
 
 /**
@@ -168,17 +181,5 @@ export function writeJsonAtomicSync<T extends object>(
   path: string,
   data: T,
 ): void {
-  const tmpFile = `${path}.${v4()}-tmp`
-
-  try {
-    writeJsonSync(tmpFile, data)
-    fs.renameSync(tmpFile, path)
-  } catch (error) {
-    // 如果发生异常, 就将 tmpFile 删除掉
-    if (pathExistsSync(tmpFile)) {
-      fs.unlinkSync(tmpFile)
-    }
-
-    throw error
-  }
+  writeFileAtomicSync(path, serializeJson(data))
 }

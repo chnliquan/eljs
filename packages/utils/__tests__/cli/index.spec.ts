@@ -154,6 +154,21 @@ describe('命令行工具函数', () => {
 
       expect(result).toBe(false)
     })
+
+    it('默认取消处理不应该直接终止进程', async () => {
+      mockPrompts.mockResolvedValue({})
+      const exit = vi
+        .spyOn(process, 'exit')
+        .mockImplementation(() => undefined as never)
+
+      await confirm('你确定吗？')
+      const options = mockPrompts.mock.calls.at(-1)?.[1]
+
+      expect(() => options?.onCancel?.({} as PromptObject, {})).toThrow(
+        'Prompt was cancelled',
+      )
+      expect(exit).not.toHaveBeenCalled()
+    })
   })
 
   describe('select 选择对话框', () => {
@@ -167,15 +182,29 @@ describe('命令行工具函数', () => {
       const result = await select('选择一个选项：', choices)
 
       expect(result).toBe('opt1')
-      expect(mockPrompts).toHaveBeenCalledWith([
-        {
-          name: 'name',
-          message: '选择一个选项：',
-          type: 'select',
-          choices,
-          initial: undefined,
-        },
-      ])
+      expect(mockPrompts).toHaveBeenCalledWith(
+        [
+          {
+            name: 'name',
+            message: '选择一个选项：',
+            type: 'select',
+            choices,
+            initial: undefined,
+          },
+        ],
+        { onCancel: expect.any(Function) },
+      )
+    })
+
+    it('取消时不应该返回空选项', async () => {
+      mockPrompts.mockResolvedValue({})
+
+      await select('选择一个选项：', [])
+      const options = mockPrompts.mock.calls.at(-1)?.[1]
+
+      expect(() => options?.onCancel?.({} as PromptObject, {})).toThrow(
+        'Prompt was cancelled',
+      )
     })
   })
 
@@ -195,7 +224,44 @@ describe('命令行工具函数', () => {
       const result = await prompt(questions)
 
       expect(result).toEqual(expectedAnswers)
-      expect(mockPrompts).toHaveBeenCalledWith(questions)
+      expect(mockPrompts).toHaveBeenCalledWith(questions, {
+        onCancel: expect.any(Function),
+      })
+    })
+
+    it('应该保留 false、0 和空字符串初始值', async () => {
+      const questions: PromptObject[] = [
+        { name: 'enabled', message: '是否启用：', type: 'confirm' },
+        { name: 'count', message: '数量：', type: 'number' },
+        { name: 'label', message: '名称：', type: 'text' },
+      ]
+      mockPrompts.mockResolvedValue({})
+
+      await prompt(questions, {
+        enabled: false,
+        count: 0,
+        label: '',
+      })
+
+      expect(mockPrompts).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({ name: 'enabled', initial: false }),
+          expect.objectContaining({ name: 'count', initial: 0 }),
+          expect.objectContaining({ name: 'label', initial: '' }),
+        ],
+        { onCancel: expect.any(Function) },
+      )
+    })
+
+    it('取消时不应该返回部分答案', async () => {
+      mockPrompts.mockResolvedValue({ name: 'partial' })
+
+      await prompt([{ name: 'name', message: '名称：', type: 'text' }])
+      const options = mockPrompts.mock.calls.at(-1)?.[1]
+
+      expect(() => options?.onCancel?.({} as PromptObject, {})).toThrow(
+        'Prompt was cancelled',
+      )
     })
   })
 

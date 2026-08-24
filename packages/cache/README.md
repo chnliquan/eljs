@@ -269,11 +269,12 @@ intentionally ordered.
 ## Persistence and Consistency
 
 - Cache files use a versioned JSON envelope and are published with an atomic rename. Readers never consume a partially written JSON file.
+- Treat `cacheDir` as an ownership boundary: one directory should serve only one data type, serializer contract, and cache producer. `clear()` and `cleanup()` remove files matching the cache naming protocol, so do not mix unrelated files into that directory.
 - Cleanup removes atomic-write temporary files older than 24 hours and leaves newer temporary files alone; `clear()` removes both managed cache and temporary files immediately.
 - `false`, `0`, empty strings, `null`, and `undefined` are preserved across process restarts. When `T` includes `null`, use hit statistics or a domain wrapper if your application must distinguish a cached `null` from a miss.
 - File paths are normalized to absolute paths. Files smaller than 50KB are validated by content hash; larger files are validated by size and exact modification time.
 - TTL is stored per entry. Changing `ttlDays` affects new writes and does not rewrite the lifetime of existing entries. Configuration must convert to a positive millisecond value no greater than `Number.MAX_SAFE_INTEGER`.
-- Reads and writes to the same key are ordered within one `Cache` instance. Multiple processes can safely publish whole files, but the last completed rename wins; there is no distributed lock.
+- Reads and writes to the same key are ordered within one `Cache` instance. Atomic rename prevents partial files across processes, but cleanup and publication are otherwise best effort: there is no distributed lock, and a concurrent cleanup can turn a newly published entry into a cache miss.
 - Persistence is best effort. A disk write failure is logged and the in-memory value remains available for the lifetime of the instance.
 - The default serializer is intended for JSON-compatible values. Use a custom serializer for `Date`, `Map`, class instances, `BigInt`, or other values that need explicit reconstruction.
 - The default data key uses SHA-256 over a type-tagged canonical representation. Primitive types remain distinct, and plain-object property insertion order does not affect the key. Functions, symbols, circular references, unsupported non-plain objects, and failing `toJSON` implementations are rejected. Provide both a custom serializer and `keyGenerator` for values such as `Map`, `Set`, or class instances without `toJSON`.

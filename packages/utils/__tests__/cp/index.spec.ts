@@ -187,6 +187,24 @@ describe('命令处理工具函数', () => {
       expect(result).toBe(mockProcess)
     })
 
+    it('应该将取消信号交给 execa 管理子进程生命周期', () => {
+      const controller = new AbortController()
+      const mockProcess = { stdout: 'success' } as unknown as ReturnType<
+        typeof execa
+      >
+      mockExeca.mockReturnValue(mockProcess)
+
+      run('npm', ['install'], {
+        cwd: '/test',
+        signal: controller.signal,
+      })
+
+      expect(execa).toHaveBeenCalledWith('npm', ['install'], {
+        cancelSignal: controller.signal,
+        cwd: '/test',
+      })
+    })
+
     it('应该在 verbose 为 true 时打印命令', () => {
       const mockConsoleLog = vi
         .spyOn(console, 'log')

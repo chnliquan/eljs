@@ -2,6 +2,9 @@ packages:
   - 'packages/*'
 verifyDepsBeforeRun: false
 autoInstallPeers: false
+overrides:
+  'eslint-plugin-tsdoc>@typescript-eslint/utils': 8.67.0
+  'nanoid@<3.3.18': 3.3.18
 allowBuilds:
   '@parcel/watcher': true
   '@prisma/engines': false

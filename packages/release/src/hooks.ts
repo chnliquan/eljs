@@ -55,6 +55,13 @@ export const releaseHookSchema = defineHooks({
  */
 export interface ReleasePluginCapabilities {
   /**
+   * 发布流程的取消信号
+   *
+   * @remarks
+   * 插件启动的子进程或网络请求应传递该信号，取消后不得继续产生发布副作用
+   */
+  readonly signal?: AbortSignal
+  /**
    * 最终 release 配置
    *
    * @remarks

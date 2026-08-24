@@ -113,6 +113,7 @@ export function parseVersion(version: string) {
  * @param version - 版本
  * @param registry - 源仓库
  * @param cwd - 用于读取项目级 npm 配置的工作目录
+ * @param signal - 用于取消 npm 查询的信号
  * @returns 版本是否存在
  * @throws 当查询因网络、鉴权或服务端异常失败时抛出
  */
@@ -121,15 +122,20 @@ export async function isVersionExist(
   version: string,
   registry?: string,
   cwd?: string,
+  signal?: AbortSignal,
 ) {
   try {
     const registryArg = registry ? ['--registry', registry] : []
     const cliArgs = ['view', `${pkgName}@${version}`, ...registryArg].filter(
       Boolean,
     )
-    const result = cwd
-      ? await run('npm', cliArgs, { cwd })
-      : await run('npm', cliArgs)
+    const result =
+      cwd || signal
+        ? await run('npm', cliArgs, {
+            ...(cwd ? { cwd } : {}),
+            ...(signal ? { signal } : {}),
+          })
+        : await run('npm', cliArgs)
     const remote = result.stdout.replace(/\W*/, '').trim()
     if (!remote) {
       return false

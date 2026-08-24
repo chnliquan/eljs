@@ -1,3 +1,4 @@
+import { isPlainObject } from '@eljs/utils/guards'
 import { fileLoaders, fileLoadersSync, loadJsSync } from '@eljs/utils/loader'
 import { deepMerge } from '@eljs/utils/object'
 import { randomUUID } from 'node:crypto'
@@ -61,9 +62,9 @@ function normalizeConfigExport(
     return null
   }
 
-  if (!isObject(actualConfig)) {
+  if (!isPlainObject(actualConfig)) {
     throw new ConfigLoadError(
-      `Config ${configFile} must export an object, received ${typeof actualConfig}`,
+      `Config ${configFile} must export a plain object`,
       {
         code: ConfigErrorCode.InvalidConfig,
         configFile,
@@ -77,6 +78,34 @@ function normalizeConfigExport(
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
+}
+
+/**
+ * 校验并复制调用方提供的默认配置
+ *
+ * @remarks
+ * 默认配置与文件导出共享同一根对象信任边界，不能通过对象展开静默改变数组或类实例的结构
+ *
+ * @typeParam T - 调用方声明的配置类型
+ * @param defaultConfig - 调用方提供的默认配置
+ * @returns 默认配置的浅层副本，未提供时返回 `null`
+ * @throws {@link ConfigLoadError} 默认配置不是普通对象时抛出
+ */
+function normalizeDefaultConfig<T extends object>(
+  defaultConfig: T | undefined,
+): T | null {
+  if (defaultConfig === undefined) {
+    return null
+  }
+
+  if (!isPlainObject(defaultConfig)) {
+    throw new ConfigLoadError('Default config must be a plain object', {
+      code: ConfigErrorCode.InvalidConfig,
+      configFile: '<default>',
+    })
+  }
+
+  return { ...defaultConfig } as T
 }
 
 /**
@@ -125,8 +154,8 @@ function mergeConfigObjects(
       ? merge(baseConfig, overrideConfig)
       : deepMerge(baseConfig, overrideConfig)
 
-    if (!isObject(mergedConfig)) {
-      throw new TypeError('Config merge must return an object')
+    if (!isPlainObject(mergedConfig)) {
+      throw new TypeError('Config merge must return a plain object')
     }
 
     return mergedConfig
@@ -166,12 +195,9 @@ function validateConfigObject<T extends object>(
       loadedConfigFiles,
     })
 
-    if (
-      !isObject(validatedConfig) ||
-      ('then' in validatedConfig && typeof validatedConfig.then === 'function')
-    ) {
+    if (!isPlainObject(validatedConfig)) {
       throw new TypeError(
-        'Config validator must synchronously return an object',
+        'Config validator must synchronously return a plain object',
       )
     }
 
@@ -225,7 +251,7 @@ export async function loadConfigFiles<T extends object>(
   const inputConfigFiles = Object.freeze([...configFiles])
   const loadedConfigFiles: string[] = []
   const { merge, reload, validate } = options
-  let config: T | null = defaultConfig ? ({ ...defaultConfig } as T) : null
+  let config = normalizeDefaultConfig(defaultConfig)
 
   for (const configFile of inputConfigFiles) {
     if (!(await isConfigPathAvailable(configFile))) {
@@ -295,7 +321,7 @@ export function loadConfigFilesSync<T extends object>(
   const inputConfigFiles = Object.freeze([...configFiles])
   const loadedConfigFiles: string[] = []
   const { merge, validate } = options
-  let config: T | null = defaultConfig ? ({ ...defaultConfig } as T) : null
+  let config = normalizeDefaultConfig(defaultConfig)
 
   for (const configFile of inputConfigFiles) {
     if (!isConfigPathAvailableSync(configFile)) {

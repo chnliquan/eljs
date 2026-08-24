@@ -16,6 +16,7 @@ import * as path from 'node:path'
 import {
   fileLoaders,
   fileLoadersSync,
+  loadJs,
   loadJson,
   loadJsonSync,
   loadJsSync,
@@ -358,6 +359,49 @@ describe('文件加载器工具 - 完整测试', () => {
       loadJsSync('/test.js')
 
       expect(mockImportFresh).toHaveBeenCalledWith('/test.js')
+    })
+  })
+
+  describe('JavaScript 文件异步加载', () => {
+    it('应该返回原生 ESM 的默认导出', async () => {
+      const modulePath = path.join(tempDir, 'default-export.mjs')
+      await fsp.writeFile(modulePath, 'export default { value: 42 }')
+
+      await expect(loadJs<{ value: number }>(modulePath)).resolves.toEqual({
+        value: 42,
+      })
+    })
+
+    it('应该保留没有默认导出的原生 ESM 命名空间', async () => {
+      const modulePath = path.join(tempDir, 'named-exports.mjs')
+      await fsp.writeFile(modulePath, 'export const value = 42')
+
+      const result = await loadJs<{ value: number }>(modulePath)
+
+      expect(result.value).toBe(42)
+      expect(Object.prototype.toString.call(result)).toBe('[object Module]')
+    })
+
+    it('模块求值失败时不应该回退到 require 重复执行', async () => {
+      const modulePath = path.join(tempDir, 'throwing-module.cjs')
+      const counterKey = `__eljsLoaderExecutionCount${Date.now()}`
+      await fsp.writeFile(
+        modulePath,
+        [
+          `globalThis.${counterKey} = (globalThis.${counterKey} || 0) + 1`,
+          "throw new Error('module failed')",
+        ].join('\n'),
+      )
+
+      try {
+        await expect(loadJs(modulePath)).rejects.toThrow(
+          `Load ${modulePath} failed: module failed`,
+        )
+        expect(Reflect.get(globalThis, counterKey)).toBe(1)
+        expect(mockImportFresh).not.toHaveBeenCalledWith(modulePath)
+      } finally {
+        Reflect.deleteProperty(globalThis, counterKey)
+      }
     })
   })
 

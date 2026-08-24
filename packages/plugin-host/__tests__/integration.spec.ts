@@ -18,6 +18,10 @@ class TestPluginHost extends PluginHost {
   public testLoad(): Promise<void> {
     return this.load()
   }
+
+  public testRunCleanupHook(key: string): Promise<unknown> {
+    return this.runCleanupHook(key)
+  }
 }
 
 describe('插件宿主集成', () => {
@@ -45,6 +49,14 @@ describe('插件宿主集成', () => {
       code: PluginHostErrorCode.OperationAborted,
     })
     expect(host.state).toBe(PluginHostState.Uninitialized)
+  })
+
+  it('应该拒绝在宿主就绪前执行清理 Hook', async () => {
+    const host = new TestPluginHost({ cwd })
+
+    await expect(host.testRunCleanupHook('onCleanup')).rejects.toMatchObject({
+      code: PluginHostErrorCode.InvalidState,
+    })
   })
 
   it('应该在 Hook 边界停止后续插件执行', async () => {
@@ -87,6 +99,9 @@ describe('插件宿主集成', () => {
     await expect(readFile(markerPath, 'utf8')).rejects.toMatchObject({
       code: 'ENOENT',
     })
+
+    await host.testRunCleanupHook('onStep')
+    await expect(readFile(markerPath, 'utf8')).resolves.toBe('ran')
   })
 
   it('应该加载真实的 ESM、CommonJS 和 TypeScript 插件', async () => {

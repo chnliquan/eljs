@@ -9,7 +9,7 @@ import { cp } from 'node:fs/promises'
 import path, { join } from 'node:path'
 
 import type { Config, RemoteTemplate } from '../types'
-import { AppError } from '../utils'
+import { AppError, onCancel } from '../utils'
 import { resolveProspectiveCanonicalPath } from './canonical-path'
 import { CreateRunner } from './create-runner'
 import {
@@ -253,20 +253,23 @@ export class ProjectCreator {
         shouldOverwrite = true
       } else {
         logger.clear()
-        const { action } = await prompts([
-          {
-            name: 'action',
-            type: 'select',
-            message: `Target directory ${chalk.cyan(targetDir)} already exists, pick an action:`,
-            choices: [
-              { title: 'Overwrite', value: 'overwrite' },
-              ...(targetIsDirectory
-                ? [{ title: 'Merge', value: 'merge' }]
-                : []),
-              { title: 'Cancel', value: false },
-            ],
-          },
-        ])
+        const { action } = await prompts(
+          [
+            {
+              name: 'action',
+              type: 'select',
+              message: `Target directory ${chalk.cyan(targetDir)} already exists, pick an action:`,
+              choices: [
+                { title: 'Overwrite', value: 'overwrite' },
+                ...(targetIsDirectory
+                  ? [{ title: 'Merge', value: 'merge' }]
+                  : []),
+                { title: 'Cancel', value: false },
+              ],
+            },
+          ],
+          { onCancel },
+        )
 
         if (!action) {
           return
@@ -511,12 +514,15 @@ export class ProjectCreator {
       logger.warn(
         `Remote template ${chalk.cyan(this._template.value)} can execute code with your user permissions.`,
       )
-      const { confirmed } = await prompts({
-        name: 'confirmed',
-        type: 'confirm',
-        message: 'Download and execute this template?',
-        initial: false,
-      })
+      const { confirmed } = await prompts(
+        {
+          name: 'confirmed',
+          type: 'confirm',
+          message: 'Download and execute this template?',
+          initial: false,
+        },
+        { onCancel },
+      )
 
       if (confirmed !== true) {
         return false

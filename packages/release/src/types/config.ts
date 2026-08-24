@@ -15,6 +15,13 @@ export type GithubReleaseMode = 'browser' | 'api'
  */
 export interface Config extends UserConfig {
   /**
+   * 用于取消发布流程、插件子进程和网络请求的信号
+   *
+   * @remarks
+   * 该字段只接受程序化调用方传入，不应序列化到 release 配置文件
+   */
+  signal?: AbortSignal
+  /**
    * 发布工作目录
    *
    * @remarks

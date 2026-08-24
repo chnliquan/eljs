@@ -2,7 +2,13 @@ import { AppError, ProjectCreator, type Config } from '@eljs/create'
 import { prompts } from '@eljs/utils/cli'
 import { logger } from '@eljs/utils/logger'
 
-import { officialTemplates, type OfficialTemplate } from './official-templates'
+import {
+  officialTemplates,
+  type OfficialTemplate,
+  type OfficialTemplateName,
+} from './official-templates'
+
+export type { OfficialTemplateName } from './official-templates'
 
 /**
  * 构造函数选项
@@ -11,7 +17,7 @@ export interface CreateTemplateOptions extends Omit<Config, 'template'> {
   /**
    * 内置模板标识
    */
-  template?: string
+  template?: OfficialTemplateName
 }
 
 /**
@@ -69,11 +75,11 @@ export class CreateTemplate {
    */
   private async _getTemplate(): Promise<OfficialTemplate> {
     this._throwIfAborted('select-template')
-    let templateAnswer = this.constructorOptions.template
+    let templateAnswer: string | undefined = this.constructorOptions.template
 
     if (
       templateAnswer !== undefined &&
-      !Object.hasOwn(officialTemplates, templateAnswer)
+      !isOfficialTemplateName(templateAnswer)
     ) {
       throw new AppError(`Unknown application template \`${templateAnswer}\``, {
         code: 'CREATE_INVALID_OPTIONS',
@@ -102,7 +108,7 @@ export class CreateTemplate {
       this._throwIfAborted('select-template')
     }
 
-    if (!templateAnswer || !Object.hasOwn(officialTemplates, templateAnswer)) {
+    if (!templateAnswer || !isOfficialTemplateName(templateAnswer)) {
       throw new AppError('Expected an application template', {
         code: 'CREATE_INVALID_OPTIONS',
       })
@@ -130,6 +136,10 @@ export class CreateTemplate {
       )
     }
   }
+}
+
+function isOfficialTemplateName(value: string): value is OfficialTemplateName {
+  return Object.hasOwn(officialTemplates, value)
 }
 
 function handleTemplateSelectionCancel(): never {

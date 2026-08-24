@@ -69,36 +69,18 @@ export function run(
   let execaOptions: ExecaOptions | undefined
 
   if (options) {
-    const { signal: _signal, verbose: _verbose, ...rest } = options
-    execaOptions = rest as ExecaOptions
+    const { signal, verbose: _verbose, ...rest } = options
+    execaOptions = {
+      ...rest,
+      ...(signal ? { cancelSignal: signal } : {}),
+    } as ExecaOptions
   }
 
   if (options?.verbose) {
     console.log('$', chalk.greenBright(command), ...args)
   }
 
-  const child = execa(command, args, execaOptions) as RunCommandChildProcess
-  const abortChild = () => child.kill('SIGTERM')
-  options?.signal?.addEventListener('abort', abortChild, { once: true })
-
-  if (options?.signal?.aborted) {
-    abortChild()
-  }
-
-  const cleanupSignal = () => {
-    options?.signal?.removeEventListener('abort', abortChild)
-  }
-
-  void Promise.resolve(child).then(
-    () => {
-      cleanupSignal()
-    },
-    () => {
-      cleanupSignal()
-    },
-  )
-
-  return child
+  return execa(command, args, execaOptions) as RunCommandChildProcess
 }
 
 /**

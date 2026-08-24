@@ -246,7 +246,7 @@
     "glob": "^13.0.6",
     "import-fresh": "^3.3.1",
     "ini": "^6.0.0",
-    "js-yaml": "^5.2.3",
+    "js-yaml": "^5.3.0",
     "mkdirp": "^3.0.1",
     "mustache": "^4.2.0",
     "parse-json": "^8.3.0",
@@ -259,7 +259,6 @@
     "tar": "^7.5.22",
     "typescript": "^6.0.3",
     "urllib": "^4.9.0",
-    "uuid": "^14.0.1",
     "which": "^6.0.1"
   },
   "engines": {

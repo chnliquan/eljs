@@ -14,7 +14,10 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 import { CreateTemplate } from '../src/create'
-import { officialTemplates } from '../src/official-templates'
+import {
+  officialTemplates,
+  type OfficialTemplateName,
+} from '../src/official-templates'
 
 interface InjectablePrompts {
   inject(answers: readonly unknown[]): void
@@ -76,13 +79,15 @@ describe.runIf(process.env.ELJS_TEST_OFFICIAL_TEMPLATES === '1')(
       120_000,
     )
 
-    it.each(Object.keys(officialTemplates))(
+    it.each(Object.keys(officialTemplates) as OfficialTemplateName[])(
       '%s 可以完成真实项目生成',
       async template => {
         const cwd = await mkdtemp(
           path.join(tmpdir(), 'eljs-official-template-'),
         )
         const projectName = 'contract-project'
+        const previousNpmCache = process.env.NPM_CONFIG_CACHE
+        process.env.NPM_CONFIG_CACHE = path.join(cwd, '.npm-cache')
 
         try {
           injectablePrompts.inject(['monorepo'])
@@ -98,6 +103,11 @@ describe.runIf(process.env.ELJS_TEST_OFFICIAL_TEMPLATES === '1')(
             pathExists(path.join(cwd, projectName, 'package.json')),
           ).resolves.toBe(true)
         } finally {
+          if (previousNpmCache === undefined) {
+            delete process.env.NPM_CONFIG_CACHE
+          } else {
+            process.env.NPM_CONFIG_CACHE = previousNpmCache
+          }
           await remove(cwd)
         }
       },

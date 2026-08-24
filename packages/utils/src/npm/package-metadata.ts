@@ -34,11 +34,10 @@ export interface NpmPackage extends OmitIndexSignature<PackageJson> {
 
   /** registry 中版本标签到精确版本的映射 */
   'dist-tags': {
-    latest: string
-    alpha: string
-    beta: string
-    next: string
-    [key: string]: string
+    /** 默认稳定版本标签，尚未设置时不存在 */
+    latest?: string
+    /** 其他稳定或预发布标签 */
+    [key: string]: string | undefined
   }
 
   /** registry 中精确版本到版本元数据的映射 */
@@ -113,7 +112,7 @@ export async function getNpmPackage(
   )}`
 
   if (options?.version) {
-    url += `/${options.version}`
+    url += `/${encodeURIComponent(options.version)}`
   }
 
   const requestConfig = await getNpmRequestConfig(url, options?.cwd)

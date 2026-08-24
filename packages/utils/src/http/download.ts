@@ -344,8 +344,26 @@ function getSafeFilename(filename: string | undefined, url: string): string {
   const safeFilename = path.basename(candidate)
 
   if (!safeFilename || safeFilename === '.' || safeFilename === path.sep) {
-    throw new Error(`Unable to determine a safe filename for ${url}`)
+    throw new Error(
+      `Unable to determine a safe filename for ${formatUrlForDiagnostics(url)}`,
+    )
   }
 
   return safeFilename
+}
+
+/**
+ * 移除 HTTP 地址中的认证和签名信息后用于诊断
+ *
+ * @param url - 原始 HTTP 地址
+ * @returns 不包含用户信息、查询参数和片段的地址
+ * @internal
+ */
+function formatUrlForDiagnostics(url: string): string {
+  const parsed = new URL(url)
+  parsed.username = ''
+  parsed.password = ''
+  parsed.search = ''
+  parsed.hash = ''
+  return parsed.href
 }

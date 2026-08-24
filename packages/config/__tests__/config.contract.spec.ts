@@ -126,6 +126,41 @@ describe('ConfigManager 加载契约测试', () => {
     )
   })
 
+  it('配置文件导出数组时应该抛出结构化错误', async () => {
+    const configFile = createRawConfigFile(tempDir, 'config.json', '[1, 2]')
+
+    await expect(ConfigManager.getConfig([configFile])).rejects.toMatchObject({
+      code: ConfigErrorCode.InvalidConfig,
+      configFile,
+      format: '.json',
+    })
+    expect(() => ConfigManager.getConfigSync([configFile])).toThrowError(
+      expect.objectContaining({
+        code: ConfigErrorCode.InvalidConfig,
+        configFile,
+        format: '.json',
+      }),
+    )
+  })
+
+  it.each([
+    ['数组', [1, 2]],
+    ['类实例', new (class CustomConfig {})()],
+  ])('默认配置为%s时应该抛出结构化错误', async (_label, defaultConfig) => {
+    await expect(
+      ConfigManager.getConfig([], defaultConfig),
+    ).rejects.toMatchObject({
+      code: ConfigErrorCode.InvalidConfig,
+      configFile: '<default>',
+    })
+    expect(() => ConfigManager.getConfigSync([], defaultConfig)).toThrowError(
+      expect.objectContaining({
+        code: ConfigErrorCode.InvalidConfig,
+        configFile: '<default>',
+      }),
+    )
+  })
+
   it('未知文件格式应该抛出 UnsupportedFormat 错误', async () => {
     const configFile = createRawConfigFile(
       tempDir,
@@ -377,6 +412,14 @@ describe('ConfigManager 加载契约测试', () => {
       ),
     ).rejects.toMatchObject({ code: ConfigErrorCode.MergeFailed })
 
+    await expect(
+      ConfigManager.getConfig(
+        [configFile],
+        { base: true },
+        { merge: () => [] },
+      ),
+    ).rejects.toMatchObject({ code: ConfigErrorCode.MergeFailed })
+
     expect(() =>
       ConfigManager.getConfigSync([configFile], undefined, {
         validate: () => {
@@ -386,5 +429,11 @@ describe('ConfigManager 加载契约测试', () => {
     ).toThrowError(
       expect.objectContaining({ code: ConfigErrorCode.ValidationFailed }),
     )
+
+    await expect(
+      ConfigManager.getConfig([configFile], undefined, {
+        validate: () => Promise.resolve({}) as unknown as object,
+      }),
+    ).rejects.toMatchObject({ code: ConfigErrorCode.ValidationFailed })
   })
 })

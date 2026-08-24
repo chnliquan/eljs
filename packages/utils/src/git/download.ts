@@ -48,7 +48,10 @@ export async function cloneGitRepository(
   if (branch) {
     args.push('--branch', branch)
   }
-  args.push(repositoryUrl, 'package')
+  // 用户提供的仓库地址必须位于选项终止符之后，避免被 Git 解析为参数
+  args.push('--', repositoryUrl, 'package')
+
+  const diagnosticSource = formatGitSourceForDiagnostics(url)
 
   try {
     await mkdir(dest)
@@ -63,18 +66,42 @@ export async function cloneGitRepository(
       } catch (cleanupError) {
         throw new AggregateError(
           [error, cleanupError],
-          `Download ${url} failed and temporary directory cleanup also failed`,
+          `Download ${diagnosticSource} failed and temporary directory cleanup also failed`,
           { cause: cleanupError },
         )
       }
     }
 
     const err = error as Error
-    err.message = `Download ${url} failed: ${err.message}.`
+    err.message = `Download ${diagnosticSource} failed: ${err.message}.`
     throw err
   }
 
   return path.join(dest, 'package')
+}
+
+/**
+ * 生成不包含凭据、查询参数和片段的 Git 地址诊断值
+ *
+ * @param source - 用户提供的 Git 地址
+ * @returns 可安全写入日志的地址
+ * @internal
+ */
+function formatGitSourceForDiagnostics(source: string): string {
+  try {
+    const parsed = new URL(source)
+    parsed.username = ''
+    parsed.password = ''
+    parsed.search = ''
+    parsed.hash = ''
+    return parsed.href
+  } catch {
+    const sourceWithoutSuffix = source.split(/[?#]/u, 1)[0]
+    return sourceWithoutSuffix.replace(
+      /^[^@/\\\s]+@(?=[^:/\\\s]+[:/])/u,
+      '***@',
+    )
+  }
 }
 
 /**

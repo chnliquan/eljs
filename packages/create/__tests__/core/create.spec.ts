@@ -23,7 +23,7 @@ import {
 } from '../../src/core/project-creator'
 import { TemplateDownloader } from '../../src/core/template-downloader'
 import type { RemoteTemplate } from '../../src/types'
-import { AppError } from '../../src/utils'
+import { AppError, onCancel } from '../../src/utils'
 
 const { mockCp } = vi.hoisted(() => ({ mockCp: vi.fn() }))
 const targetLockMocks = vi.hoisted(() => ({
@@ -299,6 +299,9 @@ describe('ProjectCreator 类完整测试', () => {
       expect(MockedDownload).not.toHaveBeenCalled()
       expect(mockedEljs.remove).not.toHaveBeenCalled()
       expect(mockedEljs.mkdir).not.toHaveBeenCalled()
+      expect(mockedEljs.prompts).toHaveBeenCalledWith(expect.any(Object), {
+        onCancel,
+      })
     })
 
     it('应该允许通过 yes 选项显式信任远程模板', async () => {
@@ -421,6 +424,9 @@ describe('ProjectCreator 类完整测试', () => {
       await create.run('existing-project')
 
       expect(mockedEljs.mkdir).not.toHaveBeenCalled()
+      expect(mockedEljs.prompts).toHaveBeenCalledWith(expect.any(Array), {
+        onCancel,
+      })
     })
 
     it('应该在找不到配置文件和生成器文件时抛出错误', async () => {

@@ -1,16 +1,7 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-  type MockedFunction,
-} from 'vitest'
-import * as importedModule0 from '../../src/file/is'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import * as fs from 'node:fs'
-import * as fsp from 'node:fs/promises'
+import fs from 'node:fs'
+import fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import { EOL } from 'node:os'
 import * as path from 'node:path'
@@ -26,19 +17,7 @@ import {
   writeJsonSync,
 } from '../../src/file/write'
 
-const requiredModule0 = vi.mocked(importedModule0, { deep: true })
-
-// Mock 依赖项
-vi.mock('../../src/file/is')
-
 describe('文件写入工具', () => {
-  const mockPathExists = requiredModule0.pathExists as MockedFunction<
-    (filePath: string) => Promise<boolean>
-  >
-  const mockPathExistsSync = requiredModule0.pathExistsSync as MockedFunction<
-    (filePath: string) => boolean
-  >
-
   let tempDir: string
   let testFile: string
   let testJsonFile: string
@@ -202,10 +181,6 @@ describe('文件写入工具', () => {
       expect(await fsp.readFile(testFile, 'utf8')).toBe('atomic')
     })
 
-    beforeEach(() => {
-      mockPathExists.mockResolvedValue(false)
-    })
-
     it('应该安全写入文件', async () => {
       const content = 'Safe content'
 
@@ -216,15 +191,34 @@ describe('文件写入工具', () => {
     })
 
     it('应该在失败时清理临时文件', async () => {
-      mockPathExists.mockResolvedValue(true)
-
-      // 创建一个会导致重命名失败的场景
-      const invalidTarget = path.join(tempDir, 'readonly', 'test.txt')
+      const invalidTarget = tempDir
 
       await expect(writeFileAtomic(invalidTarget, 'content')).rejects.toThrow()
 
-      // 应该尝试清理临时文件
-      expect(mockPathExists).toHaveBeenCalled()
+      const siblingNames = await fsp.readdir(path.dirname(tempDir))
+      expect(
+        siblingNames.some(name =>
+          name.startsWith(`${path.basename(tempDir)}.`),
+        ),
+      ).toBe(false)
+    })
+
+    it('清理失败时应该同时保留写入错误和清理错误', async () => {
+      const writeError = new Error('rename failed')
+      const cleanupError = new Error('cleanup failed')
+      vi.spyOn(fsp, 'rename').mockRejectedValueOnce(writeError)
+      vi.spyOn(fsp, 'unlink').mockRejectedValueOnce(cleanupError)
+
+      const error = await writeFileAtomic(testFile, 'content').catch(
+        value => value,
+      )
+
+      expect(error).toBeInstanceOf(AggregateError)
+      expect((error as AggregateError).errors).toEqual([
+        writeError,
+        cleanupError,
+      ])
+      expect((error as AggregateError).cause).toBe(cleanupError)
     })
 
     it('应该使用指定编码安全写入', async () => {
@@ -242,10 +236,6 @@ describe('文件写入工具', () => {
       expect(fs.readFileSync(testFile, 'utf8')).toBe('atomic-sync')
     })
 
-    beforeEach(() => {
-      mockPathExistsSync.mockReturnValue(false)
-    })
-
     it('应该同步安全写入文件', () => {
       const content = 'Sync safe content'
 
@@ -256,12 +246,40 @@ describe('文件写入工具', () => {
     })
 
     it('应该在同步失败时清理临时文件', () => {
-      mockPathExistsSync.mockReturnValue(true)
-
-      const invalidTarget = path.join(tempDir, 'readonly', 'test.txt')
+      const invalidTarget = tempDir
 
       expect(() => writeFileAtomicSync(invalidTarget, 'content')).toThrow()
-      expect(mockPathExistsSync).toHaveBeenCalled()
+      const siblingNames = fs.readdirSync(path.dirname(tempDir))
+      expect(
+        siblingNames.some(name =>
+          name.startsWith(`${path.basename(tempDir)}.`),
+        ),
+      ).toBe(false)
+    })
+
+    it('同步清理失败时应该同时保留写入错误和清理错误', () => {
+      const writeError = new Error('rename failed')
+      const cleanupError = new Error('cleanup failed')
+      vi.spyOn(fs, 'renameSync').mockImplementationOnce(() => {
+        throw writeError
+      })
+      vi.spyOn(fs, 'unlinkSync').mockImplementationOnce(() => {
+        throw cleanupError
+      })
+
+      let thrown: unknown
+      try {
+        writeFileAtomicSync(testFile, 'content')
+      } catch (error) {
+        thrown = error
+      }
+
+      expect(thrown).toBeInstanceOf(AggregateError)
+      expect((thrown as AggregateError).errors).toEqual([
+        writeError,
+        cleanupError,
+      ])
+      expect((thrown as AggregateError).cause).toBe(cleanupError)
     })
   })
 
@@ -271,10 +289,6 @@ describe('文件写入工具', () => {
       expect(JSON.parse(await fsp.readFile(testJsonFile, 'utf8'))).toEqual({
         mode: 'atomic',
       })
-    })
-
-    beforeEach(() => {
-      mockPathExists.mockResolvedValue(false)
     })
 
     it('应该安全写入JSON文件', async () => {
@@ -293,12 +307,15 @@ describe('文件写入工具', () => {
     })
 
     it('应该在JSON安全写入失败时清理临时文件', async () => {
-      mockPathExists.mockResolvedValue(true)
-
-      const invalidTarget = path.join(tempDir, 'readonly', 'test.json')
+      const invalidTarget = tempDir
 
       await expect(writeJsonAtomic(invalidTarget, {})).rejects.toThrow()
-      expect(mockPathExists).toHaveBeenCalled()
+      const siblingNames = await fsp.readdir(path.dirname(tempDir))
+      expect(
+        siblingNames.some(name =>
+          name.startsWith(`${path.basename(tempDir)}.`),
+        ),
+      ).toBe(false)
     })
   })
 
@@ -308,10 +325,6 @@ describe('文件写入工具', () => {
       expect(JSON.parse(fs.readFileSync(testJsonFile, 'utf8'))).toEqual({
         mode: 'atomic-sync',
       })
-    })
-
-    beforeEach(() => {
-      mockPathExistsSync.mockReturnValue(false)
     })
 
     it('应该同步安全写入JSON文件', () => {
@@ -325,12 +338,15 @@ describe('文件写入工具', () => {
     })
 
     it('应该在同步JSON安全写入失败时清理临时文件', () => {
-      mockPathExistsSync.mockReturnValue(true)
-
-      const invalidTarget = path.join(tempDir, 'readonly', 'test.json')
+      const invalidTarget = tempDir
 
       expect(() => writeJsonAtomicSync(invalidTarget, {})).toThrow()
-      expect(mockPathExistsSync).toHaveBeenCalled()
+      const siblingNames = fs.readdirSync(path.dirname(tempDir))
+      expect(
+        siblingNames.some(name =>
+          name.startsWith(`${path.basename(tempDir)}.`),
+        ),
+      ).toBe(false)
     })
   })
 

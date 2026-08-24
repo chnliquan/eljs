@@ -65,6 +65,7 @@ describe('create CLI', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     process.argv = originalArgv
     process.exitCode = undefined
     vi.restoreAllMocks()
@@ -178,6 +179,35 @@ describe('create CLI', () => {
 
     expect(run).toHaveBeenCalledWith('test-project')
     expect(process.exitCode).toBe(130)
+  })
+
+  it('首次信号后任务未响应时应该在宽限期结束后强制退出', async () => {
+    vi.useFakeTimers()
+    const previousListeners = new Set(process.listeners('SIGTERM'))
+    let resolveRun: (() => void) | undefined
+    let signalHandler: NodeJS.SignalsListener | undefined
+    const exit = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => undefined) as never)
+    run.mockImplementation(
+      () =>
+        new Promise<void>(resolve => {
+          resolveRun = resolve
+          signalHandler = process
+            .listeners('SIGTERM')
+            .find(listener => !previousListeners.has(listener))
+          ;(signalHandler as (signal: NodeJS.Signals) => void)('SIGTERM')
+        }),
+    )
+
+    const cliPromise = cli()
+    await vi.waitFor(() => expect(signalHandler).toBeTypeOf('function'))
+    expect(process.exitCode).toBe(130)
+    await vi.advanceTimersByTimeAsync(5_000)
+
+    expect(exit).toHaveBeenCalledWith(130)
+    resolveRun?.()
+    await cliPromise
   })
 
   it('领域错误输出简洁消息并设置退出码', async () => {

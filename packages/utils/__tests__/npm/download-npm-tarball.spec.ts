@@ -145,6 +145,19 @@ describe('NPM Download 工具', () => {
         )
       }
     })
+
+    it('错误消息不应该包含下载凭据和签名参数', async () => {
+      mockDownloadTo.mockRejectedValue(new Error('Network timeout'))
+
+      const operation = downloadNpmTarball(
+        'https://token:secret@registry.example.com/package.tgz?signature=private#fragment',
+      )
+
+      await expect(operation).rejects.toThrow(
+        'Download https://registry.example.com/package.tgz failed: Network timeout',
+      )
+      await expect(operation).rejects.not.toThrow(/token|secret|signature/u)
+    })
   })
 
   describe('参数重载', () => {

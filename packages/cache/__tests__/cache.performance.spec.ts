@@ -1,7 +1,7 @@
 import * as crypto from 'node:crypto'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Cache } from '../src'
 import {
@@ -186,8 +186,8 @@ describe('Cache 性能和清理功能测试', () => {
       ).toHaveLength(3)
     })
 
-    it('磁盘文件多于预加载上限时仍应该持续执行数量限制', async () => {
-      const cacheDir = path.join(tempDir, '.cache-preload-limit')
+    it('磁盘已有文件时应该按需加载并持续执行数量限制', async () => {
+      const cacheDir = path.join(tempDir, '.cache-existing-limit')
       const keyGenerator = (data: string) => data
       const writer = new Cache<string>({
         cacheDir,
@@ -208,7 +208,9 @@ describe('Cache 性能和清理功能测试', () => {
       })
 
       expect((await reader.getStats()).files).toBe(51)
-      expect(reader.memoryCache.size).toBe(50)
+      expect(reader.memoryCache.size).toBe(0)
+      expect(await reader.getByKey('existing-0')).toBe('existing-0')
+      expect(reader.memoryCache.size).toBe(1)
 
       await reader.setByData('new-entry')
 
@@ -217,6 +219,29 @@ describe('Cache 性能和清理功能测试', () => {
           .readdirSync(cacheDir)
           .filter(file => /^[a-f0-9]{64}\.json$/u.test(file)),
       ).toHaveLength(51)
+    })
+
+    it('达到文件上限后一次收敛只应该扫描一次目录', async () => {
+      const cacheDir = path.join(tempDir, '.cache-single-scan-limit')
+      const cache = new Cache<string>({
+        cacheDir,
+        maxFiles: 2,
+        keyGenerator: data => data,
+        autoCleanup: false,
+      })
+      await cache.getStats()
+      const readdirSpy = vi.spyOn(fs.promises, 'readdir')
+
+      await cache.setByData('first')
+      await cache.setByData('second')
+      await cache.setByData('third')
+
+      const cacheDirectoryScans = readdirSpy.mock.calls.filter(
+        ([directory]) => directory === cacheDir,
+      )
+
+      expect(cacheDirectoryScans).toHaveLength(1)
+      expect(cache.stats.files).toBe(2)
     })
 
     it('应该清理无效的缓存文件', async () => {

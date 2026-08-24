@@ -1,8 +1,21 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, expectTypeOf, it } from 'vitest'
 
-import { CreateTemplate, type CreateTemplateOptions } from '../src'
+import {
+  CreateTemplate,
+  type CreateTemplateOptions,
+  type OfficialTemplateName,
+} from '../src'
 
 describe('create-template 公共入口', () => {
+  it('应该导出精确的官方模板名称类型', () => {
+    expectTypeOf<CreateTemplateOptions['template']>().toEqualTypeOf<
+      OfficialTemplateName | undefined
+    >()
+    expectTypeOf<OfficialTemplateName>().toEqualTypeOf<
+      'template-npm-web' | 'template-npm-node'
+    >()
+  })
+
   it('应该导出创建器', () => {
     expect(CreateTemplate).toBeTypeOf('function')
   })

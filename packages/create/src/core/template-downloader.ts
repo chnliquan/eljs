@@ -197,9 +197,10 @@ export class TemplateDownloader {
    */
   private async _downloadGit(url: string): Promise<string> {
     let templateRootPath: string
+    const templateLabel = 'Git template'
 
     try {
-      this._spinner.start(`Downloading ${url}`)
+      this._spinner.start(`Downloading ${templateLabel}`)
       const gitOptions = {
         ...(this.constructorOptions.signal
           ? { signal: this.constructorOptions.signal }
@@ -213,16 +214,20 @@ export class TemplateDownloader {
       this._spinner.fail()
       throw toTemplateError(
         error,
-        `TemplateDownloader ${url} failed`,
+        `TemplateDownloader ${templateLabel} failed`,
         'CREATE_TEMPLATE_DOWNLOAD_FAILED',
         this.constructorOptions.signal,
       )
     }
 
     try {
-      await this._installDependencies(templateRootPath, url)
+      await this._installDependencies(templateRootPath, templateLabel)
     } catch (error) {
-      await cleanupFailedTemplate(path.dirname(templateRootPath), url, error)
+      await cleanupFailedTemplate(
+        path.dirname(templateRootPath),
+        templateLabel,
+        error,
+      )
     }
     return templateRootPath
   }

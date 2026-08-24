@@ -51,10 +51,15 @@ export class BaseGenerator {
    * 执行问询和写入生命周期
    *
    * @returns 写入完成时返回 `true`，子类取消写入时返回 `false`
+   * @throws 用户取消问询时抛出错误
    */
   public async run(): Promise<boolean> {
     const questions = this.prompting()
-    this.prompts = await prompts(questions)
+    this.prompts = await prompts(questions, {
+      onCancel() {
+        throw new Error('Prompt was cancelled')
+      },
+    })
 
     if (isFunction(this.basedir)) {
       this._basedir = this.basedir(this.prompts)

@@ -28,6 +28,18 @@ function isFiniteNonNegativeNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0
 }
 
+function isSafeNonNegativeInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
+}
+
+function isSafePositiveInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0
+}
+
+function isCacheHash(value: unknown): value is string {
+  return typeof value === 'string' && /^(?:|[a-f0-9]{64})$/u.test(value)
+}
+
 /**
  * 判断文件名是否属于原子写入产生的临时文件
  *
@@ -62,11 +74,11 @@ export function isCacheFile(value: unknown): value is CacheFile<unknown> {
   const metadata = value.metadata
 
   return (
-    isFiniteNonNegativeNumber(metadata.timestamp) &&
+    isSafeNonNegativeInteger(metadata.timestamp) &&
     isFiniteNonNegativeNumber(metadata.mtime) &&
-    isFiniteNonNegativeNumber(metadata.size) &&
-    typeof metadata.hash === 'string' &&
-    isFiniteNonNegativeNumber(metadata.ttl) &&
+    isSafeNonNegativeInteger(metadata.size) &&
+    isCacheHash(metadata.hash) &&
+    isSafePositiveInteger(metadata.ttl) &&
     typeof metadata.key === 'string' &&
     metadata.key.length > 0 &&
     (metadata.dataUndefined === undefined ||

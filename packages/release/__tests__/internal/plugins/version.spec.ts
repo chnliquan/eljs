@@ -340,6 +340,8 @@ describe('版本插件测试', () => {
 
       expect(confirm).toHaveBeenCalledWith(
         expect.stringContaining('[cyan]1.1.0[/cyan]'),
+        undefined,
+        expect.any(Function),
       )
       expect(result).toBe('1.1.0')
     })
@@ -674,6 +676,7 @@ describe('版本插件测试', () => {
         '1.1.0',
         'https://registry.npmjs.org',
         '/test/project',
+        undefined,
       )
     })
 
@@ -703,6 +706,7 @@ describe('版本插件测试', () => {
         '1.1.0',
         'https://registry.npmjs.org',
         '/test/project',
+        undefined,
       )
       expect(isVersionExist).toHaveBeenNthCalledWith(
         2,
@@ -710,6 +714,7 @@ describe('版本插件测试', () => {
         '1.1.0',
         'https://registry.npmjs.org',
         '/test/project',
+        undefined,
       )
     })
 
@@ -1043,6 +1048,8 @@ describe('版本插件测试', () => {
 
       expect(confirm).toHaveBeenCalledWith(
         expect.stringContaining('[cyan]1.1.0[/cyan]'),
+        undefined,
+        expect.any(Function),
       )
       expect(result).toBe('1.1.0')
     })

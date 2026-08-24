@@ -247,6 +247,12 @@ describe('类型检查工具函数', () => {
       const esModuleWithUndefined = { __esModule: true, default: undefined }
       expect(isESModule(esModuleWithUndefined)).toBe(true)
 
+      const nativeEsModule = {
+        [Symbol.toStringTag]: 'Module',
+        default: '原生默认值',
+      }
+      expect(isESModule(nativeEsModule)).toBe(true)
+
       const commonJSModule = { exports: 'value' }
       expect(isESModule(commonJSModule)).toBe(false)
 

@@ -285,7 +285,13 @@ describe('文件移动、删除和渲染工具', () => {
         const template = 'Invalid {{template'
         const data = { test: 'data' }
 
-        expect(() => renderTemplate(template, data)).toThrow(/Render .* failed/)
+        expect(() => renderTemplate(template, data)).toThrow(
+          'Render Mustache template failed',
+        )
+        expect(() => renderTemplate(template, data)).not.toThrow(template)
+        expect(() => renderTemplate(template, data)).not.toThrow(
+          'Mustache render error',
+        )
       })
 
       it('应该在 EJS 渲染失败时抛出错误', () => {
@@ -298,7 +304,10 @@ describe('文件移动、删除和渲染工具', () => {
         const options: EjsRenderTemplateOptions = { type: 'ejs' }
 
         expect(() => renderTemplate(template, data, options)).toThrow(
-          /Render .* failed/,
+          'Render EJS template failed',
+        )
+        expect(() => renderTemplate(template, data, options)).not.toThrow(
+          'EJS render error',
         )
       })
     })

@@ -35,6 +35,8 @@ export async function getRemoteDistTag(
   options?: {
     cwd?: string
     registry?: string
+    /** 取消进行中的 registry 请求 */
+    signal?: AbortSignal
   },
   tags: readonly string[] = ['latest', 'alpha', 'beta', 'rc'],
   concurrency = 8,

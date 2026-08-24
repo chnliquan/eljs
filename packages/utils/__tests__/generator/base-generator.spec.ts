@@ -169,9 +169,22 @@ describe('BaseGenerator 基础生成器', () => {
 
       await generator.run()
 
-      expect(mockPrompts).toHaveBeenCalledWith(questions)
+      expect(mockPrompts).toHaveBeenCalledWith(questions, {
+        onCancel: expect.any(Function),
+      })
       expect(generator.prompts).toEqual(answers)
       expect(generator.writing).toHaveBeenCalled()
+    })
+
+    it('用户取消问询时应该抛出错误', async () => {
+      mockPrompts.mockResolvedValue({ partial: 'answer' })
+
+      await generator.run()
+      const options = mockPrompts.mock.calls.at(-1)?.[1]
+
+      expect(() => options?.onCancel?.({} as PromptObject, {})).toThrow(
+        'Prompt was cancelled',
+      )
     })
 
     it('应该处理动态 basedir', async () => {

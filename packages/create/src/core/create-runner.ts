@@ -8,6 +8,7 @@ import { deepMerge } from '@eljs/utils/object'
 import { createRequire } from 'node:module'
 
 import { defaultConfig } from '../default'
+import { AppError } from '../errors'
 import { createHookSchema, type CreatePluginCapabilities } from '../hooks'
 import { resolveInternalModule } from '../internal'
 import { installRequireHook } from '../require-hook'
@@ -22,6 +23,32 @@ import {
 
 const currentModulePath = import.meta.url
 const localRequire = createRequire(currentModulePath)
+
+const BEHAVIOR_FLAG_NAMES = [
+  'defaultQuestions',
+  'gitInit',
+  'install',
+] as const satisfies readonly (keyof ResolvedConfig)[]
+
+/**
+ * 校验直接控制交互和外部副作用的 create 配置开关
+ *
+ * @param config - 完成默认值与用户选项合并后的配置
+ * @throws {@link AppError} 开关不是布尔值时抛出
+ */
+function validateBehaviorFlags(config: ResolvedConfig): void {
+  for (const name of BEHAVIOR_FLAG_NAMES) {
+    if (typeof config[name] !== 'boolean') {
+      throw new AppError(
+        `Invalid create config \`${name}\`, expected a boolean.`,
+        {
+          code: 'CREATE_INVALID_OPTIONS',
+          details: { option: name, value: config[name] },
+        },
+      )
+    }
+  }
+}
 
 /**
  * 创建项目生成运行器的构造选项
@@ -280,6 +307,7 @@ export class CreateRunner extends PluginHost<
    * 合并默认配置、构造选项和用户配置
    *
    * @returns 配置解析完成后兑现的 Promise
+   * @throws {@link AppError} 行为开关类型无效时抛出
    */
   private async _resolveConfig(): Promise<void> {
     const { signal: constructorSignal, ...constructorOptions } =
@@ -291,6 +319,8 @@ export class CreateRunner extends PluginHost<
       userConfig,
       constructorOptions,
     ) as ResolvedConfig
+
+    validateBehaviorFlags(config)
 
     // AbortSignal 依赖原型和内部状态，不能交给通用深合并器克隆
     config.signal = constructorSignal || userSignal

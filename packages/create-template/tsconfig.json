@@ -6,7 +6,6 @@
     "declarationMap": false,
     "noEmit": true,
     "noUnusedLocals": false,
-    "types": ["node"],
     "verbatimModuleSyntax": false
   }
 }

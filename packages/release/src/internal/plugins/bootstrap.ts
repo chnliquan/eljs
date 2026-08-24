@@ -102,9 +102,11 @@ export default definePlugin(context => {
         configuredRegistry ?? rootRegistry ?? packageRegistries[0]
       const branch = await getGitBranch({
         cwd,
+        signal: context.signal,
       })
       const latestTag = await getGitLatestTag({
         cwd,
+        signal: context.signal,
       })
 
       if (publishablePackages.length === 0) {

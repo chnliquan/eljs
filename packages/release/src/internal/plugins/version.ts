@@ -98,6 +98,7 @@ export default definePlugin(context => {
             version,
             context.appData.registry,
             context.cwd,
+            context.signal,
           ),
           pkgName,
         }),
@@ -275,6 +276,7 @@ async function getIncrementVersion(
   const remoteQueryOptions = {
     cwd: context.cwd,
     registry,
+    signal: context.signal,
   }
   const remoteDistTags =
     prereleaseId && !['alpha', 'beta', 'rc'].includes(prereleaseId)
@@ -403,11 +405,14 @@ async function getIncrementVersion(
     }
 
     if (releaseType === 'custom') {
-      answer = await prompts({
-        name: 'value',
-        type: 'text',
-        message: 'Please input the custom version:',
-      })
+      answer = await prompts(
+        {
+          name: 'value',
+          type: 'text',
+          message: 'Please input the custom version:',
+        },
+        { onCancel },
+      )
       return answer.value
     }
 
@@ -523,12 +528,13 @@ async function checkVersion(
   version: string,
   registry?: string,
   cwd?: string,
+  signal?: AbortSignal,
 ): Promise<boolean> {
   if (!semver.valid(version)) {
     throw new AppError(`Invalid semantic version ${chalk.cyan(version)}.`)
   }
 
-  return isVersionExist(pkgName, version, registry, cwd)
+  return isVersionExist(pkgName, version, registry, cwd, signal)
 }
 
 async function confirmVersion(
@@ -561,7 +567,7 @@ async function confirmVersion(
       confirmMessage = 'Are you sure to bump?'
     }
 
-    const answer = await confirm(confirmMessage)
+    const answer = await confirm(confirmMessage, undefined, onCancel)
     console.log()
 
     if (answer) {

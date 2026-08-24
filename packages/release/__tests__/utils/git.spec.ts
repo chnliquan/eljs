@@ -62,4 +62,17 @@ describe('release Git 工具', () => {
 
     await expect(isGitTagAtHead('v2.0.0')).resolves.toBe(false)
   })
+
+  it('不应该把取消误判为标签不存在', async () => {
+    const controller = new AbortController()
+    const cancellation = new Error('cancelled')
+    controller.abort(cancellation)
+    ;(run as MockedFunction<typeof run>).mockRejectedValue(
+      new Error('terminated'),
+    )
+
+    await expect(
+      isGitTagAtHead('v1.0.0', { signal: controller.signal }),
+    ).rejects.toBe(cancellation)
+  })
 })

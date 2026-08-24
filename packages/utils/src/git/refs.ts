@@ -19,6 +19,7 @@ export async function getGitBranch(
  * 获取当前 Git 上游分支
  * @param options - 命令执行选项
  * @returns 上游分支名称，未配置或查询失败时返回 `null`
+ * @throws 查询期间收到取消信号时抛出取消原因
  */
 export async function getGitUpstreamBranch(
   options?: RunCommandOptions,
@@ -29,7 +30,11 @@ export async function getGitUpstreamBranch(
       ['rev-parse', '--abbrev-ref', '@{u}'],
       options,
     ).then(data => data.stdout.trim())
-  } catch {
+  } catch (error) {
+    if (options?.signal?.aborted) {
+      throw options.signal.reason ?? error
+    }
+
     return null
   }
 }
@@ -71,6 +76,7 @@ export async function getGitCommitSha(
  * 获取当前 Git 最新标签
  * @param options - 命令执行选项
  * @returns 最新标签，未找到时返回 `null`
+ * @throws 查询期间收到取消信号时抛出取消原因
  */
 export async function getGitLatestTag(
   options?: RunCommandOptions,
@@ -80,6 +86,7 @@ export async function getGitLatestTag(
  * @param match - 标签匹配模式
  * @param options - 命令执行选项
  * @returns 最新标签，未找到时返回 `null`
+ * @throws 查询期间收到取消信号时抛出取消原因
  */
 export async function getGitLatestTag(
   match: string,
@@ -91,6 +98,7 @@ export async function getGitLatestTag(
  * @param args - 额外 Git 命令参数
  * @param options - 命令执行选项
  * @returns 最新标签，未找到时返回 `null`
+ * @throws 查询期间收到取消信号时抛出取消原因
  */
 export async function getGitLatestTag(
   match: string,
@@ -124,7 +132,11 @@ export async function getGitLatestTag(
   try {
     const { stdout } = await run('git', cliArgs, options)
     return stdout.trim()
-  } catch {
+  } catch (error) {
+    if (options?.signal?.aborted) {
+      throw options.signal.reason ?? error
+    }
+
     return null
   }
 }

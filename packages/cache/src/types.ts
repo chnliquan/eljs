@@ -16,6 +16,11 @@ export interface CacheOptions<T = unknown> {
   enabled?: boolean
   /**
    * 缓存目录路径
+   *
+   * @remarks
+   * 目录应由当前缓存用途独占；不同数据类型、序列化协议或生产者应使用不同目录
+   * `clear` 和 `cleanup` 会删除其中符合缓存文件命名协议的文件
+   *
    * @defaultValue os.tmpdir() + '/.eljs-cache'
    */
   cacheDir?: string
@@ -67,11 +72,11 @@ export interface CacheEntry<T = unknown> {
    */
   data: T
   /**
-   * 创建时间戳
+   * 创建时间戳，以毫秒表示的非负安全整数
    */
   timestamp: number
   /**
-   * 该条目独立的存活时间（毫秒）
+   * 该条目独立的存活时间，以毫秒表示的正安全整数
    */
   ttl: number
   /**
@@ -79,11 +84,11 @@ export interface CacheEntry<T = unknown> {
    */
   mtime: number
   /**
-   * 文件大小
+   * 文件大小，以字节表示的非负安全整数
    */
   size: number
   /**
-   * 文件内容哈希值
+   * 文件内容 SHA-256 哈希值，未计算时为空字符串
    */
   hash: string
   /**
@@ -115,7 +120,7 @@ export interface CacheFile<T = unknown> {
    */
   metadata: {
     /**
-     * 条目创建时间戳
+     * 条目创建时间戳，以毫秒表示的非负安全整数
      */
     timestamp: number
     /**
@@ -123,15 +128,15 @@ export interface CacheFile<T = unknown> {
      */
     mtime: number
     /**
-     * 关联源文件的字节数，非文件缓存为零
+     * 关联源文件的字节数，以非负安全整数表示，非文件缓存为零
      */
     size: number
     /**
-     * 小文件内容哈希，非文件缓存和大文件为空字符串
+     * 小文件内容 SHA-256 哈希，非文件缓存和大文件为空字符串
      */
     hash: string
     /**
-     * 该条目独立的存活时间（毫秒）
+     * 该条目独立的存活时间，以毫秒表示的正安全整数
      */
     ttl: number
     /**
