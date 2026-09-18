@@ -65,9 +65,9 @@
   "dependencies": {
     "@eljs/plugin-host": "workspace:*",
     "@eljs/utils": "workspace:*",
-    "commander": "^14.0.3",
-    "dayjs": "^1.11.22",
-    "ora": "^5.4.1",
+    "commander": "^15.0.0",
+    "dayjs": "^1.11.23",
+    "ora": "^9.4.1",
     "sort-package-json": "^4.0.0",
     "update-notifier": "^7.3.1"
   },
