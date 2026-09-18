@@ -1,5 +1,19 @@
 # ChangeLog 
 
+# [2.0.0-beta.0](https://github.com/chnliquan/eljs/compare/v1.3.2-alpha.0...v2.0.0-beta.0) (2026-09-18)
+
+### ♻ Code Refactoring
+
+* 统一取消信号传播并收紧缓存与配置校验 ([fe6ee69](https://github.com/chnliquan/eljs/commit/fe6ee6945121f302a9bba8e7af28194ecf0e9964))
+
+### ✨ Features
+
+* **pluggable:** 增加失败状态和调试诊断，重构类型守卫模块 ([3f9f6c9](https://github.com/chnliquan/eljs/commit/3f9f6c9bd056e6c9a86976446852e3c161094bd8))
+
+### 🐛 Bug Fixes
+
+* harden package downloads and dependencies ([32ac5a4](https://github.com/chnliquan/eljs/commit/32ac5a4436d0e1aee4fba7c135b48f93d9ea975a))
+
 ## [1.3.2-alpha.0](https://github.com/chnliquan/eljs/compare/v1.3.1...v1.3.2-alpha.0) (2026-07-30)
 
 ### ♻ Code Refactoring
