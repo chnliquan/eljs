@@ -9,6 +9,7 @@
   },
   "license": "MIT",
   "author": "chnliquan",
+  "type": "module",
   "scripts": {
     "add-owner": "tsx scripts/add-owner.ts",
     "build": "turbo run build",
@@ -46,6 +47,7 @@
   "devDependencies": {
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.2",
+    "@commitlint/types": "21.2.0",
     "@eljs/release": "workspace:*",
     "@eljs/utils": "workspace:*",
     "@eslint/js": "^10.0.1",
@@ -74,7 +76,7 @@
   },
   "packageManager": "pnpm@11.20.0",
   "engines": {
-    "node": ">=22.14.0",
+    "node": ">=22.18.0",
     "pnpm": ">=11.17.0"
   }
 }

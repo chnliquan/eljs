@@ -3,9 +3,15 @@ import tseslint from '@typescript-eslint/eslint-plugin'
 import eslintConfigPrettier from 'eslint-config-prettier/flat'
 import checkFile from 'eslint-plugin-check-file'
 import tsdoc from 'eslint-plugin-tsdoc'
-import { defineConfig, globalIgnores } from 'eslint/config'
+import { defineConfig, globalIgnores, type Config } from 'eslint/config'
+import { fileURLToPath } from 'node:url'
 
 const packageSourceFiles = ['packages/*/src/**/*.{ts,tsx}']
+
+// 主入口 d.ts 未声明 configs['flat/*']（运行时为 Config 数组），显式断言以保持类型可迭代
+const flatRecommended = tseslint.configs[
+  'flat/recommended'
+] as unknown as Config[]
 
 export default defineConfig([
   globalIgnores([
@@ -34,10 +40,7 @@ export default defineConfig([
   },
   {
     files: ['**/*.{ts,tsx}'],
-    extends: [
-      eslint.configs.recommended,
-      ...tseslint.configs['flat/recommended'],
-    ],
+    extends: [eslint.configs.recommended, ...flatRecommended],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -83,7 +86,7 @@ export default defineConfig([
     languageOptions: {
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: import.meta.dirname,
+        tsconfigRootDir: fileURLToPath(new URL('.', import.meta.url)),
       },
     },
     rules: {

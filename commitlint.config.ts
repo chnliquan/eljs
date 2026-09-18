@@ -1,4 +1,8 @@
 // https://github.com/conventional-changelog/commitlint
-module.exports = {
+import type { UserConfig } from '@commitlint/types'
+
+const config: UserConfig = {
   extends: ['@commitlint/config-conventional'],
 }
+
+export default config
