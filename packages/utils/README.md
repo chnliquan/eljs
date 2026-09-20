@@ -52,7 +52,7 @@ indirect re-exports from `@eljs/utils`.
 
 | Subpath                 | Responsibility                                        |
 | ----------------------- | ----------------------------------------------------- |
-| `@eljs/utils/cli`       | Confirmation, pauses, and interactive prompts         |
+| `@eljs/utils/cli`       | Prompts, pauses, CLI process harness, update notices  |
 | `@eljs/utils/cp`        | Commands, executable lookup, PID lookup, and sudo     |
 | `@eljs/utils/env`       | Global installation and environment capabilities      |
 | `@eljs/utils/error`     | `UtilsError` and stable error codes                   |

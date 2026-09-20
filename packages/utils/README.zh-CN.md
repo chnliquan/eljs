@@ -46,7 +46,7 @@ import { logger, readJson, run } from '@eljs/utils'
 
 | 子路径                  | 主要能力                                      |
 | ----------------------- | --------------------------------------------- |
-| `@eljs/utils/cli`       | 确认、暂停与交互提示                          |
+| `@eljs/utils/cli`       | 交互提示、暂停、CLI 进程外壳与更新提示        |
 | `@eljs/utils/cp`        | 命令执行、可执行文件解析、PID 查询与 sudo     |
 | `@eljs/utils/env`       | 全局安装检测与环境能力                        |
 | `@eljs/utils/error`     | `UtilsError` 与稳定错误码                     |
