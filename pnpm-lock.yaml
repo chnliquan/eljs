@@ -324,6 +324,9 @@ importers:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
+      update-notifier:
+        specifier: ^7.3.1
+        version: 7.3.1
       urllib:
         specifier: ^4.9.0
         version: 4.9.0

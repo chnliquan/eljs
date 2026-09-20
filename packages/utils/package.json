@@ -259,6 +259,7 @@
     "strip-ansi": "^7.2.0",
     "tar": "^7.5.22",
     "typescript": "^6.0.3",
+    "update-notifier": "^7.3.1",
     "urllib": "^4.9.0",
     "which": "^6.0.1"
   },
