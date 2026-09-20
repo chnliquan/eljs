@@ -1,5 +1,11 @@
 # ChangeLog 
 
+# [2.0.0-beta.2](https://github.com/chnliquan/eljs/compare/v2.0.0-beta.1...v2.0.0-beta.2) (2026-09-20)
+
+### 🐛 Bug Fixes
+
+* **create:** stop empty placeholder overrides of built-in prompt defaults ([ad60a5a](https://github.com/chnliquan/eljs/commit/ad60a5a812535c58a8ec36f122b2cc37d3d08775))
+
 # [2.0.0-beta.1](https://github.com/chnliquan/eljs/compare/v2.0.0-beta.0...v2.0.0-beta.1) (2026-09-20)
 
 ### ♻ Code Refactoring
