@@ -1,5 +1,18 @@
 # ChangeLog 
 
+# [2.0.0-beta.1](https://github.com/chnliquan/eljs/compare/v2.0.0-beta.0...v2.0.0-beta.1) (2026-09-20)
+
+### ♻ Code Refactoring
+
+* **create:** use shared CLI process harness and update notifier ([ab6d147](https://github.com/chnliquan/eljs/commit/ab6d1471939e9ae0f221d9c8acb78f95d8e4e144))
+* **create-template:** use shared CLI process harness and update notifier ([c886dad](https://github.com/chnliquan/eljs/commit/c886dad2a4dc14108e6f70e124d6ee490065e9fe))
+* **release:** use shared CLI harness and fix update notifier behavior ([fb5c18f](https://github.com/chnliquan/eljs/commit/fb5c18ff394aff41cca9051ecd21b0d6791b807d))
+
+### ✨ Features
+
+* **utils:** add notifyUpdates with optional update-notifier peer ([692d5f9](https://github.com/chnliquan/eljs/commit/692d5f9560841769454cfb3d39a6ec92c9d1bd6e))
+* **utils:** add runCliProcess CLI process harness ([f9fe78b](https://github.com/chnliquan/eljs/commit/f9fe78b310915c86f9e2ff270d6124e6c35ace48))
+
 # [2.0.0-beta.0](https://github.com/chnliquan/eljs/compare/v1.3.2-alpha.0...v2.0.0-beta.0) (2026-09-18)
 
 ### ♻ Code Refactoring
