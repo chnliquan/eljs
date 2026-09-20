@@ -106,8 +106,8 @@ checks against the files that would be published to npm.
 CLI diagnostics use the `debug` namespace:
 
 ```bash
-DEBUG=create:* pnpm exec eljs-create <template> <project-name>
-DEBUG=create-template:* pnpm exec eljs-create-template <project-name>
+DEBUG=create:* pnpm exec create <template> <project-name>
+DEBUG=create-template:* pnpm exec create-template <project-name>
 DEBUG=release:* pnpm exec eljs-release
 ```
 

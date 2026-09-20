@@ -32,8 +32,8 @@ yarn add @eljs/release -D
 npm install @eljs/release -D
 ```
 
-When installed globally, use `eljs-release`. The shorter `release` command is
-retained as a compatibility alias.
+When installed globally or invoked through `npx @eljs/release`, use the
+`eljs-release` command.
 
 ## 🚀 Quick Start
 

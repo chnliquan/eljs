@@ -38,8 +38,7 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "create-template": "./bin/create-template.js",
-    "eljs-create-template": "./bin/create-template.js"
+    "create-template": "./bin/create-template.js"
   },
   "files": [
     "bin",

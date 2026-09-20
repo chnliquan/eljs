@@ -32,20 +32,20 @@ yarn global add @eljs/create-template
 npm install @eljs/create-template -g
 ```
 
-Global installations expose `eljs-create-template` as the preferred command
-and keep `create-template` as a compatibility alias.
+Global installations expose a single `create-template` command. You can also
+run it without installing anything via `npx @eljs/create-template`.
 
 ## 🚀 Quick Start
 
 ```bash
 # Create a new project with interactive prompts
-eljs-create-template my-project
+create-template my-project
 
 # Create with a specific template
-eljs-create-template my-web-app --template template-npm-web
+create-template my-web-app --template template-npm-web
 
 # Force overwrite existing directory
-eljs-create-template my-project --force
+create-template my-project --force
 
 # Using npx (no global installation needed)
 npx @eljs/create-template my-project
@@ -56,7 +56,7 @@ npx @eljs/create-template my-project
 ### Command
 
 ```bash
-eljs-create-template [options] <project-name>
+create-template [options] <project-name>
 ```
 
 ### Arguments
@@ -92,7 +92,7 @@ The following built-in templates are available:
 
 ```bash
 # Start with interactive prompts
-eljs-create-template my-awesome-project
+create-template my-awesome-project
 
 # The CLI prompts you to choose from available templates:
 #    - Web Common Template
@@ -103,26 +103,26 @@ eljs-create-template my-awesome-project
 
 ```bash
 # Create a web project
-eljs-create-template my-web-app --template template-npm-web
+create-template my-web-app --template template-npm-web
 
 # Create a Node.js project
-eljs-create-template my-node-api --template template-npm-node
+create-template my-node-api --template template-npm-node
 ```
 
 ### Advanced Usage
 
 ```bash
 # Force overwrite existing directory
-eljs-create-template existing-project --force
+create-template existing-project --force
 
 # Merge with existing directory
-eljs-create-template existing-project --merge
+create-template existing-project --merge
 
 # Custom working directory
-eljs-create-template new-project --cwd ./workspace
+create-template new-project --cwd ./workspace
 
 # Combine multiple options
-eljs-create-template my-project --template template-npm-web --force --cwd ./projects
+create-template my-project --template template-npm-web --force --cwd ./projects
 ```
 
 ## Programmatic API

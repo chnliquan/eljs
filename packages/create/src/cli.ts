@@ -125,7 +125,7 @@ async function main(signal: AbortSignal) {
   }
 
   const command = new Command()
-    .name('eljs-create')
+    .name('create')
     .description('Generate a project from a local, npm, or Git template')
     .version(pkg.version, '-v, --version', 'Output the current version')
     .arguments('<template> <project-name>')

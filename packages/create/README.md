@@ -30,8 +30,8 @@ yarn global add @eljs/create
 npm install @eljs/create -g
 ```
 
-Global installations expose `eljs-create` as the preferred command and keep
-`create` as a compatibility alias.
+Global installations expose a single `create` command. You can also run the
+initializer without installing anything via `npm create @eljs`.
 
 ## 🚀 Quick Start
 
@@ -39,13 +39,13 @@ Global installations expose `eljs-create` as the preferred command and keep
 
 ```bash
 # Create from an npm template
-eljs-create my-template my-project
+create my-template my-project
 
 # Create from a git repository
-eljs-create https://github.com/user/template.git my-project
+create https://github.com/user/template.git my-project
 
 # Create from a local template
-eljs-create ./local-template my-project
+create ./local-template my-project
 
 # Using npx (no global installation needed)
 npx @eljs/create my-template my-project
@@ -82,7 +82,7 @@ await enterpriseCreator.run('enterprise-app')
 ### Commands
 
 ```bash
-eljs-create [options] <template> <project-name>
+create [options] <template> <project-name>
 ```
 
 ### Arguments
@@ -117,25 +117,25 @@ eljs-create [options] <template> <project-name>
 
 ```bash
 # Basic template creation
-eljs-create react-template my-react-app
+create react-template my-react-app
 
 # Force overwrite existing directory
-eljs-create vue-template my-vue-app --force
+create vue-template my-vue-app --force
 
 # Merge with existing directory
-eljs-create component-template my-component --merge
+create component-template my-component --merge
 
 # Custom working directory
-eljs-create context-template my-context --cwd ./projects
+create context-template my-context --cwd ./projects
 
 # From scoped npm package
-eljs-create @company/enterprise-template my-enterprise-app
+create @company/enterprise-template my-enterprise-app
 
 # From a Git repository branch or tag
-eljs-create https://github.com/templates/fullstack.git#main my-fullstack-app
+create https://github.com/templates/fullstack.git#main my-fullstack-app
 
 # Local template with custom options
-eljs-create ./templates/custom-template my-custom-app --no-install
+create ./templates/custom-template my-custom-app --no-install
 ```
 
 ## 📖 API Reference

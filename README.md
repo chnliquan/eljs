@@ -33,9 +33,8 @@ npx @eljs/create-template my-project
 npx @eljs/release
 ```
 
-Global installations also expose the namespaced commands `eljs-create`,
-`eljs-create-template`, and `eljs-release`. Existing short commands remain
-available as compatibility aliases.
+Global installations expose the commands `create`, `create-template`, and
+`eljs-release`.
 
 ## Requirements
 

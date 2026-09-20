@@ -126,7 +126,7 @@ async function main(signal: AbortSignal) {
   }
 
   const command = new Command()
-    .name('eljs-create-template')
+    .name('create-template')
     .description('Initialize a project from an official template')
     .version(pkg.version, '-v, --version', 'Output the current version')
     .argument('<project-name>', 'Project name')
