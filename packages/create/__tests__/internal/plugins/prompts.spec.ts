@@ -263,7 +263,8 @@ describe('内部插件 prompts', () => {
       const memo: PromptMemo = { gitUrl: '' }
       const result = secondModifyPromptsCallback(memo)
 
-      expect(result.gitUrl).toBe('')
+      // 空串占位不再覆盖钩子计算出的占位符
+      expect(result.gitUrl).toBe('{{gitUrl}}')
       expect(result.gitHref).toBe('{{gitHref}}')
     })
 
@@ -315,6 +316,90 @@ describe('内部插件 prompts', () => {
 
       expect(result.existingProp).toBe('value')
       expect(result.author).toBe('Original Author') // memo 值应该被保留
+    })
+
+    it('memo 内置键为空串时不应该覆盖默认值', () => {
+      // 前序用例可能把 execSync 覆盖为抛错实现，必须恢复探测行为再断言
+      mockChildProcess.execSync.mockImplementation(
+        () => 'https://custom-registry.com\n',
+      )
+      mockInternalUtils.getGitHref.mockReturnValue(
+        'https://github.com/test/repo',
+      )
+
+      promptsPlugin(mockContext)
+
+      // create-runner 的 modifyPrompts 初值把内置键预置为空串占位
+      const memo: PromptMemo = {
+        author: '',
+        email: '',
+        gitUrl: '',
+        gitHref: '',
+        registry: '',
+        year: '',
+        date: '',
+        dateTime: '',
+      }
+      const result = secondModifyPromptsCallback(memo)
+
+      expect(result.author).toBe('Test Author')
+      expect(result.email).toBe('test@example.com')
+      expect(result.gitUrl).toBe('{{gitUrl}}')
+      expect(result.gitHref).toBe('{{gitHref}}')
+      expect(result.registry).toBe('https://custom-registry.com')
+      expect(result.year).toBe('2023')
+      expect(result.date).toBe('2023-12-01')
+      expect(result.dateTime).toBe('2023-12-01 10:30:45')
+    })
+
+    it('memo 内置键为 null 或 undefined 时也应该回填默认值', () => {
+      // 前序用例可能把 execSync 覆盖为抛错实现，必须恢复探测行为再断言
+      mockChildProcess.execSync.mockImplementation(
+        () => 'https://custom-registry.com\n',
+      )
+
+      promptsPlugin(mockContext)
+
+      const memo = {
+        author: undefined,
+        // 交互链路可能把内置键置为 null，回填逻辑必须同样兜底
+        email: null as never,
+        registry: undefined,
+      } satisfies PromptMemo
+      const result = secondModifyPromptsCallback(memo)
+
+      expect(result.author).toBe('Test Author')
+      expect(result.email).toBe('test@example.com')
+      expect(result.registry).toBe('https://custom-registry.com')
+    })
+
+    it('memo 内置键为非空用户值时仍然覆盖默认值', () => {
+      promptsPlugin(mockContext)
+
+      const memo: PromptMemo = {
+        author: 'Original Author',
+        registry: 'https://my-registry.example.com',
+      }
+      const result = secondModifyPromptsCallback(memo)
+
+      expect(result.author).toBe('Original Author')
+      expect(result.registry).toBe('https://my-registry.example.com')
+    })
+
+    it('github 项目 memo registry 为空串时应该回填默认 registry', () => {
+      promptsPlugin(mockContext)
+
+      mockInternalUtils.getGitHref.mockReturnValue(
+        'https://github.com/test/repo',
+      )
+
+      const memo: PromptMemo = {
+        gitUrl: 'git@github.com:test/repo.git',
+        registry: '',
+      }
+      const result = secondModifyPromptsCallback(memo)
+
+      expect(result.registry).toBe('https://registry.npmjs.org')
     })
 
     it('应该正确格式化日期', () => {

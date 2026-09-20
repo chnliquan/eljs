@@ -59,7 +59,80 @@ export default definePlugin(context => {
         date,
         dateTime,
       },
-      ...memo,
+      // create-runner 的初值把内置键预置为空串占位，非空用户值才允许覆盖默认值
+      ...pickBuiltInValues(memo, {
+        author,
+        email,
+        gitUrl,
+        gitHref,
+        registry,
+        year,
+        date,
+        dateTime,
+      }),
+      ...omitBuiltInKeys(memo, {
+        author,
+        email,
+        gitUrl,
+        gitHref,
+        registry,
+        year,
+        date,
+        dateTime,
+      }),
     }
   })
 })
+
+/**
+ * 收集 memo 中已由用户显式设置的内置键值
+ *
+ * @remarks
+ * create-runner 传入的初值把内置键预置为空串占位；
+ * 空串、null 与 undefined 均视为未设置，交由默认值兜底
+ *
+ * @param memo - 上一个钩子累积的输入
+ * @param defaults - 当前钩子计算出的内置默认值
+ * @returns 仅包含非空内置键的部分对象
+ */
+function pickBuiltInValues(
+  memo: Record<string, unknown>,
+  defaults: Record<string, unknown>,
+): Record<string, unknown> {
+  const picked: Record<string, unknown> = {}
+
+  for (const key of Object.keys(defaults)) {
+    const value = memo[key]
+    if (value !== '' && value !== null && value !== undefined) {
+      picked[key] = value
+    }
+  }
+
+  return picked
+}
+
+/**
+ * 透传 memo 中不属于内置键的其余属性
+ *
+ * @remarks
+ * 内置键的取舍统一由 {@link pickBuiltInValues} 决定，
+ * 其余键必须原样透传，避免丢失 preset 或用户插件追加的输入
+ *
+ * @param memo - 上一个钩子累积的输入
+ * @param defaults - 当前钩子计算出的内置默认值
+ * @returns 仅包含非内置键的部分对象
+ */
+function omitBuiltInKeys(
+  memo: Record<string, unknown>,
+  defaults: Record<string, unknown>,
+): Record<string, unknown> {
+  const rest: Record<string, unknown> = {}
+
+  for (const [key, value] of Object.entries(memo)) {
+    if (!Object.hasOwn(defaults, key)) {
+      rest[key] = value
+    }
+  }
+
+  return rest
+}
