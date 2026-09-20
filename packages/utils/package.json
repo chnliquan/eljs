@@ -236,6 +236,7 @@
     "@types/mustache": "^4.2.6",
     "@types/prompts": "^2.4.9",
     "@types/resolve": "^1.20.6",
+    "@types/update-notifier": "^6.0.8",
     "@types/which": "^3.0.4",
     "chalk": "^6.0.0",
     "debug": "^4.4.1",
@@ -260,6 +261,14 @@
     "typescript": "^6.0.3",
     "urllib": "^4.9.0",
     "which": "^6.0.1"
+  },
+  "peerDependencies": {
+    "update-notifier": "^7.3.1"
+  },
+  "peerDependenciesMeta": {
+    "update-notifier": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=22.14.0"

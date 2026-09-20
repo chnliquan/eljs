@@ -255,6 +255,9 @@ importers:
       '@types/resolve':
         specifier: ^1.20.6
         version: 1.20.6
+      '@types/update-notifier':
+        specifier: ^6.0.8
+        version: 6.0.8
       '@types/which':
         specifier: ^3.0.4
         version: 3.0.4
