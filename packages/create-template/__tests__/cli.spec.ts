@@ -151,7 +151,7 @@ describe('create-template CLI', () => {
 
     expect(signalHandler).toBeTypeOf('function')
     expect(logger.event).toHaveBeenCalledWith(
-      'Cancelling create template after SIGINT',
+      'Cancelling create-template after SIGINT',
     )
     expect(process.exitCode).toBe(130)
     expect(process.listeners('SIGINT')).not.toContain(signalHandler)
