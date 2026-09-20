@@ -34,6 +34,21 @@ vi.mock('@eljs/utils', () => ({
 vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
 
+const { mockNotifyUpdates, realRunCliProcess } = await vi.hoisted(() =>
+  import('@eljs/utils/cli').then(loaded => ({
+    mockNotifyUpdates: vi.fn(),
+    realRunCliProcess: loaded.runCliProcess,
+  })),
+)
+
+// 信号语义由共享外壳保证，这里直接复用真实实现保持测试效力
+vi.mock('@eljs/utils/cli', () => ({
+  runCliProcess: (
+    options: Parameters<typeof realRunCliProcess>[0],
+  ): Promise<void> => realRunCliProcess(options),
+  notifyUpdates: mockNotifyUpdates,
+}))
+
 const { mockProgram } = vi.hoisted(() => ({
   mockProgram: {
     name: vi.fn().mockReturnThis(),
@@ -146,7 +161,11 @@ describe('CLI 命令行接口综合测试', () => {
       await cli()
 
       expect(readJson).toHaveBeenCalled()
-      expect(updateNotifier).toHaveBeenCalledWith({ pkg: mockPackageJson })
+      expect(mockNotifyUpdates).toHaveBeenCalledWith({
+        pkg: mockPackageJson,
+        argv: process.argv,
+        debug: expect.any(Function),
+      })
       expect(mockProgram.parseAsync).toHaveBeenCalledWith(process.argv)
     })
 
@@ -403,17 +422,15 @@ describe('CLI 命令行接口综合测试', () => {
       )
     })
 
-    it('应该调用 updateNotifier 并触发通知', async () => {
+    it('应该通过 notifyUpdates 触发更新提示', async () => {
       await cli()
 
-      expect(updateNotifier).toHaveBeenCalledWith({ pkg: mockPackageJson })
-
-      const notifierResult = (
-        updateNotifier as MockedFunction<typeof updateNotifier>
-      ).mock.results[0]
-      if (notifierResult && notifierResult.value) {
-        expect(notifierResult.value.notify).toHaveBeenCalled()
-      }
+      expect(mockNotifyUpdates).toHaveBeenCalledTimes(1)
+      expect(mockNotifyUpdates).toHaveBeenCalledWith({
+        pkg: mockPackageJson,
+        argv: process.argv,
+        debug: expect.any(Function),
+      })
     })
   })
 
@@ -490,7 +507,7 @@ describe('CLI 命令行接口综合测试', () => {
 
       // 验证所有关键步骤都被执行
       expect(readJson).toHaveBeenCalled()
-      expect(updateNotifier).toHaveBeenCalled()
+      expect(mockNotifyUpdates).toHaveBeenCalled()
       expect(mockProgram.name).toHaveBeenCalled()
       expect(mockProgram.description).toHaveBeenCalled()
       expect(mockProgram.version).toHaveBeenCalled()
@@ -709,7 +726,7 @@ describe('CLI 命令行接口综合测试', () => {
 
       // 应该再次调用所有设置步骤
       expect(readJson).toHaveBeenCalled()
-      expect(updateNotifier).toHaveBeenCalled()
+      expect(mockNotifyUpdates).toHaveBeenCalled()
       expect(mockProgram.parseAsync).toHaveBeenCalled()
     })
   })

@@ -1,19 +1,16 @@
+import { notifyUpdates, runCliProcess } from '@eljs/utils/cli'
 import { readJson } from '@eljs/utils/file'
-import { createDebugger, logger } from '@eljs/utils/logger'
+import { createDebugger } from '@eljs/utils/logger'
 import type { PackageJson } from '@eljs/utils/types'
 import { InvalidArgumentError, program } from 'commander'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import semver, { type ReleaseType } from 'semver'
-import updateNotifier from 'update-notifier'
 
 import { release } from './release'
 import { AppError } from './utils'
 
 const { RELEASE_TYPES } = semver
-
-/** 首次终止信号后等待异步清理完成的最长时间 */
-const FORCE_EXIT_GRACE_PERIOD_MS = 5_000
 
 /**
  * 启动 release 命令行程序
@@ -21,71 +18,14 @@ const FORCE_EXIT_GRACE_PERIOD_MS = 5_000
  * @returns 命令行流程 Promise
  */
 export function cli(): Promise<void> {
-  const controller = new AbortController()
-  const disposeSignalHandlers = registerSignalHandlers(controller)
-
-  return main(controller.signal)
-    .then(() => {
-      if (controller.signal.aborted) {
-        throw controller.signal.reason
-      }
-    })
-    .catch(error => {
-      if (controller.signal.aborted) {
-        process.exitCode = 130
-      } else if (error instanceof AppError) {
-        process.exitCode = 1
-        logger.error(error.message)
-      } else {
-        process.exitCode = 1
-        console.error(error)
-      }
-    })
-    .finally(disposeSignalHandlers)
-}
-
-/**
- * 注册当前发布流程的进程信号并返回清理函数
- *
- * @param controller - 当前发布流程的取消控制器
- * @returns 移除本次信号监听器的函数
- * @internal
- */
-function registerSignalHandlers(controller: AbortController): () => void {
-  let forceExitTimer: NodeJS.Timeout | undefined
-
-  const handleSignal = (signal: NodeJS.Signals) => {
-    if (!controller.signal.aborted) {
-      try {
-        logger.event(`Cancelling release after ${signal}`)
-      } catch {
-        // 日志失败不能阻止发布流程进入取消状态
-      }
-      // 即使插件返回不持有事件循环句柄的悬空 Promise，自然退出也必须保留取消语义
-      process.exitCode = 130
-      controller.abort(new AppError(`Release operation received ${signal}`))
-      // 第三方插件可能忽略 AbortSignal，宽限期后退出避免进程无限挂起
-      forceExitTimer = setTimeout(
-        () => process.exit(130),
-        FORCE_EXIT_GRACE_PERIOD_MS,
-      )
-      forceExitTimer.unref()
-      return
-    }
-
-    process.exit(130)
-  }
-
-  process.on('SIGINT', handleSignal)
-  process.on('SIGTERM', handleSignal)
-
-  return () => {
-    if (forceExitTimer) {
-      clearTimeout(forceExitTimer)
-    }
-    process.off('SIGINT', handleSignal)
-    process.off('SIGTERM', handleSignal)
-  }
+  return runCliProcess({
+    name: 'release',
+    run: main,
+    createCancelReason: signal =>
+      new AppError(`Release operation received ${signal}`),
+    // release 的 AppError 尚无取消错误码，保留接口对齐以备未来接入
+    isCancellation: () => false,
+  })
 }
 
 async function main(signal: AbortSignal) {
@@ -97,7 +37,7 @@ async function main(signal: AbortSignal) {
 
   const pkg = await readJson<Required<PackageJson>>(packageJsonPath)
 
-  updateNotifier({ pkg }).notify()
+  notifyUpdates({ pkg, argv: process.argv, debug })
 
   program
     .name('eljs-release')
