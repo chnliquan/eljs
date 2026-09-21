@@ -62,11 +62,6 @@ async function main(signal: AbortSignal) {
     .option('--npm.canary', 'Specify the release type as canary')
     .option('--npm.registry <registry>', 'Specify the npm registry')
     .option('--no-npm.requireOwner', 'Skip npm owner check')
-    .option(
-      '--npm.networkConcurrency <count>',
-      'Limit concurrent npm registry requests',
-      parsePositiveInteger,
-    )
     .option('--no-npm.confirm', 'Skip confirm bump version')
     .option('--npm.prereleaseId <prereleaseId>', 'Specify the prereleaseId')
     .option('--no-github.release', 'Skip github release')
@@ -101,16 +96,6 @@ function checkVersion(value: string): string {
   }
 
   return value
-}
-
-function parsePositiveInteger(value: string): number {
-  const number = Number(value)
-
-  if (!Number.isInteger(number) || number < 1) {
-    throw new InvalidArgumentError('Expected a positive integer.')
-  }
-
-  return number
 }
 
 /**

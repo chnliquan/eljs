@@ -120,7 +120,6 @@ release [options] [version]
 | `--npm.canary`                 | Specify the release type as canary                      | `false`            |
 | `--npm.registry <registry>`    | Use one registry for queries, owner checks, and publish | package/npm config |
 | `--no-npm.requireOwner`        | Skip npm owner check                                    | `true`             |
-| `--npm.networkConcurrency <n>` | Limit concurrent npm registry requests                  | `8`                |
 | `--no-npm.confirm`             | Skip confirm bump version                               | `true`             |
 | `--npm.prereleaseId <id>`      | Specify a prerelease ID such as alpha/beta/rc/next      | -                  |
 | `--no-github.release`          | Skip GitHub Release creation                            | `true`             |
