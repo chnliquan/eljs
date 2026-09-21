@@ -25,15 +25,15 @@ pnpm config get registry
 
 ## Workspace commands
 
-| Command           | Purpose                                                    |
-| ----------------- | ---------------------------------------------------------- |
-| `pnpm dev`        | Build all packages in watch mode                           |
-| `pnpm build`      | Build all publishable packages                             |
-| `pnpm test`       | Run the complete test suite                                |
-| `pnpm typecheck`  | Type-check every TypeScript package                        |
-| `pnpm lint`       | Run ESLint, including TSDoc syntax checks                  |
-| `pnpm pack:check` | Verify installed tarballs, exports, types, CLIs, and files |
-| `pnpm verify`     | Run the complete local and CI verification suite           |
+| Command              | Purpose                                                    |
+| -------------------- | ---------------------------------------------------------- |
+| `pnpm dev`           | Build all packages in watch mode                           |
+| `pnpm build`         | Build all publishable packages                             |
+| `pnpm test`          | Run the complete test suite                                |
+| `pnpm typecheck`     | Type-check every TypeScript package                        |
+| `pnpm lint`          | Run ESLint, including TSDoc syntax checks                  |
+| `pnpm package:check` | Verify installed tarballs, exports, types, CLIs, and files |
+| `pnpm verify`        | Run the complete local and CI verification suite           |
 
 Use pnpm filters while iterating on one package:
 
@@ -142,9 +142,9 @@ directories:
 
 ```bash
 pnpm release
-pnpm release:alpha
 pnpm release:beta
-pnpm release:next
+pnpm release -- --npm.prereleaseId=alpha
+pnpm release -- patch
 ```
 
 The release workflow validates the workspace, updates package versions and the
