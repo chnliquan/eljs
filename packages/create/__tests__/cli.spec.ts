@@ -100,6 +100,26 @@ describe('create CLI', () => {
     expect(process.exitCode).toBeUndefined()
   })
 
+  it('显式 --install 传递 true 以覆盖模板配置', async () => {
+    process.argv = [
+      'node',
+      'create',
+      '@scope/template',
+      'orders-service',
+      '--install',
+    ]
+
+    await cli()
+
+    expect(mockedProjectCreator).toHaveBeenCalledWith(
+      expect.objectContaining({
+        install: true,
+        template: '@scope/template',
+      }),
+    )
+    expect(run).toHaveBeenCalledWith('orders-service')
+  })
+
   it('未显式禁用安装时不覆盖模板配置', async () => {
     await cli()
 

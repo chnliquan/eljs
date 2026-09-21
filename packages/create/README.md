@@ -102,16 +102,16 @@ create [options] <template> <project-name>
 
 ### Options
 
-| Option                     | Description                                         | Default         |
-| -------------------------- | --------------------------------------------------- | --------------- |
-| `-v, --version`            | Output the current version                          | -               |
-| `--cwd <cwd>`              | Specify the working directory                       | `process.cwd()` |
-| `-f, --force`              | Overwrite target directory if it exists             | `false`         |
-| `-m, --merge`              | Merge with target directory if it exists            | `false`         |
-| `--no-install`             | Skip dependency installation after creation         | `true`          |
-| `-y, --yes`                | Trust and execute the selected remote template      | `false`         |
-| `--allow-template-scripts` | Allow dependency lifecycle scripts while loading it | `false`         |
-| `-h, --help`               | Display help for command                            | -               |
+| Option                       | Description                                         | Default         |
+| ---------------------------- | --------------------------------------------------- | --------------- |
+| `-v, --version`              | Output the current version                          | -               |
+| `--cwd <cwd>`                | Specify the working directory                       | `process.cwd()` |
+| `-f, --force`                | Overwrite target directory if it exists             | `false`         |
+| `-m, --merge`                | Merge with target directory if it exists            | `false`         |
+| `--install` / `--no-install` | Install dependencies after creation                 | `true`          |
+| `-y, --yes`                  | Trust and execute the selected remote template      | `false`         |
+| `--allow-template-scripts`   | Allow dependency lifecycle scripts while loading it | `false`         |
+| `-h, --help`                 | Display help for command                            | -               |
 
 ### CLI Examples
 

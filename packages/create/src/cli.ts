@@ -45,20 +45,23 @@ async function main(signal: AbortSignal) {
     .option('--cwd <cwd>', 'Specify the working directory')
     .option('-f, --force', 'Overwrite target directory if it exists')
     .option('-m, --merge', 'Merge target directory if it exists')
+    .option('--install', 'Install dependencies after create done', true)
     .option('--no-install', 'Skip install dependencies after create done')
     .option('-y, --yes', 'Trust and execute the selected remote template')
     .option(
       '--allow-template-scripts',
       'Allow lifecycle scripts while installing remote template dependencies',
     )
-    .action(async (template, projectName, options) => {
+    .action(async (template, projectName, options, command) => {
       debug?.(`template:`, template)
       debug?.(`projectName:`, projectName)
       debug?.(`options:%O`, options)
       const creatorOptions = { ...options }
 
-      // Commander 会为否定选项注入 true 默认值，只有 false 才表示用户显式覆盖模版配置
-      if (creatorOptions.install !== false) {
+      // 只有 CLI 显式传递的值才能覆盖模版配置，commander 注入的默认值
+      // 与未传递状态的 source 均不为 cli
+      const source = command.getOptionValueSource('install')
+      if (source !== 'cli' && source !== 'env') {
         delete creatorOptions.install
       }
 
