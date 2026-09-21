@@ -71,7 +71,7 @@ npx @eljs/release patch
 ### Programmatic API Usage
 
 ```typescript
-import { release, ReleaseRunner, defineConfig } from '@eljs/release'
+import { release, defineConfig } from '@eljs/release'
 
 // Simple release
 await release('patch')
@@ -437,10 +437,10 @@ export default defineConfig({
 ### Custom Prerelease Workflow
 
 ```typescript
-import { ReleaseRunner } from '@eljs/release'
+import { release } from '@eljs/release'
 
 async function betaRelease() {
-  const runner = new ReleaseRunner({
+  await release(undefined, {
     npm: {
       prerelease: true,
       prereleaseId: 'beta',
@@ -455,8 +455,6 @@ async function betaRelease() {
       release: false, // No GitHub release for betas
     },
   })
-
-  await runner.run()
 }
 
 betaRelease()

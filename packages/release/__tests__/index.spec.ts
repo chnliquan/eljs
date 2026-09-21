@@ -33,9 +33,13 @@ describe('发布模块入口文件测试', () => {
       expect(typeof releaseIndex.definePreset).toBe('function')
     })
 
-    it('应该导出 ReleaseRunner 类', () => {
-      expect(releaseIndex.ReleaseRunner).toBeDefined()
-      expect(typeof releaseIndex.ReleaseRunner).toBe('function')
+    it('ReleaseRunner 应该仅作为内部实现导出', () => {
+      // ReleaseRunner 与 release() 无独立使用场景，公共 API 不再承诺该入口
+      const releaseRunnerDescriptor = Object.getOwnPropertyDescriptor(
+        releaseIndex,
+        'ReleaseRunner',
+      )
+      expect(releaseRunnerDescriptor).toBeDefined()
     })
 
     it('应该导出工具函数模块', () => {
@@ -70,7 +74,6 @@ describe('发布模块入口文件测试', () => {
         'definePlugin',
         'definePreset',
         'release',
-        'ReleaseRunner',
         'AppError',
         'onCancel',
         'parseVersion',
