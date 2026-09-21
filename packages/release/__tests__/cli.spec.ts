@@ -56,16 +56,35 @@ const { mockProgram } = vi.hoisted(() => ({
     version: vi.fn().mockReturnThis(),
     argument: vi.fn().mockReturnThis(),
     option: vi.fn().mockReturnThis(),
-    action: vi.fn().mockReturnThis(),
+    addOption: vi.fn().mockReturnThis(),
     showHelpAfterError: vi.fn().mockReturnThis(),
+    action: vi.fn().mockReturnThis(),
     parseAsync: vi.fn().mockResolvedValue(undefined),
     outputHelp: vi.fn(),
+    options: [] as Array<{ attributeName: () => string }>,
+    getOptionValueSource: vi.fn((_key: string) => 'cli' as const),
   },
 }))
 
 vi.mock('commander', () => ({
   InvalidArgumentError: class InvalidArgumentError extends Error {},
-  program: mockProgram,
+  Option: class Option {
+    public constructor(
+      public flags: string,
+      public description?: string,
+    ) {}
+    public choices() {
+      return this
+    }
+    public default() {
+      return this
+    }
+  },
+  Command: class Command {
+    public constructor() {
+      return mockProgram
+    }
+  },
 }))
 
 vi.mock('node:path', async importOriginal => {
@@ -81,6 +100,7 @@ vi.mock('node:path', async importOriginal => {
 
 vi.mock('semver', () => {
   const valid = vi.fn()
+  const validRange = vi.fn()
   const releaseTypes = [
     'major',
     'minor',
@@ -92,8 +112,9 @@ vi.mock('semver', () => {
   ]
 
   return {
-    default: { valid, RELEASE_TYPES: releaseTypes },
+    default: { valid, validRange, RELEASE_TYPES: releaseTypes },
     valid,
+    validRange,
     RELEASE_TYPES: releaseTypes,
   }
 })
@@ -117,6 +138,19 @@ const requiredModule0 = vi.mocked(importedModule0, { deep: true })
 // 模拟 console.log
 const mockConsoleLog = vi.spyOn(console, 'log').mockImplementation(() => {})
 
+// 将 opts 的键注册为显式 CLI 选项，模拟真实 commander 中
+// 声明即注册、传入即 source=cli 的行为
+const runAction = (
+  actionHandler: ActionHandlerFunction,
+  version: string | undefined,
+  opts: Record<string, unknown>,
+): Promise<void> => {
+  mockProgram.options = Object.keys(opts).map(key => ({
+    attributeName: () => key,
+  }))
+  return actionHandler(version, opts, mockProgram)
+}
+
 describe('CLI 命令行接口综合测试', () => {
   const mockPackageJson = {
     name: '@eljs/release',
@@ -127,6 +161,9 @@ describe('CLI 命令行接口综合测试', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     process.exitCode = undefined
+    mockProgram.options = []
+    // restoreMocks 每轮清空实现，这里恢复默认全显式语义
+    mockProgram.getOptionValueSource.mockImplementation(() => 'cli')
     ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue(
       mockPackageJson,
     )
@@ -211,20 +248,37 @@ describe('CLI 命令行接口综合测试', () => {
       )
       expect(mockProgram.option).toHaveBeenCalledWith(
         '--git.independent',
-        'Generate git tag independent',
+        'Generate one git tag per workspace package',
+        false,
+      )
+      expect(mockProgram.option).toHaveBeenCalledWith(
+        '--no-git.independent',
+        'Generate a single git tag',
+      )
+      expect(mockProgram.option).toHaveBeenCalledWith(
+        '--git.push',
+        'Push commit and tags to remote',
+        true,
+      )
+      expect(mockProgram.option).toHaveBeenCalledWith(
+        '--no-git.push',
+        'Skip git push',
       )
       expect(mockProgram.option).toHaveBeenCalledWith(
         '--npm.prerelease',
         'Specify the release type as prerelease',
+        false,
       )
       expect(mockProgram.option).toHaveBeenCalledWith(
         '--npm.canary',
         'Specify the release type as canary',
+        false,
       )
       expect(mockProgram.option).toHaveBeenCalledWith(
         '--npm.registry <registry>',
         'Specify the npm registry',
       )
+      expect(mockProgram.addOption).toHaveBeenCalledTimes(1)
     })
 
     it('应该设置 action 处理器', async () => {
@@ -284,7 +338,7 @@ describe('CLI 命令行接口综合测试', () => {
     })
 
     it('应该正确调用 release 函数', async () => {
-      await actionHandler('1.0.0', { cwd: '/it' })
+      await runAction(actionHandler, '1.0.0', { cwd: '/it' })
 
       expect(release).toHaveBeenCalledWith(
         '1.0.0',
@@ -295,15 +349,15 @@ describe('CLI 命令行接口综合测试', () => {
     })
 
     it('retry 与版本参数互斥时应该报错', async () => {
-      await expect(actionHandler('1.2.3', { retry: true })).rejects.toThrow(
-        '--retry cannot be combined with a version argument',
-      )
+      await expect(
+        runAction(actionHandler, '1.2.3', { retry: true }),
+      ).rejects.toThrow('--retry cannot be combined with a version argument')
 
       expect(release).not.toHaveBeenCalled()
     })
 
     it('retry 应该转发到 release 配置', async () => {
-      await actionHandler(undefined, { retry: true })
+      await runAction(actionHandler, undefined, { retry: true })
 
       expect(release).toHaveBeenCalledWith(
         undefined,
@@ -314,7 +368,7 @@ describe('CLI 命令行接口综合测试', () => {
     })
 
     it('应该正确解析嵌套选项', async () => {
-      await actionHandler('minor', {
+      await runAction(actionHandler, 'minor', {
         dryRun: true,
         'git.requireClean': false,
         'npm.confirm': false,
@@ -333,32 +387,94 @@ describe('CLI 命令行接口综合测试', () => {
             confirm: false,
             registry: 'https://registry.example.com',
           }),
-          github: {},
+          github: expect.objectContaining({
+            release: true,
+          }),
         }),
       )
     })
 
-    it('应该删除默认 true 值的特定选项', async () => {
-      await actionHandler('patch', {
-        'git.requireClean': true, // 应该被删除
-        'git.commit': true, // 应该被删除
-        'npm.confirm': true, // 应该被删除
-        'github.release': true, // 应该被删除
-        'git.independent': true, // 不应该被删除
-      })
+    it('应该过滤 source 为 default 的选项', async () => {
+      mockProgram.options = [
+        { attributeName: () => 'git.independent' },
+        { attributeName: () => 'git.requireClean' },
+        { attributeName: () => 'git.commit' },
+        { attributeName: () => 'npm.confirm' },
+        { attributeName: () => 'github.release' },
+      ]
+      mockProgram.getOptionValueSource.mockImplementation(key =>
+        key === 'git.independent' ? 'cli' : 'default',
+      )
+
+      await actionHandler(
+        'patch',
+        {
+          'git.requireClean': true,
+          'git.commit': true,
+          'npm.confirm': true,
+          'github.release': true,
+          'git.independent': true,
+        },
+        mockProgram,
+      )
 
       const releaseCall = (release as MockedFunction<typeof release>).mock
         .calls[0]
       const options = releaseCall[1]
 
-      // 验证特定选项被删除
-      expect(options?.git).not.toHaveProperty('requireClean')
-      expect(options?.git).not.toHaveProperty('commit')
-      expect(options?.npm).not.toHaveProperty('confirm')
-      expect(options?.github).not.toHaveProperty('release')
+      // source 为 default 的键全部过滤，只有 CLI 显式传递的键进入配置；
+      // 全部键被过滤时不会产生空配置组
+      expect(options?.git).toEqual({ independent: true })
+      expect(options).not.toHaveProperty('npm')
+      expect(options).not.toHaveProperty('github')
+    })
+  })
 
-      // 验证这个选项保留
-      expect(options?.git).toHaveProperty('independent', true)
+  describe('checkPrereleaseId 校验测试', () => {
+    let checkPrereleaseId: (value: string) => string
+
+    beforeEach(async () => {
+      await cli()
+      const optionCall = mockProgram.option.mock.calls.find(call =>
+        call[0].includes('prereleaseId'),
+      )
+      checkPrereleaseId = optionCall ? optionCall[2] : null
+    })
+
+    it('应该接受合法的预发布标识', () => {
+      ;(
+        semver.validRange as MockedFunction<typeof semver.validRange>
+      ).mockReturnValue(null)
+
+      expect(checkPrereleaseId('alpha')).toBe('alpha')
+      expect(checkPrereleaseId('beta')).toBe('beta')
+      expect(checkPrereleaseId('rc')).toBe('rc')
+      expect(checkPrereleaseId('next')).toBe('next')
+    })
+
+    it('应该拒绝语义化版本区间', () => {
+      ;(
+        semver.validRange as MockedFunction<typeof semver.validRange>
+      ).mockReturnValue('1.2.3')
+
+      expect(() => checkPrereleaseId('1.2.3')).toThrow()
+    })
+
+    it('应该拒绝 latest 保留字', () => {
+      ;(
+        semver.validRange as MockedFunction<typeof semver.validRange>
+      ).mockReturnValue(null)
+
+      expect(() => checkPrereleaseId('latest')).toThrow()
+    })
+
+    it('应该拒绝多段或含非法字符的标识', () => {
+      ;(
+        semver.validRange as MockedFunction<typeof semver.validRange>
+      ).mockReturnValue(null)
+
+      expect(() => checkPrereleaseId('alpha.1')).toThrow()
+      expect(() => checkPrereleaseId('alpha beta')).toThrow()
     })
   })
 
@@ -468,7 +584,7 @@ describe('CLI 命令行接口综合测试', () => {
     })
 
     it('应该处理复杂的选项键路径', async () => {
-      await actionHandler('1.0.0', {
+      await runAction(actionHandler, '1.0.0', {
         'git.changelog.filename': 'CHANGES.md',
         'git.changelog.preset': 'angular',
         'npm.publishArgs': '--access public',
@@ -491,17 +607,13 @@ describe('CLI 命令行接口综合测试', () => {
     })
 
     it('应该处理空选项对象', async () => {
-      await actionHandler('major', {})
+      await runAction(actionHandler, 'major', {})
 
-      // 空选项会产生空的结果对象
-      expect(release).toHaveBeenCalledWith(
-        'major',
-        expect.objectContaining({ signal: expect.any(AbortSignal) }),
-      )
+      expect(release).toHaveBeenCalledWith('major', expect.objectContaining({}))
     })
 
     it('应该处理混合的平级和嵌套选项', async () => {
-      await actionHandler('minor', {
+      await runAction(actionHandler, 'minor', {
         cwd: '/mixed/path',
         'git.push': false,
         'npm.canary': true,
@@ -536,8 +648,8 @@ describe('CLI 命令行接口综合测试', () => {
       expect(mockProgram.version).toHaveBeenCalled()
       expect(mockProgram.argument).toHaveBeenCalled()
 
-      // 验证所有选项都被设置（至少13个）
-      expect(mockProgram.option.mock.calls.length).toBeGreaterThanOrEqual(13)
+      // 验证所有选项都被设置（成对声明后至少 18 个 .option 调用 + 1 个 addOption）
+      expect(mockProgram.option.mock.calls.length).toBeGreaterThanOrEqual(18)
 
       expect(mockProgram.action).toHaveBeenCalled()
       expect(mockProgram.parseAsync).toHaveBeenCalled()
@@ -561,7 +673,9 @@ describe('CLI 命令行接口综合测试', () => {
 
       for (const version of versionInputs) {
         vi.clearAllMocks()
-        await actionHandler(version, {})
+        mockProgram.options = []
+        mockProgram.getOptionValueSource.mockImplementation(() => 'cli')
+        await runAction(actionHandler, version, {})
         expect(release).toHaveBeenCalledTimes(1)
       }
     })
@@ -681,58 +795,59 @@ describe('CLI 命令行接口综合测试', () => {
       const actionCall = mockProgram.action.mock.calls[0]
       const actionHandler = actionCall[0]
 
-      // 模拟真实的发布命令调用
-
-      await actionHandler('1.0.0', {
+      await runAction(actionHandler, '1.0.0', {
         cwd: process.cwd(),
         'git.requireClean': false,
-        'git.changelog': true,
         'npm.confirm': false,
-        'npm.prerelease': false,
-        'github.release': true,
       })
 
-      // 修正测试期望，因为 'git.changelog': true 不会被删除（只有特定的 true 值会被删除）
       expect(release).toHaveBeenCalledWith(
         '1.0.0',
         expect.objectContaining({
           cwd: process.cwd(),
           git: expect.objectContaining({
             requireClean: false,
-            // changelog: true 不会被删除，因为它不在删除列表中
           }),
           npm: expect.objectContaining({
-            prerelease: false,
-            // confirm: false 不会被删除，因为只有 true 值会被删除
+            confirm: false,
           }),
-          github: {},
         }),
       )
     })
 
-    it('应该能够处理复杂的选项删除逻辑', async () => {
+    it('应该能够处理复杂的选项过滤逻辑', async () => {
       await cli()
       const actionCall = mockProgram.action.mock.calls[0]
       const actionHandler = actionCall[0]
 
-      // 测试所有会被删除的 true 值选项
+      mockProgram.options = [
+        { attributeName: () => 'git.requireClean' },
+        { attributeName: () => 'git.commit' },
+        { attributeName: () => 'git.push' },
+        { attributeName: () => 'npm.requireOwner' },
+        { attributeName: () => 'npm.confirm' },
+      ]
+      mockProgram.getOptionValueSource.mockReturnValue('default')
 
-      await actionHandler('major', {
-        'git.requireClean': true,
-        'git.changelog': true,
-        'git.commit': true,
-        'git.push': true,
-        'npm.requireOwner': true,
-        'npm.confirm': true,
-      })
+      await actionHandler(
+        'major',
+        {
+          'git.requireClean': true,
+          'git.commit': true,
+          'git.push': true,
+          'npm.requireOwner': true,
+          'npm.confirm': true,
+        },
+        mockProgram,
+      )
 
       const releaseCall = (release as MockedFunction<typeof release>).mock
         .calls[0]
       const options = releaseCall[1]
 
-      // 所有这些选项都应该被删除
-      expect(options?.git).toEqual({})
-      expect(options?.npm).toEqual({})
+      // 所有 source 为 default 的键都被过滤，不产生空配置组
+      expect(options).not.toHaveProperty('git')
+      expect(options).not.toHaveProperty('npm')
     })
   })
 
