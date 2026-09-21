@@ -603,16 +603,17 @@ function isGitTemplateSource(source: string): boolean {
 }
 
 /**
- * 拒绝本地模版与目标目录相同或相互嵌套
+ * 拒绝会吞掉本地模版根的目标目录
  *
  * @remarks
- * 覆盖和生成流程会移动或写入目标目录；若两个路径重叠，生成过程可能移动模版
- * 自身或在递归拷贝时不断读取刚生成的文件。对已存在路径优先使用真实路径以识别
- * 符号链接指向的重叠位置
+ * 覆盖流程的备份步会整体移动目标目录；目标一旦是模版根本身或其祖先，
+ * 备份会把模版一起移走。目标嵌套在模版目录内是合法工作流（如模板包内
+ * 生成 `temp`），渲染源位于 `src` 等子目录时与目标天然无重叠，不做限制。
+ * 对已存在路径优先使用真实路径以识别符号链接指向的重叠位置
  *
  * @param templateRootPath - 本地模版根目录
  * @param targetDir - 项目输出目录
- * @throws {@link AppError} 两个目录相同或任一目录包含另一个目录时抛出
+ * @throws {@link AppError} 目标与模版根相同或是其祖先时抛出
  */
 async function assertPathsDoNotOverlap(
   templateRootPath: string,
@@ -623,10 +624,7 @@ async function assertPathsDoNotOverlap(
     resolveProspectiveCanonicalPath(targetDir),
   ])
 
-  if (
-    isSameOrDescendant(templatePath, targetPath) ||
-    isSameOrDescendant(targetPath, templatePath)
-  ) {
+  if (isSameOrDescendant(targetPath, templatePath)) {
     throw new AppError(
       `Local template ${chalk.cyan(templateRootPath)} and target ${chalk.cyan(targetDir)} must not overlap.`,
       {

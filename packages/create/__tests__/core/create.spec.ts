@@ -631,18 +631,33 @@ describe('ProjectCreator 类完整测试', () => {
       await expect(create.run('test-project')).rejects.toThrow(AppError)
     })
 
-    it('应该拒绝位于本地模版内部的目标目录', async () => {
+    it('应该允许目标目录嵌套在本地模版内部', async () => {
       const create = new ProjectCreator({
         cwd: '/mock/cwd/template',
         template: '/mock/cwd/template',
         force: true,
       })
 
-      await expect(create.run('nested-project')).rejects.toThrow(
-        'must not overlap',
+      await expect(create.run('nested-project')).resolves.toBeUndefined()
+      expect(mockedEljs.move).not.toHaveBeenCalledWith(
+        '/mock/cwd/template',
+        expect.anything(),
       )
+      expect(MockedRunner.prototype.run).toHaveBeenCalledWith(
+        '/mock/cwd/template/nested-project',
+        'nested-project',
+      )
+    })
+
+    it('应该拒绝与本地模版根相同的目标目录', async () => {
+      const create = new ProjectCreator({
+        cwd: '/mock/cwd',
+        template: '/mock/cwd/template',
+        force: true,
+      })
+
+      await expect(create.run('template')).rejects.toThrow('must not overlap')
       expect(mockedEljs.move).not.toHaveBeenCalled()
-      expect(mockedEljs.mkdir).not.toHaveBeenCalled()
     })
 
     it('应该解析 node_modules 中的模板', async () => {
