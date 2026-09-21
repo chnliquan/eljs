@@ -106,6 +106,7 @@ describe('ReleaseRunner 类测试', () => {
     deepMerge.mockReturnValue({
       cwd: process.cwd(),
       dryRun: false,
+      retry: false,
       git: {
         requireClean: true,
         changelog: {

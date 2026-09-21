@@ -9,6 +9,7 @@ import { definePlugin } from '../../define'
 import type { PrereleaseId, ReleasePluginContext } from '../../types'
 import {
   AppError,
+  findRetryVersionAtHead,
   getCanaryVersion,
   getMaxVersion,
   getReleaseVersion,
@@ -49,8 +50,12 @@ export default definePlugin(context => {
   })
 
   context.getIncrementVersion(
-    async ({ releaseTypeOrVersion }) => {
-      const version = await getIncrementVersion(context, releaseTypeOrVersion)
+    async ({ releaseTypeOrVersion, retry }) => {
+      const version = await getIncrementVersion(
+        context,
+        releaseTypeOrVersion,
+        retry,
+      )
 
       if (!context.config.npm.confirm) {
         return version
@@ -251,6 +256,7 @@ export default definePlugin(context => {
 async function getIncrementVersion(
   context: ReleasePluginContext,
   releaseTypeOrVersion?: string,
+  retry?: boolean,
 ): Promise<string> {
   const { prerelease, prereleaseId, canary } = context.config.npm
   const { registry, projectPkg, workspacePackages } = context.appData
@@ -259,6 +265,23 @@ async function getIncrementVersion(
     .map(({ manifest }) => manifest.name)
 
   context.step('Incrementing version ...')
+
+  if (retry) {
+    // 重试目标由本地 release 标签决定，无需查询远程 dist-tag 或计算增量
+    const retryVersion = await findRetryVersionAtHead(
+      context.cwd,
+      context.config.git.independent,
+      { signal: context.signal },
+    )
+
+    if (!retryVersion) {
+      throw new AppError(
+        `No release tag points at HEAD. Confirm the failed release commit and tags are unchanged, then rerun with an exact version such as ${chalk.cyan('release 1.2.3')}.`,
+      )
+    }
+
+    return retryVersion
+  }
 
   if (
     releaseTypeOrVersion &&

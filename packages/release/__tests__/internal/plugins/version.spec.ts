@@ -18,6 +18,7 @@ import { confirm, logger, prompts, writeJsonAtomic } from '@eljs/utils'
 import versionPlugin from '../../../src/internal/plugins/version'
 import type { PrereleaseId } from '../../../src/types'
 import {
+  findRetryVersionAtHead,
   getCanaryVersion,
   getMaxVersion,
   getReleaseVersion,
@@ -79,6 +80,7 @@ vi.mock('../../../src/utils', () => ({
       this.name = 'AppError'
     }
   },
+  findRetryVersionAtHead: vi.fn(),
   getCanaryVersion: vi.fn(),
   getMaxVersion: vi.fn(),
   getReleaseVersion: vi.fn(),
@@ -485,6 +487,64 @@ describe('版本插件测试', () => {
 
       // 对于具体版本字符串（不是发布类型），应该直接返回
       expect(result).toBe('2.0.0')
+    })
+
+    it('retry 模式应该从指向 HEAD 的发布标签发现版本', async () => {
+      mockContext.config.npm.confirm = false
+      ;(
+        findRetryVersionAtHead as MockedFunction<typeof findRetryVersionAtHead>
+      ).mockResolvedValue('2.0.0')
+
+      const result = await getIncrementVersionHandler({
+        releaseTypeOrVersion: undefined,
+        retry: true,
+      })
+
+      expect(result).toBe('2.0.0')
+      expect(findRetryVersionAtHead).toHaveBeenCalledWith(
+        '/test/project',
+        false,
+        {
+          signal: undefined,
+        },
+      )
+      // retry 发现版本后不应再查询远程 dist-tag
+      expect(getRemoteDistTag).not.toHaveBeenCalled()
+    })
+
+    it('retry 模式发现失败时应该抛出稳定领域错误', async () => {
+      ;(
+        findRetryVersionAtHead as MockedFunction<typeof findRetryVersionAtHead>
+      ).mockResolvedValue(undefined)
+
+      await expect(
+        getIncrementVersionHandler({
+          releaseTypeOrVersion: undefined,
+          retry: true,
+        }),
+      ).rejects.toThrow('No release tag points at HEAD')
+    })
+
+    it('retry 模式应该兼容独立标签仓库', async () => {
+      mockContext.config.npm.confirm = false
+      mockContext.config.git.independent = true
+      ;(
+        findRetryVersionAtHead as MockedFunction<typeof findRetryVersionAtHead>
+      ).mockResolvedValue('3.1.4')
+
+      const result = await getIncrementVersionHandler({
+        releaseTypeOrVersion: undefined,
+        retry: true,
+      })
+
+      expect(result).toBe('3.1.4')
+      expect(findRetryVersionAtHead).toHaveBeenCalledWith(
+        '/test/project',
+        true,
+        {
+          signal: undefined,
+        },
+      )
     })
   })
 

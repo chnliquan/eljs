@@ -253,6 +253,7 @@ export class ReleaseRunner extends PluginHost<
       await this.runHook('onCheck', {
         args: {
           releaseTypeOrVersion,
+          retry: this.config.retry,
         },
       })
       /**
@@ -266,6 +267,7 @@ export class ReleaseRunner extends PluginHost<
       const rawVersion = await this.runHook('getIncrementVersion', {
         args: {
           releaseTypeOrVersion,
+          retry: this.config.retry,
         },
       })
 

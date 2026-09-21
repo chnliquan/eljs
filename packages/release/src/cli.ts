@@ -49,6 +49,7 @@ async function main(signal: AbortSignal) {
       '--dry-run',
       'Validate and preview without publishing or modifying project files',
     )
+    .option('--retry', 'Retry the release version from the release tag at HEAD')
     .option('--git.independent', 'Generate git tag independent')
     .option('--no-git.requireClean', 'Skip git working tree clean check')
     .option('--no-git.changelog', 'Skip changelog generation')
@@ -72,6 +73,12 @@ async function main(signal: AbortSignal) {
     .action(async (version, opts) => {
       debug?.(`version:`, version)
       debug?.(`opts:%O`, opts)
+      // retry 的目标版本只能由本地发布标签决定，显式版本与自动发现互相矛盾
+      if (version && opts.retry) {
+        throw new InvalidArgumentError(
+          '--retry cannot be combined with a version argument',
+        )
+      }
       const options = parseOptions(opts)
       debug?.(`options:%O`, options)
       await release(version, { ...options, signal })

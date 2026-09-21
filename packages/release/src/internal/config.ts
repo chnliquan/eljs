@@ -15,6 +15,7 @@ export function validateResolvedConfig(input: unknown): ResolvedConfig {
   const config = requireRecord(input, 'config')
   requireString(config.cwd, 'cwd')
   requireBoolean(config.dryRun, 'dryRun')
+  requireBoolean(config.retry, 'retry')
 
   const git = requireRecord(config.git, 'git')
   requireBoolean(git.requireClean, 'git.requireClean')

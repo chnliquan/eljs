@@ -116,6 +116,7 @@ release [options] [version]
 | `--no-git.commit`              | Skip git commit                                         | `true`             |
 | `--no-git.push`                | Skip git push                                           | `true`             |
 | `--git.requireBranch <branch>` | Require that the release is on a particular branch      | -                  |
+| `--retry`                      | Retry the release version from the release tag at HEAD  | `false`            |
 | `--npm.prerelease`             | Specify the release type as prerelease                  | `false`            |
 | `--npm.canary`                 | Specify the release type as canary                      | `false`            |
 | `--npm.registry <registry>`    | Use one registry for queries, owner checks, and publish | package/npm config |
@@ -512,7 +513,9 @@ prints the prefilled URL and keeps the completed publication successful.
 
 The release commit and tags stay local until every package is published. If a
 workspace publish stops partway through, rerun the exact target version from
-the unchanged release commit, for example `release 1.2.3`. Do not rerun a
+the unchanged release commit, for example `release 1.2.3`, or run
+`release --retry` to discover the failed version from the release tag at HEAD
+automatically. Do not rerun a
 relative bump such as `release patch`, because it may calculate a newer
 version. This also works when the first package failed before any package was
 published. Packages already present in the registry are verified against the

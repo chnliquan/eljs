@@ -13,6 +13,10 @@ export const defaultConfig: Config = {
    */
   dryRun: false,
   /**
+   * 是否从指向 HEAD 的发布标签自动发现待重试版本
+   */
+  retry: false,
+  /**
    * git 相关配置项
    */
   git: {

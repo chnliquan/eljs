@@ -34,10 +34,11 @@ export const releaseHookSchema = defineHooks({
   modifyAppData: defineModifyHook<AppData, { cwd: string }>(),
   onCheck: defineEventHook<{
     releaseTypeOrVersion?: ReleaseType | string
+    retry?: boolean
   }>(),
   onStart: defineEventHook(),
   getIncrementVersion: defineGetHook<
-    { releaseTypeOrVersion?: ReleaseType | string },
+    { releaseTypeOrVersion?: ReleaseType | string; retry?: boolean },
     string
   >(),
   onBeforeBumpVersion: defineEventHook<ParsedVersion>(),

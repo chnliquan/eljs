@@ -7,6 +7,7 @@ function createConfig(): ResolvedConfig {
   return {
     cwd: '/project',
     dryRun: false,
+    retry: false,
     git: {
       requireClean: true,
       changelog: {

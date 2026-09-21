@@ -206,6 +206,10 @@ describe('CLI 命令行接口综合测试', () => {
         'Validate and preview without publishing or modifying project files',
       )
       expect(mockProgram.option).toHaveBeenCalledWith(
+        '--retry',
+        'Retry the release version from the release tag at HEAD',
+      )
+      expect(mockProgram.option).toHaveBeenCalledWith(
         '--git.independent',
         'Generate git tag independent',
       )
@@ -286,6 +290,25 @@ describe('CLI 命令行接口综合测试', () => {
         '1.0.0',
         expect.objectContaining({
           cwd: '/it',
+        }),
+      )
+    })
+
+    it('retry 与版本参数互斥时应该报错', async () => {
+      await expect(actionHandler('1.2.3', { retry: true })).rejects.toThrow(
+        '--retry cannot be combined with a version argument',
+      )
+
+      expect(release).not.toHaveBeenCalled()
+    })
+
+    it('retry 应该转发到 release 配置', async () => {
+      await actionHandler(undefined, { retry: true })
+
+      expect(release).toHaveBeenCalledWith(
+        undefined,
+        expect.objectContaining({
+          retry: true,
         }),
       )
     })

@@ -40,6 +40,16 @@ export interface Config extends UserConfig {
    */
   dryRun?: boolean
   /**
+   * 是否从指向 HEAD 的发布标签发现待重试的版本
+   *
+   * @remarks
+   * 用于发布中断后的重试：目标版本由本地 release 标签决定，
+   * 已发布包由 registry 事实驱动跳过
+   *
+   * @defaultValue `false`
+   */
+  retry?: boolean
+  /**
    * Git 配置
    */
   git?: {
@@ -211,6 +221,10 @@ export interface ResolvedConfig extends UserConfig {
    * 内置插件保证遵守该值，自定义插件负责在演练模式下跳过自身副作用
    */
   dryRun: boolean
+  /**
+   * 是否从指向 HEAD 的发布标签自动发现待重试的版本
+   */
+  retry: boolean
   /**
    * 已解析的 Git 配置
    */
