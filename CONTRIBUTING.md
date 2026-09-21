@@ -33,7 +33,6 @@ pnpm config get registry
 | `pnpm typecheck`     | Type-check every TypeScript package                        |
 | `pnpm lint`          | Run ESLint, including TSDoc syntax checks                  |
 | `pnpm package:check` | Verify installed tarballs, exports, types, CLIs, and files |
-| `pnpm verify`        | Run the complete local and CI verification suite           |
 
 Use pnpm filters while iterating on one package:
 
