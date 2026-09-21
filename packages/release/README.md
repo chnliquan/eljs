@@ -105,27 +105,35 @@ release [options] [version]
 
 ### Options
 
-| Option                         | Description                                             | Default            |
-| ------------------------------ | ------------------------------------------------------- | ------------------ |
-| `-v, --version`                | Output the current version                              | -                  |
-| `--cwd <cwd>`                  | Specify the working directory                           | `process.cwd()`    |
-| `--dry-run`                    | Preview without publishing or modifying project files   | `false`            |
-| `--git.independent`            | Generate git tag independent                            | `false`            |
-| `--no-git.requireClean`        | Skip git working tree clean check                       | `true`             |
-| `--no-git.changelog`           | Skip changelog generation                               | `true`             |
-| `--no-git.commit`              | Skip git commit                                         | `true`             |
-| `--no-git.push`                | Skip git push                                           | `true`             |
-| `--git.requireBranch <branch>` | Require that the release is on a particular branch      | -                  |
-| `--retry`                      | Retry the release version from the release tag at HEAD  | `false`            |
-| `--npm.prerelease`             | Specify the release type as prerelease                  | `false`            |
-| `--npm.canary`                 | Specify the release type as canary                      | `false`            |
-| `--npm.registry <registry>`    | Use one registry for queries, owner checks, and publish | package/npm config |
-| `--no-npm.requireOwner`        | Skip npm owner check                                    | `true`             |
-| `--no-npm.confirm`             | Skip confirm bump version                               | `true`             |
-| `--npm.prereleaseId <id>`      | Specify a prerelease ID such as alpha/beta/rc/next      | -                  |
-| `--no-github.release`          | Skip GitHub Release creation                            | `true`             |
-| `--github.mode <mode>`         | Create GitHub Release through `browser` or `api`        | `browser`          |
-| `-h, --help`                   | Display help for command                                | -                  |
+| Option                                         | Description                                             | Default            |
+| ---------------------------------------------- | ------------------------------------------------------- | ------------------ |
+| `-v, --version`                                | Output the current version                              | -                  |
+| `--cwd <cwd>`                                  | Specify the working directory                           | `process.cwd()`    |
+| `--dry-run`                                    | Preview without publishing or modifying project files   | `false`            |
+| `--git.independent` / `--no-git.independent`   | Generate one git tag per workspace package              | `false`            |
+| `--git.requireClean` / `--no-git.requireClean` | Check git working tree is clean                         | `true`             |
+| `--no-git.changelog`                           | Skip changelog generation                               | `true`             |
+| `--git.commit` / `--no-git.commit`             | Commit version and changelog changes                    | `true`             |
+| `--git.push` / `--no-git.push`                 | Push commit and tags to remote                          | `true`             |
+| `--git.requireBranch <branch>`                 | Require that the release is on a particular branch      | -                  |
+| `--retry`                                      | Retry the release version from the release tag at HEAD  | `false`            |
+| `--npm.prerelease` / `--no-npm.prerelease`     | Specify the release type as prerelease                  | `false`            |
+| `--npm.canary` / `--no-npm.canary`             | Specify the release type as canary                      | `false`            |
+| `--npm.registry <registry>`                    | Use one registry for queries, owner checks, and publish | package/npm config |
+| `--npm.requireOwner` / `--no-npm.requireOwner` | Require npm ownership of all packages                   | `true`             |
+| `--npm.confirm` / `--no-npm.confirm`           | Confirm bump version before publish                     | `true`             |
+| `--npm.prereleaseId <id>`                      | Specify a prerelease ID such as alpha/beta/rc/next      | -                  |
+| `--github.release` / `--no-github.release`     | Create GitHub Release                                   | `true`             |
+| `--github.mode <mode>`                         | Create GitHub Release through `browser` or `api`        | `browser`          |
+| `-h, --help`                                   | Display help for command                                | -                  |
+
+#### Precedence
+
+Options explicitly passed on the command line always override the
+`release.config.ts` file, which in turn overrides built-in defaults:
+`CLI > release.config.ts > defaults`. Both positive and negative forms are
+accepted for boolean options; when the same option is passed multiple times,
+the last occurrence wins.
 
 ### CLI Examples
 
@@ -147,6 +155,12 @@ release minor --no-git.commit --no-git.push
 
 # Release on specific branch with custom settings
 release patch --git.requireBranch main --no-npm.confirm
+
+# Enable push even when release.config.ts sets git.push to false
+release patch --git.push
+
+# Disable independent tags even when release.config.ts enables them
+release minor --no-git.independent
 ```
 
 ## 📖 API Reference
