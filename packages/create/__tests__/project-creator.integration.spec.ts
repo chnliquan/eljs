@@ -286,6 +286,77 @@ module.exports = context => {
     })
   })
 
+  it('应该在本地模版目录内生成目标项目', async () => {
+    const fixture = await createFixture()
+    await writeFile(
+      path.join(fixture.templateRoot, 'create.config.js'),
+      `module.exports = {
+  defaultQuestions: false,
+  gitInit: false,
+  install: false,
+  plugins: ['./write.cjs'],
+}
+`,
+    )
+    await writeFile(
+      path.join(fixture.templateRoot, 'write.cjs'),
+      `const fs = require('node:fs')
+const path = require('node:path')
+
+module.exports = context => {
+  context.onGenerateFiles(() => {
+    fs.writeFileSync(path.join(context.paths.target, 'generated.txt'), 'generated\\n')
+  })
+}
+`,
+    )
+
+    await expect(
+      new ProjectCreator({
+        cwd: fixture.templateRoot,
+        template: '.',
+        force: true,
+      }).run('nested'),
+    ).resolves.toBeUndefined()
+
+    // 模板资产在生成后仍然存在
+    await expect(
+      readFile(path.join(fixture.templateRoot, 'create.config.js'), 'utf8'),
+    ).resolves.toContain('defaultQuestions')
+    await expect(
+      readFile(path.join(fixture.templateRoot, 'write.cjs'), 'utf8'),
+    ).resolves.toContain('onGenerateFiles')
+    await expect(
+      readFile(
+        path.join(fixture.templateRoot, 'nested', 'generated.txt'),
+        'utf8',
+      ),
+    ).resolves.toBe('generated\n')
+  })
+
+  it('应该拒绝通过符号链接吞掉本地模版根的目标目录', async () => {
+    const fixture = await createFixture()
+    // cwd 内的符号链接指向 cwd 本身，使 canonical 目标成为模板根的祖先
+    const selfLink = path.join(cwd, 'to-cwd')
+    await symlink(cwd, selfLink)
+
+    await expect(
+      new ProjectCreator({
+        cwd,
+        template: '.',
+        force: true,
+      }).run('to-cwd'),
+    ).rejects.toThrow('must not overlap')
+
+    // 拒绝后模板资产未被移动或清理
+    await expect(readFile(fixture.originalFile, 'utf8')).resolves.toBe(
+      'original\n',
+    )
+    await expect(
+      readFile(path.join(fixture.templateRoot, 'original.txt'), 'utf8'),
+    ).rejects.toMatchObject({ code: 'ENOENT' })
+  })
+
   async function createFixture(): Promise<{
     originalFile: string
     targetRoot: string
