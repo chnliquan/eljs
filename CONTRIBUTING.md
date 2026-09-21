@@ -108,7 +108,7 @@ CLI diagnostics use the `debug` namespace:
 ```bash
 DEBUG=create:* pnpm exec create <template> <project-name>
 DEBUG=create-template:* pnpm exec create-template <project-name>
-DEBUG=release:* pnpm exec eljs-release
+DEBUG=release:* pnpm exec release
 ```
 
 Do not include tokens, registry credentials, or private template URLs in issue

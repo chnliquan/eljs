@@ -34,7 +34,7 @@ npx @eljs/release
 ```
 
 Global installations expose the commands `create`, `create-template`, and
-`eljs-release`.
+`release`.
 
 ## Requirements
 

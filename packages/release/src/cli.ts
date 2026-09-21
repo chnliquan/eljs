@@ -40,7 +40,7 @@ async function main(signal: AbortSignal) {
   notifyUpdates({ pkg, argv: process.argv, debug })
 
   program
-    .name('eljs-release')
+    .name('release')
     .description('Run a programmable npm release workflow')
     .version(pkg.version, '-v, --version', 'Output the current version')
     .argument('[version]', 'Specify the bump version', checkVersion)

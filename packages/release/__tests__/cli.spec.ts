@@ -172,7 +172,7 @@ describe('CLI 命令行接口综合测试', () => {
     it('应该正确设置 program 基本信息', async () => {
       await cli()
 
-      expect(mockProgram.name).toHaveBeenCalledWith('eljs-release')
+      expect(mockProgram.name).toHaveBeenCalledWith('release')
       expect(mockProgram.description).toHaveBeenCalledWith(
         'Run a programmable npm release workflow',
       )

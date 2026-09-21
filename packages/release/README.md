@@ -33,7 +33,7 @@ npm install @eljs/release -D
 ```
 
 When installed globally or invoked through `npx @eljs/release`, use the
-`eljs-release` command.
+`release` command.
 
 ## 🚀 Quick Start
 
@@ -94,7 +94,7 @@ await release('1.2.3', {
 ### Commands
 
 ```bash
-eljs-release [options] [version]
+release [options] [version]
 ```
 
 ### Arguments
@@ -131,22 +131,22 @@ eljs-release [options] [version]
 
 ```bash
 # Standard patch release
-eljs-release patch
+release patch
 
 # Validate the entire plan without modifying files or publishing
-eljs-release patch --dry-run
+release patch --dry-run
 
 # Major release with custom working directory
-eljs-release major --cwd ./packages/core
+release major --cwd ./packages/core
 
 # Prerelease with beta tag
-eljs-release --npm.prerelease --npm.prereleaseId beta
+release --npm.prerelease --npm.prereleaseId beta
 
 # Release without git operations
-eljs-release minor --no-git.commit --no-git.push
+release minor --no-git.commit --no-git.push
 
 # Release on specific branch with custom settings
-eljs-release patch --git.requireBranch main --no-npm.confirm
+release patch --git.requireBranch main --no-npm.confirm
 ```
 
 ## 📖 API Reference
@@ -513,8 +513,8 @@ prints the prefilled URL and keeps the completed publication successful.
 
 The release commit and tags stay local until every package is published. If a
 workspace publish stops partway through, rerun the exact target version from
-the unchanged release commit, for example `eljs-release 1.2.3`. Do not rerun a
-relative bump such as `eljs-release patch`, because it may calculate a newer
+the unchanged release commit, for example `release 1.2.3`. Do not rerun a
+relative bump such as `release patch`, because it may calculate a newer
 version. This also works when the first package failed before any package was
 published. Packages already present in the registry are verified against the
 local tag and skipped; the remaining packages are then published before the
