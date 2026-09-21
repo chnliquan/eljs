@@ -19,6 +19,7 @@ type VersionCheckFunction = (version: string) => string
 type ActionHandlerFunction = (
   version?: string,
   options?: Record<string, unknown>,
+  command?: unknown,
 ) => Promise<void>
 
 // 首先进行所有模拟设置
@@ -62,7 +63,9 @@ const { mockProgram } = vi.hoisted(() => ({
     parseAsync: vi.fn().mockResolvedValue(undefined),
     outputHelp: vi.fn(),
     options: [] as Array<{ attributeName: () => string }>,
-    getOptionValueSource: vi.fn((_key: string) => 'cli' as const),
+    getOptionValueSource: vi.fn(
+      (_key: string): 'cli' | 'default' | 'env' | undefined => 'cli',
+    ),
   },
 }))
 
@@ -163,7 +166,9 @@ describe('CLI 命令行接口综合测试', () => {
     process.exitCode = undefined
     mockProgram.options = []
     // restoreMocks 每轮清空实现，这里恢复默认全显式语义
-    mockProgram.getOptionValueSource.mockImplementation(() => 'cli')
+    mockProgram.getOptionValueSource.mockImplementation(
+      (): 'cli' | 'default' | 'env' | undefined => 'cli',
+    )
     ;(readJson as MockedFunction<typeof readJson>).mockResolvedValue(
       mockPackageJson,
     )
@@ -674,7 +679,9 @@ describe('CLI 命令行接口综合测试', () => {
       for (const version of versionInputs) {
         vi.clearAllMocks()
         mockProgram.options = []
-        mockProgram.getOptionValueSource.mockImplementation(() => 'cli')
+        mockProgram.getOptionValueSource.mockImplementation(
+          (): 'cli' | 'default' | 'env' | undefined => 'cli',
+        )
         await runAction(actionHandler, version, {})
         expect(release).toHaveBeenCalledTimes(1)
       }
