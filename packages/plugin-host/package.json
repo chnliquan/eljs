@@ -52,7 +52,7 @@
     "@eljs/utils": "workspace:*",
     "@standard-schema/spec": "^1.1.0",
     "tapable": "^2.2.1",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "devDependencies": {
     "zod": "^4.4.3"
