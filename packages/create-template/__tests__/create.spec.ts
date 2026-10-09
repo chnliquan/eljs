@@ -49,7 +49,7 @@ describe('CreateTemplate 类功能测试', () => {
     it('应该正确初始化 CreateTemplate 实例', () => {
       const options: CreateTemplateOptions = {
         cwd: '/test/path',
-        template: 'template-npm-web',
+        template: 'template-npm-package',
         force: true,
         merge: false,
       }
@@ -91,7 +91,7 @@ describe('CreateTemplate 类功能测试', () => {
     beforeEach(() => {
       createTemplate = new CreateTemplate({
         cwd: '/test/path',
-        template: 'template-npm-web',
+        template: 'template-npm-package',
       })
     })
 
@@ -109,10 +109,9 @@ describe('CreateTemplate 类功能测试', () => {
         cwd: '/test/path',
         template: {
           type: 'npm',
-          value: '@eljs/create-plugin-npm-web@0.12.1',
+          value: '@eljs/create-plugin-npm-package@0.13.0',
           registry: 'https://registry.npmjs.org/',
-          integrity:
-            'sha512-PnCXo/ZbnGnQqdFQjG9jI1jXRn9ZV8l4DWE6Txxjmu40PkCF6MRfqCGpCBd4PN2flAKCph+DUaNrKM+6lKrrww==',
+          integrity: 'sha512-PENDING-PUBLISH',
           trusted: true,
         },
       })
@@ -137,7 +136,7 @@ describe('CreateTemplate 类功能测试', () => {
     describe('模板选择测试', () => {
       it('应该使用提供的有效模板', async () => {
         const createTemplate = new CreateTemplate({
-          template: 'template-npm-web',
+          template: 'template-npm-package',
         })
 
         const mockCreateInstance = {
@@ -156,7 +155,9 @@ describe('CreateTemplate 类功能测试', () => {
       it('应该提示用户选择模板当未提供模板时', async () => {
         const createTemplate = new CreateTemplate()
 
-        mockedPrompts.mockResolvedValueOnce({ template: 'template-npm-web' })
+        mockedPrompts.mockResolvedValueOnce({
+          template: 'template-npm-package',
+        })
 
         const mockCreateInstance = {
           run: vi.fn().mockResolvedValue(undefined),
@@ -173,8 +174,11 @@ describe('CreateTemplate 类功能测试', () => {
             name: 'template',
             message: 'Select the application template',
             choices: [
-              { title: 'Web Common Template', value: 'template-npm-web' },
-              { title: 'Node Common Template', value: 'template-npm-node' },
+              { title: 'NPM Package Template', value: 'template-npm-package' },
+              {
+                title: 'Full-stack Project Template',
+                value: 'template-project',
+              },
             ],
           },
           { onCancel: expect.any(Function) },
@@ -267,7 +271,7 @@ describe('CreateTemplate 类功能测试', () => {
         merge: false,
       })
 
-      mockedPrompts.mockResolvedValueOnce({ template: 'template-npm-web' })
+      mockedPrompts.mockResolvedValueOnce({ template: 'template-npm-package' })
 
       const mockCreateInstance = {
         run: vi.fn().mockResolvedValue(undefined),
@@ -285,10 +289,9 @@ describe('CreateTemplate 类功能测试', () => {
         merge: false,
         template: {
           type: 'npm',
-          value: '@eljs/create-plugin-npm-web@0.12.1',
+          value: '@eljs/create-plugin-npm-package@0.13.0',
           registry: 'https://registry.npmjs.org/',
-          integrity:
-            'sha512-PnCXo/ZbnGnQqdFQjG9jI1jXRn9ZV8l4DWE6Txxjmu40PkCF6MRfqCGpCBd4PN2flAKCph+DUaNrKM+6lKrrww==',
+          integrity: 'sha512-PENDING-PUBLISH',
           trusted: true,
         },
       })
@@ -309,7 +312,7 @@ describe('CreateTemplate 类功能测试', () => {
   describe('边界情况测试', () => {
     it('应该处理空项目名称', async () => {
       const createTemplate = new CreateTemplate({
-        template: 'template-npm-web',
+        template: 'template-npm-package',
       })
 
       const mockCreateInstance = {
@@ -326,7 +329,7 @@ describe('CreateTemplate 类功能测试', () => {
 
     it('应该处理特殊字符的项目名称', async () => {
       const createTemplate = new CreateTemplate({
-        template: 'template-npm-web',
+        template: 'template-npm-package',
       })
 
       const mockCreateInstance = {
@@ -345,7 +348,7 @@ describe('CreateTemplate 类功能测试', () => {
     it('应该拒绝同时启用 force 与 merge', () => {
       const options: CreateTemplateOptions = {
         cwd: '/complex/path',
-        template: 'template-npm-web',
+        template: 'template-npm-package',
         force: true,
         merge: true,
       }

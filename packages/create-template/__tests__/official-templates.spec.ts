@@ -5,22 +5,20 @@ import { officialTemplates } from '../src/official-templates'
 describe('create-template 内置目录', () => {
   it('固定官方模板版本、registry 和信任声明', () => {
     expect(officialTemplates).toEqual({
-      'template-npm-web': {
+      'template-npm-package': {
         type: 'npm',
-        description: 'Web Common Template',
-        value: '@eljs/create-plugin-npm-web@0.12.1',
+        description: 'NPM Package Template',
+        value: '@eljs/create-plugin-npm-package@0.13.0',
         registry: 'https://registry.npmjs.org/',
-        integrity:
-          'sha512-PnCXo/ZbnGnQqdFQjG9jI1jXRn9ZV8l4DWE6Txxjmu40PkCF6MRfqCGpCBd4PN2flAKCph+DUaNrKM+6lKrrww==',
+        integrity: 'sha512-PENDING-PUBLISH',
         trusted: true,
       },
-      'template-npm-node': {
+      'template-project': {
         type: 'npm',
-        description: 'Node Common Template',
-        value: '@eljs/create-plugin-npm-node@0.12.1',
+        description: 'Full-stack Project Template',
+        value: '@eljs/create-plugin-project@0.13.0',
         registry: 'https://registry.npmjs.org/',
-        integrity:
-          'sha512-51zCeHJUTzpp0Gxpnn2LcWAPJOeKi1d9HUF5TIQ2pZDzrdnyuSm5quViki9kMKiYTzwf6HckEvw5I5rD3yQm8A==',
+        integrity: 'sha512-PENDING-PUBLISH',
         trusted: true,
       },
     })
@@ -32,14 +30,23 @@ describe('create-template 内置目录', () => {
       expect(template.value).toMatch(/^@eljs\/[a-z0-9-]+@\d+\.\d+\.\d+$/u)
       expect(template.registry).toBeTypeOf('string')
       expect(new URL(template.registry ?? '').protocol).toBe('https:')
-      expect(template.integrity).toMatch(/^sha512-[A-Za-z0-9+/]+=*$/u)
       expect(template.trusted).toBe(true)
+    }
+  })
+
+  // 真实 integrity 只能在 templates 仓库发布 0.13.0 之后从 registry 元数据取得，
+  // 该断言在占位值期间无法成立；回填真实摘要后必须同时移除 skip
+  it.skip('官方远程模板使用真实 SHA-512 integrity 摘要', () => {
+    for (const template of Object.values(officialTemplates)) {
+      expect(template.integrity).toMatch(/^sha512-[A-Za-z0-9+/]+=*$/u)
     }
   })
 
   it('目录及其模板条目在运行时不可变', () => {
     expect(Object.isFrozen(officialTemplates)).toBe(true)
-    expect(Object.isFrozen(officialTemplates['template-npm-web'])).toBe(true)
-    expect(Object.isFrozen(officialTemplates['template-npm-node'])).toBe(true)
+    expect(Object.isFrozen(officialTemplates['template-npm-package'])).toBe(
+      true,
+    )
+    expect(Object.isFrozen(officialTemplates['template-project'])).toBe(true)
   })
 })

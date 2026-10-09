@@ -12,7 +12,7 @@ describe('create-template 公共入口', () => {
       OfficialTemplateName | undefined
     >()
     expectTypeOf<OfficialTemplateName>().toEqualTypeOf<
-      'template-npm-web' | 'template-npm-node'
+      'template-npm-package' | 'template-project'
     >()
   })
 
@@ -23,9 +23,9 @@ describe('create-template 公共入口', () => {
   it('应该公开创建器构造选项类型', () => {
     const options: CreateTemplateOptions = {
       cwd: '/workspace',
-      template: 'template-npm-web',
+      template: 'template-npm-package',
     }
 
-    expect(options.template).toBe('template-npm-web')
+    expect(options.template).toBe('template-npm-package')
   })
 })

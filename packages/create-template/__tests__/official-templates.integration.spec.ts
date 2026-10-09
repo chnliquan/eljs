@@ -90,7 +90,10 @@ describe.runIf(process.env.ELJS_TEST_OFFICIAL_TEMPLATES === '1')(
         process.env.NPM_CONFIG_CACHE = path.join(cwd, '.npm-cache')
 
         try {
-          injectablePrompts.inject(['monorepo'])
+          // 注入答案按提问顺序逐条消费：两个新模板都以基座的 `repositoryType`
+          // 打头（monorepo），其后各自追加环境/内容问题，队列未覆盖的问题回落到
+          // 默认值——真实的题序契约只能在该模板发布后联网跑通并据实调整
+          injectablePrompts.inject(['monorepo', 'web'])
           await new CreateTemplate({
             cwd,
             defaultQuestions: false,

@@ -79,7 +79,7 @@ describe('create-template CLI', () => {
       '--cwd',
       '/workspace',
       '--template',
-      'template-npm-node',
+      'template-npm-package',
       '--force',
       '--allow-template-scripts',
     ]
@@ -91,7 +91,7 @@ describe('create-template CLI', () => {
       cwd: '/workspace',
       force: true,
       signal: expect.any(AbortSignal),
-      template: 'template-npm-node',
+      template: 'template-npm-package',
     })
     expect(run).toHaveBeenCalledWith('orders-service')
     expect(process.exitCode).toBeUndefined()

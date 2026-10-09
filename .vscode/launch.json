@@ -85,7 +85,7 @@
         // "--cwd=/Users/ender/kwai/technology/polyrepo-release",
         // "-f",
         // "-m",
-        "@eljs/create-plugin-npm-web",
+        "@eljs/create-plugin-npm-package",
         // "@eljs/utils",
         // "./template",
         // "./generator",
@@ -116,7 +116,7 @@
         "create-app",
         "--cwd=/Users/ender/kwai/technology/polyrepo-release",
         "--scene=npm",
-        // "--template=template-npm-web",
+        // "--template=template-npm-package",
         "-f"
       ],
       "console": "integratedTerminal",

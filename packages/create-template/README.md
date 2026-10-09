@@ -15,7 +15,7 @@ to supply an arbitrary local, npm, or Git template source.
 
 - 🚀 **Quick Setup** - Instantly create projects with predefined templates
 - 🎯 **Template Selection** - Select directly from the built-in application templates
-- 📦 **Official Templates** - Built-in web and Node.js project templates
+- 📦 **Official Templates** - Built-in NPM package and full-stack project templates
 - 💬 **Interactive Mode** - User-friendly CLI with smart prompts
 - 🔧 **Configurable** - Support for custom working directory and merge options
 
@@ -42,7 +42,7 @@ run it without installing anything via `npx @eljs/create-template`.
 create-template my-project
 
 # Create with a specific template
-create-template my-web-app --template template-npm-web
+create-template my-package --template template-npm-package
 
 # Force overwrite existing directory
 create-template my-project --force
@@ -81,10 +81,15 @@ create-template [options] <project-name>
 
 The following built-in templates are available:
 
-| Template            | Description          | Type | Source                                |
-| ------------------- | -------------------- | ---- | ------------------------------------- |
-| `template-npm-web`  | Web Common Template  | npm  | `@eljs/create-plugin-npm-web@0.12.1`  |
-| `template-npm-node` | Node Common Template | npm  | `@eljs/create-plugin-npm-node@0.12.1` |
+| Template               | Description                 | Type | Source                                   |
+| ---------------------- | --------------------------- | ---- | ---------------------------------------- |
+| `template-npm-package` | NPM Package Template        | npm  | `@eljs/create-plugin-npm-package@0.13.0` |
+| `template-project`     | Full-stack Project Template | npm  | `@eljs/create-plugin-project@0.13.0`     |
+
+`template-npm-package` scaffolds a single publishable package and then asks whether
+it targets Node or the browser. `template-project` scaffolds a full-stack workspace
+(web app, docs site, library packages, and CLI). The shared base preset
+`@eljs/create-preset-base-package` is consumed by both and is not exposed as an entry.
 
 ## 📋 Usage Examples
 
@@ -95,18 +100,18 @@ The following built-in templates are available:
 create-template my-awesome-project
 
 # The CLI prompts you to choose from available templates:
-#    - Web Common Template
-#    - Node Common Template
+#    - NPM Package Template
+#    - Full-stack Project Template
 ```
 
 ### Direct Template Selection
 
 ```bash
-# Create a web project
-create-template my-web-app --template template-npm-web
+# Create an NPM package
+create-template my-package --template template-npm-package
 
-# Create a Node.js project
-create-template my-node-api --template template-npm-node
+# Create a full-stack project
+create-template my-project --template template-project
 ```
 
 ### Advanced Usage
@@ -122,7 +127,7 @@ create-template existing-project --merge
 create-template new-project --cwd ./workspace
 
 # Combine multiple options
-create-template my-project --template template-npm-web --force --cwd ./projects
+create-template my-project --template template-npm-package --force --cwd ./projects
 ```
 
 ## Programmatic API
@@ -131,7 +136,7 @@ create-template my-project --template template-npm-web --force --cwd ./projects
 import { CreateTemplate } from '@eljs/create-template'
 
 const creator = new CreateTemplate({
-  template: 'template-npm-web',
+  template: 'template-npm-package',
   cwd: '/workspace/projects',
 })
 
