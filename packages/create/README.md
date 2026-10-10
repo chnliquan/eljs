@@ -238,6 +238,26 @@ download limit and a 20,000-entry extraction limit. A caller-provided
 `integrity` digest is used as the independent trust root for the downloaded
 archive; otherwise the registry integrity or shasum is used.
 
+#### Choosing `trusted` and `integrity`
+
+`trusted` and `integrity` guard two independent concerns and can be combined
+based on how a wrapper CLI resolves and ships templates:
+
+| `trusted` | `integrity`  | Use case                                                                                                                                      |
+| --------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `false`   | not provided | Default. End user types an arbitrary source; always confirm and fall back to registry-provided integrity                                      |
+| `true`    | pinned       | Internal CLI pins an exact template version. Strongest guarantee; bump the digest on every template release                                   |
+| `true`    | not provided | Internal CLI always resolves `latest`. No pinned digest to invalidate on template releases, so no CLI redeploy is needed per template release |
+| `false`   | pinned       | Caller knows the expected digest in advance but still wants the user to confirm before executing                                              |
+
+A pinned `integrity` fixes the downloaded bytes, not just a version number. If
+the template publishes a new release and the digest in a wrapper CLI is not
+updated, downloads fail closed instead of silently serving stale or
+unexpected content. This is why "always track latest" and "pin `integrity`"
+are mutually exclusive: pin the digest only when template upgrades go through
+a review-and-redeploy step for the wrapper CLI; omit it when the wrapper CLI
+is intended to always fetch the newest template release.
+
 ### API Examples
 
 ```typescript

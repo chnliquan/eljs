@@ -3,9 +3,6 @@ import { extname, isAbsolute, resolve } from 'node:path'
 /**
  * 在文件扩展名前插入环境后缀
  *
- * @remarks
- * 文件没有扩展名时直接在末尾追加后缀，空后缀保持原路径不变
- *
  * @param file - 文件路径
  * @param ext - 要插入的后缀，可包含开头的点
  * @returns 插入后缀后的文件路径

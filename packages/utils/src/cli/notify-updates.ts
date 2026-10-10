@@ -23,8 +23,7 @@ export interface NotifyUpdatesOptions {
  * 后台触发 CLI 更新提示
  *
  * @remarks
- * 更新提示是辅助能力，加载或检查失败不影响调用方主路径。
- * 帮助和版本查询是本地只读快路径，跳过网络更新提示以降低启动成本
+ * 帮助和版本查询跳过网络请求以降低启动成本
  *
  * @param options - 更新提示参数
  */
@@ -45,9 +44,6 @@ export function notifyUpdates(options: NotifyUpdatesOptions): void {
 
 /**
  * 判断当前命令是否需要检查更新
- *
- * @remarks
- * 帮助和版本查询是本地只读快路径，不应为网络更新提示增加启动成本
  *
  * @param argv - Node 进程参数
  * @returns 普通命令返回 `true`

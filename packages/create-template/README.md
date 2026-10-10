@@ -1,7 +1,8 @@
 # @eljs/create-template
 
-An opinionated project initializer backed by version-pinned official templates
-and `@eljs/create`.
+An opinionated project initializer backed by official templates and
+`@eljs/create`. Built-in templates always resolve to each template package's
+`latest` release.
 
 [![NPM Version](https://img.shields.io/npm/v/@eljs/create-template.svg)](https://www.npmjs.com/package/@eljs/create-template)
 [![NPM Downloads](https://img.shields.io/npm/dm/@eljs/create-template.svg)](https://www.npmjs.com/package/@eljs/create-template)
@@ -83,8 +84,8 @@ The following built-in templates are available:
 
 | Template               | Description                 | Type | Source                                   |
 | ---------------------- | --------------------------- | ---- | ---------------------------------------- |
-| `template-npm-package` | NPM Package Template        | npm  | `@eljs/create-plugin-npm-package@0.13.0` |
-| `template-project`     | Full-stack Project Template | npm  | `@eljs/create-plugin-project@0.13.0`     |
+| `template-npm-package` | NPM Package Template        | npm  | `@eljs/create-plugin-npm-package@latest` |
+| `template-project`     | Full-stack Project Template | npm  | `@eljs/create-plugin-project@latest`     |
 
 `template-npm-package` scaffolds a single publishable package and then asks whether
 it targets Node or the browser. `template-project` scaffolds a full-stack workspace
@@ -143,14 +144,21 @@ const creator = new CreateTemplate({
 await creator.run('orders-service')
 ```
 
-The internal built-in template list pins official templates to exact versions. All
-`ProjectCreator` options, including `force`, `merge`, and `signal`, are passed
-through.
+The internal built-in template list always resolves official templates to
+their `latest` published version, so a template release becomes available
+immediately without redeploying `create-template`. All `ProjectCreator`
+options, including `force`, `merge`, and `signal`, are passed through.
 
 ## Security model
 
-- Built-in remote templates use exact versions, HTTPS registry URLs, and pinned
-  SHA-512 integrity digests
+- Built-in remote templates are maintained by this repository and use HTTPS
+  registry URLs; the confirmation prompt is skipped (`trusted: true`) because
+  the source is controlled by the maintainers
+- No `integrity` digest is pinned, since always tracking `latest` and pinning
+  a digest to specific bytes are mutually exclusive. Each download still
+  falls back to the registry-provided integrity or shasum. See
+  [`@eljs/create`'s "Choosing `trusted` and `integrity`"](https://github.com/chnliquan/eljs/tree/master/packages/create#choosing-trusted-and-integrity)
+  for the tradeoff
 - Template dependency lifecycle scripts are disabled by default; only enable
   `--allow-template-scripts` for a source you control
 

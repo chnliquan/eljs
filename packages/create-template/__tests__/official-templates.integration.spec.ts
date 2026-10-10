@@ -3,7 +3,6 @@ import {
   downloadNpmTarball,
   getNpmPackage,
   getNpmRequestConfig,
-  parsePackageSpecifier,
 } from '@eljs/utils/npm'
 import type { PackageJson } from '@eljs/utils/types'
 import { mkdtemp } from 'node:fs/promises'
@@ -32,23 +31,15 @@ describe.runIf(process.env.ELJS_TEST_OFFICIAL_TEMPLATES === '1')(
   'create-template 官方模板发布契约',
   () => {
     it.each(Object.values(officialTemplates))(
-      '$value 包含当前创建器需要的入口文件',
+      '$value 的 latest 版本包含当前创建器需要的入口文件',
       async template => {
-        const { name, version } = parsePackageSpecifier(template.value)
-        expect(version).toBeTypeOf('string')
-        if (!version) {
-          throw new Error(`${template.value} must use an exact version`)
-        }
-
-        const metadata = await getNpmPackage(name, {
+        const metadata = await getNpmPackage(template.value, {
           registry: template.registry,
-          version,
         })
         expect(metadata).not.toBeNull()
         if (!metadata) {
           throw new Error(`${template.value} is not published`)
         }
-        expect(metadata.dist.integrity).toBe(template.integrity)
 
         const requestConfig = await getNpmRequestConfig(metadata.dist.tarball)
         let templateRoot = ''
@@ -56,7 +47,9 @@ describe.runIf(process.env.ELJS_TEST_OFFICIAL_TEMPLATES === '1')(
         try {
           templateRoot = await downloadNpmTarball(metadata.dist.tarball, {
             ...requestConfig,
-            integrity: template.integrity,
+            ...(metadata.dist.integrity
+              ? { integrity: metadata.dist.integrity }
+              : {}),
           })
           const packageJson = await readJson<PackageJson>(
             path.join(templateRoot, 'package.json'),
@@ -68,7 +61,7 @@ describe.runIf(process.env.ELJS_TEST_OFFICIAL_TEMPLATES === '1')(
             pathExists(path.join(templateRoot, 'generators/index.js')),
           ])
 
-          expect(packageJson).toMatchObject({ name, version })
+          expect(packageJson).toMatchObject({ name: template.value })
           expect(hasConfig).toContain(true)
         } finally {
           if (templateRoot) {

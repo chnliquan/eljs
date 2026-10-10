@@ -1,7 +1,7 @@
 {
   "name": "@eljs/create-template",
   "version": "2.0.0-beta.2",
-  "description": "Project initializer backed by version-pinned official templates and @eljs/create.",
+  "description": "Project initializer backed by latest-tracking official templates and @eljs/create.",
   "keywords": [
     "eljs",
     "project-initializer",

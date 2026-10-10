@@ -109,9 +109,8 @@ describe('CreateTemplate 类功能测试', () => {
         cwd: '/test/path',
         template: {
           type: 'npm',
-          value: '@eljs/create-plugin-npm-package@0.13.0',
+          value: '@eljs/create-plugin-npm-package',
           registry: 'https://registry.npmjs.org/',
-          integrity: 'sha512-PENDING-PUBLISH',
           trusted: true,
         },
       })
@@ -289,9 +288,8 @@ describe('CreateTemplate 类功能测试', () => {
         merge: false,
         template: {
           type: 'npm',
-          value: '@eljs/create-plugin-npm-package@0.13.0',
+          value: '@eljs/create-plugin-npm-package',
           registry: 'https://registry.npmjs.org/',
-          integrity: 'sha512-PENDING-PUBLISH',
           trusted: true,
         },
       })

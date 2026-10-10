@@ -11,7 +11,7 @@ export interface CloneGitRepositoryOptions {
    * 要检出的分支或标签
    *
    * @remarks
-   * 显式值优先于仓库地址末尾的 `#ref` 片段；未指定时使用远端默认分支
+   * 显式值优先于仓库地址末尾的 `#ref` 片段
    */
   branch?: string
   /**

@@ -12,7 +12,7 @@ import { findExecutable } from './command'
 export interface SudoOptions {
   /**
    * 是否在当前进程内短期缓存交互输入的密码
-   * @remarks 默认关闭，缓存仅保存在内存中并在有效期结束后失效
+   * @defaultValue false
    */
   cachePassword?: boolean
 
@@ -30,7 +30,9 @@ export interface SudoOptions {
 
   /**
    * 传给 Node.js `spawn` 的选项
-   * @remarks 标准输入、输出和错误流固定为 `pipe`
+   *
+   * @remarks
+   * 标准输入、输出和错误流固定为 `pipe`，调用方传入的对应字段会被覆盖
    */
   spawnOptions?: cp.SpawnOptions
 }
