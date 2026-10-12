@@ -4,7 +4,7 @@ import { run } from '../cp'
 import { createTempDir, mkdir, remove } from '../file'
 
 /**
- * 下载选项
+ * 克隆 Git 仓库时使用的选项
  */
 export interface CloneGitRepositoryOptions {
   /**

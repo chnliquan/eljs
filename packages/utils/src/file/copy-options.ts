@@ -4,7 +4,7 @@ import type { RenderTemplateOptions } from './render'
  * 复制文件和模板时使用的选项
  */
 export interface CopyFileOptions {
-  /** 复制模式 */
+  /** 目标文件的权限模式 */
   mode?: number
 
   /** 文件基础路径，传入时打印相对路径日志 */

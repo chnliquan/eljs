@@ -8,6 +8,9 @@ import { parseGitRemoteUrl, type GitRemoteRepository } from './remote'
 
 /**
  * Git 仓库信息
+ *
+ * @remarks
+ * 在远程仓库信息之上附加本地 Git 配置解析出的分支、作者与邮箱
  */
 export interface GitRepository extends GitRemoteRepository {
   /** Git 仓库分支 */

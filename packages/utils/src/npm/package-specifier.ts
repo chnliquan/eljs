@@ -1,5 +1,9 @@
 /**
  * 解析后的 npm 包标识
+ *
+ * @remarks
+ * 输入未携带版本时 `version` 回退为 `latest`，
+ * 非命名空间包的 `scope` 为空字符串
  */
 export interface ParsedPackageSpecifier {
   /** 包名 */

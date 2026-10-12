@@ -4,7 +4,11 @@ import type { PackageManager } from '../types'
 import { getPackageManager } from './package-manager'
 
 /**
- * 安装依赖选项
+ * 依赖安装选项
+ *
+ * @remarks
+ * `dependencies` 与 `devDependencies` 分两次安装，
+ * 其余字段透传给底层命令执行器
  */
 export interface InstallDepsOptions extends RunCommandOptions {
   /**

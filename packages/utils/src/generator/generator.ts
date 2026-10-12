@@ -4,6 +4,13 @@ import { isDirectorySync, mkdirSync, pathExistsSync } from '../file'
 import { isFunction } from '../guards'
 import { BaseGenerator } from './base-generator'
 
+/**
+ * 模板生成器构造选项
+ *
+ * @remarks
+ * `src`、`dest` 与 `data` 均支持函数形式，
+ * 在问询完成后以问询结果计算，`basedir` 缺省时取 `dest`
+ */
 export interface GeneratorOptions {
   /**
    * 模版文件夹路径
@@ -50,7 +57,6 @@ interface GeneratorDoneCtx {
   /**
    * 模版渲染数据
    */
-
   data: object
 }
 

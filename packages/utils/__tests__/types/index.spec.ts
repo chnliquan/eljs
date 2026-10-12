@@ -334,10 +334,13 @@ describe('Types 模块测试', () => {
       expect(packageJson.version).toBe('1.0.0')
       expect(packageJson.private).toBe(false)
       expect(packageJson.keywords).toEqual(['test', 'typescript'])
-      expect(packageJson.bugs?.url).toBe(
-        'https://github.com/test/package/issues',
-      )
-      expect(packageJson.repository?.type).toBe('git')
+      expect(packageJson.bugs).toEqual({
+        url: 'https://github.com/test/package/issues',
+      })
+      expect(packageJson.repository).toEqual({
+        type: 'git',
+        url: 'https://github.com/test/package',
+      })
       expect(packageJson.bin).toEqual({ 'my-cli': './bin/cli.js' })
       expect(packageJson.workspaces).toEqual(['packages/*'])
       expect(packageJson.customField).toBe('custom value')
@@ -361,6 +364,38 @@ describe('Types 模块测试', () => {
       }
 
       expect(packageWithStringBin.bin).toBe('./bin/cli.js')
+    })
+
+    it('PackageJson 应该支持字符串简写、对象作者与 exports 条件映射', () => {
+      const packageJson: PackageJson = {
+        name: 'shorthand-package',
+        version: '1.0.0',
+        type: 'module',
+        author: { name: 'Test Author', email: 'test@example.com' },
+        bugs: 'https://github.com/test/package/issues',
+        repository: 'github:test/package',
+        exports: {
+          '.': {
+            import: './dist/index.js',
+            require: './dist/index.cjs',
+          },
+          './features/extra': null,
+        },
+        sideEffects: false,
+      }
+
+      expect(packageJson.type).toBe('module')
+      expect(packageJson.author).toEqual({
+        name: 'Test Author',
+        email: 'test@example.com',
+      })
+      expect(packageJson.bugs).toBe('https://github.com/test/package/issues')
+      expect(packageJson.repository).toBe('github:test/package')
+      expect(packageJson.sideEffects).toBe(false)
+      expect(packageJson.exports).toEqual({
+        '.': { import: './dist/index.js', require: './dist/index.cjs' },
+        './features/extra': null,
+      })
     })
   })
 

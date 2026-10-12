@@ -5,7 +5,6 @@ import path from 'node:path'
 
 /**
  * npm 请求使用的认证与代理配置
- *
  */
 export interface NpmRequestConfig {
   /** 仅对目标 registry 生效的 HTTP 请求头 */

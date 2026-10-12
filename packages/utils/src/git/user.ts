@@ -7,6 +7,10 @@ import { readFile, readFileSync } from '../file'
 
 /**
  * Git 用户信息
+ *
+ * @remarks
+ * 取自 Git 配置的 `user.name` 与 `user.email`，
+ * 读取不到时对应字段为空字符串
  */
 export interface GitUser {
   /** 用户名 */

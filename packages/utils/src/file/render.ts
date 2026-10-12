@@ -13,18 +13,26 @@ export type RenderTemplateOptions =
 
 /**
  * mustache 模版渲染选项
+ *
+ * @remarks
+ * `type` 缺省时按 mustache 渲染
  */
 export interface MustacheRenderTemplateOptions {
   /**
    * 模版渲染器类型
    */
   type?: 'mustache'
+  /** 局部模版内容或查找函数 */
   partials?: PartialsOrLookupFn
+  /** 自定义定界符或 mustache 渲染选项 */
   tagsOrOptions?: OpeningAndClosingTags | RenderOptions
 }
 
 /**
  * ejs 模版渲染选项
+ *
+ * @remarks
+ * 通过 `type: 'ejs'` 启用 EJS 渲染器
  */
 export interface EjsRenderTemplateOptions {
   /**
@@ -34,6 +42,7 @@ export interface EjsRenderTemplateOptions {
    * EJS 模板可执行 JavaScript，仅应用于可信模板
    */
   type?: 'ejs'
+  /** 透传给 EJS 的渲染选项 */
   options?: Options
 }
 

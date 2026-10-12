@@ -7,6 +7,10 @@ import { getProjectGitDir, getProjectGitDirSync } from './directory'
 
 /**
  * Git 远程仓库信息
+ *
+ * @remarks
+ * 由 origin 的 SSH 或 HTTP(S) 地址解析出的标准化标识，
+ * `group` 为仓库名之前的完整路径段
  */
 export interface GitRemoteRepository {
   /** Git 仓库名称 */

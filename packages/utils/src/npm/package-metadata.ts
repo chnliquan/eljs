@@ -48,6 +48,10 @@ export interface NpmPackage extends OmitIndexSignature<PackageJson> {
 
 /**
  * npm 包元数据查询选项
+ *
+ * @remarks
+ * `registry` 未指定时按当前 npm 配置解析默认地址，
+ * 认证信息仅对目标 registry 生效
  */
 export interface NpmPackageQueryOptions {
   /** 用于解析项目级 `.npmrc` 的目录 */

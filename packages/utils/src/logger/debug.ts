@@ -1,15 +1,16 @@
 import debug, { type Debugger } from 'debug'
 
 /**
- * 调试选项
+ * 调试器的行为选项
  */
 interface DebuggerOptions {
   /**
-   * 仅当包含当前字符串时开启
+   * 仅当 `DEBUG` 环境变量包含指定命名空间时开启，
+   * 为 `true` 时匹配调试器自身命名空间
    */
   onlyWhenFocused?: boolean | string
   /**
-   * 对象检查深度
+   * 日志输出对象的嵌套检查深度
    */
   depth?: number
 }
