@@ -4,7 +4,7 @@
  */
 export function createParserOpts() {
   return {
-    headerPattern: /^(\w*)(?:\((.*)\))?: (.*)$/,
+    headerPattern: /^(\w*)(?:\((.*)\))?!?: (.*)$/,
     headerCorrespondence: ['type', 'scope', 'subject'],
     noteKeywords: ['BREAKING CHANGE'],
     revertPattern:

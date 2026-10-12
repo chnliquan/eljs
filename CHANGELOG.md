@@ -2,8 +2,6 @@
 
 # [2.0.0-beta.3](https://github.com/chnliquan/eljs/compare/v2.0.0-beta.2...v2.0.0-beta.3) (2026-10-12)
 
-* feat(create-template)!: 内置模板切换为新架构的 npm-package 与 project ([cd6e9c0](https://github.com/chnliquan/eljs/commit/cd6e9c0a8f5614e8e5dc006961cd17738c2341d5))
-
 ### ♻ Code Refactoring
 
 * 官方模板改为始终跟随 latest，移除固定版本与 integrity ([8381d40](https://github.com/chnliquan/eljs/commit/8381d4093f2f1a0a01b60c620f89bbeabccccf8b))
@@ -15,6 +13,7 @@
 
 * 扩展 PackageJson 类型并完善各模块文档注释 ([7b37fda](https://github.com/chnliquan/eljs/commit/7b37fda9f8adc29c6aaea624039d41ac5e9981d2))
 * 添加 alpha/next 发布脚本及统一验证命令 ([1aae607](https://github.com/chnliquan/eljs/commit/1aae607a42c60c90a2fe23fd81a0c7c96e6ecbf2))
+* **create-template:** 内置模板切换为新架构的 npm-package 与 project ([cd6e9c0](https://github.com/chnliquan/eljs/commit/cd6e9c0a8f5614e8e5dc006961cd17738c2341d5))
 * **release:** add --retry to rediscover failed release version from tag ([c984213](https://github.com/chnliquan/eljs/commit/c984213bc9e01ad47a5df0339366d949385f0d6a))
 
 ### 🐛 Bug Fixes
@@ -22,9 +21,9 @@
 * **create:** allow target directories nested inside local templates ([3c674ac](https://github.com/chnliquan/eljs/commit/3c674ac227387156b75b69df7cb42d3b89a8840b))
 * **create:** install 选项成对声明并按 value-source 过滤 ([28afa04](https://github.com/chnliquan/eljs/commit/28afa04c1b0c131f83ad743d0c035efca3032038))
 
-### BREAKING CHANGES
+### 💥 BREAKING CHANGES
 
-* 内置模板标识 template-npm-web、template-npm-node 被
+* **create-template:** 内置模板标识 template-npm-web、template-npm-node 被
   template-npm-package、template-project 取代
 
 # [2.0.0-beta.2](https://github.com/chnliquan/eljs/compare/v2.0.0-beta.1...v2.0.0-beta.2) (2026-09-20)

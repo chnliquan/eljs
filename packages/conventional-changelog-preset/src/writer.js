@@ -57,7 +57,7 @@ export function createWriterOpts() {
 
         return {
           ...note,
-          title: 'BREAKING CHANGES',
+          title: '💥 BREAKING CHANGES',
         }
       })
 
