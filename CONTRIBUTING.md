@@ -141,8 +141,8 @@ directories:
 
 ```bash
 pnpm release
+pnpm release:alpha
 pnpm release:beta
-pnpm release -- --npm.prereleaseId=alpha
 pnpm release -- patch
 ```
 

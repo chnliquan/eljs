@@ -24,10 +24,13 @@
     "package:create": "tsx scripts/create-package.ts",
     "prepare": "husky",
     "release": "tsx scripts/release.ts",
+    "release:alpha": "tsx scripts/release.ts --npm.prereleaseId=alpha",
     "release:beta": "tsx scripts/release.ts --npm.prereleaseId=beta",
+    "release:next": "tsx scripts/release.ts --npm.prereleaseId=next",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "turbo run typecheck && tsc --noEmit -p scripts/tsconfig.json",
+    "verify": "pnpm verify:static && pnpm verify:test && pnpm verify:package",
     "verify:package": "pnpm build && pnpm package:check",
     "verify:static": "pnpm format:check && pnpm lint && pnpm typecheck",
     "verify:test": "pnpm coverage"
