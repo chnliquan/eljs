@@ -1,5 +1,11 @@
 # ChangeLog 
 
+# [2.0.0-beta.5](https://github.com/chnliquan/eljs/compare/v2.0.0-beta.4...v2.0.0-beta.5) (2026-10-29)
+
+### ✨ Features
+
+* 添加缓存容量准入、目标锁v2及changelog预设TS迁移 ([883ca59](https://github.com/chnliquan/eljs/commit/883ca597524b0470bc7151d649ca066f769816a0))
+
 # [2.0.0-beta.4](https://github.com/chnliquan/eljs/compare/v2.0.0-beta.3...v2.0.0-beta.4) (2026-10-29)
 
 ### ♻ Code Refactoring
