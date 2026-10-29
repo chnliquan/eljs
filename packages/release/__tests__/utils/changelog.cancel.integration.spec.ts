@@ -1,4 +1,9 @@
-import { execFileSync, spawn, type ChildProcess } from 'node:child_process'
+import {
+  execFileSync,
+  spawn,
+  spawnSync,
+  type ChildProcess,
+} from 'node:child_process'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -134,10 +139,18 @@ describe('更新日志取消真实 Git 集成', () => {
     const controller = new AbortController()
     const add = vi.spyOn(controller.signal, 'addEventListener')
     const remove = vi.spyOn(controller.signal, 'removeEventListener')
+    // Git 的诊断会随本机语言变化，使用同一非仓库目录的真实 stderr 验证透传
+    const failure = spawnSync('git', ['rev-parse', '--git-dir'], {
+      cwd,
+      encoding: 'utf8',
+    })
+    expect(failure.error).toBeUndefined()
+    expect(failure.status).not.toBe(0)
+    expect(failure.stderr.trim()).not.toBe('')
 
     await expect(
       getChangelog({ cwd, signal: controller.signal }),
-    ).rejects.toThrow('fatal: not a git repository')
+    ).rejects.toThrow(failure.stderr.trim())
     expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0][1])
   })
 
