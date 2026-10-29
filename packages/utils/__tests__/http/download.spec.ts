@@ -13,7 +13,10 @@ import {
   type MockedFunction,
 } from 'vitest'
 
-import download, { downloadTo } from '../../src/http/download'
+import download, {
+  downloadTo,
+  type DownloadOptions,
+} from '../../src/http/download'
 
 const { mockProxyClose } = vi.hoisted(() => ({
   mockProxyClose: vi.fn().mockResolvedValue(undefined),
@@ -151,6 +154,248 @@ describe('download', () => {
     ).rejects.toMatchObject({ errors: [requestError, cleanupError] })
   })
 
+  it('cancels a failed response before closing its proxy and preserves both cleanup failures', async () => {
+    const bodyError = new Error('body cancellation failed')
+    const proxyError = new Error('proxy close failed')
+    const cancel = vi.fn().mockRejectedValue(bodyError)
+    const response = new Response(
+      new ReadableStream({ cancel }, { highWaterMark: 0 }),
+      { status: 503 },
+    )
+    mockFetch.mockResolvedValue(response)
+    mockProxyClose.mockRejectedValueOnce(proxyError)
+
+    await expect(
+      download('https://example.com/file', {
+        proxy: 'http://proxy.example.com:8080',
+      }),
+    ).rejects.toMatchObject({
+      errors: [
+        { code: 'ERR_DOWNLOAD_HTTP_STATUS', details: { status: 503 } },
+        bodyError,
+        proxyError,
+      ],
+      cause: proxyError,
+    })
+    expect(cancel.mock.invocationCallOrder[0]).toBeLessThan(
+      mockProxyClose.mock.invocationCallOrder[0],
+    )
+  })
+
+  it.each([
+    { 'X-Api-Key': 'secret', Authorization: 'bearer', Accept: 'test' },
+    new Headers({ 'X-Api-Key': 'secret', Cookie: 'private', Accept: 'test' }),
+    [
+      ['X-Api-Key', 'secret'],
+      ['Proxy-Authorization', 'private'],
+      ['Accept', 'test'],
+    ],
+  ] as const)(
+    'strips custom credentials across origins for headers %j',
+    async headers => {
+      const cancel = vi.fn()
+      mockFetch
+        .mockResolvedValueOnce(
+          new Response(new ReadableStream({ cancel }, { highWaterMark: 0 }), {
+            status: 302,
+            headers: { location: 'https://cdn.example.com/file' },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(null, {
+            status: 307,
+            headers: { location: 'https://example.com/final' },
+          }),
+        )
+        .mockResolvedValueOnce(new Response('downloaded'))
+      await download('https://example.com/file', {
+        headers: headers as DownloadOptions['headers'],
+        timeout: 5_000,
+        proxy: 'http://proxy.example.com:8080',
+      })
+      const first = mockFetch.mock.calls[0][1]
+      for (const [, request] of mockFetch.mock.calls.slice(1)) {
+        expect([...new Headers(request.headers)]).toEqual([['accept', 'test']])
+        expect(request.signal).toBe(first.signal)
+        expect(request.dispatcher).toBe(first.dispatcher)
+        expect(request.redirect).toBe('manual')
+      }
+      expect(cancel).toHaveBeenCalledOnce()
+      expect(cancel.mock.invocationCallOrder[0]).toBeLessThan(
+        mockFetch.mock.invocationCallOrder[1],
+      )
+      expect(mockProxyClose).toHaveBeenCalledOnce()
+    },
+  )
+
+  it('retains caller headers on relative same-origin redirects', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, {
+        status: 308,
+        headers: { location: '/final' },
+      }),
+    )
+    await download('https://example.com/file', {
+      headers: { 'X-Api-Key': 'secret' },
+    })
+    expect(mockFetch.mock.calls[1][0].href).toBe('https://example.com/final')
+    expect(mockFetch.mock.calls[1][1].headers).toEqual({
+      'X-Api-Key': 'secret',
+    })
+  })
+
+  it.each([
+    ['http://example.com/file', {}, 'disabled'],
+    ['file:///tmp/file', {}, 'Unsupported'],
+    ['https://user:password@example.com/file', {}, 'Unsupported'],
+    ['http://[', {}, 'Invalid'],
+    ['/loop', { maxRedirects: 0 }, 'limit'],
+  ])(
+    'rejects unsafe or excessive redirects to %s and cancels their body',
+    async (location, options, message) => {
+      const cancel = vi.fn()
+      mockFetch.mockResolvedValue(
+        new Response(new ReadableStream({ cancel }, { highWaterMark: 0 }), {
+          status: 302,
+          headers: { location },
+        }),
+      )
+      await expect(
+        download('https://example.com/file', options),
+      ).rejects.toMatchObject({
+        code: 'ERR_DOWNLOAD_REDIRECT',
+        message: expect.stringContaining(message),
+      })
+      expect(cancel).toHaveBeenCalledOnce()
+      expect(mockFetch).toHaveBeenCalledOnce()
+    },
+  )
+
+  it('allows an explicitly configured HTTPS downgrade', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, {
+        status: 301,
+        headers: { location: 'http://example.com/file' },
+      }),
+    )
+    await expect(
+      download('https://example.com/file', {
+        allowInsecureRedirects: true,
+        headers: { 'X-Api-Key': 'secret' },
+      }),
+    ).resolves.toEqual(Buffer.from('downloaded'))
+    expect([...mockFetch.mock.calls[1][1].headers]).toEqual([])
+  })
+
+  it('stops a redirect loop at the configured limit and cancels every response', async () => {
+    const cancellations: ReturnType<typeof vi.fn>[] = []
+    mockFetch.mockImplementation(() => {
+      const cancel = vi.fn()
+      cancellations.push(cancel)
+      return Promise.resolve(
+        new Response(new ReadableStream({ cancel }, { highWaterMark: 0 }), {
+          status: 302,
+          headers: { location: '/loop' },
+        }),
+      )
+    })
+    await expect(
+      download('https://example.com/file', { maxRedirects: 2 }),
+    ).rejects.toMatchObject({ code: 'ERR_DOWNLOAD_REDIRECT' })
+    expect(mockFetch).toHaveBeenCalledTimes(3)
+    for (const cancel of cancellations) {
+      expect(cancel).toHaveBeenCalledOnce()
+    }
+  })
+
+  it('stops before the next hop when redirect body cleanup fails and preserves proxy cleanup failure', async () => {
+    const bodyError = new Error('redirect body cancellation failed')
+    const proxyError = new Error('proxy close failed')
+    mockFetch.mockResolvedValue(
+      new Response(
+        new ReadableStream(
+          { cancel: () => Promise.reject(bodyError) },
+          { highWaterMark: 0 },
+        ),
+        { status: 302, headers: { location: '/final' } },
+      ),
+    )
+    mockProxyClose.mockRejectedValueOnce(proxyError)
+    await expect(
+      download('https://example.com/file', {
+        proxy: 'http://proxy.example.com:8080',
+      }),
+    ).rejects.toMatchObject({
+      errors: [bodyError, proxyError],
+      cause: proxyError,
+    })
+    expect(mockFetch).toHaveBeenCalledOnce()
+    expect(mockProxyClose).toHaveBeenCalledOnce()
+  })
+
+  it('preserves caller cancellation between hops and still closes the proxy', async () => {
+    const controller = new AbortController()
+    const reason = new Error('caller stopped the redirect chain')
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          new ReadableStream(
+            { cancel: () => controller.abort(reason) },
+            { highWaterMark: 0 },
+          ),
+          { status: 302, headers: { location: '/final' } },
+        ),
+      )
+      .mockImplementationOnce((_url, request) => {
+        expect(request.signal).toBe(controller.signal)
+        expect(request.signal.aborted).toBe(true)
+        return Promise.reject(request.signal.reason)
+      })
+    await expect(
+      download('https://example.com/file', {
+        proxy: 'http://proxy.example.com:8080',
+        signal: controller.signal,
+        timeout: 0,
+      }),
+    ).rejects.toBe(reason)
+    expect(mockProxyClose).toHaveBeenCalledOnce()
+  })
+
+  it('enforces maxBytes on the final response after a redirect', async () => {
+    const cancel = vi.fn()
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 303,
+          headers: { location: '/final' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          new ReadableStream({
+            cancel,
+            pull(controller) {
+              controller.enqueue(Buffer.from('too large'))
+            },
+          }),
+        ),
+      )
+    await expect(
+      download('https://example.com/file', { maxBytes: 4 }),
+    ).rejects.toMatchObject({ code: 'ERR_DOWNLOAD_TOO_LARGE' })
+    expect(cancel).toHaveBeenCalledOnce()
+  })
+
+  it.each([-1, 1.5, Infinity])(
+    'validates maxRedirects %s before fetching',
+    async maxRedirects => {
+      await expect(
+        download('https://example.com/file', { maxRedirects }),
+      ).rejects.toThrow('maxRedirects must be a non-negative safe integer')
+      expect(mockFetch).not.toHaveBeenCalled()
+    },
+  )
+
   it('rejects responses that exceed the configured buffer limit', async () => {
     await expect(
       download('https://example.com/archive.tgz', { maxBytes: 4 }),
@@ -285,7 +530,7 @@ describe('download', () => {
       expect.any(URL),
       expect.objectContaining({
         headers: { accept: 'application/tgz' },
-        redirect: 'follow',
+        redirect: 'manual',
         signal: expect.any(AbortSignal),
       }),
     )

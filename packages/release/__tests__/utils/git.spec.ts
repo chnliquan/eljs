@@ -98,23 +98,54 @@ describe('release Git 工具', () => {
     ).rejects.toBe(cancellation)
   })
 
-  it('findRetryVersionAtHead 应该返回指向 HEAD 的最大统一标签版本', async () => {
+  it('统一模式多个不同 HEAD 版本必须拒绝', async () => {
     ;(run as MockedFunction<typeof run>).mockResolvedValue({
       stdout: 'v1.2.3\nv1.10.0\nnot-a-release-tag\nv1.9.2\n',
     } as Awaited<ReturnType<typeof run>>)
 
-    await expect(findRetryVersionAtHead('/repo', false)).resolves.toBe('1.10.0')
+    await expect(findRetryVersionAtHead('/repo', false)).rejects.toThrow(
+      'Ambiguous release tags',
+    )
     expect(run).toHaveBeenCalledWith('git', ['tag', '--points-at', 'HEAD'], {
       cwd: '/repo',
     })
   })
 
-  it('findRetryVersionAtHead 应该解析独立标签并取最大版本', async () => {
+  it('未过滤的独立标签多个不同版本必须拒绝', async () => {
     ;(run as MockedFunction<typeof run>).mockResolvedValue({
       stdout: '@scope/pkg-a@2.0.0\npkg-b@2.1.0\nv1.0.0\n',
     } as Awaited<ReturnType<typeof run>>)
 
-    await expect(findRetryVersionAtHead('/repo', true)).resolves.toBe('2.1.0')
+    await expect(findRetryVersionAtHead('/repo', true)).rejects.toThrow(
+      'Ambiguous release tags',
+    )
+  })
+
+  it('过滤当前包并支持 scoped、同版本多标签和 partial 标签', async () => {
+    vi.mocked(run).mockResolvedValue({
+      stdout: '@scope/pkg-a@2.0.0\npkg-b@2.0.0\nunrelated@9.0.0\n',
+    } as Awaited<ReturnType<typeof run>>)
+    await expect(
+      findRetryVersionAtHead('/repo', true, undefined, [
+        '@scope/pkg-a',
+        'pkg-b',
+      ]),
+    ).resolves.toBe('2.0.0')
+    await expect(
+      findRetryVersionAtHead('/repo', true, undefined, ['@scope/pkg-a']),
+    ).resolves.toBe('2.0.0')
+    await expect(
+      findRetryVersionAtHead('/repo', true, undefined, []),
+    ).resolves.toBeUndefined()
+  })
+
+  it('过滤后当前包混合版本仍必须拒绝', async () => {
+    vi.mocked(run).mockResolvedValue({
+      stdout: '@scope/a@1.0.0\nb@2.0.0\nunrelated@9.0.0\n',
+    } as Awaited<ReturnType<typeof run>>)
+    await expect(
+      findRetryVersionAtHead('/repo', true, undefined, ['@scope/a', 'b']),
+    ).rejects.toThrow('Ambiguous release tags')
   })
 
   it('findRetryVersionAtHead 无匹配标签时应该返回 undefined', async () => {
@@ -129,7 +160,7 @@ describe('release Git 工具', () => {
 
   it('findRetryVersionAtHead 应该跳过非法版本片段', async () => {
     ;(run as MockedFunction<typeof run>).mockResolvedValue({
-      stdout: 'v2.0.0-notsemver\npkg@latest\nv2.0.0-rc.1\n',
+      stdout: 'v2.0.0-01\npkg@latest\nv2.0.0-rc.1\n',
     } as Awaited<ReturnType<typeof run>>)
 
     await expect(findRetryVersionAtHead('/repo', false)).resolves.toBe(

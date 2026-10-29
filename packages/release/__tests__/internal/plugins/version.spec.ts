@@ -15,6 +15,7 @@ import {
 
 import { confirm, logger, prompts, writeJsonAtomic } from '@eljs/utils'
 
+import { restoreLockfiles } from '../../../src/internal/lockfile-transaction'
 import versionPlugin from '../../../src/internal/plugins/version'
 import type { PrereleaseId } from '../../../src/types'
 import {
@@ -55,6 +56,13 @@ vi.mock('@eljs/utils/cli', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils/string', async () => import('@eljs/utils'))
+vi.mock('../../../src/internal/lockfile-transaction', () => ({
+  captureFileSnapshots: vi.fn(async (paths: string[]) =>
+    paths.map(file => ({ path: file, content: Buffer.from('original') })),
+  ),
+  captureLockfiles: vi.fn(async () => []),
+  restoreLockfiles: vi.fn(async () => undefined),
+}))
 
 vi.mock('semver', () => {
   const releaseTypes = ['major', 'minor', 'patch']
@@ -102,6 +110,8 @@ describe('版本插件测试', () => {
   beforeEach(() => {
     mockContext = {
       onCheck: vi.fn(),
+      onError: vi.fn(),
+      onAfterRelease: vi.fn(),
       getIncrementVersion: vi.fn(),
       onBeforeBumpVersion: vi.fn(),
       onAfterBumpVersion: vi.fn(),
@@ -507,6 +517,7 @@ describe('版本插件测试', () => {
         {
           signal: undefined,
         },
+        ['test-package'],
       )
       // retry 发现版本后不应再查询远程 dist-tag
       expect(getRemoteDistTag).not.toHaveBeenCalled()
@@ -544,6 +555,7 @@ describe('版本插件测试', () => {
         {
           signal: undefined,
         },
+        ['test-package'],
       )
     })
   })
@@ -572,7 +584,10 @@ describe('版本插件测试', () => {
         { name: 'test-package', version: '1.1.0' },
         '1.1.0',
         ['test-package'],
-        { write: false },
+        expect.objectContaining({
+          write: false,
+          workspacePackages: expect.any(Array),
+        }),
       )
       expect(writeJsonAtomic).toHaveBeenCalledWith('/test/package.json', {
         name: 'test-package',
@@ -598,7 +613,10 @@ describe('版本插件测试', () => {
         { name: 'test-package', version: '1.1.0' },
         '1.1.0',
         ['test-package'],
-        { write: false },
+        expect.objectContaining({
+          write: false,
+          workspacePackages: expect.any(Array),
+        }),
       )
 
       expect(updatePackageVersion).toHaveBeenCalledWith(
@@ -624,7 +642,10 @@ describe('版本插件测试', () => {
         { name: 'test-package', version: '1.1.0' },
         '1.1.0',
         ['test-package'],
-        { write: false },
+        expect.objectContaining({
+          write: false,
+          workspacePackages: expect.any(Array),
+        }),
       )
       expect(writeJsonAtomic).not.toHaveBeenCalled()
     })
@@ -1042,13 +1063,11 @@ describe('版本插件测试', () => {
         '锁文件更新失败',
       )
 
-      expect(writeJsonAtomic).toHaveBeenCalledWith(
-        '/test/package.json',
-        expect.objectContaining({ version: '1.0.0' }),
-      )
-      expect(writeJsonAtomic).toHaveBeenCalledWith(
-        '/test/project/package.json',
-        expect.objectContaining({ version: '1.0.0' }),
+      expect(restoreLockfiles).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ path: '/test/package.json' }),
+          expect.objectContaining({ path: '/test/project/package.json' }),
+        ]),
       )
       expect(mockContext.appData.workspacePackages[0].manifest.version).toBe(
         '1.0.0',

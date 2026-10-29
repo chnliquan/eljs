@@ -1,5 +1,10 @@
 import type { RunCommandOptions } from '@eljs/utils/cp'
-import { pathExists, readJson, writeJson } from '@eljs/utils/file'
+import {
+  pathExists,
+  readJson,
+  resolveWriteDestination,
+  writeJson,
+} from '@eljs/utils/file'
 import { isObject } from '@eljs/utils/guards'
 import { chalk, logger } from '@eljs/utils/logger'
 import { install } from '@eljs/utils/npm'
@@ -83,7 +88,11 @@ export default definePlugin(context => {
     async () => {
       applyPackageExtensions()
 
-      const pkgJsonPath = join(context.paths.target, 'package.json')
+      // merge 会保留原目标的链接，读取旧清单前也必须确认后续写入不会影响外部文件
+      const pkgJsonPath = await resolveWriteDestination(
+        join(context.paths.target, 'package.json'),
+        context.paths.target,
+      )
       let pkg = context.appData.pkg
 
       if (await pathExists(pkgJsonPath)) {

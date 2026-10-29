@@ -1,6 +1,7 @@
 import path from 'node:path'
 
 import { run } from '../cp'
+import { UtilsError } from '../error'
 import { createTempDir, mkdir, remove } from '../file'
 
 /**
@@ -29,7 +30,9 @@ export interface CloneGitRepositoryOptions {
  * @param url - Git 地址
  * @param options - 选项
  * @returns 克隆后的 package 目录
- * @throws 克隆或临时目录清理失败时抛出错误
+ * @throws 克隆失败时抛出仅含安全诊断字段的 `UtilsError`，取消使用 `ERR_OPERATION_ABORTED`
+ * @throws 临时目录清理也失败时抛出包含安全异常的 `AggregateError`
+ * @remarks 不保留底层异常的消息、命令、输出或 cause，避免凭据通过日志和序列化泄露
  */
 export async function cloneGitRepository(
   url: string,
@@ -41,43 +44,104 @@ export async function cloneGitRepository(
     dest = await createTempDir(true),
     signal,
   } = options || {}
-  const { repositoryUrl, branch: fragmentBranch } = parseGitCloneSource(url)
-  const branch = explicitBranch ?? fragmentBranch
-
-  const args = ['clone', '--quiet', '--depth', '1']
-  if (branch) {
-    args.push('--branch', branch)
-  }
-  // 用户提供的仓库地址必须位于选项终止符之后，避免被 Git 解析为参数
-  args.push('--', repositoryUrl, 'package')
-
   const diagnosticSource = formatGitSourceForDiagnostics(url)
 
   try {
+    const { repositoryUrl, branch: fragmentBranch } = parseGitCloneSource(url)
+    const branch = explicitBranch ?? fragmentBranch
+    const args = ['clone', '--quiet', '--depth', '1']
+    if (branch) {
+      args.push('--branch', branch)
+    }
+    // 用户提供的仓库地址必须位于选项终止符之后，避免被 Git 解析为参数
+    args.push('--', repositoryUrl, 'package')
     await mkdir(dest)
     await run('git', args, {
       cwd: dest,
       signal,
     })
   } catch (error) {
+    const safeError = createSafeGitError(error, diagnosticSource, signal)
     if (ownsDestination) {
       try {
         await remove(dest)
       } catch (cleanupError) {
+        const safeCleanupError = createSafeGitError(cleanupError)
         throw new AggregateError(
-          [error, cleanupError],
+          [safeError, safeCleanupError],
           `Download ${diagnosticSource} failed and temporary directory cleanup also failed`,
-          { cause: cleanupError },
+          // eslint-disable-next-line preserve-caught-error -- 原始清理异常可能包含凭据，只保留安全副本
+          { cause: safeCleanupError },
         )
       }
     }
 
-    const err = error as Error
-    err.message = `Download ${diagnosticSource} failed: ${err.message}.`
-    throw err
+    throw safeError
   }
 
   return path.join(dest, 'package')
+}
+
+/**
+ * 将不可信的进程或清理异常转换为白名单诊断，不遍历或保留原始异常图
+ * @remarks 取消原因同样可能含凭据，仅保留取消分类；清理错误独立转换且不包含路径
+ * @param error - 底层异常
+ * @param source - 已脱敏的仓库地址，省略时表示清理操作
+ * @param signal - 调用方的取消信号
+ * @returns 不引用原始异常及其 metadata、cause 或聚合成员的错误
+ * @internal
+ */
+function createSafeGitError(
+  error: unknown,
+  source?: string,
+  signal?: AbortSignal,
+): UtilsError {
+  const metadata =
+    error !== null && typeof error === 'object'
+      ? (error as Record<string, unknown>)
+      : {}
+  const aborted =
+    signal?.aborted ||
+    metadata.isCanceled === true ||
+    metadata.name === 'AbortError' ||
+    metadata.name === 'TimeoutError'
+  const exitCode = metadata.exitCode
+  const errno = metadata.code
+  const code = aborted
+    ? 'ERR_OPERATION_ABORTED'
+    : Number.isSafeInteger(exitCode)
+      ? 'ERR_PROCESS_EXIT'
+      : 'ERR_PROCESS_SPAWN'
+  return new UtilsError(
+    code,
+    source
+      ? `Download ${source} failed (${code})`
+      : 'Git download cleanup failed',
+    {
+      details: {
+        ...(source ? { source } : {}),
+        ...(typeof exitCode === 'number' && Number.isSafeInteger(exitCode)
+          ? { exitCode }
+          : {}),
+        ...(typeof errno === 'string' &&
+        [
+          'ENOENT',
+          'EACCES',
+          'EPERM',
+          'EAGAIN',
+          'ENOMEM',
+          'ENOSPC',
+          'EIO',
+        ].includes(errno)
+          ? { errno }
+          : {}),
+        ...(typeof metadata.timedOut === 'boolean'
+          ? { timedOut: metadata.timedOut }
+          : {}),
+      },
+      operation: source ? 'git.clone' : 'git.clone.cleanup',
+    },
+  )
 }
 
 /**
@@ -89,18 +153,19 @@ export async function cloneGitRepository(
  */
 function formatGitSourceForDiagnostics(source: string): string {
   try {
-    const parsed = new URL(source)
+    const parsed = new URL(source.replace(/^git\+(?=https?:|ssh:)/u, ''))
+    if (
+      !['http:', 'https:', 'ssh:', 'git:', 'file:'].includes(parsed.protocol)
+    ) {
+      return '<non-URL Git source>'
+    }
     parsed.username = ''
     parsed.password = ''
     parsed.search = ''
     parsed.hash = ''
     return parsed.href
   } catch {
-    const sourceWithoutSuffix = source.split(/[?#]/u, 1)[0]
-    return sourceWithoutSuffix.replace(
-      /^[^@/\\\s]+@(?=[^:/\\\s]+[:/])/u,
-      '***@',
-    )
+    return '<non-URL Git source>'
   }
 }
 

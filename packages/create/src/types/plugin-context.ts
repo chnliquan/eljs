@@ -29,6 +29,7 @@ export type CreatePluginContext = Omit<
   /**
    * 拷贝文件
    *
+   * @remarks 渲染后的写入路径必须位于 `paths.target`，目标子路径中的符号链接会被拒绝
    * @param from - 源文件路径
    * @param to - 目标文件路径
    * @param options - 可选拷贝选项
@@ -42,6 +43,7 @@ export type CreatePluginContext = Omit<
   /**
    * 拷贝模板文件
    *
+   * @remarks 写入边界在文件名渲染后检查，调用方不能通过选项覆盖输出根目录
    * @param from - 源文件路径
    * @param to - 目标文件路径
    * @param data - 模板数据
@@ -57,6 +59,7 @@ export type CreatePluginContext = Omit<
   /**
    * 递归拷贝模板目录
    *
+   * @remarks 每个输出文件均受 `paths.target` 边界保护，拒绝沿目标中的符号链接写入
    * @param from - 源目录路径
    * @param to - 目标目录路径
    * @param data - 模板数据
@@ -72,6 +75,7 @@ export type CreatePluginContext = Omit<
   /**
    * 渲染模板
    *
+   * @remarks 输出文件受复制能力的目标目录边界保护
    * @param path - 模板路径
    * @param data - 模板数据
    * @param options - 渲染选项
@@ -90,6 +94,7 @@ export type CreatePluginContext = Omit<
    * 插件初始化阶段登记的扩展会在交互输入和应用数据就绪后按登记顺序合并
    * 生成阶段登记的扩展会立即合并，并在依赖安装前写入文件
    * 数组字段会按登记顺序追加并去重
+   * 内置持久化只写入输出根目录中的普通路径，拒绝符号链接形式的 `package.json`
    *
    * @param partial - 待合并的 `package.json` 字段
    */

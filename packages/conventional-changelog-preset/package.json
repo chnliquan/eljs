@@ -18,27 +18,42 @@
   },
   "license": "MIT",
   "author": "chnliquan",
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
-      "types": "./src/index.d.ts",
-      "import": "./src/index.js",
-      "default": "./src/index.js"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      },
+      "default": "./dist/index.js"
     },
     "./package.json": "./package.json"
   },
-  "main": "src/index.js",
-  "types": "src/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
-    "src"
+    "dist"
   ],
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "build": "rslib build",
+    "clean": "rimraf dist",
+    "dev": "rslib build --watch",
+    "lint": "eslint src __tests__ --max-warnings=0",
+    "test": "vitest run --config ../../vitest.config.ts packages/conventional-changelog-preset/__tests__",
+    "test:coverage": "vitest run --config ../../vitest.config.ts packages/conventional-changelog-preset/__tests__ --coverage --coverage.include='packages/conventional-changelog-preset/src/**/*.ts'",
+    "test:watch": "vitest --config ../../vitest.config.ts packages/conventional-changelog-preset/__tests__",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json"
   },
   "dependencies": {
-    "@conventional-changelog/template": "^1.3.0",
-    "conventional-changelog-writer": "^9.2.1",
-    "conventional-commits-parser": "^7.1.2"
+    "@conventional-changelog/template": "^1.4.0",
+    "conventional-changelog-writer": "^9.3.0",
+    "conventional-commits-parser": "^7.1.3"
   },
   "engines": {
     "node": ">=22.14.0"

@@ -2,9 +2,11 @@ import { runCommandLine, type RunCommandOptions } from '@eljs/utils/cp'
 import { writeJsonAtomic } from '@eljs/utils/file'
 import { logger } from '@eljs/utils/logger'
 import type { PackageJson, PackageManager } from '@eljs/utils/types'
+import path from 'node:path'
 import semver from 'semver'
 
-import type { PackageManagerVariant } from '../types'
+import { resolveWorkspaceReference } from '../internal/workspace-reference'
+import type { PackageManagerVariant, WorkspacePackage } from '../types'
 
 /**
  * 发布时需要同步内部包版本的依赖字段
@@ -18,6 +20,18 @@ type DependencyField =
   | 'peerDependencies'
 
 /**
+ * 依赖更新时解析相对 workspace 引用的目录上下文
+ *
+ * @remarks 目录映射必须完整且唯一，未提供时拒绝相对引用而不猜测目标包
+ */
+export interface PackageDependencyContext {
+  /** 当前消费包的根目录 */
+  rootPath?: string
+  /** 已加载的工作区包及其目录 */
+  workspacePackages?: readonly WorkspacePackage[]
+}
+
+/**
  * 更新包版本时的文件写入选项
  */
 export interface UpdatePackageVersionOptions {
@@ -26,6 +40,12 @@ export interface UpdatePackageVersionOptions {
    * @defaultValue `true`
    */
   write?: boolean
+  /**
+   * 相对 workspace 引用的完整目录映射
+   *
+   * @remarks 不提供映射时允许具名引用，但拒绝相对引用
+   */
+  workspacePackages?: readonly WorkspacePackage[]
 }
 
 /**
@@ -66,10 +86,10 @@ export async function updatePackageLock(
  * @param pkgJsonPath - package.json 路径
  * @param pkg - package.json 对象
  * @param version - 版本
- * @param pkgNames - 包名
- * @param options - 文件写入选项
+ * @param pkgNames - 完整工作区包名，省略时仅更新包自身版本
+ * @param options - 文件写入及 workspace 目录解析选项
  * @returns 清单更新完成后兑现的 Promise
- * @throws 当 workspace 协议无效、依赖范围类型无效或文件写入失败时抛出
+ * @throws 当 workspace 协议无效、目标无法安全解析、依赖范围类型无效或文件写入失败时抛出
  */
 export async function updatePackageVersion(
   pkgJsonPath: string,
@@ -82,10 +102,38 @@ export async function updatePackageVersion(
   pkg.version = version
 
   if (pkgNames?.length) {
-    updatePackageDependencies(pkg, 'dependencies', version, pkgNames)
-    updatePackageDependencies(pkg, 'devDependencies', version, pkgNames)
-    updatePackageDependencies(pkg, 'optionalDependencies', version, pkgNames)
-    updatePackageDependencies(pkg, 'peerDependencies', version, pkgNames)
+    const referenceContext = {
+      rootPath: path.dirname(pkgJsonPath),
+      workspacePackages: options.workspacePackages,
+    }
+    updatePackageDependencies(
+      pkg,
+      'dependencies',
+      version,
+      pkgNames,
+      referenceContext,
+    )
+    updatePackageDependencies(
+      pkg,
+      'devDependencies',
+      version,
+      pkgNames,
+      referenceContext,
+    )
+    updatePackageDependencies(
+      pkg,
+      'optionalDependencies',
+      version,
+      pkgNames,
+      referenceContext,
+    )
+    updatePackageDependencies(
+      pkg,
+      'peerDependencies',
+      version,
+      pkgNames,
+      referenceContext,
+    )
   }
 
   if (write) {
@@ -98,15 +146,18 @@ export async function updatePackageVersion(
  * @param pkg - package.json 对象
  * @param type - 依赖类型
  * @param version - 版本
- * @param pkgNames - 包名
+ * @param pkgNames - 完整工作区包名，用于解析直接依赖和 workspace 别名目标
+ * @param referenceContext - 相对 workspace 引用的目录映射
  * @returns 无返回值
- * @throws 当 workspace 协议或依赖范围类型无效时抛出
+ * @remarks workspace 别名保留目标名前缀，相对引用及 `*`、`^`、`~` 占位范围保持原样
+ * @throws 当 workspace 协议、目标映射或依赖范围类型无效时抛出
  */
 export function updatePackageDependencies(
   pkg: PackageJson,
   type: DependencyField,
   version: string,
   pkgNames: string[],
+  referenceContext: PackageDependencyContext = {},
 ) {
   const deps = pkg[type]
 
@@ -115,7 +166,10 @@ export function updatePackageDependencies(
   }
 
   Object.entries(deps).forEach(([depName, depValue]) => {
-    if (!pkgNames.includes(depName)) {
+    if (
+      !pkgNames.includes(depName) &&
+      !(typeof depValue === 'string' && depValue.startsWith('workspace:'))
+    ) {
       return
     }
 
@@ -125,40 +179,21 @@ export function updatePackageDependencies(
       )
     }
 
-    const updatedValue = getUpdatedDependencyVersion(depName, depValue, version)
+    const reference = resolveWorkspaceReference(depName, depValue, {
+      rootPath: referenceContext.rootPath,
+      packages: referenceContext.workspacePackages,
+      packageNames: pkgNames,
+    })
+    if (!reference) return
+    const updatedValue =
+      reference.relative || ['*', '^', '~'].includes(reference.range)
+        ? depValue
+        : reference.prefix
+          ? `${reference.prefix}${version}`
+          : semver.validRange(depValue) && depValue !== '*'
+            ? version
+            : depValue
     logger.info(`${pkg.name} -> ${type} -> ${depName}@${version}`)
     deps[depName] = updatedValue
   })
-}
-
-function getUpdatedDependencyVersion(
-  depName: string,
-  depValue: string,
-  version: string,
-): string {
-  const workspacePrefix = 'workspace:'
-
-  if (depValue.startsWith(workspacePrefix)) {
-    const workspaceRange = depValue.slice(workspacePrefix.length)
-
-    if (!workspaceRange || /\s/.test(workspaceRange)) {
-      throw new Error(
-        `Invalid workspace protocol \`${depValue}\` in \`${depName}\`.`,
-      )
-    }
-
-    if (['*', '^', '~'].includes(workspaceRange)) {
-      return depValue
-    }
-
-    if (!semver.validRange(workspaceRange)) {
-      throw new Error(
-        `Invalid workspace protocol \`${depValue}\` in \`${depName}\`.`,
-      )
-    }
-
-    return `${workspacePrefix}${version}`
-  }
-
-  return semver.validRange(depValue) && depValue !== '*' ? version : depValue
 }

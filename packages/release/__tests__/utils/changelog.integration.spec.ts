@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { getChangelog } from '../../src/utils/changelog'
 
@@ -40,10 +40,17 @@ describe('更新日志真实集成', () => {
     runGit(repositoryPath, ['add', '.'])
     runGit(repositoryPath, ['commit', '-m', 'feat(core): initial feature'])
 
-    const changelog = await getChangelog({ cwd: repositoryPath })
+    const controller = new AbortController()
+    const add = vi.spyOn(controller.signal, 'addEventListener')
+    const remove = vi.spyOn(controller.signal, 'removeEventListener')
+    const changelog = await getChangelog({
+      cwd: repositoryPath,
+      signal: controller.signal,
+    })
 
     expect(changelog).toContain('✨ Features')
     expect(changelog).toContain('initial feature')
+    expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0][1])
   }, 30_000)
 
   it('应该在独立模式下使用包名标签生成正确的提交范围', async () => {

@@ -8,13 +8,27 @@ import {
   isGitClean,
 } from '@eljs/utils/git'
 import { chalk, logger } from '@eljs/utils/logger'
+import { mkdir, rmdir } from 'node:fs/promises'
 import { EOL } from 'node:os'
 import path from 'node:path'
 
 import { definePlugin } from '../../define'
+import type { AppData } from '../../types'
 import { AppError, getChangelog, isGitTagAtHead } from '../../utils'
+import { resolveChangelogPath } from '../changelog-path'
+import { captureFileSnapshots, restoreLockfiles } from '../lockfile-transaction'
+import {
+  closeRollbackWindow,
+  registerPrecommitRollback,
+  rollbackPrecommitChanges,
+} from '../precommit-rollback'
 
 export default definePlugin(context => {
+  let rollbackData: AppData | undefined
+  context.onError(async () => {
+    if (rollbackData) await rollbackPrecommitChanges(rollbackData)
+  })
+  context.onAfterRelease(() => closeRollbackWindow(context.appData))
   context.onCheck(async () => {
     const { requireClean, requireBranch } = context.config.git
 
@@ -61,6 +75,7 @@ export default definePlugin(context => {
         cwd: context.cwd,
         independent,
         ...changelog,
+        signal: context.signal,
       })
     },
     {
@@ -79,7 +94,12 @@ export default definePlugin(context => {
     }
 
     const { filename, placeholder } = context.config.git.changelog
-    const changelogFile = path.join(context.cwd, filename)
+    // 配置路径先通过边界与 Git 元数据检查，读取旧日志也不能跟随子路径链接
+    const changelogFile = await resolveChangelogPath(
+      context.cwd,
+      filename,
+      context.signal,
+    )
 
     context.step(`Writing changelog to ${changelogFile} ...`)
 
@@ -109,7 +129,51 @@ export default definePlugin(context => {
       changelog = `# ChangeLog${EOL}${EOL}${changelog}`
     }
 
-    await writeFileAtomic(changelogFile, changelog)
+    const snapshot = await captureFileSnapshots([changelogFile])
+    const createdDirectories: string[] = []
+    rollbackData = context.appData
+    registerPrecommitRollback(
+      context.appData,
+      async () => {
+        const errors: unknown[] = []
+        try {
+          await restoreLockfiles(snapshot)
+        } catch (error) {
+          errors.push(error)
+        }
+        // 只删除本次新建且仍为空的目录，自定义 Hook 留下的文件必须保留
+        for (const directory of [...createdDirectories].reverse()) {
+          try {
+            await rmdir(directory)
+          } catch (error) {
+            const code = (error as NodeJS.ErrnoException).code
+            if (!['ENOENT', 'ENOTEMPTY', 'EEXIST'].includes(code ?? '')) {
+              errors.push(error)
+            }
+          }
+        }
+        if (errors.length) {
+          throw new AggregateError(errors, 'Changelog rollback failed.')
+        }
+      },
+      () => {
+        rollbackData = undefined
+      },
+    )
+    const missingDirectories: string[] = []
+    let directory = path.dirname(changelogFile)
+    while (directory !== context.cwd && !(await pathExists(directory))) {
+      missingDirectories.unshift(directory)
+      directory = path.dirname(directory)
+    }
+    for (const missing of missingDirectories) {
+      await mkdir(missing)
+      createdDirectories.push(missing)
+    }
+    await writeFileAtomic(
+      await resolveChangelogPath(context.cwd, filename, context.signal),
+      changelog,
+    )
   })
 
   context.onRelease(
@@ -120,33 +184,46 @@ export default definePlugin(context => {
         .filter(({ manifest }) => !manifest.private)
         .map(({ manifest }) => manifest.name)
 
-      if (
-        !commit ||
-        context.config.dryRun ||
-        context.appData.isReleaseRetry ||
-        context.appData.existingPkgNames?.length
-      ) {
+      if (!commit || context.config.dryRun) {
         return
       }
 
-      context.step('Committing changes ...')
+      const isRetry =
+        context.appData.isReleaseRetry ||
+        Boolean(context.appData.existingPkgNames?.length)
+      if (!isRetry) {
+        context.step('Committing changes ...')
 
-      const commitMsg = commitMessage.replace('${version}', version)
-      await gitCommit(
-        commitMsg,
-        [...normalizeArgs(commitArgs)].filter(Boolean),
-        {
+        const commitMsg = commitMessage.replace('${version}', version)
+        const args = normalizeArgs(commitArgs).filter(Boolean)
+        // 信号已取消时仍可恢复；进入 gitCommit 后可能已产生真实提交，禁止回退
+        context.signal?.throwIfAborted()
+        closeRollbackWindow(context.appData)
+        await gitCommit(commitMsg, args, {
           cwd: context.cwd,
           signal: context.signal,
           verbose: true,
-        },
-      )
+        })
+      }
+      // 重试分支已有真实提交，补标签失败也必须保留当前版本
+      if (isRetry) closeRollbackWindow(context.appData)
 
       const tags = independent
         ? publishablePackageNames.map(pkgName => `${pkgName}@${version}`)
         : [`v${version}`]
 
       for (const tagName of tags) {
+        // 重试保留现有提交，只补缺失标签；非 HEAD 标签由非强制 gitTag 拒绝覆盖
+        if (
+          isRetry &&
+          (await isGitTagAtHead(tagName, {
+            cwd: context.cwd,
+            signal: context.signal,
+            verbose: false,
+          }))
+        ) {
+          continue
+        }
         try {
           await gitTag(tagName, {
             cwd: context.cwd,
@@ -175,7 +252,7 @@ export default definePlugin(context => {
       }
     },
     {
-      // Keep the release state local until every package has been published.
+      // 所有包发布成功前保留本地提交和标签，便于中断后重试
       stage: -10,
     },
   )

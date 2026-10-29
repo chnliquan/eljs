@@ -3,6 +3,7 @@ import * as path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Cache } from '../src'
+import * as cacheFile from '../src/internal/cache-file'
 import {
   cleanupDir,
   createBlockedDirectoryPath,
@@ -289,32 +290,30 @@ describe('Cache 并发初始化测试', () => {
       await cache.getStats()
       await cache.setByData('existing-data')
 
-      let releaseAccess: (() => void) | undefined
-      let markAccessStarted: (() => void) | undefined
-      const accessStarted = new Promise<void>(resolve => {
-        markAccessStarted = resolve
+      let releaseWrite: (() => void) | undefined
+      let markWriteStarted: (() => void) | undefined
+      const writeStarted = new Promise<void>(resolve => {
+        markWriteStarted = resolve
       })
-      const accessGate = new Promise<void>(resolve => {
-        releaseAccess = resolve
+      const writeGate = new Promise<void>(resolve => {
+        releaseWrite = resolve
       })
-      const accessError = Object.assign(new Error('not found'), {
-        code: 'ENOENT',
-      })
-      const accessSpy = vi
-        .spyOn(fs.promises, 'access')
-        .mockImplementationOnce(async () => {
-          markAccessStarted?.()
-          await accessGate
-          throw accessError
+      const writeAtomic = cacheFile.writeCacheFileAtomic
+      const writeSpy = vi
+        .spyOn(cacheFile, 'writeCacheFileAtomic')
+        .mockImplementationOnce(async (filePath, content) => {
+          markWriteStarted?.()
+          await writeGate
+          await writeAtomic(filePath, content)
         })
 
       const setPromise = cache.setByData('new-data')
-      await accessStarted
+      await writeStarted
       const clearPromise = cache.clear()
-      releaseAccess?.()
+      releaseWrite?.()
 
       await Promise.all([setPromise, clearPromise])
-      accessSpy.mockRestore()
+      writeSpy.mockRestore()
 
       expect(cache.memoryCache.size).toBe(0)
       expect(
@@ -368,17 +367,13 @@ describe('Cache 并发初始化测试', () => {
       const readGate = new Promise<void>(resolve => {
         releaseRead = resolve
       })
+      const readCacheFile = cacheFile.readCacheFile
       const readFileSpy = vi
-        .spyOn(fs.promises, 'readFile')
-        .mockImplementationOnce(async filePath => {
+        .spyOn(cacheFile, 'readCacheFile')
+        .mockImplementationOnce(async (filePath, maxEntryBytes) => {
           markReadStarted?.()
           await readGate
-
-          if (typeof filePath !== 'string') {
-            throw new TypeError('Expected cleanup to read a string path')
-          }
-
-          return fs.readFileSync(filePath, 'utf8')
+          return readCacheFile(filePath, maxEntryBytes)
         })
       const cleanupPromise = cache.cleanup()
       await readStarted

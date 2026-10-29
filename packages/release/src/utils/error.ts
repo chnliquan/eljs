@@ -1,3 +1,5 @@
+import { createSafeCommandError } from '../internal/safe-command-error'
+
 /**
  * 可向命令行用户直接展示的发布错误
  */
@@ -43,6 +45,7 @@ export interface ReleasePublishFailure {
  * 默认启用 Git 提交时，即使首个包发布失败也可显式重新执行相同版本
  * 重试会复用本地发布提交和标签
  * 已经发布成功的包会在核对标签后跳过
+ * `cause` 仅保留白名单诊断，不引用原始命令异常或取消原因，防止认证信息泄露
  */
 export class ReleasePublishError extends AppError {
   /**
@@ -54,7 +57,7 @@ export class ReleasePublishError extends AppError {
    * 创建发布中断错误
    *
    * @param details - 发布进度
-   * @param cause - npm publish 的原始错误
+   * @param cause - 发布失败原因，构造时转换为不包含命令、输出和原始异常图的安全副本
    */
   public constructor(details: ReleasePublishFailure, cause?: unknown) {
     const published = details.publishedPackages
@@ -79,6 +82,6 @@ export class ReleasePublishError extends AppError {
       publishedPackages: Object.freeze([...details.publishedPackages]),
       unpublishedPackages: Object.freeze([...details.unpublishedPackages]),
     })
-    this.cause = cause
+    this.cause = cause === undefined ? undefined : createSafeCommandError(cause)
   }
 }

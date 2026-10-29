@@ -32,9 +32,10 @@ const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
  *
  * @remarks
  * `countsTowardFileLimit` 区分正式缓存与崩溃遗留临时文件，避免临时文件删除数量污染磁盘缓存统计
+ * 只保留格式有效性和淘汰元数据，不持有已解析的业务数据，避免扫描内存随文件总容量增长
  */
 interface CleanupCandidate {
-  cacheData: CacheFile<unknown> | null
+  valid: boolean
   cacheKey: string | undefined
   countsTowardFileLimit: boolean
   file: string
@@ -132,12 +133,23 @@ export class Cache<T = unknown> {
    */
   private readonly _ttlMilliseconds: number
   /**
-   * 当前磁盘文件计数是否来自一次成功的目录扫描
+   * 当前磁盘文件数与字节数是否来自一次成功的目录扫描
    *
    * @remarks
    * 扫描失败时计数只能用于观测，后续成功写入必须触发清理重扫，不能把未知状态当成空目录
    */
   private _diskFileCountKnown = false
+  /**
+   * 最近观测到的受管理文件大小，用于发布、覆盖和删除时增量维护磁盘统计
+   *
+   * @remarks
+   * 扫描失败时保留已观测大小，但必须将统计标为未知以触发后续重扫
+   */
+  private _diskFileSizes = new Map<string, number>()
+  /**
+   * 磁盘统计变更代次，避免并发扫描覆盖发布或删除后的增量统计
+   */
+  private _diskRevision = 0
   /**
    * 当前清理任务，同一实例同时只扫描一次缓存目录
    */
@@ -176,7 +188,7 @@ export class Cache<T = unknown> {
    * 当前只读的内存缓存快照
    *
    * @remarks
-   * 该视图用于诊断和观测，条目数量受 `maxFiles` 的 LRU 约束
+   * 该视图用于诊断和观测，条目数量受 `maxFiles` 的 LRU 约束，准入受 `maxEntryBytes` 约束
    */
   public get memoryCache(): ReadonlyMap<string, Readonly<CacheEntry<T>>> {
     return new Map(
@@ -191,7 +203,7 @@ export class Cache<T = unknown> {
    * 当前缓存统计快照
    *
    * @remarks
-   * 命中统计会实时更新，磁盘文件数和空间使用量由 `getStats` 刷新为权威值
+   * 命中统计实时更新，磁盘文件数和字节数增量维护，并由目录扫描刷新
    */
   public get stats(): Readonly<CacheStats> {
     return { ...this._stats }
@@ -205,7 +217,7 @@ export class Cache<T = unknown> {
    * 初始化失败后实例会自动降级为禁用状态，读取返回未命中且写入不生效
    *
    * @param options - 缓存配置选项，包括自定义函数
-   * @throws `cacheDir` 为空、TTL 无法安全转换为正毫秒数或最大文件数不是正安全整数时抛出
+   * @throws 配置类型不正确、TTL 无法安全转换为正毫秒数、容量不是正安全整数或单条上限超过总上限时抛出
    */
   public constructor(options: CacheOptions<T> = {}) {
     this.constructorOptions = Object.freeze({ ...options })
@@ -213,6 +225,8 @@ export class Cache<T = unknown> {
     const cacheDir = options.cacheDir ?? this._getDefaultCacheDir()
     const ttlDays = options.ttlDays ?? 7
     const maxFiles = options.maxFiles ?? 1000
+    const maxEntryBytes = options.maxEntryBytes ?? 16 * 1024 * 1024
+    const maxDiskBytes = options.maxDiskBytes ?? 256 * 1024 * 1024
     const ttlMilliseconds = ttlDays * MILLISECONDS_PER_DAY
 
     if (typeof cacheDir !== 'string' || cacheDir.trim().length === 0) {
@@ -244,6 +258,19 @@ export class Cache<T = unknown> {
 
     if (!Number.isSafeInteger(maxFiles) || maxFiles <= 0) {
       throw new RangeError('maxFiles must be a positive safe integer')
+    }
+
+    for (const [name, value] of Object.entries({
+      maxEntryBytes,
+      maxDiskBytes,
+    })) {
+      if (!Number.isSafeInteger(value) || value <= 0) {
+        throw new RangeError(`${name} must be a positive safe integer`)
+      }
+    }
+
+    if (maxEntryBytes > maxDiskBytes) {
+      throw new RangeError('maxEntryBytes must not exceed maxDiskBytes')
     }
 
     if (
@@ -279,6 +306,8 @@ export class Cache<T = unknown> {
       ttlDays,
       autoCleanup: options.autoCleanup ?? true,
       maxFiles,
+      maxEntryBytes,
+      maxDiskBytes,
     })
     this._enabled = this.options.enabled
     this._ttlMilliseconds = Math.max(1, Math.round(ttlMilliseconds))
@@ -302,6 +331,7 @@ export class Cache<T = unknown> {
    * @remarks
    * 文件身份按绝对路径归一化；源文件不存在、条目过期、校验失败或发生 I/O 错误时均返回 `null`
    * 命中对象数据时返回内存中的同一引用，调用方不应直接修改该对象
+   * 磁盘缓存超限或不是普通文件时视为未命中，迁移后必要时在按键任务结束后收敛磁盘容量
    *
    * @param filePath - 要获取缓存的文件路径
    * @returns 缓存的数据，如果未找到或无效则返回 null
@@ -324,7 +354,7 @@ export class Cache<T = unknown> {
     const generation = this._generation
 
     try {
-      return await this._runKeyOperation(cacheKey, async () => {
+      const data = await this._runKeyOperation(cacheKey, async () => {
         if (generation !== this._generation) {
           this._recordMiss()
           return null
@@ -390,6 +420,15 @@ export class Cache<T = unknown> {
         this._recordMiss()
         return null
       })
+
+      if (
+        this._stats.files > this.options.maxFiles ||
+        this._stats.diskUsage > this.options.maxDiskBytes
+      ) {
+        await this._enforceFileLimit()
+      }
+
+      return data
     } catch (error) {
       console.warn(`Failed to get cache for ${normalizedPath}:`, error)
       this._recordMiss()
@@ -402,6 +441,7 @@ export class Cache<T = unknown> {
    *
    * @remarks
    * 同一缓存键的写入按调用顺序串行，内存写入成功但磁盘持久化失败时方法仍会正常结束并输出警告
+   * 完整 JSON 超过 `maxEntryBytes` 或无法序列化时不进入内存，并尽力删除同键旧缓存
    * 若执行期间发生 `clear`，该次旧生命周期写入会被放弃
    *
    * @param filePath - 要缓存数据的文件路径
@@ -451,13 +491,22 @@ export class Cache<T = unknown> {
           key: cacheKey,
         }
 
+        const content = this._prepareCacheContent(cacheEntry)
+
+        if (content === null) {
+          this._memoryCache.delete(cacheKey)
+          await this._removeFromDisk(cacheKey)
+          return
+        }
+
         this._setMemoryEntry(cacheKey, cacheEntry)
-        const saved = await this._saveToDisk(cacheKey, cacheEntry)
+        const saved = await this._saveToDisk(cacheKey, content)
 
         shouldCleanup =
           saved &&
           (!this._diskFileCountKnown ||
-            this._stats.files > this.options.maxFiles) &&
+            this._stats.files > this.options.maxFiles ||
+            this._stats.diskUsage > this.options.maxDiskBytes) &&
           generation === this._generation
       })
     } catch (error) {
@@ -474,7 +523,8 @@ export class Cache<T = unknown> {
    *
    * @remarks
    * 返回的键可直接传给 `getByKey`，同一生成键的后续写入会覆盖先前数据
-   * 若缓存已禁用或写入被并发的 `clear` 取消，则返回 `null`
+   * 若缓存已禁用、写入被并发的 `clear` 取消或完整 JSON 无法通过容量准入，则返回 `null`
+   * 容量准入前仅同步调用一次序列化器；合规条目磁盘写入失败时仍可从内存命中
    *
    * @param data - 要缓存的数据
    * @param metadata - 可选的元数据
@@ -531,14 +581,23 @@ export class Cache<T = unknown> {
           key: cacheKey,
         }
 
+        const content = this._prepareCacheContent(cacheEntry)
+
+        if (content === null) {
+          this._memoryCache.delete(cacheKey)
+          await this._removeFromDisk(cacheKey)
+          return
+        }
+
         this._setMemoryEntry(cacheKey, cacheEntry)
-        const saved = await this._saveToDisk(cacheKey, cacheEntry)
+        const saved = await this._saveToDisk(cacheKey, content)
         stored = true
 
         shouldCleanup =
           saved &&
           (!this._diskFileCountKnown ||
-            this._stats.files > this.options.maxFiles) &&
+            this._stats.files > this.options.maxFiles ||
+            this._stats.diskUsage > this.options.maxDiskBytes) &&
           generation === this._generation
       })
     } catch (error) {
@@ -557,6 +616,7 @@ export class Cache<T = unknown> {
    *
    * @remarks
    * 同一键存在进行中的写入时会等待写入结束，过期条目会同时从内存和磁盘删除
+   * 磁盘缓存超限或不是普通文件时视为未命中，迁移后必要时在按键任务结束后收敛磁盘容量
    *
    * @param key - 缓存键
    * @returns 缓存的数据，如果未找到或无效则返回 null
@@ -578,7 +638,7 @@ export class Cache<T = unknown> {
     const generation = this._generation
 
     try {
-      return await this._runKeyOperation(key, async () => {
+      const data = await this._runKeyOperation(key, async () => {
         if (generation !== this._generation) {
           this._recordMiss()
           return null
@@ -621,6 +681,15 @@ export class Cache<T = unknown> {
         this._recordMiss()
         return null
       })
+
+      if (
+        this._stats.files > this.options.maxFiles ||
+        this._stats.diskUsage > this.options.maxDiskBytes
+      ) {
+        await this._enforceFileLimit()
+      }
+
+      return data
     } catch (error) {
       console.warn('Failed to get cache by key:', error)
       this._recordMiss()
@@ -632,9 +701,10 @@ export class Cache<T = unknown> {
    * 清理过期和无效的缓存文件
    *
    * @remarks
-   * TTL 以缓存条目的创建时间为准，超过数量上限时按最旧条目优先淘汰
+   * TTL 以缓存条目的创建时间为准，超过数量或磁盘总字节上限时按最旧条目优先淘汰
    * 超过 24 小时的原子写临时文件会一并回收，新近临时文件保留给可能仍在执行的写入
-   * 同一实例的并发调用共享一次目录扫描，扫描开始后的按键读写会等待清理完成，单文件操作使用有限并发
+   * 同一实例的并发调用共享一次目录扫描，扫描开始后的按键读写会等待清理完成
+   * JSON 逐个有界读取且只保留元数据，文件删除使用有限并发
    *
    * @returns 包含统计信息的清理结果
    */
@@ -693,6 +763,9 @@ export class Cache<T = unknown> {
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
           this._stats.files = 0
+          this._stats.diskUsage = 0
+          this._diskFileSizes.clear()
+          this._diskRevision++
           this._diskFileCountKnown = true
           return result
         }
@@ -706,16 +779,17 @@ export class Cache<T = unknown> {
       const candidates = await mapWithConcurrency<
         string,
         CleanupCandidate | null
-      >(cacheFiles, FILE_OPERATION_CONCURRENCY, async file => {
+      >(cacheFiles, 1, async file => {
         try {
           const filePath = path.join(this.cacheDir, file)
-          const [stat, cacheData] = await Promise.all([
-            fs.promises.stat(filePath),
-            readCacheFile(filePath),
-          ])
+          const stat = await fs.promises.lstat(filePath)
+          const cacheData = await readCacheFile(
+            filePath,
+            this.options.maxEntryBytes,
+          )
 
           return {
-            cacheData,
+            valid: cacheData !== null,
             cacheKey: cacheData?.metadata.key,
             file,
             filePath,
@@ -736,14 +810,14 @@ export class Cache<T = unknown> {
           async file => {
             try {
               const filePath = path.join(this.cacheDir, file)
-              const stat = await fs.promises.stat(filePath)
+              const stat = await fs.promises.lstat(filePath)
 
               if (now - stat.mtimeMs <= STALE_CACHE_TEMP_FILE_AGE_MS) {
                 return null
               }
 
               return {
-                cacheData: null,
+                valid: false,
                 cacheKey: undefined,
                 file,
                 filePath,
@@ -762,25 +836,45 @@ export class Cache<T = unknown> {
       const inspectedFiles = candidates.filter(
         (candidate): candidate is CleanupCandidate => candidate !== null,
       )
+      // 清理已隔离同实例读写，复用本次检查结果，避免为容量统计再次扫描目录
+      this._diskFileSizes = new Map(
+        inspectedFiles.map(candidate => [candidate.filePath, candidate.size]),
+      )
+      this._stats.files = cacheFiles.length
+      this._stats.diskUsage = inspectedFiles.reduce(
+        (total, candidate) => total + candidate.size,
+        0,
+      )
+      this._diskFileCountKnown = inspectedFiles.length === cacheFiles.length
+      this._diskRevision++
       const removalCandidates = new Set(
         inspectedFiles.filter(
           candidate =>
-            !candidate.cacheData || now - candidate.timestamp > candidate.ttl,
+            !candidate.valid || now - candidate.timestamp > candidate.ttl,
         ),
       )
       const retainedCandidates = inspectedFiles
         .filter(candidate => !removalCandidates.has(candidate))
         .sort((a, b) => a.timestamp - b.timestamp)
-      const overflow = Math.max(
+      let retainedCount = retainedCandidates.length
+      let retainedBytes = retainedCandidates.reduce(
+        (total, candidate) => total + candidate.size,
         0,
-        retainedCandidates.length - this.options.maxFiles,
       )
 
-      for (const candidate of retainedCandidates.slice(0, overflow)) {
+      for (const candidate of retainedCandidates) {
+        if (
+          retainedCount <= this.options.maxFiles &&
+          retainedBytes <= this.options.maxDiskBytes
+        ) {
+          break
+        }
+
         removalCandidates.add(candidate)
+        retainedCount--
+        retainedBytes -= candidate.size
       }
 
-      let removedCacheFiles = 0
       await mapWithConcurrency(
         [...removalCandidates, ...staleTemporaryFiles],
         FILE_OPERATION_CONCURRENCY,
@@ -791,7 +885,7 @@ export class Cache<T = unknown> {
             result.totalSize += size
 
             if (countsTowardFileLimit) {
-              removedCacheFiles++
+              this._forgetDiskFile(filePath)
             }
 
             if (cacheKey !== undefined) {
@@ -800,15 +894,16 @@ export class Cache<T = unknown> {
               this._removeMemoryEntryForFile(file)
             }
           } catch (error) {
-            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+            if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+              if (countsTowardFileLimit) {
+                this._forgetDiskFile(filePath)
+              }
+            } else {
               result.errors.push(`Failed to remove ${file}: ${error}`)
             }
           }
         },
       )
-
-      this._stats.files = cacheFiles.length - removedCacheFiles
-      this._diskFileCountKnown = true
     } catch (error) {
       this._diskFileCountKnown = false
       result.errors.push(`Cleanup failed: ${error}`)
@@ -821,7 +916,8 @@ export class Cache<T = unknown> {
    * 获取缓存统计信息
    *
    * @remarks
-   * `files` 和 `diskUsage` 只统计当前库管理的缓存文件，不包含同目录下的其他文件
+   * `files` 和 `diskUsage` 只统计当前库管理的正式缓存路径，不包含临时文件与无关文件
+   * 等待已开始的清理和按键读写后扫描；大小来自 `lstat`，不累计符号链接目标容量
    *
    * @returns 包括命中率和磁盘使用量的缓存统计信息
    */
@@ -839,8 +935,22 @@ export class Cache<T = unknown> {
     }
 
     await this._waitForClear()
+    await this._cleanupPromise
+    await Promise.allSettled([...this._keyOperations.values()])
+    await this._refreshDiskStats()
 
-    let diskUsage = 0
+    return { ...this._stats }
+  }
+
+  /**
+   * 通过不跟随符号链接的目录扫描刷新文件数与字节数
+   *
+   * @remarks
+   * 并发发布或删除使扫描失效时不覆盖增量统计；任何检查失败都使容量状态保持未知
+   */
+  private async _refreshDiskStats(): Promise<void> {
+    const revision = this._diskRevision
+
     try {
       const files = (await fs.promises.readdir(this.cacheDir)).filter(file =>
         this._isManagedCacheFile(file),
@@ -850,7 +960,7 @@ export class Cache<T = unknown> {
         FILE_OPERATION_CONCURRENCY,
         async file => {
           try {
-            const stat = await fs.promises.stat(path.join(this.cacheDir, file))
+            const stat = await fs.promises.lstat(path.join(this.cacheDir, file))
             return stat.size
           } catch {
             return null
@@ -858,22 +968,44 @@ export class Cache<T = unknown> {
         },
       )
 
-      for (const size of fileSizes) {
-        if (size !== null) {
-          diskUsage += size
-        }
+      if (revision !== this._diskRevision) {
+        this._diskFileCountKnown = false
+        return
       }
 
-      // 单文件 stat 失败不能让文件上限低估，目录快照仍是数量的权威来源
+      const sizes = new Map<string, number>()
+      let diskUsage = 0
+
+      files.forEach((file, index) => {
+        const size = fileSizes[index]
+
+        if (size !== null && size !== undefined) {
+          sizes.set(path.join(this.cacheDir, file), size)
+          diskUsage += size
+        }
+      })
+
+      this._diskFileSizes = sizes
       this._stats.files = files.length
       this._stats.diskUsage = diskUsage
-      this._diskFileCountKnown = true
-    } catch {
+      this._diskFileCountKnown = fileSizes.every(size => size !== null)
+      this._diskRevision++
+    } catch (error) {
+      if (
+        (error as NodeJS.ErrnoException).code === 'ENOENT' &&
+        revision === this._diskRevision
+      ) {
+        this._diskFileSizes.clear()
+        this._stats.files = 0
+        this._stats.diskUsage = 0
+        this._diskFileCountKnown = true
+        this._diskRevision++
+        return
+      }
+
       // 扫描失败时保留上一次观测值，并让后续成功写入重新触发权威扫描
       this._diskFileCountKnown = false
     }
-
-    return { ...this._stats }
   }
 
   /**
@@ -882,6 +1014,7 @@ export class Cache<T = unknown> {
    * @remarks
    * 清空操作会取消尚未发布的旧生命周期写入，并等待已经开始的按键读写结束后删除受管理文件
    * 同一实例的并发调用共享同一个清空任务
+   * 删除按 best-effort 语义执行，残余受管理文件会保留在重扫后的容量统计中
    */
   public clear(): Promise<void> {
     if (this._clearPromise) {
@@ -944,10 +1077,8 @@ export class Cache<T = unknown> {
     }
 
     this._memoryCache.clear()
-    this._stats.files = 0
-    this._stats.diskUsage = 0
-    // 单文件删除采用 best-effort 语义，下一次写入重扫才能确认磁盘确实为空
-    this._diskFileCountKnown = false
+    // 删除失败时保留残余文件的真实容量，下一次写入仍可触发收敛
+    await this._refreshDiskStats()
   }
 
   /**
@@ -976,17 +1107,7 @@ export class Cache<T = unknown> {
     try {
       await fs.promises.mkdir(this.cacheDir, { recursive: true, mode: 0o700 })
 
-      try {
-        const files = await fs.promises.readdir(this.cacheDir)
-        this._stats.files = files.filter(file =>
-          this._isManagedCacheFile(file),
-        ).length
-        this._diskFileCountKnown = true
-      } catch {
-        // 内存层仍可使用，但下一次成功落盘必须通过清理重建权威计数
-        this._stats.files = 0
-        this._diskFileCountKnown = false
-      }
+      await this._refreshDiskStats()
 
       this._initialized = true
 
@@ -1132,7 +1253,10 @@ export class Cache<T = unknown> {
     }
 
     for (const filePath of candidatePaths) {
-      const cacheData = await readCacheFile(filePath)
+      const cacheData = await readCacheFile(
+        filePath,
+        this.options.maxEntryBytes,
+      )
 
       if (!cacheData) {
         await this._unlinkManagedFile(filePath)
@@ -1147,7 +1271,7 @@ export class Cache<T = unknown> {
       try {
         const cacheEntry = this._deserializeCacheFile(cacheData)
 
-        await this._migrateCacheFile(cacheKey, cacheEntry, filePath)
+        await this._migrateCacheFile(cacheKey, cacheData, filePath)
 
         return cacheEntry
       } catch {
@@ -1165,20 +1289,25 @@ export class Cache<T = unknown> {
    * 只有新文件原子发布成功后才删除旧文件，避免迁移失败造成有效缓存丢失
    *
    * @param cacheKey - 未哈希的逻辑缓存键
-   * @param cacheEntry - 已完成格式校验和反序列化的条目
+   * @param cacheData - 已通过格式与容量校验的原始序列化结构，避免再次调用自定义序列化器
    * @param sourcePath - 当前读取到的磁盘文件绝对路径
    * @returns 无需迁移或迁移尝试结束后完成
    */
   private async _migrateCacheFile(
     cacheKey: string,
-    cacheEntry: CacheEntry<T>,
+    cacheData: CacheFile<unknown>,
     sourcePath: string,
   ): Promise<void> {
     if (sourcePath === this._getCacheFilePath(cacheKey)) {
       return
     }
 
-    if (!(await this._saveToDisk(cacheKey, cacheEntry))) {
+    const content = `${JSON.stringify(cacheData)}\n`
+
+    if (
+      Buffer.byteLength(content, 'utf8') > this.options.maxEntryBytes ||
+      !(await this._saveToDisk(cacheKey, content))
+    ) {
       return
     }
 
@@ -1186,16 +1315,15 @@ export class Cache<T = unknown> {
   }
 
   /**
-   * 将缓存条目保存到磁盘
-   * @param cacheKey - 缓存键
+   * 同步生成完整持久化文本并决定内存与磁盘准入
+   *
+   * @remarks
+   * 每次写入只调用一次自定义序列化器和 JSON 序列化，无法证明容量合规时拒绝准入
+   *
    * @param cacheEntry - 要保存的缓存条目
+   * @returns 容量合规的完整文本，超限或序列化失败时返回 `null`
    */
-  private async _saveToDisk(
-    cacheKey: string,
-    cacheEntry: CacheEntry<T>,
-  ): Promise<boolean> {
-    const filePath = this._getCacheFilePath(cacheKey)
-
+  private _prepareCacheContent(cacheEntry: CacheEntry<T>): string | null {
     try {
       const serializedData = this._serializer.serialize(cacheEntry.data)
       const dataUndefined = serializedData === undefined
@@ -1212,16 +1340,46 @@ export class Cache<T = unknown> {
           dataUndefined: dataUndefined || undefined,
         },
       }
-      const existed = await fs.promises
-        .access(filePath)
-        .then(() => true)
-        .catch(() => false)
-      await writeCacheFileAtomic(filePath, cacheFile)
+      const content = `${JSON.stringify(cacheFile)}\n`
 
-      if (!existed) {
-        this._stats.files++
+      if (Buffer.byteLength(content, 'utf8') > this.options.maxEntryBytes) {
+        return null
       }
 
+      return content
+    } catch (error) {
+      console.warn('Failed to serialize cache data:', error)
+      return null
+    }
+  }
+
+  /**
+   * 发布已通过容量准入的文本并增量更新磁盘字节数
+   *
+   * @param cacheKey - 缓存键
+   * @param content - 已完成一次序列化的完整 UTF-8 JSON 文本
+   * @returns 原子发布成功时返回 `true`，I/O 失败时按 best-effort 返回 `false`
+   */
+  private async _saveToDisk(
+    cacheKey: string,
+    content: string,
+  ): Promise<boolean> {
+    const filePath = this._getCacheFilePath(cacheKey)
+
+    try {
+      await writeCacheFileAtomic(filePath, content)
+      const previousSize = this._diskFileSizes.get(filePath)
+
+      if (previousSize === undefined) {
+        this._stats.files++
+      } else {
+        this._stats.diskUsage -= previousSize
+      }
+
+      const size = Buffer.byteLength(content, 'utf8')
+      this._diskFileSizes.set(filePath, size)
+      this._stats.diskUsage += size
+      this._diskRevision++
       return true
     } catch (error) {
       console.warn(`Failed to save cache file ${filePath}:`, error)
@@ -1257,11 +1415,29 @@ export class Cache<T = unknown> {
   private async _unlinkManagedFile(filePath: string): Promise<void> {
     try {
       await fs.promises.unlink(filePath)
-      this._stats.files = Math.max(0, this._stats.files - 1)
+      this._forgetDiskFile(filePath)
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        this._forgetDiskFile(filePath)
+      } else {
         console.warn(`Failed to remove cache file ${filePath}:`, error)
       }
+    }
+  }
+
+  /**
+   * 从已观测容量中扣除删除或已经消失的文件
+   *
+   * @param filePath - 受管理文件的绝对路径
+   */
+  private _forgetDiskFile(filePath: string): void {
+    const size = this._diskFileSizes.get(filePath)
+
+    if (size !== undefined) {
+      this._diskFileSizes.delete(filePath)
+      this._stats.files = Math.max(0, this._stats.files - 1)
+      this._stats.diskUsage = Math.max(0, this._stats.diskUsage - size)
+      this._diskRevision++
     }
   }
 
@@ -1288,7 +1464,7 @@ export class Cache<T = unknown> {
   }
 
   /**
-   * 在有限轮次内收敛磁盘文件数量
+   * 在有限轮次内收敛磁盘文件数量与总字节数
    *
    * @remarks
    * 并发写入可能共享同一次清理扫描，因此每轮根据清理结果判断是否继续收敛
@@ -1304,7 +1480,8 @@ export class Cache<T = unknown> {
 
       if (
         this._diskFileCountKnown &&
-        this._stats.files <= this.options.maxFiles
+        this._stats.files <= this.options.maxFiles &&
+        this._stats.diskUsage <= this.options.maxDiskBytes
       ) {
         return
       }

@@ -85,6 +85,8 @@ export interface AppData {
    *
    * @remarks
    * 即使上一次执行尚未成功发布任何包，该值也可能为 `true`
+   * 独立模式下全部 workspace 包已到目标版本且至少一个预期标签指向 HEAD 时，
+   * 允许复用提交并补齐缺失标签，已有非 HEAD 标签仍会阻止恢复
    */
   isReleaseRetry?: boolean
   /**

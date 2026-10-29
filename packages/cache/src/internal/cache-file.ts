@@ -89,20 +89,78 @@ export function isCacheFile(value: unknown): value is CacheFile<unknown> {
 /**
  * 从磁盘读取并校验缓存文件
  *
+ * @remarks
+ * 不跟随符号链接，打开后检查文件身份、普通文件类型和大小
+ * 读取缓冲区最多为检查时的文件大小，额外探测一个字节以拒绝检查后增长的文件
+ *
  * @param filePath - 缓存文件绝对路径
- * @returns 受支持的缓存文件，文件缺失、损坏或版本不兼容时返回 `null`
+ * @param maxEntryBytes - 完整持久化文件的最大字节数
+ * @returns 受支持的缓存文件，缺失、超限、非普通文件、损坏或版本不兼容时返回 `null`
  * @internal
  */
 export async function readCacheFile(
   filePath: string,
+  maxEntryBytes: number,
 ): Promise<CacheFile<unknown> | null> {
+  let handle: fs.promises.FileHandle | undefined
+
   try {
-    const content = await fs.promises.readFile(filePath, 'utf8')
-    const value: unknown = JSON.parse(content)
+    const beforeOpen = await fs.promises.lstat(filePath)
+
+    if (!beforeOpen.isFile()) {
+      return null
+    }
+
+    handle = await fs.promises.open(
+      filePath,
+      fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK,
+    )
+    const stat = await handle.stat()
+
+    if (
+      !stat.isFile() ||
+      stat.dev !== beforeOpen.dev ||
+      stat.ino !== beforeOpen.ino ||
+      !Number.isSafeInteger(stat.size) ||
+      stat.size < 0 ||
+      stat.size > maxEntryBytes
+    ) {
+      return null
+    }
+
+    // 不使用 readFile，避免检查后膨胀的文件驱动无界缓冲区分配
+    const buffer = Buffer.alloc(stat.size)
+    let offset = 0
+
+    while (offset < buffer.length) {
+      const { bytesRead } = await handle.read(
+        buffer,
+        offset,
+        buffer.length - offset,
+        offset,
+      )
+
+      if (bytesRead === 0) {
+        return null
+      }
+
+      offset += bytesRead
+    }
+
+    const probe = await handle.read(Buffer.alloc(1), 0, 1, offset)
+    const afterRead = await handle.stat()
+
+    if (probe.bytesRead !== 0 || afterRead.size !== offset) {
+      return null
+    }
+
+    const value: unknown = JSON.parse(buffer.toString('utf8'))
 
     return isCacheFile(value) ? value : null
   } catch {
     return null
+  } finally {
+    await handle?.close().catch(() => {})
   }
 }
 
@@ -114,17 +172,16 @@ export async function readCacheFile(
  * 临时文件使用仅当前用户可读写的权限，失败时会尽力清理，进程崩溃遗留文件由缓存清理流程延迟回收
  *
  * @param filePath - 最终缓存文件绝对路径
- * @param cacheFile - 已完成序列化的缓存文件
+ * @param content - 已完成序列化与容量准入校验的完整 UTF-8 JSON 文本
  * @returns 重命名发布完成后结束
- * @throws 文件序列化、写入或重命名失败时抛出原始错误
+ * @throws 写入或重命名失败时抛出原始错误
  * @internal
  */
 export async function writeCacheFileAtomic(
   filePath: string,
-  cacheFile: CacheFile<unknown>,
+  content: string,
 ): Promise<void> {
   const temporaryPath = `${filePath}.${process.pid}.${randomUUID()}.tmp`
-  const content = `${JSON.stringify(cacheFile)}\n`
 
   try {
     await fs.promises.writeFile(temporaryPath, content, {

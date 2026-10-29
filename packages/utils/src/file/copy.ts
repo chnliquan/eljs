@@ -11,6 +11,10 @@ import { isDirectory, isDirectorySync } from './is'
 import { readFile, readFileSync } from './read'
 import { renderTemplate, type RenderTemplateOptions } from './render'
 import { writeFile, writeFileSync, type WriteFileSyncOptions } from './write'
+import {
+  resolveWriteDestination,
+  resolveWriteDestinationSync,
+} from './write-boundary'
 
 /**
  * 复制文件和模板时使用的选项
@@ -24,6 +28,12 @@ export interface CopyFileOptions {
 
   /** 文件基础路径，传入时打印相对路径日志 */
   basedir?: string
+
+  /**
+   * 将渲染后的文件目标限制在此输出根目录中
+   * @remarks 根目录必须存在，子路径中的符号链接与路径越界会在创建目录或写入前被拒绝
+   */
+  destinationRoot?: string
 
   /** 模板渲染数据 */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -112,7 +122,7 @@ function renderCopyPath(
  * @param to - 目标文件路径
  * @param options - 复制选项
  * @returns 复制完成后结束
- * @throws 目录创建、路径渲染或文件复制失败时抛出带路径上下文的错误
+ * @throws 目标越界、含符号链接、目录创建、路径渲染或文件复制失败时抛出带路径上下文的错误
  */
 export async function copyFile(
   from: string,
@@ -121,11 +131,17 @@ export async function copyFile(
 ): Promise<void> {
   try {
     const { mode, basedir, data, renderOptions } = options
-    const destination = renderCopyPath(
+    let destination = renderCopyPath(
       normalizeDotfilePath(to),
       data || {},
       renderOptions,
     )
+    if (options.destinationRoot !== undefined) {
+      destination = await resolveWriteDestination(
+        destination,
+        options.destinationRoot,
+      )
+    }
 
     await mkdir(path.dirname(destination))
 
@@ -151,7 +167,7 @@ export async function copyFile(
  * @param data - 模板数据
  * @param options - 复制选项
  * @returns 写入完成后结束
- * @throws 模板读取、渲染或写入失败时抛出带路径上下文的错误
+ * @throws 目标边界校验、模板读取、渲染或写入失败时抛出带路径上下文的错误
  */
 export async function copyTemplate(
   from: string,
@@ -165,11 +181,17 @@ export async function copyTemplate(
   try {
     const template = await readFile(from)
     const content = renderTemplate(template, data, renderOptions)
-    const destination = renderCopyPath(
+    let destination = renderCopyPath(
       normalizeDotfilePath(to.replace(/\.tpl$/, '')),
       data,
       renderOptions,
     )
+    if (options?.destinationRoot !== undefined) {
+      destination = await resolveWriteDestination(
+        destination,
+        options.destinationRoot,
+      )
+    }
 
     await mkdir(path.dirname(destination))
 
@@ -244,7 +266,7 @@ export async function copyDirectory(
  * @param from - 源文件路径
  * @param to - 目标文件路径
  * @param options - 复制选项
- * @throws 目录创建、路径渲染或文件复制失败时抛出带路径上下文的错误
+ * @throws 目标边界校验、目录创建、路径渲染或文件复制失败时抛出带路径上下文的错误
  */
 export function copyFileSync(
   from: string,
@@ -254,11 +276,17 @@ export function copyFileSync(
   try {
     validateCopyFileSyncOptions(options)
     const { mode, basedir, data, renderOptions } = options
-    const destination = renderCopyPath(
+    let destination = renderCopyPath(
       normalizeDotfilePath(to),
       data || {},
       renderOptions,
     )
+    if (options.destinationRoot !== undefined) {
+      destination = resolveWriteDestinationSync(
+        destination,
+        options.destinationRoot,
+      )
+    }
 
     mkdirSync(path.dirname(destination))
 
@@ -283,7 +311,7 @@ export function copyFileSync(
  * @param to - 目标文件路径
  * @param data - 模板数据
  * @param options - 复制选项
- * @throws 模板读取、渲染或写入失败时抛出带路径上下文的错误
+ * @throws 目标边界校验、模板读取、渲染或写入失败时抛出带路径上下文的错误
  */
 export function copyTemplateSync(
   from: string,
@@ -298,11 +326,17 @@ export function copyTemplateSync(
     validateCopyFileSyncOptions(options)
     const template = readFileSync(from)
     const content = renderTemplate(template, data, renderOptions)
-    const destination = renderCopyPath(
+    let destination = renderCopyPath(
       normalizeDotfilePath(to.replace(/\.tpl$/, '')),
       data,
       renderOptions,
     )
+    if (options?.destinationRoot !== undefined) {
+      destination = resolveWriteDestinationSync(
+        destination,
+        options.destinationRoot,
+      )
+    }
 
     mkdirSync(path.dirname(destination))
 

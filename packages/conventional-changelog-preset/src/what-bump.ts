@@ -1,9 +1,12 @@
-// https://github.com/conventional-changelog/conventional-changelog/blob/master/packages/conventional-changelog-angular/src/whatBump.js
+import type { PresetCommit, WhatBumpResult } from './types.js'
+
 /**
- * @param {Array<{ notes: readonly unknown[], type?: string }>} commits
+ * 根据原始提交推断版本提升，破坏性变更优先于新功能，其他提交默认提升补丁版本
+ *
+ * @internal
  */
-export function whatBump(commits) {
-  let level = 2
+export function whatBump(commits: PresetCommit[]): WhatBumpResult {
+  let level: WhatBumpResult['level'] = 2
   let breakings = 0
   let features = 0
 

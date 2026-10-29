@@ -39,6 +39,7 @@ vi.mock('@eljs/utils', () => ({
     ready: vi.fn(),
   },
   readJson: vi.fn(),
+  resolveWriteDestination: vi.fn(async (file: string) => file),
   writeJson: vi.fn(),
 }))
 

@@ -6,7 +6,7 @@ import semver, { type ReleaseType } from 'semver'
 
 import { prereleaseTypes } from '../../constants'
 import { definePlugin } from '../../define'
-import type { PrereleaseId, ReleasePluginContext } from '../../types'
+import type { AppData, PrereleaseId, ReleasePluginContext } from '../../types'
 import {
   AppError,
   findRetryVersionAtHead,
@@ -23,13 +23,18 @@ import {
 } from '../../utils'
 import { mapWithConcurrency } from '../concurrency'
 import {
+  captureFileSnapshots,
   captureLockfiles,
   restoreLockfiles,
   type LockfileSnapshot,
 } from '../lockfile-transaction'
 import {
+  closeRollbackWindow,
+  registerPrecommitRollback,
+  rollbackPrecommitChanges,
+} from '../precommit-rollback'
+import {
   prepareVersionPlan,
-  rollbackVersionPlan,
   writeVersionPlan,
   type PreparedVersionPlan,
 } from '../version-plan'
@@ -40,6 +45,65 @@ const debug = createDebugger('release:version')
 
 export default definePlugin(context => {
   let preparedVersionPlan: PreparedVersionPlan | undefined
+  let manifestSnapshot: LockfileSnapshot | undefined
+  let rollbackData: AppData | undefined
+
+  context.onError(async () => {
+    if (rollbackData) await rollbackPrecommitChanges(rollbackData)
+  })
+  context.onAfterRelease(() => closeRollbackWindow(context.appData))
+
+  /** 本地写入失败时立即消费恢复回调，避免后续 onError 重复恢复 */
+  async function restoreAfterFailure(error: unknown): Promise<never> {
+    let rollbackFailure: unknown
+    try {
+      await rollbackPrecommitChanges(context.appData)
+    } catch (rollbackError) {
+      rollbackFailure = rollbackError
+    }
+    if (rollbackFailure) {
+      throw new AggregateError(
+        [error, rollbackFailure],
+        'Version update failed and precommit files could not be fully restored.',
+        { cause: error },
+      )
+    }
+    throw error
+  }
+
+  /** 保留内存原值及后续磁盘快照，直至提交入口或失败恢复完成 */
+  function retainPlan(plan: PreparedVersionPlan): void {
+    preparedVersionPlan = plan
+    rollbackData = context.appData
+    const originalExistingPkgNames = context.appData.existingPkgNames
+    const originalIsReleaseRetry = context.appData.isReleaseRetry
+    registerPrecommitRollback(
+      context.appData,
+      async () => {
+        try {
+          if (manifestSnapshot) await restoreLockfiles(manifestSnapshot)
+        } finally {
+          context.appData.workspacePackages = plan.originalWorkspacePackages
+          context.appData.projectPkg = plan.originalProjectPkg
+          if (originalExistingPkgNames === undefined) {
+            delete context.appData.existingPkgNames
+          } else {
+            context.appData.existingPkgNames = originalExistingPkgNames
+          }
+          if (originalIsReleaseRetry === undefined) {
+            delete context.appData.isReleaseRetry
+          } else {
+            context.appData.isReleaseRetry = originalIsReleaseRetry
+          }
+        }
+      },
+      () => {
+        preparedVersionPlan = undefined
+        manifestSnapshot = undefined
+        rollbackData = undefined
+      },
+    )
+  }
 
   context.onCheck(async ({ releaseTypeOrVersion }) => {
     if (releaseTypeOrVersion && !isVersionValid(releaseTypeOrVersion, true)) {
@@ -117,6 +181,9 @@ export default definePlugin(context => {
           manifest.version,
         ]),
       )
+      const allPackagesAtTarget = context.appData.workspacePackages.every(
+        ({ manifest }) => manifest.version === version,
+      )
       const shouldCheckReleaseTags =
         versionChecks.some(({ exists }) => exists) ||
         publishablePackageNames.every(
@@ -131,6 +198,7 @@ export default definePlugin(context => {
                     tagName,
                     await isGitTagAtHead(tagName, {
                       cwd: context.cwd,
+                      signal: context.signal,
                       verbose: false,
                     }),
                   ] as const,
@@ -140,7 +208,12 @@ export default definePlugin(context => {
       )
       const isReleaseRetry =
         shouldCheckReleaseTags &&
-        releaseTagNames.every(tagName => tagChecks.get(tagName) === true)
+        releaseTagNames.length > 0 &&
+        (releaseTagNames.every(tagName => tagChecks.get(tagName) === true) ||
+          // 独立标签可能在首次发布前中断，已有 HEAD 标签和一致版本共同确认重试
+          (context.config.git.independent &&
+            allPackagesAtTarget &&
+            releaseTagNames.some(tagName => tagChecks.get(tagName) === true)))
 
       for (const { exists, pkgName } of versionChecks) {
         if (!exists) {
@@ -161,6 +234,8 @@ export default definePlugin(context => {
         existingPkgNames.push(pkgName)
       }
 
+      const plan = await prepareVersionPlan(context.appData, version)
+      retainPlan(plan)
       context.appData.existingPkgNames = existingPkgNames
       context.appData.isReleaseRetry = isReleaseRetry
 
@@ -176,9 +251,8 @@ export default definePlugin(context => {
         )
       }
 
-      preparedVersionPlan = await prepareVersionPlan(context.appData, version)
-      context.appData.workspacePackages = preparedVersionPlan.workspacePackages
-      context.appData.projectPkg = preparedVersionPlan.projectPkg
+      context.appData.workspacePackages = plan.workspacePackages
+      context.appData.projectPkg = plan.projectPkg
     },
   )
 
@@ -187,7 +261,7 @@ export default definePlugin(context => {
       preparedVersionPlan?.version === version
         ? preparedVersionPlan
         : await prepareVersionPlan(context.appData, version)
-    preparedVersionPlan = plan
+    if (preparedVersionPlan !== plan) retainPlan(plan)
     context.appData.workspacePackages = plan.workspacePackages
     context.appData.projectPkg = plan.projectPkg
     debug?.(
@@ -195,7 +269,14 @@ export default definePlugin(context => {
     )
 
     if (!context.config.dryRun) {
-      await writeVersionPlan(plan)
+      try {
+        manifestSnapshot = await captureFileSnapshots(
+          plan.manifests.map(manifest => manifest.path),
+        )
+        await writeVersionPlan(plan, false)
+      } catch (error) {
+        await restoreAfterFailure(error)
+      }
     }
   })
 
@@ -205,50 +286,23 @@ export default definePlugin(context => {
     }
 
     context.step('Updating Lockfile ...')
-    let lockfileSnapshot: LockfileSnapshot | undefined
 
     try {
-      lockfileSnapshot = await captureLockfiles(context.cwd)
+      const snapshot = await captureLockfiles(context.cwd)
+      registerPrecommitRollback(context.appData, () =>
+        restoreLockfiles(snapshot),
+      )
       await updatePackageLock(
         context.appData.packageManager,
         {
           cwd: context.cwd,
+          signal: context.signal,
           verbose: true,
         },
         context.appData.packageManagerVariant,
       )
     } catch (lockfileError) {
-      const rollbackErrors: unknown[] = []
-
-      if (lockfileSnapshot) {
-        try {
-          await restoreLockfiles(lockfileSnapshot)
-        } catch (error) {
-          rollbackErrors.push(error)
-        }
-      }
-
-      if (preparedVersionPlan?.version === version) {
-        try {
-          await rollbackVersionPlan(preparedVersionPlan)
-        } catch (error) {
-          rollbackErrors.push(error)
-        }
-
-        context.appData.workspacePackages =
-          preparedVersionPlan.originalWorkspacePackages
-        context.appData.projectPkg = preparedVersionPlan.originalProjectPkg
-      }
-
-      if (rollbackErrors.length) {
-        throw new AggregateError(
-          [lockfileError, ...rollbackErrors],
-          'Lockfile update failed and the version transaction could not be fully restored.',
-          { cause: lockfileError },
-        )
-      }
-
-      throw lockfileError
+      await restoreAfterFailure(lockfileError)
     }
   })
 })
@@ -272,6 +326,7 @@ async function getIncrementVersion(
       context.cwd,
       context.config.git.independent,
       { signal: context.signal },
+      publishablePackageNames,
     )
 
     if (!retryVersion) {

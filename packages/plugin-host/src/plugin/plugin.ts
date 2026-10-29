@@ -202,9 +202,13 @@ export class Plugin {
   /**
    * 加载插件入口函数
    *
+   * @remarks
+   * TypeScript 入口及相对依赖在执行各模块前检查语法，不执行完整类型检查
+   * 加载失败不会回滚已经执行模块的副作用
+   *
    * @returns 插件初始化函数
    * @throws {@link PluginHostError}
-   * 当模块无法加载或没有导出初始化函数时抛出
+   * 当模块语法无效、无法加载或没有导出初始化函数时抛出
    */
   public async loadInitializer(): Promise<PluginInitializer<unknown>> {
     return loadPluginInitializer(this.path, this.type)

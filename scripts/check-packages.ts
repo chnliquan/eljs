@@ -48,6 +48,8 @@ const packagesRoot = path.join(repoRoot, 'packages')
 const smokeRoot = mkdtempSync(path.join(tmpdir(), 'eljs-package-smoke-'))
 const smokeNodeModules = path.join(smokeRoot, 'node_modules')
 const tarballsRoot = path.join(smokeRoot, 'tarballs')
+// 构建工具可使用较新 Node，消费者烟测独立运行在声明的最低支持版本
+const runtimeNode = process.env.ELJS_SMOKE_NODE || process.execPath
 
 function run(
   command: string,
@@ -343,10 +345,10 @@ try {
         hasExportCondition(target, 'require') ||
         (specifier === packageJson.name && supportsRequire(packageJson))
       ) {
-        run(process.execPath, ['-e', `require(${JSON.stringify(specifier)})`])
+        run(runtimeNode, ['-e', `require(${JSON.stringify(specifier)})`])
       }
 
-      run(process.execPath, [
+      run(runtimeNode, [
         '--input-type=module',
         '-e',
         `await import(${JSON.stringify(specifier)})`,
@@ -354,7 +356,7 @@ try {
     }
 
     for (const binPath of Object.values(packageJson.bin || {})) {
-      run(process.execPath, [
+      run(runtimeNode, [
         path.join(installedRoot, normalizePackagePath(binPath)),
         '--help',
       ])
@@ -390,7 +392,7 @@ try {
   )
 
   // 使用发布 tarball 和纯 Node 进程验证配置加载，避免测试转换器掩盖模块解析问题
-  run(process.execPath, [
+  run(runtimeNode, [
     '--input-type=module',
     '-e',
     [
@@ -414,7 +416,7 @@ try {
       "assert.equal(selectedFile, path.join(fixtureRoot, 'fallback.json'))",
     ].join(';'),
   ])
-  run(process.execPath, [
+  run(runtimeNode, [
     '-e',
     [
       "const assert = require('node:assert/strict')",
@@ -434,6 +436,44 @@ try {
     ].join(';'),
   ])
 
+  const pluginFixtureRoot = path.join(smokeRoot, 'plugin-fixture')
+  mkdirSync(pluginFixtureRoot, { recursive: true })
+  writeFileSync(
+    path.join(pluginFixtureRoot, 'helper.ts'),
+    'export const value = 42\n',
+  )
+  writeFileSync(
+    path.join(pluginFixtureRoot, 'valid.cts'),
+    "import { value } from './helper'\nexport default () => value\n",
+  )
+  writeFileSync(
+    path.join(pluginFixtureRoot, 'invalid.ts'),
+    'globalThis.__eljsInvalidPluginExecuted = true\nconst broken: = 1\nexport default () => {}\n',
+  )
+  // 同时验证双格式发布入口，确保纯 Node 的同步 Hook 不被测试转换器替代
+  for (const esm of [true, false]) {
+    run(runtimeNode, [
+      ...(esm ? ['--input-type=module'] : []),
+      '-e',
+      [
+        esm
+          ? "import assert from 'node:assert/strict'"
+          : "const assert = require('node:assert/strict')",
+        esm
+          ? "import { Plugin, PluginHostErrorCode } from '@eljs/plugin-host'"
+          : "const { Plugin, PluginHostErrorCode } = require('@eljs/plugin-host')",
+        `const cwd = ${JSON.stringify(pluginFixtureRoot)}`,
+        'void (async () => {',
+        "const invalid = new Plugin({ cwd, path: './invalid.ts', type: 'plugin' })",
+        'await assert.rejects(invalid.loadInitializer(), error => error.code === PluginHostErrorCode.PluginLoadFailed && error.message.includes("Type expected."))',
+        'assert.equal(globalThis.__eljsInvalidPluginExecuted, undefined)',
+        "const valid = new Plugin({ cwd, path: './valid.cts', type: 'plugin' })",
+        'assert.equal((await valid.loadInitializer())(), 42)',
+        '})().catch(error => { console.error(error); process.exitCode = 1 })',
+      ].join(';'),
+    ])
+  }
+
   const releaseFixtureRoot = path.join(smokeRoot, 'release-fixture')
   mkdirSync(releaseFixtureRoot, { recursive: true })
   writeFileSync(
@@ -441,7 +481,34 @@ try {
     `${JSON.stringify({ name: 'release-fixture', version: '1.0.0' })}\n`,
   )
 
-  run(process.execPath, [
+  // 默认工厂与模板必须在两种模块入口中都可调用，避免仅导入成功掩盖互操作问题
+  const presetRuntimeAssertions = [
+    "assert.equal(preset.whatBump([{ type: 'feat', notes: [] }]).level, 1)",
+    "const markdown = await preset.writer.template({ ...preset.writer, version: '1.0.0', date: '2026-10-29', commitGroups: [{ title: 'Features', commits: [{ notes: [], scope: 'core', subject: 'add presets' }] }], noteGroups: [] })",
+    "assert.ok(markdown.includes('**core:** add presets'))",
+  ]
+  run(runtimeNode, [
+    '--input-type=module',
+    '-e',
+    [
+      "import assert from 'node:assert/strict'",
+      "import createPreset from '@eljs/conventional-changelog-preset'",
+      'const preset = await createPreset()',
+      ...presetRuntimeAssertions,
+    ].join(';'),
+  ])
+  run(runtimeNode, [
+    '-e',
+    [
+      "const assert = require('node:assert/strict')",
+      "const { default: createPreset } = require('@eljs/conventional-changelog-preset')",
+      'createPreset().then(async preset => {',
+      ...presetRuntimeAssertions,
+      '}).catch(error => { console.error(error); process.exitCode = 1 })',
+    ].join(';'),
+  ])
+
+  run(runtimeNode, [
     '--input-type=module',
     '-e',
     [
@@ -452,7 +519,7 @@ try {
       "if (runner.state !== 'ready') throw new Error('Release ESM plugins were not fully loaded')",
     ].join(';'),
   ])
-  run(process.execPath, [
+  run(runtimeNode, [
     '-e',
     [
       "const { ReleaseRunner } = require('@eljs/release')",
@@ -473,7 +540,7 @@ try {
     'module.exports = { defaultQuestions: false, gitInit: false, install: false }\n',
   )
 
-  run(process.execPath, [
+  run(runtimeNode, [
     '--input-type=module',
     '-e',
     [
@@ -482,7 +549,7 @@ try {
       "await creator.run('create-esm-output')",
     ].join(';'),
   ])
-  run(process.execPath, [
+  run(runtimeNode, [
     '-e',
     [
       "const { ProjectCreator } = require('@eljs/create')",
@@ -517,8 +584,30 @@ try {
     )
     .join('\n')
 
-  writeFileSync(path.join(smokeRoot, 'consumer.mts'), `${typeImports}\n`)
-  writeFileSync(path.join(smokeRoot, 'consumer.cts'), `${requireTypeImports}\n`)
+  const presetTypeUsage = [
+    "import createPreset, { type EljsChangelogPreset, type PresetCommit, type WhatBumpResult } from '@eljs/conventional-changelog-preset'",
+    "const commits: PresetCommit[] = [{ type: 'feat', notes: [] }]",
+    'const preset: EljsChangelogPreset = await createPreset()',
+    'const suggestion: WhatBumpResult = preset.whatBump(commits)',
+    'void suggestion',
+  ].join('\n')
+  writeFileSync(
+    path.join(smokeRoot, 'consumer.mts'),
+    `${typeImports}\n${presetTypeUsage}\n`,
+  )
+  const presetRequireTypeUsage = [
+    "import presetPackage = require('@eljs/conventional-changelog-preset')",
+    'const presetPromise: Promise<presetPackage.EljsChangelogPreset> = presetPackage.default()',
+    "const commits: presetPackage.PresetCommit[] = [{ type: 'feat', notes: [] }]",
+    'void presetPromise.then(preset => {',
+    'const suggestion: presetPackage.WhatBumpResult = preset.whatBump(commits)',
+    'void suggestion',
+    '})',
+  ].join('\n')
+  writeFileSync(
+    path.join(smokeRoot, 'consumer.cts'),
+    `${requireTypeImports}\n${presetRequireTypeUsage}\n`,
+  )
   writeFileSync(
     path.join(smokeRoot, 'tsconfig.json'),
     `${JSON.stringify(

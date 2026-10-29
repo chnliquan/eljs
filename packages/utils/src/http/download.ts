@@ -40,7 +40,7 @@ export type { DownloadOptions, DownloadResult } from './download-options'
  * @param destination - 写入或解压资源的目标目录
  * @param options - 下载选项
  * @returns 可作为 Promise 或双工流消费的下载结果
- * @throws URL 协议、HTTP 状态、响应大小或文件处理不符合约束时抛出错误
+ * @throws URL 协议、重定向策略、HTTP 状态、响应大小或文件处理不符合约束时抛出错误
  */
 export default function download(
   url: string,
@@ -54,7 +54,7 @@ export default function download(
  * @param url - 资源地址
  * @param options - 下载选项
  * @returns 可作为 Promise 或双工流消费的下载结果
- * @throws URL 协议、HTTP 状态或响应大小不符合约束时抛出错误
+ * @throws URL 协议、重定向策略、HTTP 状态或响应大小不符合约束时抛出错误
  */
 export default function download(
   url: string,
@@ -105,7 +105,7 @@ export default function download(
  * @param destination - 写入或解压资源的目标目录
  * @param options - 下载选项
  * @returns 文件写入或解压完成后结束
- * @throws URL 协议、HTTP 状态、响应大小或文件处理不符合约束时抛出错误
+ * @throws URL 协议、重定向策略、HTTP 状态、响应大小或文件处理不符合约束时抛出错误
  */
 export async function downloadTo(
   url: string,

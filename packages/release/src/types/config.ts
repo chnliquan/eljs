@@ -45,6 +45,8 @@ export interface Config extends UserConfig {
    * @remarks
    * 用于发布中断后的重试：目标版本由本地 release 标签决定，
    * 已发布包由 registry 事实驱动跳过
+   * 独立模式只匹配当前可发布包的标签，允许部分标签缺失，匹配版本必须唯一
+   * 随后仍须校验包版本和已发布冲突，统一模式也拒绝多个不同版本的发布标签
    *
    * @defaultValue `false`
    */
@@ -70,7 +72,9 @@ export interface Config extends UserConfig {
       | false
       | {
           /**
-           * 更新日志文件名
+           * 工作目录内的更新日志相对路径
+           *
+           * @remarks 允许普通子目录，拒绝越界、子路径符号链接及 Git 元数据目录
            * @defaultValue `CHANGELOG.md`
            */
           filename?: string
@@ -166,7 +170,15 @@ export interface Config extends UserConfig {
      */
     confirm?: boolean
     /**
-     * 附加到 npm publish 命令的参数
+     * 附加到包管理器 publish 命令的选项
+     *
+     * @remarks
+     * 不允许位置参数、目录切换、工作区选择或版本改写，以保持实际发布身份与预检一致
+     * 限制也适用于多横线、否定前缀及规范化后等价的选项名称
+     * 会改变目标的已知别名与缩写同样被拒绝，例如 `--w`、`--ws`、`--C`
+     * 不允许覆盖 registry，包含缩写、作用域配置、配置文件切换及 `--config.*` 包装
+     * 应使用 `npm.registry` 统一配置发布地址
+     * 未知选项的取值应使用 `--option=value` 形式
      */
     publishArgs?: string | string[]
   }

@@ -1,5 +1,6 @@
 /**
  * utils 公共错误码
+ * @remarks `ERR_DOWNLOAD_REDIRECT` 表示重定向地址、降级策略或跳数限制不符合下载约束
  */
 export type UtilsErrorCode =
   | 'ERR_ARCHIVE_TOO_LARGE'
@@ -7,6 +8,7 @@ export type UtilsErrorCode =
   | 'ERR_DOWNLOAD_HTTP_STATUS'
   | 'ERR_DOWNLOAD_INTEGRITY'
   | 'ERR_DOWNLOAD_PROTOCOL'
+  | 'ERR_DOWNLOAD_REDIRECT'
   | 'ERR_DOWNLOAD_REQUEST'
   | 'ERR_DOWNLOAD_TOO_LARGE'
   | 'ERR_EXECUTABLE_NOT_FOUND'

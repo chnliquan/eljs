@@ -427,6 +427,10 @@ Nested preset/plugin initialization errors include their declaration source and 
 Plugin entry files support `.js`, `.cjs`, `.mjs`, `.ts`, and `.cts`. `.jsx`, `.tsx`, `.mts`, and
 exports-only packages are not part of the supported contract. TypeScript plugin loading requires
 TypeScript to be available in the consuming project.
+The loader checks syntax before executing each `.ts` or `.cts` module, including relative
+dependencies, and restores its temporary require hooks after success or failure. It uses fixed
+CommonJS compiler options and does not perform a full type check. Side effects from modules
+that executed before a later dependency failed are not rolled back.
 
 ### Trust model
 

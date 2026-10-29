@@ -1,3 +1,5 @@
+import { run } from '@eljs/utils/cp'
+import { inspect } from 'node:util'
 import { describe, expect, it } from 'vitest'
 /**
  * @file packages/release utils/error 模块单元测试
@@ -149,7 +151,7 @@ describe('应用错误类测试', () => {
 })
 
 describe('ReleasePublishError 错误类测试', () => {
-  it('应该保留结构化发布进度和原始错误', () => {
+  it('应该保留结构化发布进度和安全错误副本', () => {
     const cause = new Error('registry unavailable')
     const error = new ReleasePublishError(
       {
@@ -163,7 +165,11 @@ describe('ReleasePublishError 错误类测试', () => {
 
     expect(error).toBeInstanceOf(AppError)
     expect(error.name).toBe('ReleasePublishError')
-    expect(error.cause).toBe(cause)
+    expect(error.cause).not.toBe(cause)
+    expect(error.cause).toMatchObject({
+      message: 'Release operation failed',
+      name: 'ReleaseCommandError',
+    })
     expect(error.details).toEqual({
       failedPackage: 'app',
       version: '1.2.0',
@@ -184,5 +190,99 @@ describe('ReleasePublishError 错误类测试', () => {
     expect(Object.isFrozen(error.details)).toBe(true)
     expect(Object.isFrozen(error.details.publishedPackages)).toBe(true)
     expect(Object.isFrozen(error.details.unpublishedPackages)).toBe(true)
+  })
+
+  const details = {
+    failedPackage: 'app',
+    version: '1.2.0',
+    publishedPackages: [],
+    unpublishedPackages: ['app'],
+  }
+
+  it('不保留命令、输出、聚合异常和任意 cause 中的凭据', () => {
+    const secret = 'dummy-private-otp'
+    const cause = Object.assign(
+      new AggregateError([new Error(secret)], secret, {
+        cause: new Error(secret),
+      }),
+      {
+        command: `npm publish --otp=${secret}`,
+        escapedCommand: secret,
+        shortMessage: secret,
+        stdout: secret,
+        stderr: secret,
+        code: 'EOTP',
+        exitCode: 1,
+      },
+    )
+    const originalStack = cause.stack
+    const error = new ReleasePublishError(details, cause)
+    expect(error.cause).toMatchObject({ code: 'EOTP', exitCode: 1 })
+    expect(inspect(error, { depth: null })).not.toContain(secret)
+    expect(JSON.stringify(error)).not.toContain(secret)
+    expect(error.stack).not.toContain(secret)
+    expect(cause.stack).toBe(originalStack)
+    expect(cause.message).toBe(secret)
+  })
+
+  it('真实 Execa 启动失败不暴露 OTP 或 registry 用户信息', async () => {
+    const secret = 'dummy-private-otp'
+    const cause = await run(
+      'eljs-deliberately-missing-publish-command',
+      [
+        'publish',
+        `--otp=${secret}`,
+        '--registry=https://user:dummy-password@registry.invalid',
+      ],
+      { env: { PATH: '' }, extendEnv: false },
+    ).catch(error => error)
+    expect(cause.code).toBe('ENOENT')
+    expect(cause.message).toContain(secret)
+    const error = new ReleasePublishError(details, cause)
+    expect(error.cause).toMatchObject({ code: 'ENOENT' })
+    const diagnostic = inspect(error, { depth: null }) + JSON.stringify(error)
+    expect(diagnostic).not.toContain(secret)
+    expect(diagnostic).not.toContain('dummy-password')
+    expect(diagnostic).not.toContain('registry.invalid')
+  })
+
+  it.each([
+    [{ name: 'AbortError' }, { name: 'AbortError', isCanceled: true }],
+    [{ isCanceled: true }, { name: 'AbortError', isCanceled: true }],
+    [{ timedOut: true }, { name: 'TimeoutError', timedOut: true }],
+    [{ name: 'TimeoutError' }, { name: 'TimeoutError', timedOut: true }],
+  ])('保留取消与超时分类 %j', (cause, expected) => {
+    expect(new ReleasePublishError(details, cause).cause).toMatchObject(
+      expected,
+    )
+  })
+
+  it('不执行错误对象的 getter，也不信任未知错误码', () => {
+    const cause = Object.defineProperty(
+      { code: 'secret-error-code', exitCode: Infinity },
+      'name',
+      {
+        get() {
+          throw new Error('must not read accessors')
+        },
+      },
+    )
+    const error = new ReleasePublishError(details, cause)
+    expect(error.cause).not.toHaveProperty('code')
+    expect(error.cause).not.toHaveProperty('exitCode')
+    expect(
+      () =>
+        new ReleasePublishError(
+          details,
+          new Proxy(
+            {},
+            {
+              getOwnPropertyDescriptor() {
+                throw new Error('untrusted proxy')
+              },
+            },
+          ),
+        ),
+    ).not.toThrow()
   })
 })

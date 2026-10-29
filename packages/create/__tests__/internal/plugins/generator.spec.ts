@@ -184,7 +184,11 @@ describe('内部插件 generator', () => {
     it('应该使用 basedir 选项调用 copyFile', async () => {
       generatorPlugin(mockContext)
 
-      const options: CopyFileOptions = { mode: 0o755, basedir: '/custom' }
+      const options: CopyFileOptions = {
+        mode: 0o755,
+        basedir: '/custom',
+        destinationRoot: '/outside',
+      }
       await copyFileCallback('source.txt', 'dest.txt', options)
 
       expect(mockUtils.copyFile).toHaveBeenCalledWith(
@@ -193,6 +197,7 @@ describe('内部插件 generator', () => {
         {
           mode: 0o755,
           basedir: '/test/project',
+          destinationRoot: '/test/project',
         },
       )
     })
@@ -207,6 +212,7 @@ describe('内部插件 generator', () => {
         'dest.txt',
         {
           basedir: '/test/project',
+          destinationRoot: '/test/project',
         },
       )
     })
@@ -231,6 +237,7 @@ describe('内部插件 generator', () => {
           data: { template: 'data' },
           renderOptions: { type: 'ejs', options: { cache: true } },
           basedir: '/test/project',
+          destinationRoot: '/test/project',
         },
       )
     })
@@ -246,6 +253,7 @@ describe('内部插件 generator', () => {
         {},
         {
           basedir: '/test/project',
+          destinationRoot: '/test/project',
         },
       )
     })
@@ -270,6 +278,7 @@ describe('内部插件 generator', () => {
           mode: 0o755,
           data: { template: 'data' },
           basedir: '/test/project',
+          destinationRoot: '/test/project',
         },
       )
     })
@@ -285,6 +294,7 @@ describe('内部插件 generator', () => {
         {},
         {
           basedir: '/test/project',
+          destinationRoot: '/test/project',
         },
       )
     })

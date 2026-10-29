@@ -9,6 +9,8 @@ import {
   stat,
   writeFile,
 } from 'node:fs/promises'
+import { createServer, type RequestListener } from 'node:http'
+import { createConnection, type Socket } from 'node:net'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { c as createTar } from 'tar'
@@ -27,6 +29,7 @@ vi.mock('node:fs/promises', async importOriginal => {
 })
 
 const temporaryPaths: string[] = []
+const nativeFetch = globalThis.fetch
 
 describe('download integration', () => {
   afterEach(async () => {
@@ -41,6 +44,124 @@ describe('download integration', () => {
 
   afterAll(() => {
     vi.unstubAllGlobals()
+  })
+
+  it('promptly cancels a real endless HTTP error body before closing a real proxy', async () => {
+    vi.stubGlobal('fetch', nativeFetch)
+    let closed = false
+    const origin = await serveLocally((_request, response) => {
+      response.writeHead(503)
+      response.write('still failing')
+      const timer = setInterval(() => response.write('more errors'), 10)
+      response.on('close', () => {
+        closed = true
+        clearInterval(timer)
+      })
+    })
+    const proxy = await serveLocally((_request, response) => response.end())
+    const tunnels = new Set<Socket>()
+    proxy.server.on('connect', (request, client, head) => {
+      const target = new URL(`http://${request.url}`)
+      const upstream = createConnection({
+        host: target.hostname,
+        port: Number(target.port),
+      })
+      tunnels.add(upstream)
+      upstream.on('error', () => client.destroy())
+      client.on('error', () => upstream.destroy())
+      client.on('close', () => upstream.destroy())
+      upstream.on('connect', () => {
+        client.write('HTTP/1.1 200 Connection Established\r\n\r\n')
+        upstream.write(head)
+        client.pipe(upstream).pipe(client)
+      })
+    })
+    const started = Date.now()
+    try {
+      await expect(
+        download(`${origin.url}/file`, {
+          proxy: proxy.url,
+          timeout: 0,
+          signal: AbortSignal.timeout(1500),
+        }),
+      ).rejects.toMatchObject({ code: 'ERR_DOWNLOAD_HTTP_STATUS' })
+      expect(Date.now() - started).toBeLessThan(1000)
+      await vi.waitFor(() => expect(closed).toBe(true))
+    } finally {
+      for (const tunnel of tunnels) {
+        tunnel.destroy()
+      }
+      await Promise.all([origin.close(), proxy.close()])
+    }
+  })
+
+  it('cancels real endless redirect bodies and removes credentials before contacting another origin', async () => {
+    vi.stubGlobal('fetch', nativeFetch)
+    let receivedHeaders: Record<string, unknown> = {}
+    let closed = false
+    const target = await serveLocally((request, response) => {
+      receivedHeaders = request.headers
+      response.end('verified')
+    })
+    const origin = await serveLocally((_request, response) => {
+      response.writeHead(302, { location: `${target.url}/final` })
+      response.write('redirect never finishes')
+      const timer = setInterval(() => response.write('more'), 10)
+      response.on('close', () => {
+        closed = true
+        clearInterval(timer)
+      })
+    })
+    try {
+      await expect(
+        download(`${origin.url}/file`, {
+          headers: {
+            'X-Api-Key': 'private',
+            Authorization: 'secret',
+            Cookie: 'private',
+            Accept: 'application/octet-stream',
+          },
+          timeout: 1500,
+          maxBytes: 8,
+        }),
+      ).resolves.toEqual(Buffer.from('verified'))
+      expect(receivedHeaders).toMatchObject({
+        accept: 'application/octet-stream',
+      })
+      expect(receivedHeaders).not.toHaveProperty('x-api-key')
+      expect(receivedHeaders).not.toHaveProperty('authorization')
+      expect(receivedHeaders).not.toHaveProperty('cookie')
+      await vi.waitFor(() => expect(closed).toBe(true))
+    } finally {
+      await Promise.all([origin.close(), target.close()])
+    }
+  })
+
+  it('applies one timeout across redirects and final body consumption', async () => {
+    vi.stubGlobal('fetch', nativeFetch)
+    const origin = await serveLocally((request, response) => {
+      if (request.url === '/file') {
+        const timer = setTimeout(() => {
+          response.writeHead(302, { location: '/final' })
+          response.end()
+        }, 120)
+        response.on('close', () => clearTimeout(timer))
+      } else {
+        response.writeHead(200)
+        response.write('partial')
+        const timer = setTimeout(() => response.end('done'), 160)
+        response.on('close', () => clearTimeout(timer))
+      }
+    })
+    try {
+      await expect(
+        download(`${origin.url}/file`, {
+          timeout: 220,
+        }),
+      ).rejects.toMatchObject({ code: 'ERR_OPERATION_ABORTED' })
+    } finally {
+      await origin.close()
+    }
   })
 
   it('stops reading and cancels a chunked body as soon as the buffer limit is exceeded', async () => {
@@ -301,4 +422,30 @@ async function createTemporaryDirectory(): Promise<string> {
   const temporaryPath = await mkdtemp(path.join(tmpdir(), 'eljs-download-'))
   temporaryPaths.push(temporaryPath)
   return temporaryPath
+}
+
+async function serveLocally(handler: RequestListener) {
+  const server = createServer(handler)
+  const sockets = new Set<Socket>()
+  server.on('connection', socket => {
+    sockets.add(socket)
+    socket.on('close', () => sockets.delete(socket))
+  })
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
+  const address = server.address()
+  if (!address || typeof address === 'string') {
+    throw new Error('Missing local server address')
+  }
+  return {
+    server,
+    url: `http://127.0.0.1:${address.port}`,
+    async close() {
+      for (const socket of sockets) {
+        socket.destroy()
+      }
+      await new Promise<void>((resolve, reject) => {
+        server.close(error => (error ? reject(error) : resolve()))
+      })
+    },
+  }
 }

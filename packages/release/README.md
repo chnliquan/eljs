@@ -534,6 +534,11 @@ published. Packages already present in the registry are verified against the
 local tag and skipped; the remaining packages are then published before the
 commit and tags are pushed.
 
+Independent retry only considers tags for currently publishable workspace
+packages. Missing package tags are allowed, but matched tags must identify one
+version. Unified retry also rejects conflicting `v<version>` tags rather than
+choosing the highest version.
+
 Programmatic callers can inspect `ReleasePublishError.details` for
 `failedPackage`, `publishedPackages`, and `unpublishedPackages`. Do not amend,
 delete, or move the local release tag before retrying.
@@ -542,10 +547,13 @@ Automatic recovery relies on the default `git.commit: true` workflow. When Git
 commits and tags are disabled, reconcile any partially published package set
 manually before starting another release.
 
-Manifest and lockfile updates are transactional within the built-in version
-plugin. If lockfile generation fails, all changed manifests and supported
-lockfiles (`package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `bun.lock`, and
-legacy `bun.lockb`) are restored before the error is reported.
+Before entering the built-in Git commit or publish command, failure or cancellation
+restores built-in manifest, lockfile and changelog changes, including original
+bytes, permissions and existence. Supported lockfiles include `package-lock.json`,
+`pnpm-lock.yaml`, `yarn.lock`, `bun.lock` and legacy `bun.lockb`. Newly created empty
+changelog directories are removed; unrelated custom Hook files remain intact.
+Once the commit or publish call begins, rollback is disabled because that command
+may have completed a side effect even if it reports failure.
 
 ## 📦 Package Manager Compatibility
 
@@ -556,6 +564,36 @@ supported. Yarn Berry is distinguished by the declaration or `.yarnrc.yml`, so i
 `yarn publish`. Bun 1.2+ `bun.lock` and legacy `bun.lockb` are both detected.
 When Yarn Berry is used, any manifest `publishConfig.registry` must match an
 explicit `npm.registry`, because Yarn gives the manifest value precedence.
+
+After all `onBeforeRelease` Hooks, disk manifests are checked before the Git
+commit, then checked again before each package is published. pnpm's
+`publishConfig.directory` is checked as the effective publish directory. Prepare
+its manifest in `onBeforeRelease` when building publish artifacts; the check does
+not run `pack` or lifecycle scripts. It guarantees the manifest state before the
+command starts, without locking the final tarball or external filesystem writers.
+`dryRun` uses the in-memory plan and does not require built artifacts.
+
+`publishArgs` cannot override the registry, publish directory, workspace selection
+or version. Registry overrides include scoped settings, configuration-file
+selectors such as `--userconfig`, and pnpm `--config.*` options. Configure the
+registry through `npm.registry`. Values for other unknown options must use the
+`--option=value` form. Target restrictions also apply to normalized option
+names, including multi-hyphen forms such as `---workspace`.
+Known target-changing aliases and abbreviations such as `--w`, `--ws`, `--C`,
+and `--prefi` are also rejected, as are workspace-root inclusion options,
+pnpm `-F`, and `--workspace-packages`. npm's lowercase `-f` remains available.
+
+Publish commands do not echo their arguments or stream subprocess output to
+logs, because OTP values and registry URLs may contain credentials. Publish
+errors retain structured progress and a safe `cause` with exit codes, recognized
+error codes, and cancellation status; raw command errors, output, and original
+cause chains are discarded. Owner-check command failures use the same safe
+diagnostics.
+
+Changelog generation receives the runner's cancellation signal. The exported
+`getChangelog({ cwd, signal })` helper also supports cancellation: an already
+aborted signal starts no Git process, and cancellation waits for active Git
+processes to close before rejecting with the signal's original reason.
 
 ## 🧑‍💻 Development
 

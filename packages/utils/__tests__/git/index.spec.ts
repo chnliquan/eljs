@@ -16,6 +16,7 @@ import * as importedModule3 from '../../src/guards'
 import { execa, type Result } from 'execa'
 import ini from 'ini'
 import path from 'node:path'
+import { inspect } from 'node:util'
 
 import {
   cloneGitRepository,
@@ -625,7 +626,7 @@ describe('Git 工具函数', () => {
         await expect(
           cloneGitRepository('https://github.com/user/repo.git'),
         ).rejects.toThrow(
-          'Download https://github.com/user/repo.git failed: 网络错误.',
+          'Download https://github.com/user/repo.git failed (ERR_PROCESS_SPAWN)',
         )
         expect(mockRemove).toHaveBeenCalledWith(tempDir)
       })
@@ -666,10 +667,81 @@ describe('Git 工具函数', () => {
         )
 
         await expect(operation).rejects.toThrow(
-          'Download https://github.com/user/repo.git failed: 网络错误.',
+          'Download https://github.com/user/repo.git failed (ERR_PROCESS_SPAWN)',
         )
         await expect(operation).rejects.not.toThrow(/token|secret|signature/u)
       })
+
+      it('不保留异常图中的原始消息、命令输出、cause 或聚合成员', async () => {
+        const url =
+          'https://token:secret@github.com/user/repo.git?signature=private#main'
+        const cause = Object.assign(new Error(url), {
+          command: url,
+          escapedCommand: url,
+          stdout: url,
+          stderr: url,
+          exitCode: 128,
+          cause: new AggregateError([new Error(url)], url),
+        })
+        const cleanup = Object.assign(new Error(url), {
+          code: 'EACCES',
+          path: url,
+          cause,
+        })
+        mockCreateTempDir.mockResolvedValue('/tmp/test-dir')
+        mockRun.mockRejectedValue(cause)
+        mockRemove.mockRejectedValueOnce(cleanup)
+
+        const error = await cloneGitRepository(url).catch(error => error)
+        expect(error).toMatchObject({
+          errors: [
+            { code: 'ERR_PROCESS_EXIT', details: { exitCode: 128 } },
+            { details: { errno: 'EACCES' } },
+          ],
+        })
+        expect(inspect(error, { depth: null })).not.toMatch(
+          /token|secret|signature|private/u,
+        )
+        expect(JSON.stringify(error)).not.toMatch(
+          /token|secret|signature|private/u,
+        )
+        expect(cause.message).toBe(url)
+        expect(cleanup.message).toBe(url)
+      })
+
+      it('取消原因含凭据时仍保留取消分类并清理临时目录', async () => {
+        const controller = new AbortController()
+        const reason = new Error('https://token:secret@host/?signature=private')
+        controller.abort(reason)
+        mockCreateTempDir.mockResolvedValue('/tmp/test-dir')
+        mockRun.mockRejectedValue(reason)
+
+        const error = await cloneGitRepository('https://host/repo', {
+          signal: controller.signal,
+        }).catch(error => error)
+        expect(error).toMatchObject({ code: 'ERR_OPERATION_ABORTED' })
+        expect(inspect(error, { depth: null })).not.toMatch(
+          /token|secret|signature|private/u,
+        )
+        expect(mockRemove).toHaveBeenCalledWith('/tmp/test-dir')
+      })
+
+      it.each([
+        ['https://token:secret@host/repo?signature=private#%ZZ', undefined],
+        ['token:secret@host:repo?signature=private', 'token:secret'],
+      ])(
+        '解析失败或抛出非 Error 值时仍输出安全异常：%s',
+        async (url, thrown) => {
+          mockCreateTempDir.mockResolvedValue('/tmp/test-dir')
+          mockRun.mockRejectedValue(thrown)
+          const error = await cloneGitRepository(url).catch(error => error)
+          expect(error).toMatchObject({ code: 'ERR_PROCESS_SPAWN' })
+          expect(inspect(error, { depth: null })).not.toMatch(
+            /token|secret|signature|private|%ZZ/u,
+          )
+          expect(mockRemove).toHaveBeenCalledWith('/tmp/test-dir')
+        },
+      )
     })
   })
 

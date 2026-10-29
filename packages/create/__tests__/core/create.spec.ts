@@ -28,6 +28,7 @@ import { AppError, onCancel } from '../../src/utils'
 const { mockCp } = vi.hoisted(() => ({ mockCp: vi.fn() }))
 const targetLockMocks = vi.hoisted(() => ({
   acquireTargetLock: vi.fn(),
+  commitTargetLock: vi.fn(),
   releaseTargetLock: vi.fn(),
   updateTargetLockBackup: vi.fn(),
 }))
@@ -117,7 +118,9 @@ describe('ProjectCreator 类完整测试', () => {
       path: '/mock/cwd/.eljs-create-target.lock',
       cwd: mockCwd,
       metadata: {
-        version: 1,
+        version: 2,
+        cwd: mockCwd,
+        phase: 'active',
         ownerId: 'test-owner',
         pid: process.pid,
         hostname: 'test-host',
@@ -128,6 +131,7 @@ describe('ProjectCreator 类完整测试', () => {
     })
     targetLockMocks.releaseTargetLock.mockResolvedValue(undefined)
     targetLockMocks.updateTargetLockBackup.mockResolvedValue(undefined)
+    targetLockMocks.commitTargetLock.mockResolvedValue(undefined)
 
     mockedPath.resolve.mockImplementation((...paths) => {
       let lastAbsoluteIndex = 0
@@ -328,17 +332,20 @@ describe('ProjectCreator 类完整测试', () => {
 
       expect(mockedEljs.move).toHaveBeenCalledWith(
         '/mock/cwd/existing-project',
-        expect.stringMatching(/^\/mock\/cwd\/\.eljs-backup-/u),
+        expect.stringMatching(/^\/test\/cwd\/\.eljs-backup-/u),
       )
       expect(mockedEljs.mkdir).toHaveBeenCalledWith(
         '/mock/cwd/existing-project',
       )
       expect(mockedEljs.remove).toHaveBeenCalledWith(
-        expect.stringMatching(/^\/mock\/cwd\/\.eljs-backup-/u),
+        expect.stringMatching(/^\/test\/cwd\/\.eljs-backup-/u),
       )
       expect(mockedEljs.remove.mock.invocationCallOrder[0]).toBeLessThan(
         targetLockMocks.updateTargetLockBackup.mock.invocationCallOrder[1],
       )
+      expect(
+        targetLockMocks.commitTargetLock.mock.invocationCallOrder[0],
+      ).toBeLessThan(mockedEljs.remove.mock.invocationCallOrder[0])
     })
 
     it('备份日志失败时仍然执行可恢复覆盖', async () => {
@@ -356,7 +363,7 @@ describe('ProjectCreator 类完整测试', () => {
 
       expect(mockedEljs.move).toHaveBeenCalledWith(
         '/mock/cwd/existing-project',
-        expect.stringMatching(/^\/mock\/cwd\/\.eljs-backup-/u),
+        expect.stringMatching(/^\/test\/cwd\/\.eljs-backup-/u),
       )
     })
 
@@ -463,7 +470,10 @@ describe('ProjectCreator 类完整测试', () => {
         2,
         backupPath,
         '/mock/cwd/existing-project',
-        true,
+        false,
+      )
+      expect(mockedEljs.remove).toHaveBeenCalledWith(
+        '/mock/cwd/existing-project',
       )
     })
 
@@ -493,7 +503,7 @@ describe('ProjectCreator 类完整测试', () => {
       )
       expect(mockedEljs.move).toHaveBeenCalledTimes(1)
       expect(mockedEljs.remove).toHaveBeenCalledWith(
-        expect.stringMatching(/^\/mock\/cwd\/\.eljs-backup-/u),
+        expect.stringMatching(/^\/test\/cwd\/\.eljs-backup-/u),
       )
       expect(targetLockMocks.updateTargetLockBackup).toHaveBeenLastCalledWith(
         expect.anything(),

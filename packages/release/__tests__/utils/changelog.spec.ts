@@ -47,6 +47,9 @@ describe('更新日志生成工具函数测试', () => {
   let mockStream: {
     pipe: Mock
     on: Mock
+    removeListener: Mock
+    unpipe: Mock
+    destroy: Mock
   }
 
   beforeEach(() => {
@@ -55,6 +58,9 @@ describe('更新日志生成工具函数测试', () => {
     mockStream = {
       pipe: vi.fn(),
       on: vi.fn(),
+      removeListener: vi.fn(),
+      unpipe: vi.fn(),
+      destroy: vi.fn(),
     }
 
     generator = {
@@ -88,11 +94,110 @@ describe('更新日志生成工具函数测试', () => {
     ;(concat as Mock).mockImplementation(callback => {
       return {
         callback,
+        on: vi.fn(),
+        removeListener: vi.fn(),
+        destroy: vi.fn(),
       }
     })
   })
 
   describe('getChangelog 函数', () => {
+    it.each([
+      new Error('用户取消'),
+      new DOMException('超时', 'TimeoutError'),
+      '取消原因',
+      null,
+    ])('预取消应保留原始原因且不初始化生成器：%s', async reason => {
+      const controller = new AbortController()
+      controller.abort(reason)
+
+      await expect(getChangelog({ signal: controller.signal })).rejects.toBe(
+        reason,
+      )
+      expect(ConventionalChangelogMock).not.toHaveBeenCalled()
+    })
+
+    it('初始化导入期间取消应释放监听器且不创建生成器', async () => {
+      const controller = new AbortController()
+      const add = vi.spyOn(controller.signal, 'addEventListener')
+      const remove = vi.spyOn(controller.signal, 'removeEventListener')
+      const reason = new Error('初始化取消')
+      const result = getChangelog({ signal: controller.signal })
+      controller.abort(reason)
+
+      await expect(result).rejects.toBe(reason)
+      await new Promise(resolve => setTimeout(resolve, 0))
+      expect(ConventionalChangelogMock).not.toHaveBeenCalled()
+      expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0][1])
+    })
+
+    it.each([
+      'success',
+      'failure',
+      'abort',
+      'abort-string',
+      'abort-null',
+      'sink-close',
+      'stream-close',
+      'sink-error',
+    ] as const)('%s 应释放取消监听器且安全处理晚到流错误', async outcome => {
+      const controller = new AbortController()
+      const add = vi.spyOn(controller.signal, 'addEventListener')
+      const remove = vi.spyOn(controller.signal, 'removeEventListener')
+      const reason =
+        outcome === 'abort-string'
+          ? '生成取消'
+          : outcome === 'abort-null'
+            ? null
+            : new DOMException('生成超时', 'TimeoutError')
+      const result = getChangelog({ signal: controller.signal })
+      const assertion =
+        outcome === 'success'
+          ? expect(result).resolves.toBe('rendered')
+          : outcome === 'stream-close'
+            ? expect(result).rejects.toThrow(
+                'Changelog stream closed before completion',
+              )
+            : outcome === 'sink-close'
+              ? expect(result).rejects.toThrow(
+                  'Changelog output closed before completion',
+                )
+              : expect(result).rejects.toBe(reason)
+      await vi.waitFor(() => expect(mockStream.pipe).toHaveBeenCalled())
+      const sink = mockStream.pipe.mock.calls[0][0]
+      const onError = mockStream.on.mock.calls.find(
+        ([event]) => event === 'error',
+      )?.[1]
+      if (outcome === 'success') {
+        sink.callback(Buffer.from(' rendered \n'))
+      } else if (outcome === 'failure') {
+        onError(reason)
+      } else if (outcome === 'sink-close') {
+        sink.on.mock.calls.find(([event]: [string]) => event === 'close')[1]()
+      } else if (outcome === 'stream-close') {
+        mockStream.on.mock.calls.find(([event]) => event === 'close')?.[1]()
+      } else if (outcome === 'sink-error') {
+        sink.on.mock.calls.find(([event]: [string]) => event === 'error')[1](
+          reason,
+        )
+      } else {
+        controller.abort(reason)
+      }
+      await assertion
+      expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0][1])
+      expect(() => onError(new Error('晚到错误'))).not.toThrow()
+      if (outcome !== 'success') {
+        expect(mockStream.destroy).toHaveBeenCalledOnce()
+        expect(sink.destroy).toHaveBeenCalledOnce()
+        // concat 即便晚到回调，也不能将已取消的生成变成成功
+        sink.callback(Buffer.from('late'))
+      }
+      mockStream.on.mock.calls.find(([event]) => event === 'close')?.[1]()
+      sink.on.mock.calls.find(([event]: [string]) => event === 'close')[1]()
+      expect(mockStream.removeListener).toHaveBeenCalledWith('error', onError)
+      expect(sink.removeListener).toHaveBeenCalledWith('error', onError)
+    })
+
     it('应该使用默认配置生成更新日志', async () => {
       const options: GenerateChangelogOptions = {}
       const expectedChangelog = '# Changelog\n\n## v1.0.0\n- 新功能'

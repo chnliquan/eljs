@@ -68,9 +68,15 @@ conventional-changelog-preset ─> release
 ```
 
 `cache` is an independent foundation package. `conventional-changelog-preset`
-is an independent native ESM package consumed by the release tooling. The
-TypeScript packages publish separate CommonJS and native ESM runtime entries,
+is an independent TypeScript package consumed by the release tooling. All
+packages publish separate CommonJS and native ESM runtime entries,
 selected through package exports, plus TypeScript declarations.
+
+The repository toolchain requires Node.js 22.18 or newer, while published
+packages support Node.js 22.14. CI builds with Node.js 24 and runs tarball
+consumer checks with Node.js 22.14 using `ELJS_SMOKE_NODE`. This variable selects
+the consumer executable only; installation and declaration checks continue to
+use the toolchain Node.
 
 ## Naming conventions
 

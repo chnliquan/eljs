@@ -2,10 +2,11 @@ import { execFile } from 'node:child_process'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { promisify } from 'node:util'
+import { inspect, promisify } from 'node:util'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as cp from '../../src/cp'
+import { cloneGitRepository } from '../../src/git/download'
 import { isGitAheadRemote, isGitBehindRemote } from '../../src/git/is'
 import { gitCommit, gitPush } from '../../src/git/operations'
 
@@ -59,6 +60,43 @@ describe('Git 命令回归', () => {
     const before = (await git(['rev-parse', 'HEAD'])).stdout
     await expect(gitCommit('no changes', { cwd, env })).resolves.toBeUndefined()
     expect((await git(['rev-parse', 'HEAD'])).stdout).toBe(before)
+  })
+
+  it('真实 Execa spawn 失败包含凭据时仅输出安全分类和 errno', async () => {
+    const url =
+      'https://fixture-user:fixture-password@example.invalid/repo?fixture-query=fixture-value#main'
+    let original: unknown
+    vi.mocked(cp.run).mockImplementation(((command, args, options) => {
+      const child = actualCp.run(command, args as string[], {
+        ...options,
+        env: { ...env, PATH: path.join(root, 'missing-bin') },
+        preferLocal: false,
+      })
+      return child.catch(error => {
+        original = error
+        throw error
+      })
+    }) as typeof cp.run)
+
+    const error = await cloneGitRepository(url, { dest: cwd }).catch(
+      error => error,
+    )
+    expect(original).toMatchObject({ code: 'ENOENT' })
+    expect(inspect(original, { depth: null })).toContain('fixture-password')
+    expect(error).toMatchObject({
+      code: 'ERR_PROCESS_SPAWN',
+      operation: 'git.clone',
+      details: { errno: 'ENOENT', source: 'https://example.invalid/repo' },
+    })
+    for (const output of [
+      inspect(error, { depth: null }),
+      JSON.stringify(error),
+      error.stack,
+    ]) {
+      expect(output).not.toMatch(
+        /fixture-user|fixture-password|fixture-query|fixture-value/u,
+      )
+    }
   })
 
   it.each([{}, { encoding: 'buffer' }, { lines: true }] as const)(

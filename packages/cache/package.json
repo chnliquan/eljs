@@ -47,9 +47,9 @@
     "clean": "rimraf dist",
     "dev": "rslib build --watch",
     "lint": "eslint src __tests__ --max-warnings=0",
-    "test": "vitest run --config ../../vitest.config.mts packages/cache/__tests__",
-    "test:coverage": "vitest run --config ../../vitest.config.mts packages/cache/__tests__ --coverage --coverage.include='packages/cache/src/**/*.ts'",
-    "test:watch": "vitest --config ../../vitest.config.mts packages/cache/__tests__",
+    "test": "vitest run --config ../../vitest.config.ts packages/cache/__tests__",
+    "test:coverage": "vitest run --config ../../vitest.config.ts packages/cache/__tests__ --coverage --coverage.include='packages/cache/src/**/*.ts'",
+    "test:watch": "vitest --config ../../vitest.config.ts packages/cache/__tests__",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json"
   },
   "engines": {

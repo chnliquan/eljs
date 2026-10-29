@@ -22,8 +22,18 @@ export interface DownloadOptions {
    */
   filename?: string
 
-  /** HTTP 请求头 */
+  /**
+   * HTTP 请求头
+   * @remarks 跨 origin 重定向仅保留 accept、accept-encoding、accept-language、user-agent 和 range，不恢复已移除的头
+   */
   headers?: Headers | Record<string, string> | Array<[string, string]>
+
+  /**
+   * 是否允许 HTTPS 重定向到 HTTP
+   * @remarks 仅在可信下载链路需要降级兼容时显式启用，跨 origin 的凭证头仍会移除
+   * @defaultValue false
+   */
+  allowInsecureRedirects?: boolean
 
   /**
    * Subresource Integrity 格式的预期内容摘要
@@ -36,6 +46,12 @@ export interface DownloadOptions {
    * @defaultValue 104857600
    */
   maxBytes?: number
+
+  /**
+   * 允许跟随的最大重定向跳数，设置为 `0` 时拒绝重定向
+   * @defaultValue 20
+   */
+  maxRedirects?: number
 
   /** 解压归档时允许处理的最大条目数，设置为 `0` 时不限制 */
   maxEntries?: number
@@ -59,7 +75,7 @@ export interface DownloadOptions {
   strip?: number
 
   /**
-   * 请求超时时间，单位为毫秒，设置为 `0` 时不启用超时
+   * 整个请求链及最终响应读取的超时时间，单位为毫秒，设置为 `0` 时不启用超时
    * @defaultValue 30000
    */
   timeout?: number

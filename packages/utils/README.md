@@ -90,6 +90,13 @@ product workflows or domain policy.
 
 ### Files and Loaders
 
+File and template copies accept `destinationRoot` to enforce an output boundary
+after filename rendering. The root must exist; descendant symbolic links,
+including dangling links, and paths outside the root are rejected before writing.
+`basedir` remains a logging option. `resolveWriteDestination()` and its synchronous
+counterpart expose the same check for other writes. Callers must keep exclusive
+ownership of the output directory until the write finishes.
+
 ```ts
 import { copyDirectory, readJson, writeJsonAtomic } from '@eljs/utils/file'
 import { loadYaml } from '@eljs/utils/loader'
@@ -277,6 +284,30 @@ into the destination directly and may leave extracted entries on failure.
 `downloadNpmTarball()` always extracts with `strip: 1`; its dedicated
 `DownloadNpmTarballOptions` omits these fixed settings while remaining
 compatible with existing `DownloadOptions` variables.
+
+Downloads follow redirects manually, canceling each intermediate or failed
+response body before continuing or closing the proxy. `maxRedirects` defaults
+to 20; `0` rejects redirects. HTTPS to HTTP redirects are rejected unless
+`allowInsecureRedirects: true` is explicitly set for a trusted legacy endpoint.
+Across origins (including changes of port or protocol), only `accept`,
+`accept-encoding`, `accept-language`, `user-agent`, and `range` survive from
+caller headers. Custom authentication headers, cookies, and authorization
+headers are removed and never restored later in the chain. Use a signed
+destination URL when a CDN requires authentication. Redirect URLs containing
+userinfo or non-HTTP(S) protocols are rejected with `ERR_DOWNLOAD_REDIRECT`.
+The entire redirect chain and final body share one timeout, cancellation
+signal, and proxy; `maxBytes` still limits the final downloaded content.
+Independent response cancellation and proxy cleanup failures are retained
+alongside the original error in an `AggregateError`.
+
+`cloneGitRepository()` creates safe `UtilsError` diagnostics instead of
+exposing the underlying Execa error. Messages and details omit URL userinfo,
+query, and fragment; raw command, output, metadata, and cause graphs are not
+retained. Stable process/abort codes, numeric exit codes, and selected system
+error codes remain available. Cancellation still terminates the subprocess
+but reports `ERR_OPERATION_ABORTED` without retaining the caller's reason.
+Owned temporary-directory cleanup failures are sanitized independently and
+combined in an `AggregateError`; caller-supplied destinations are retained.
 
 ## API Naming Changes
 

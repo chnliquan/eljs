@@ -8,6 +8,11 @@ import { resolve } from 'node:path'
 
 import { definePlugin } from '../../define'
 
+/**
+ * 注册受项目输出根目录约束的复制能力，调用选项不能取消写入边界
+ *
+ * @internal
+ */
 export default definePlugin(context => {
   context.registerCapability('resolve', (...paths: string[]) => {
     return resolve(context.paths.target, ...paths)
@@ -18,6 +23,7 @@ export default definePlugin(context => {
     await copyFile(from, to, {
       ...options,
       basedir: context.paths.target,
+      destinationRoot: context.paths.target,
     })
   })
 
@@ -28,6 +34,7 @@ export default definePlugin(context => {
       await copyTemplate(from, to, data, {
         ...options,
         basedir: context.paths.target,
+        destinationRoot: context.paths.target,
       })
     },
   )
@@ -39,6 +46,7 @@ export default definePlugin(context => {
       await copyDirectory(from, to, data, {
         ...options,
         basedir: context.paths.target,
+        destinationRoot: context.paths.target,
       })
     },
   )

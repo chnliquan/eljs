@@ -14,13 +14,24 @@ import {
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import { getNpmUser, logger, normalizeArgs, run } from '@eljs/utils'
+import { inspect } from 'node:util'
 
 import npmPlugin from '../../../src/internal/plugins/npm'
+import { createPublishPlan } from '../../../src/internal/publish-plan'
 import type {
   Config,
   PrereleaseId,
   ReleasePluginContext,
 } from '../../../src/types'
+
+vi.mock('../../../src/internal/publish-plan', async importOriginal => ({
+  ...(await importOriginal<
+    typeof import('../../../src/internal/publish-plan')
+  >()),
+  inspectPublishPlan: vi.fn(async (appData, _expected, version) =>
+    createPublishPlan(appData, version),
+  ),
+}))
 
 // 定义测试专用的 Mock API 类型，基于源代码类型
 interface NpmTestApi {
@@ -316,6 +327,32 @@ describe('NPM 插件测试', () => {
         onCheckHandler({ releaseTypeOrVersion: 'minor' }),
       ).resolves.toBeUndefined()
     })
+
+    it.each(['whoami', 'owner'])(
+      '%s 命令失败不向外传播 registry 凭据或原始输出',
+      async command => {
+        const secret = 'dummy-private-token'
+        mockContext.appData.registry = `https://user:${secret}@registry.invalid`
+        if (command === 'owner') {
+          vi.mocked(run).mockResolvedValueOnce({
+            stdout: 'test-user',
+            stderr: '',
+          } as Awaited<ReturnType<typeof run>>)
+        }
+        vi.mocked(run).mockRejectedValueOnce(
+          Object.assign(new Error(`command failed ${secret}`), {
+            stderr: secret,
+            cause: new Error(secret),
+            code: 'E401',
+          }),
+        )
+        const error = await onCheckHandler({
+          releaseTypeOrVersion: 'minor',
+        }).catch(value => value)
+        expect(error).toMatchObject({ code: 'E401' })
+        expect(inspect(error, { depth: null })).not.toContain(secret)
+      },
+    )
 
     it('当不需要检查所有者时应该跳过', async () => {
       mockContext.config.npm!.requireOwner = false
@@ -679,6 +716,42 @@ describe('NPM 插件测试', () => {
       expect(logger.error).toHaveBeenCalled()
     })
 
+    it('发布失败日志和错误图不包含 OTP、命令输出或 registry 凭据', async () => {
+      const secret = 'dummy-private-otp'
+      mockContext.config.npm!.publishArgs = ['--otp', secret]
+      mockContext.appData.registry =
+        'https://user:dummy-password@registry.invalid'
+      ;(run as MockedFunction<typeof run>).mockRejectedValueOnce(
+        Object.assign(new Error(`npm publish --otp=${secret}`), {
+          stderr: 'dummy-password',
+          cause: new Error(secret),
+          exitCode: 1,
+        }),
+      )
+      const error = await onReleaseHandler({
+        version: '1.1.0',
+        isPrerelease: false,
+        prereleaseId: null,
+        changelog: 'test',
+      }).catch(value => value)
+      expect(error.cause).toMatchObject({ exitCode: 1 })
+      const output =
+        inspect(error, { depth: null }) +
+        inspect(vi.mocked(logger.error).mock.calls)
+      expect(output).not.toContain(secret)
+      expect(output).not.toContain('dummy-password')
+      expect(run).toHaveBeenCalledWith(
+        'npm',
+        expect.arrayContaining(['--otp', secret]),
+        expect.objectContaining({
+          verbose: false,
+          stdout: 'pipe',
+          stderr: 'pipe',
+          stdin: 'inherit',
+        }),
+      )
+    })
+
     it('应该在首个失败后停止并报告已经发布和尚未发布的包', async () => {
       setWorkspacePackages(mockContext, [
         { name: 'core', version: '1.1.0', rootPath: '/test/core' },
@@ -880,7 +953,7 @@ describe('NPM 插件测试', () => {
 
       await expect(
         onCheckHandler({ releaseTypeOrVersion: 'minor' }),
-      ).rejects.toThrow('无法获取用户信息')
+      ).rejects.toThrow('Release operation failed')
     })
   })
 })

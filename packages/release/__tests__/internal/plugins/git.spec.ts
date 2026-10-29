@@ -24,6 +24,7 @@ import {
   writeFileAtomic,
 } from '@eljs/utils'
 
+import path from 'node:path'
 import gitPlugin from '../../../src/internal/plugins/git'
 import type {
   Config,
@@ -32,8 +33,24 @@ import type {
 } from '../../../src/types'
 import { getChangelog, isGitTagAtHead } from '../../../src/utils'
 
+vi.mock('../../../src/internal/changelog-path', () => ({
+  resolveChangelogPath: vi.fn(async (cwd: string, filename: string) =>
+    path.join(cwd, filename),
+  ),
+}))
+vi.mock('node:fs/promises', async importOriginal => ({
+  ...(await importOriginal<typeof import('node:fs/promises')>()),
+  mkdir: vi.fn(async () => undefined),
+}))
+vi.mock('../../../src/internal/lockfile-transaction', () => ({
+  captureFileSnapshots: vi.fn(async () => []),
+  restoreLockfiles: vi.fn(async () => undefined),
+}))
+
 // 定义测试专用的 Mock API 类型，基于源代码类型但适应测试环境
 interface GitTestApi {
+  onError: ReturnType<typeof vi.fn>
+  onAfterRelease: ReturnType<typeof vi.fn>
   onCheck: MockedFunction<
     (
       handler: (args: { releaseTypeOrVersion?: string }) => Promise<void>,
@@ -166,6 +183,8 @@ describe('Git 插件测试', () => {
       getChangelog: vi.fn(),
       onBeforeRelease: vi.fn(),
       onRelease: vi.fn(),
+      onError: vi.fn(),
+      onAfterRelease: vi.fn(),
       step: vi.fn(),
       config: {
         git: {
@@ -672,6 +691,7 @@ describe('Git 插件测试', () => {
 
     it('恢复部分发布时应该复用已有提交和标签', async () => {
       mockContext.appData.existingPkgNames = ['it-package']
+      vi.mocked(isGitTagAtHead).mockResolvedValue(true)
 
       await onReleaseHandler({
         version: '1.1.0',
@@ -687,6 +707,7 @@ describe('Git 插件测试', () => {
 
     it('首个包发布失败后的重试应该复用已有提交和标签', async () => {
       mockContext.appData.isReleaseRetry = true
+      vi.mocked(isGitTagAtHead).mockResolvedValue(true)
 
       await onReleaseHandler({
         version: '1.1.0',
@@ -698,6 +719,26 @@ describe('Git 插件测试', () => {
       expect(gitCommit).not.toHaveBeenCalled()
       expect(gitTag).not.toHaveBeenCalled()
       expect(gitPush).toHaveBeenCalled()
+    })
+
+    it('重试时应该补齐缺失标签且拒绝覆盖非 HEAD 标签', async () => {
+      mockContext.appData.isReleaseRetry = true
+      vi.mocked(isGitTagAtHead).mockResolvedValue(false)
+      vi.mocked(gitTag).mockRejectedValueOnce(
+        new Error("tag 'v1.1.0' already exists"),
+      )
+
+      await expect(
+        onReleaseHandler({
+          version: '1.1.0',
+          isPrerelease: false,
+          prereleaseId: null,
+          changelog: '',
+        }),
+      ).rejects.toThrow("tag 'v1.1.0' already exists")
+
+      expect(gitCommit).not.toHaveBeenCalled()
+      expect(gitPush).not.toHaveBeenCalled()
     })
 
     it('应该在独立模式下创建包特定标签', async () => {

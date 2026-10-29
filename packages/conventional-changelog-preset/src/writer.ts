@@ -1,55 +1,34 @@
-import {
-  commitPartial,
-  footerPartial,
-  headerPartial,
-  preamblePartial,
-  template,
-} from './templates.js'
+import type { CommitNote } from '@conventional-changelog/template'
+import type { Options as WriterOptions } from 'conventional-changelog-writer'
+
+import { createTemplates } from './templates.js'
+import type { EljsCommit } from './types.js'
 
 const COMMIT_HASH_LENGTH = 7
 
-/**
- * @typedef {import('@conventional-changelog/template').CommitKnownProps & {
- *   scope?: string | null
- *   subject?: string | null
- *   shortHash?: string | null
- * }} EljsCommit
- */
-
-/**
- * @param {import('@conventional-changelog/template').CommitNote} left
- * @param {import('@conventional-changelog/template').CommitNote} right
- */
-function compareNotes(left, right) {
+function compareNotes(left: CommitNote, right: CommitNote): number {
   return (
     (left.title || '').localeCompare(right.title || '') ||
     (left.text || '').localeCompare(right.text || '')
   )
 }
 
-/**
- * @param {EljsCommit} left
- * @param {EljsCommit} right
- */
-function compareCommits(left, right) {
+function compareCommits(left: EljsCommit, right: EljsCommit): number {
   return (
     (left.scope || '').localeCompare(right.scope || '') ||
     (left.subject || '').localeCompare(right.subject || '')
   )
 }
 
-// https://github.com/conventional-changelog/conventional-changelog/blob/master/packages/conventional-changelog-angular/src/writer.js
 /**
- * @returns {import('conventional-changelog-writer').Options<EljsCommit>}
+ * 创建按类型分组的 Markdown 写入配置，过滤无破坏性变更的辅助提交
+ *
+ * @remarks 转换仅返回字段补丁，不修改上游提交对象
+ * @internal
  */
-export function createWriterOpts() {
-  /** @type {import('conventional-changelog-writer').Options<EljsCommit>} */
-  const writerOptions = {
-    template,
-    headerPartial,
-    preamblePartial,
-    commitPartial,
-    footerPartial,
+export async function createWriterOpts(): Promise<WriterOptions<EljsCommit>> {
+  const writerOptions: WriterOptions<EljsCommit> = {
+    ...(await createTemplates()),
     transform: (commit, context) => {
       let discard = true
       const notes = commit.notes.map(note => {
@@ -95,8 +74,7 @@ export function createWriterOpts() {
           ? commit.hash.substring(0, COMMIT_HASH_LENGTH)
           : commit.shortHash
 
-      /** @type {Set<string>} */
-      const issues = new Set()
+      const issues = new Set<string>()
       let subject = commit.subject
 
       if (typeof commit.subject === 'string') {
@@ -114,8 +92,8 @@ export function createWriterOpts() {
         }
 
         if (context.host) {
-          // User URLs.
-          subject = commit.subject.replace(
+          // 在已完成 Issue 链接替换的文本上继续处理，避免覆盖此前的转换结果
+          subject = (subject || '').replace(
             /\B@([a-z0-9](?:-?[a-z0-9/]){0,38})/g,
             (_, username) => {
               if (username.includes('/')) {

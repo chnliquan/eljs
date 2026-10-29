@@ -3,7 +3,7 @@
  *
  * @remarks
  * `ttlDays` 必须能安全转换为不超过 `Number.MAX_SAFE_INTEGER` 的正毫秒数
- * `maxFiles` 必须是正安全整数
+ * `maxFiles`、`maxEntryBytes` 和 `maxDiskBytes` 必须是正安全整数，且单条上限不能超过磁盘总上限
  * 自定义序列化器的输出必须可由 JSON 安全持久化
  *
  * @typeParam T - 缓存中的业务数据类型
@@ -47,6 +47,28 @@ export interface CacheOptions<T = unknown> {
    * @defaultValue 1000
    */
   maxFiles?: number
+  /**
+   * 单个完整持久化 JSON 文件的最大 UTF-8 字节数，包含元数据和末尾换行
+   *
+   * @remarks
+   * 同时作为内存条目的准入门槛，超限写入会删除同键旧缓存且不进入内存
+   * 磁盘读取先检查普通文件类型和大小，再有界读取，拒绝符号链接与超限文件
+   * 此值不限制业务对象、序列化过程或反序列化后对象的实际堆内存大小
+   *
+   * @defaultValue 16777216
+   */
+  maxEntryBytes?: number
+  /**
+   * 受管理正式缓存文件的总字节上限
+   *
+   * @remarks
+   * 成功持久化后和显式清理时，与 `maxFiles` 一起按条目创建时间最旧优先淘汰
+   * 不包含原子写临时文件和无关文件，不作为内存总字节上限
+   * 并发发布、外部写入或删除失败时可能暂时超限，按 best-effort 语义有限重试收敛
+   *
+   * @defaultValue 268435456
+   */
+  maxDiskBytes?: number
   /**
    * 用于数据持久化的自定义序列化器
    */

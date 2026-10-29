@@ -11,12 +11,12 @@ const LOCKFILE_NAMES = [
 ] as const
 
 /**
- * 单个受支持锁文件在命令执行前的磁盘状态
+ * 单个内置文件在写入前的磁盘状态，供清单、变更日志和锁文件恢复复用
  *
  * @internal
  */
 export interface LockfileSnapshotEntry {
-  /** 锁文件绝对路径 */
+  /** 已通过调用方边界校验的文件绝对路径 */
   readonly path: string
   /** 原始二进制内容，不存在时为 `null` */
   readonly content: Buffer | null
@@ -25,7 +25,7 @@ export interface LockfileSnapshotEntry {
 }
 
 /**
- * 锁文件更新命令执行前的完整快照
+ * 内置文件写入前的完整快照，锁文件更新时覆盖所有受支持格式
  *
  * @internal
  */
@@ -43,11 +43,22 @@ export type LockfileSnapshot = readonly LockfileSnapshotEntry[]
  * @internal
  */
 export async function captureLockfiles(cwd: string): Promise<LockfileSnapshot> {
+  return captureFileSnapshots(LOCKFILE_NAMES.map(name => path.join(cwd, name)))
+}
+
+/**
+ * 保存内置流程将改写的文件的字节、权限及存在状态
+ *
+ * @param paths - 已通过各自路径边界校验的绝对路径
+ * @throws 文件读取或元数据查询失败时传播原始错误
+ * @internal
+ */
+export async function captureFileSnapshots(
+  paths: readonly string[],
+): Promise<LockfileSnapshot> {
   const snapshot: LockfileSnapshotEntry[] = []
 
-  for (const name of LOCKFILE_NAMES) {
-    const filePath = path.join(cwd, name)
-
+  for (const filePath of paths) {
     try {
       const [content, metadata] = await Promise.all([
         readFile(filePath),
@@ -72,11 +83,11 @@ export async function captureLockfiles(cwd: string): Promise<LockfileSnapshot> {
 }
 
 /**
- * 恢复锁文件快照并删除命令执行期间新建的锁文件
+ * 按逆序恢复内置文件快照并删除写入期间新建的文件
  *
- * @param snapshot - 锁文件更新前捕获的快照
- * @returns 全部锁文件恢复完成后兑现的 Promise
- * @throws 当一个或多个锁文件无法恢复时抛出原始错误或聚合错误
+ * @param snapshot - 内置文件写入前捕获的快照
+ * @returns 全部文件恢复完成后兑现的 Promise
+ * @throws 当一个或多个文件无法恢复时抛出原始错误或聚合错误
  * @internal
  */
 export async function restoreLockfiles(
@@ -84,7 +95,7 @@ export async function restoreLockfiles(
 ): Promise<void> {
   const restoreErrors: unknown[] = []
 
-  for (const entry of snapshot) {
+  for (const entry of [...snapshot].reverse()) {
     try {
       if (entry.content === null) {
         await rm(entry.path, { force: true })
@@ -103,7 +114,7 @@ export async function restoreLockfiles(
   if (restoreErrors.length > 1) {
     throw new AggregateError(
       restoreErrors,
-      'One or more lockfiles could not be restored.',
+      'One or more built-in files could not be restored.',
     )
   }
 }

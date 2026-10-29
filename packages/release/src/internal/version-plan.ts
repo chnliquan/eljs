@@ -71,7 +71,7 @@ export async function prepareVersionPlan(
       updated,
       version,
       packageNames,
-      { write: false },
+      { write: false, workspacePackages },
     )
     manifests.push({
       path: workspacePackage.manifestPath,
@@ -160,15 +160,18 @@ export async function rollbackVersionPlan(
  * 写入已完成内存预检的版本计划
  *
  * @remarks
- * 任一写入失败时会尽力把本次已经写入的清单恢复为原始快照
+ * 默认在任一写入失败时尽力恢复本次已写入的清单
+ * 内置插件关闭此处恢复后，由提交前协调器使用原始字节和权限快照统一恢复
  *
  * @param plan - 待提交的版本更新计划
+ * @param rollbackOnError - 是否自行恢复已写入清单；内置插件由字节快照协调恢复时传 `false`
  * @returns 全部清单写入完成后兑现的 Promise
  * @throws 当写入失败时传播原始错误，回滚同时失败时抛出聚合错误
  * @internal
  */
 export async function writeVersionPlan(
   plan: PreparedVersionPlan,
+  rollbackOnError = true,
 ): Promise<void> {
   const written: PreparedVersionManifest[] = []
 
@@ -178,6 +181,7 @@ export async function writeVersionPlan(
       written.push(manifest)
     }
   } catch (writeError) {
+    if (!rollbackOnError) throw writeError
     let rollbackError: unknown
 
     try {

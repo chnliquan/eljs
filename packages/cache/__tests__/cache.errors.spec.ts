@@ -238,7 +238,7 @@ describe('Cache 错误处理和边界情况测试', () => {
       await cache.setByData('first')
       await cache.setByData('second')
       const statSpy = vi
-        .spyOn(fs.promises, 'stat')
+        .spyOn(fs.promises, 'lstat')
         .mockRejectedValueOnce(new Error('stat failed'))
 
       const stats = await cache.getStats()

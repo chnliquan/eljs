@@ -6,6 +6,41 @@ Conventional changelog preset for @eljs/release.
 [![NPM Downloads](https://img.shields.io/npm/dm/@eljs/conventional-changelog-preset.svg)](https://www.npmjs.com/package/@eljs/conventional-changelog-preset)
 [![License](https://img.shields.io/npm/l/@eljs/conventional-changelog-preset.svg)](https://github.com/chnliquan/eljs/blob/master/LICENSE)
 
+## Installation
+
+```bash
+npm install @eljs/conventional-changelog-preset
+```
+
+Requires Node.js 22.14 or newer. The package publishes native ESM and CommonJS
+entries with TypeScript declarations generated from its source.
+
+## Usage
+
+```ts
+import createPreset from '@eljs/conventional-changelog-preset'
+
+const preset = await createPreset()
+const suggestion = preset.whatBump([{ type: 'feat', notes: [] }])
+// suggestion.level === 1 (minor)
+```
+
+The default export remains an async factory compatible with Conventional
+Changelog preset loaders and `@eljs/release`.
+
+Breaking changes are recognized through `!` in the commit header or
+`BREAKING CHANGE:` / `BREAKING-CHANGE:` in the footer. All three forms produce a
+major version suggestion and a breaking-change section.
+
+## Development
+
+```bash
+pnpm --filter @eljs/conventional-changelog-preset build
+pnpm --filter @eljs/conventional-changelog-preset typecheck
+pnpm --filter @eljs/conventional-changelog-preset lint
+pnpm --filter @eljs/conventional-changelog-preset test
+```
+
 ## Angular Convention
 
 Angular's [commit message guidelines](https://github.com/angular/angular/blob/master/CONTRIBUTING.md#commit).

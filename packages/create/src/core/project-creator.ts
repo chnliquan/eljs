@@ -14,6 +14,7 @@ import { resolveProspectiveCanonicalPath } from './canonical-path'
 import { CreateRunner } from './create-runner'
 import {
   acquireTargetLock,
+  commitTargetLock,
   releaseTargetLock,
   type TargetLock,
   updateTargetLockBackup,
@@ -100,6 +101,9 @@ export class ProjectCreator {
    *
    * @param projectName - 项目名称
    * @returns 创建流程结束后兑现的 Promise
+   * @remarks
+   * 物理目标在整个事务中独占；生成失败回滚，提交阶段只清理备份并保留新目标
+   * 恢复失败会保留可重试元数据，目标操作停止并释放获取互斥目录后允许后续运行接管
    * @throws {@link AppError}
    * 当项目名称、模版或目标目录无效时抛出
    */
@@ -119,18 +123,16 @@ export class ProjectCreator {
     }
 
     let cleanupFailure: { cleanupRootPath: string; error: unknown } | undefined
-    if (
-      !this._isLocal &&
-      this._templateRootPath &&
-      (await pathExists(this._templateRootPath))
-    ) {
+    if (!this._isLocal && this._templateRootPath) {
       const cleanupRootPath =
         !isString(this._template) && this._template.type === 'git'
           ? path.dirname(this._templateRootPath)
           : this._templateRootPath
 
       try {
-        await remove(cleanupRootPath)
+        if (await pathExists(this._templateRootPath)) {
+          await remove(cleanupRootPath)
+        }
       } catch (error) {
         cleanupFailure = { cleanupRootPath, error }
       }
@@ -185,6 +187,9 @@ export class ProjectCreator {
 
   /**
    * 执行创建事务主体，由 `run` 统一处理远程模版清理与错误聚合
+   *
+   * @remarks
+   * 回滚时先删除半成品再无覆盖恢复备份，原备份在恢复发布前始终保留于锁记录的位置
    *
    * @param projectName - 项目名称
    * @param targetDir - 已通过边界校验并加锁的目标目录
@@ -288,10 +293,7 @@ export class ProjectCreator {
     try {
       if (shouldOverwrite || shouldMergeExisting) {
         this._throwIfAborted('backup-target')
-        backupPath = join(
-          path.resolve(this.cwd),
-          `.eljs-backup-${randomUUID()}`,
-        )
+        backupPath = join(targetLock.cwd, `.eljs-backup-${randomUUID()}`)
         try {
           logger.event(`Backing up ${chalk.cyan(targetDir)} ...`)
         } catch {
@@ -330,15 +332,17 @@ export class ProjectCreator {
       await runner.run(targetDir, projectName)
       this._throwIfAborted('commit-target')
 
+      // 先发布不可回滚的提交决定，崩溃恢复才不会使用删除了一部分的备份
+      await commitTargetLock(targetLock)
+      commitStarted = true
       if (backupPath) {
-        // 锁元数据在备份删除前始终保留恢复路径，避免进程崩溃后留下无主备份
-        commitStarted = true
         await remove(backupPath)
         await updateTargetLockBackup(targetLock, undefined)
         backupPath = undefined
       }
     } catch (error) {
-      if (commitStarted) {
+      if (commitStarted || targetLock.metadata.phase === 'committing') {
+        targetLock.recoveryRequired = true
         throw new AppError(
           `Project was created, but target transaction commit failed: ${getErrorMessage(error)}`,
           {
@@ -352,7 +356,9 @@ export class ProjectCreator {
       try {
         if (backupPath) {
           if (await pathExists(backupPath)) {
-            await move(backupPath, targetDir, true)
+            // 半成品可丢弃，先删除再恢复，避免覆盖式移动产生协议外的临时备份
+            await remove(targetDir)
+            await move(backupPath, targetDir, false)
           } else if (!(await pathExists(targetDir))) {
             throw new Error(
               'Both the original target and its backup are missing',
@@ -365,6 +371,8 @@ export class ProjectCreator {
           await remove(targetDir)
         }
       } catch (recoveryError) {
+        // run 在目标操作全部停止后交接 pending，不能让活跃 PID 永久阻止恢复重试
+        targetLock.recoveryRequired = true
         throw new AppError(
           `Create project failed and target recovery also failed${backupPath ? `; the original target is preserved at ${chalk.cyan(backupPath)}` : ''}: ${getErrorMessage(recoveryError)}`,
           {
@@ -387,6 +395,7 @@ export class ProjectCreator {
    *
    * @remarks
    * 对尚不存在的路径解析最近存在父目录的真实位置，从而识别父目录中的符号链接
+   * 规范目标必须是规范工作目录的严格后代，指向工作目录根的别名同样被拒绝
    *
    * @param projectName - 相对工作目录的项目名称
    * @returns 通过边界校验的目标规范物理路径
@@ -429,7 +438,10 @@ export class ProjectCreator {
       resolveProspectiveCanonicalPath(targetDir),
     ])
 
-    if (!isSameOrDescendant(canonicalCwd, canonicalTarget)) {
+    if (
+      canonicalTarget === canonicalCwd ||
+      !isSameOrDescendant(canonicalCwd, canonicalTarget)
+    ) {
       throw new AppError(
         `Invalid project name ${chalk.cyan(projectName)}: resolved target directory must be inside ${chalk.cyan(canonicalCwd)}.`,
         {

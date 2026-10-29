@@ -159,6 +159,8 @@ await copyTemplate(
 
 生成器复制方法按字段浅合并渲染选项：实例字段作为默认值，单次调用字段优先；嵌套选项对象整体替换。自定义模板分隔符也作用于目标文件名。
 
+文件与模板复制可通过 `destinationRoot` 在文件名渲染后校验输出边界。根目录必须已存在；写入前会拒绝越界路径和根目录下的符号链接，包括悬空链接。`basedir` 仍只用于日志。`resolveWriteDestination()` 及其同步版本为其他写入提供相同检查。调用方必须在校验到写入结束期间独占输出目录，这些检查不提供恶意并发文件系统操作的隔离保证。
+
 `move()` 和 `moveSync()` 优先使用原生重命名，不提前删除目标，相同或互相包含的路径会被拒绝。非空目录保留覆盖能力：暂存旧目标，替换失败则恢复；恢复失败时，错误会报告保留的备份位置。这个兼容流程不具备原子性或崩溃恢复保证。跨设备移动直接传播 `EXDEV`，不删除旧目标。禁止覆盖的检查包含悬空符号链接，不过它不提供针对并发写入的原子预留。
 
 路径校验仅解析父目录中的符号链接；末级符号链接作为目录项移动或替换，不跟随其指向的目标。
@@ -201,6 +203,10 @@ console.log(result.stdout)
 `select()` 根据有明确类型的选项推导返回值；宽泛的选项类型返回 `unknown`。`confirm()` 传入自定义取消回调时，返回值可能为 `undefined`，保留原有回调行为。`loopPrompt()` 仅在摘要中遮蔽密码和不可见输入，不修改返回值。`pause()` 在收到输入行前关闭输入时会拒绝。
 
 缓冲式 `download()` 在读取过程中执行字节数限制，并保留 `download(url, undefined, options)` 的第三个参数。两种下载方法都通过临时文件重命名发布普通文件，并保留已有普通文件的读、写、执行权限；归档直接解压到目标目录，失败时可能保留已解压条目。`downloadNpmTarball()` 始终解压且固定 `strip: 1`；专用的 `DownloadNpmTarballOptions` 不再公开这些固定参数，同时兼容已有 `DownloadOptions` 变量。
+
+下载逐跳跟随重定向，在进入下一跳或关闭代理前取消中间或失败响应体。`maxRedirects` 默认 `20`，设为 `0` 时拒绝重定向。默认拒绝 HTTPS 到 HTTP 降级；可信旧端点确需兼容时可显式设置 `allowInsecureRedirects: true`。跨 origin（包括端口或协议改变）只保留调用者的 `accept`、`accept-encoding`、`accept-language`、`user-agent` 和 `range` 头，自定义认证头、Cookie 和 Authorization 等被移除，后续跳转不会恢复。CDN 需要认证时可使用目标站点签名 URL。含用户信息或非 HTTP(S) 协议的重定向地址以 `ERR_DOWNLOAD_REDIRECT` 拒绝。整个跳转链及最终响应读取共用原有 timeout、signal 和 proxy，`maxBytes` 仍约束最终内容。独立的响应取消和代理关闭错误与原始错误一并保留在 `AggregateError` 中。
+
+`cloneGitRepository()` 重新构造安全的 `UtilsError`，消息与诊断字段不包含 URL 用户信息、query 和 fragment，也不保留原始 Execa 命令、输出、metadata 或 cause 图。仍提供稳定的进程或取消分类、数值退出码和选定的系统错误码。取消会终止子进程并报告 `ERR_OPERATION_ABORTED`，不再保留可能含敏感信息的调用方取消原因。自动创建的临时目录清理失败时，清理异常独立脱敏并通过 `AggregateError` 合并；调用方指定的目标目录保留。
 
 ## API 命名迁移
 
