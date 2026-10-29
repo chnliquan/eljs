@@ -1,5 +1,15 @@
 # ChangeLog 
 
+# [2.0.0-beta.4](https://github.com/chnliquan/eljs/compare/v2.0.0-beta.3...v2.0.0-beta.4) (2026-10-29)
+
+### ♻ Code Refactoring
+
+* 重构 utils 模块结构并增强类型安全与测试覆盖 ([ffda47b](https://github.com/chnliquan/eljs/commit/ffda47bebe9b2cd5f742e865201806e6430505aa))
+
+### ✨ Features
+
+* 支持 conventional commit 破坏性变更标记语法 ([3478c28](https://github.com/chnliquan/eljs/commit/3478c28c5f3c02255b31b021840c7c68cc3314e2))
+
 # [2.0.0-beta.3](https://github.com/chnliquan/eljs/compare/v2.0.0-beta.2...v2.0.0-beta.3) (2026-10-12)
 
 ### ♻ Code Refactoring
