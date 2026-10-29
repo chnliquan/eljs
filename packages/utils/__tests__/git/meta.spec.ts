@@ -48,7 +48,7 @@ vi.mock('ini')
 vi.mock('node:os')
 
 describe('Git Meta 工具', () => {
-  const mockRun = requiredModule0.run as MockedFunction<
+  const mockRun = requiredModule0.run as unknown as MockedFunction<
     (
       command: string,
       args: string[],
@@ -329,6 +329,44 @@ describe('Git Meta 工具', () => {
   })
 
   describe('parseGitRemoteUrl', () => {
+    it.each([
+      ['ssh://git@example.com/team/nested/repo.git', 'example.com'],
+      ['ssh://alice@example.com:2222/team/nested/repo.git', 'example.com'],
+      ['ssh://example.com/team/nested/repo.git', 'example.com'],
+      ['ssh://git@[::1]:2222/team/nested/repo.git', '[::1]'],
+    ])('应保留显式 SSH 地址及端口：%s', (url, host) => {
+      expect(parseGitRemoteUrl(url)).toEqual({
+        name: 'repo',
+        group: 'team/nested',
+        href: `https://${host}/team/nested/repo`,
+        https: `https://${host}/team/nested/repo.git`,
+        ssh: url,
+      })
+    })
+
+    it('应为未带后缀的 SSH 地址补充 .git', () => {
+      expect(
+        parseGitRemoteUrl('ssh://git@example.com:2222/team/repo')?.ssh,
+      ).toBe('ssh://git@example.com:2222/team/repo.git')
+    })
+
+    it('应支持不带组织路径的 SSH 仓库', () => {
+      expect(parseGitRemoteUrl('ssh://git@example.com:2222/repo.git')).toEqual({
+        name: 'repo',
+        group: '',
+        href: 'https://example.com/repo',
+        https: 'https://example.com/repo.git',
+        ssh: 'ssh://git@example.com:2222/repo.git',
+      })
+    })
+
+    it.each(['ssh://', 'ssh://example.com', 'ssh://example.com:bad/team/repo'])(
+      '无效 SSH 地址应返回 null：%s',
+      url => {
+        expect(parseGitRemoteUrl(url)).toBeNull()
+      },
+    )
+
     it('新名称应该解析远程仓库地址', () => {
       expect(parseGitRemoteUrl('git@github.com:eljs/utils.git')).toEqual({
         name: 'utils',

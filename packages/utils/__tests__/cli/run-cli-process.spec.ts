@@ -102,6 +102,79 @@ describe('runCliProcess', () => {
     expect(process.listeners('SIGINT')).not.toContain(signalHandler)
   })
 
+  it.each([
+    [new TestAppError('Sync domain failure'), 1, 'domain'],
+    [new Error('Sync unexpected failure'), 1, 'unknown'],
+    [
+      new TestAppError('Sync cancellation', 'OPERATION_CANCELLED'),
+      130,
+      'cancel',
+    ],
+  ] as const)(
+    '同步抛错 %s 仍然分类并清理信号监听器',
+    async (error, code, kind) => {
+      const beforeInt = process.listeners('SIGINT')
+      const beforeTerm = process.listeners('SIGTERM')
+      const loggerError = vi.spyOn(logger, 'error').mockImplementation(() => {})
+      const consoleError = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {})
+      const result = runHarness({
+        run: () => {
+          throw error
+        },
+      })
+
+      await expect(result).resolves.toBeUndefined()
+      expect(process.exitCode).toBe(code)
+      expect(process.listeners('SIGINT')).toEqual(beforeInt)
+      expect(process.listeners('SIGTERM')).toEqual(beforeTerm)
+      if (kind === 'domain')
+        expect(loggerError).toHaveBeenCalledWith(error.message)
+      else if (kind === 'unknown')
+        expect(consoleError).toHaveBeenCalledWith(error)
+      else {
+        expect(loggerError).not.toHaveBeenCalled()
+        expect(consoleError).not.toHaveBeenCalled()
+      }
+    },
+  )
+
+  it('主流程立即安装取消监听，紧随调用的信号可被观察并清理强退计时器', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(logger, 'event').mockImplementation(() => {})
+    const beforeInt = process.listeners('SIGINT')
+    const beforeTerm = process.listeners('SIGTERM')
+    let observed = false
+    const result = runCliProcess({
+      name: 'create',
+      createCancelReason,
+      isCancellation,
+      run: signal =>
+        new Promise<void>(resolve => {
+          signal.addEventListener(
+            'abort',
+            () => {
+              observed = true
+              resolve()
+            },
+            { once: true },
+          )
+        }),
+    })
+    const handler = process
+      .listeners('SIGINT')
+      .find(item => !beforeInt.includes(item))
+    expect(handler).toBeTypeOf('function')
+    handler?.('SIGINT')
+    expect(observed).toBe(true)
+    await result
+    expect(process.exitCode).toBe(130)
+    expect(vi.getTimerCount()).toBe(0)
+    expect(process.listeners('SIGINT')).toEqual(beforeInt)
+    expect(process.listeners('SIGTERM')).toEqual(beforeTerm)
+  })
+
   it('信号日志失败时仍然取消流程', async () => {
     const previousListeners = new Set(process.listeners('SIGINT'))
     vi.spyOn(logger, 'event').mockImplementationOnce(() => {

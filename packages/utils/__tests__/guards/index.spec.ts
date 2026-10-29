@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, expectTypeOf, it } from 'vitest'
 
 import {
   isArray,
   isAsyncFunction,
+  isAsyncGeneratorFunction,
   isBoolean,
   isESModule,
   isFunction,
@@ -16,6 +17,37 @@ import {
 } from '../../src/guards'
 
 describe('类型检查工具函数', () => {
+  it('基本类型守卫不接受包装对象或伪造的类型标签', () => {
+    expect(isString(Object('text'))).toBe(false)
+    expect(isBoolean(Object(false))).toBe(false)
+    expect(isString({ [Symbol.toStringTag]: 'String' })).toBe(false)
+    expect(isBoolean({ [Symbol.toStringTag]: 'Boolean' })).toBe(false)
+    expect(isArray({ [Symbol.toStringTag]: 'Array' })).toBe(false)
+  })
+
+  it('thenable 仅收窄为 PromiseLike', async () => {
+    const candidate: unknown = {
+      then(resolve: (value: number) => void) {
+        resolve(42)
+      },
+    }
+    if (!isPromise<number>(candidate)) {
+      throw new Error('Expected a thenable')
+    }
+    expectTypeOf(candidate).toEqualTypeOf<PromiseLike<number>>()
+    expect(await Promise.resolve(candidate)).toBe(42)
+    expect('catch' in candidate).toBe(false)
+  })
+
+  it('异步生成器不会被收窄成返回 Promise 的函数', () => {
+    async function* values() {
+      yield 1
+    }
+    expect(isAsyncGeneratorFunction(values)).toBe(true)
+    expect(isAsyncFunction(values)).toBe(false)
+    expect(isGeneratorFunction(values)).toBe(false)
+  })
+
   describe('基础类型检查', () => {
     it('isUndefined 检查 undefined', () => {
       expect(isUndefined(undefined)).toBe(true)

@@ -8,6 +8,7 @@ import {
   getNpmPackage,
   getNpmRequestConfig,
   parsePackageSpecifier,
+  type NpmPackage,
 } from '@eljs/utils/npm'
 import type { PackageJson } from '@eljs/utils/types'
 import path from 'node:path'
@@ -105,7 +106,7 @@ export class TemplateDownloader {
     registry?: string,
   ): Promise<string> {
     const { name: pkgName, version } = parsePackageSpecifier(name)
-    let data: Awaited<ReturnType<typeof getNpmPackage>>
+    let data: NpmPackage['versions'][string] | null
 
     try {
       data = await getNpmPackage(pkgName, {

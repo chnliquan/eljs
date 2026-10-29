@@ -76,6 +76,18 @@ export interface NpmPackageVersionQueryOptions extends NpmPackageQueryOptions {
 }
 
 /**
+ * 获取指定版本的 npm 包元数据
+ * @remarks 版本查询重载优先匹配，显式类型的选项变量也返回版本级元数据
+ * @param name - 包名
+ * @param options - 指定版本的 npm 包查询选项
+ * @returns 版本元数据，包或版本不存在时返回 `null`
+ * @throws registry 请求、HTTP 状态或响应结构异常时抛出错误
+ */
+export async function getNpmPackage(
+  name: string,
+  options: NpmPackageVersionQueryOptions,
+): Promise<Omit<NpmPackage, 'versions' | 'dist-tags'> | null>
+/**
  * 获取 npm 包元数据
  * @param name - 包名
  * @param options - npm 包查询选项
@@ -86,17 +98,6 @@ export async function getNpmPackage(
   name: string,
   options?: NpmPackageQueryOptions,
 ): Promise<Omit<NpmPackage, 'version'> | null>
-/**
- * 获取指定版本的 npm 包元数据
- * @param name - 包名
- * @param options - 指定版本的 npm 包查询选项
- * @returns 版本元数据，包或版本不存在时返回 `null`
- * @throws registry 请求、HTTP 状态或响应结构异常时抛出错误
- */
-export async function getNpmPackage(
-  name: string,
-  options: NpmPackageVersionQueryOptions,
-): Promise<Omit<NpmPackage, 'versions' | 'dist-tags'> | null>
 export async function getNpmPackage(
   name: string,
   options?: NpmPackageQueryOptions & { version?: string },

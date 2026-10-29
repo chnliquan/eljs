@@ -44,6 +44,35 @@ describe('Promise 工具函数', () => {
   })
 
   describe('timeout 超时函数', () => {
+    it('无论任务成功或失败，都立即清理超时计时器', async () => {
+      vi.useFakeTimers()
+      try {
+        await expect(timeout(Promise.resolve(42), 60_000)).resolves.toBe(42)
+        expect(vi.getTimerCount()).toBe(0)
+        const error = new Error('original')
+        await expect(timeout(Promise.reject(error), 60_000)).rejects.toBe(error)
+        expect(vi.getTimerCount()).toBe(0)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('超时后仍处理原任务的延迟拒绝', async () => {
+      vi.useFakeTimers()
+      try {
+        const deferred = new Deferred<void>()
+        const result = expect(
+          timeout(deferred.promise, 10, ''),
+        ).rejects.toThrow(/^$/)
+        await vi.advanceTimersByTimeAsync(10)
+        await result
+        deferred.reject(new Error('late failure'))
+        await Promise.resolve()
+        expect(vi.getTimerCount()).toBe(0)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
     it('应该在超时时间内返回 Promise 值', async () => {
       const promise = Promise.resolve('success')
       const result = await timeout(promise, 100)
@@ -145,6 +174,50 @@ describe('Promise 工具函数', () => {
   })
 
   describe('retry 重试函数', () => {
+    it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
+      '在执行前拒绝无效尝试次数 %s',
+      async count => {
+        const fn = vi.fn()
+        await expect(retry(fn, count)).rejects.toBeInstanceOf(RangeError)
+        await expect(retryWithValue(fn, count)).rejects.toBeInstanceOf(
+          RangeError,
+        )
+        expect(fn).not.toHaveBeenCalled()
+      },
+    )
+
+    it.each([-1, Number.NaN, Number.POSITIVE_INFINITY, 2_147_483_648])(
+      '在执行前拒绝无效延时 %s',
+      async delay => {
+        const fn = vi.fn()
+        await expect(retry(fn, 2, delay)).rejects.toBeInstanceOf(RangeError)
+        await expect(retryWithValue(fn, 2, delay)).rejects.toBeInstanceOf(
+          RangeError,
+        )
+        expect(fn).not.toHaveBeenCalled()
+      },
+    )
+
+    it('只有两次尝试之间才等待，且原样保留未知异常', async () => {
+      vi.useFakeTimers()
+      try {
+        const reason = { code: 'CUSTOM' }
+        const fn = vi.fn(() => {
+          throw reason
+        })
+        const result = expect(retry(fn, 2, 100)).rejects.toBe(reason)
+        await vi.advanceTimersByTimeAsync(100)
+        await result
+        expect(fn).toHaveBeenCalledTimes(2)
+        expect(vi.getTimerCount()).toBe(0)
+        await expect(
+          retryWithValue(() => undefined, 1, 100),
+        ).resolves.toBeUndefined()
+        expect(vi.getTimerCount()).toBe(0)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
     it('应该在第一次尝试时成功', async () => {
       let callCount = 0
       const fn = vi.fn().mockImplementation(() => {

@@ -1,11 +1,12 @@
 import { run, type RunCommandOptions } from '../cp'
+import { getCommandTextOutput } from '../cp/command'
 
 /**
  * 获取 npm registry 地址
  * @param options - 命令执行选项
  * @param scope - 优先查询专属 registry 的 npm scope
  * @returns npm 当前配置的 registry 地址
- * @throws npm 命令执行失败时抛出错误
+ * @throws npm 命令执行失败或输出不是字符串时抛出错误
  */
 export async function getNpmRegistry(
   options?: RunCommandOptions,
@@ -16,7 +17,7 @@ export async function getNpmRegistry(
       'npm',
       ['config', 'get', `${scope}:registry`],
       options,
-    ).then(data => normalizeRegistry(data.stdout))
+    ).then(data => normalizeRegistry(getCommandTextOutput(data.stdout)))
 
     if (scopedRegistry) {
       return scopedRegistry
@@ -24,7 +25,7 @@ export async function getNpmRegistry(
   }
 
   return run('npm', ['config', 'get', 'registry'], options).then(data => {
-    const registry = normalizeRegistry(data.stdout)
+    const registry = normalizeRegistry(getCommandTextOutput(data.stdout))
 
     if (!registry) {
       throw new Error('npm registry is not configured')
@@ -45,8 +46,10 @@ function normalizeRegistry(value: string): string | undefined {
  * 获取当前 npm 用户
  * @param options - 命令执行选项
  * @returns npm 当前登录用户名
- * @throws npm 命令执行失败或用户未登录时抛出错误
+ * @throws npm 命令执行失败、输出不是字符串或用户未登录时抛出错误
  */
 export async function getNpmUser(options?: RunCommandOptions): Promise<string> {
-  return run('npm', ['whoami'], options).then(data => data.stdout.trim())
+  return run('npm', ['whoami'], options).then(data =>
+    getCommandTextOutput(data.stdout).trim(),
+  )
 }

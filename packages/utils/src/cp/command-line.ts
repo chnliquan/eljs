@@ -1,3 +1,5 @@
+import { isArray } from '../guards'
+
 const WHITESPACE_REGEXP = /\s+/g
 
 /**
@@ -29,4 +31,20 @@ export function parseCommandLine(commandLine: string): string[] {
   }
 
   return tokens
+}
+
+/**
+ * 格式化参数
+ * @param args - 参数
+ */
+export function normalizeArgs(args?: string | string[]): string[] {
+  if (!args) {
+    return []
+  }
+
+  if (isArray(args)) {
+    return args
+  }
+
+  return parseCommandLine(args)
 }

@@ -70,11 +70,13 @@ export async function installDeps(
 
 /**
  * 安装项目依赖
+ * @remarks 未指定包管理器时按工作目录自动检测，数组参数作为安装命令的附加参数
  * @param options - 选项
  */
 export async function install(options?: RunCommandOptions): Promise<void>
 /**
  * 安装项目依赖
+ * @remarks 按工作目录自动检测包管理器，并保留附加参数的顺序
  * @param args - 命令行参数
  * @param options - 选项
  */
@@ -116,6 +118,7 @@ export async function install(
   if (isArray(packageManager)) {
     options = args as RunCommandOptions
     args = packageManager
+    packageManager = undefined
   }
 
   if (isObject(args)) {

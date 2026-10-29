@@ -63,6 +63,28 @@ describe('release Git 工具', () => {
     await expect(isGitTagAtHead('v2.0.0')).resolves.toBe(false)
   })
 
+  it('缺失标准输出时不把标签判为当前提交', async () => {
+    ;(run as MockedFunction<typeof run>)
+      .mockResolvedValueOnce({
+        stdout: undefined,
+      } as Awaited<ReturnType<typeof run>>)
+      .mockResolvedValueOnce({
+        stdout: 'abc123',
+      } as Awaited<ReturnType<typeof run>>)
+
+    await expect(isGitTagAtHead('v1.0.0')).resolves.toBe(false)
+  })
+
+  it('缺失标签输出时给出文本解析错误', async () => {
+    ;(run as MockedFunction<typeof run>).mockResolvedValueOnce({
+      stdout: undefined,
+    } as Awaited<ReturnType<typeof run>>)
+
+    await expect(findRetryVersionAtHead('/repo', false)).rejects.toThrow(
+      'Git tag output must be text',
+    )
+  })
+
   it('不应该把取消误判为标签不存在', async () => {
     const controller = new AbortController()
     const cancellation = new Error('cancelled')

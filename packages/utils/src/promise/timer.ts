@@ -8,6 +8,7 @@ export function sleep(ms: number): Promise<void> {
 
 /**
  * 超时拒绝
+ * @remarks 原任务完成后清理计时器；超时仅拒绝返回值，不取消原任务
  * @param promise - promise
  * @param ms - 超时时间
  * @param message - 超时信息
@@ -18,26 +19,16 @@ export function timeout<T>(
   message?: string,
 ): Promise<T> {
   return new Promise((resolve, reject) => {
-    let finished = false
-
-    promise
-      .then(data => {
-        finished = true
+    const timer = setTimeout(() => reject(new Error(message ?? 'Timeout')), ms)
+    promise.then(
+      data => {
+        clearTimeout(timer)
         resolve(data)
-      })
-      .catch(error => {
-        finished = true
+      },
+      error => {
+        clearTimeout(timer)
         reject(error)
-      })
-
-    setTimeout(() => maybeTimeout(), ms)
-
-    function maybeTimeout() {
-      if (finished) {
-        return
-      }
-
-      reject(new Error(message || 'Timeout'))
-    }
+      },
+    )
   })
 }

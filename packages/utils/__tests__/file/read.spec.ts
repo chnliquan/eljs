@@ -3,11 +3,13 @@ import {
   beforeEach,
   describe,
   expect,
+  expectTypeOf,
   it,
   vi,
   type MockedFunction,
 } from 'vitest'
 
+import { constants } from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -17,13 +19,15 @@ import {
   readFileSync,
   readJson,
   readJsonSync,
+  type ReadFileOptions,
+  type ReadFileSyncOptions,
 } from '../../src/file/read'
 
 const loaderDependencies = vi.hoisted(() => ({
   parseJson: vi.fn(),
 }))
 
-vi.mock('../../src/file/loader-dependencies', () => ({
+vi.mock('../../src/internal/lazy-dependencies', () => ({
   loadParseJson: () => loaderDependencies.parseJson,
 }))
 
@@ -59,6 +63,174 @@ describe('文件读取工具', () => {
     } catch {
       // 忽略清理错误
     }
+  })
+
+  describe('读取选项与返回类型', () => {
+    it('省略选项或编码时始终使用 UTF-8 且不修改选项', async () => {
+      const text = '默认 UTF-8 文本'
+      await fsp.writeFile(testFile, text)
+      const options = Object.freeze({ flag: 'r' })
+      const undefinedEncoding = Object.freeze({
+        encoding: undefined,
+        flag: 'r',
+      })
+      const defaultRead = readFile(testFile)
+      expectTypeOf(defaultRead).toEqualTypeOf<Promise<string>>()
+      expectTypeOf(readFileSync(testFile)).toEqualTypeOf<string>()
+      expectTypeOf(readFile(testFile, options)).toEqualTypeOf<Promise<string>>()
+      expectTypeOf(readFileSync(testFile, options)).toEqualTypeOf<string>()
+      expectTypeOf(readFile(testFile, undefinedEncoding)).toEqualTypeOf<
+        Promise<string>
+      >()
+      expectTypeOf(
+        readFileSync(testFile, undefinedEncoding),
+      ).toEqualTypeOf<string>()
+
+      expect(await defaultRead).toBe(text)
+      for (const option of [undefined, {}, options, undefinedEncoding]) {
+        expect(await readFile(testFile, option)).toBe(text)
+        expect(readFileSync(testFile, option)).toBe(text)
+      }
+      expect(options).toEqual({ flag: 'r' })
+      expect(undefinedEncoding).toEqual({ encoding: undefined, flag: 'r' })
+    })
+
+    it('字符串和对象编码均返回准确的文本类型并转发 flag', async () => {
+      const bytes = Buffer.from([0, 0x80, 0xff, 0x41])
+      await fsp.writeFile(testFile, bytes)
+      const options = Object.freeze({ encoding: 'hex', flag: 'r+' } as const)
+      const read = readFile(testFile, options)
+      expectTypeOf(read).toEqualTypeOf<Promise<string>>()
+      expectTypeOf(readFileSync(testFile, options)).toEqualTypeOf<string>()
+      expectTypeOf(readFile(testFile, 'hex')).toEqualTypeOf<Promise<string>>()
+      expectTypeOf(readFileSync(testFile, 'hex')).toEqualTypeOf<string>()
+      expect(await read).toBe('0080ff41')
+      expect(readFileSync(testFile, options)).toBe('0080ff41')
+      expect(await readFile(testFile, 'hex')).toBe('0080ff41')
+      expect(readFileSync(testFile, 'hex')).toBe('0080ff41')
+      expect(
+        await readFile(testFile, { encoding: 'hex', flag: constants.O_RDONLY }),
+      ).toBe('0080ff41')
+      expect(options).toEqual({ encoding: 'hex', flag: 'r+' })
+    })
+
+    it('显式 null 或对象 null 编码均返回原始 Buffer', async () => {
+      const bytes = Buffer.from([0, 0x80, 0xff, 0x41])
+      await fsp.writeFile(testFile, bytes)
+      const options = Object.freeze({ encoding: null, flag: 'r' })
+      const raw = readFile(testFile, null)
+      const objectRaw = readFile(testFile, options)
+      expectTypeOf(raw).toEqualTypeOf<Promise<Buffer>>()
+      expectTypeOf(objectRaw).toEqualTypeOf<Promise<Buffer>>()
+      expectTypeOf(readFileSync(testFile, null)).toEqualTypeOf<Buffer>()
+      expectTypeOf(readFileSync(testFile, options)).toEqualTypeOf<Buffer>()
+      expect(await raw).toEqual(bytes)
+      expect(await objectRaw).toEqual(bytes)
+      expect(readFileSync(testFile, null)).toEqual(bytes)
+      expect(readFileSync(testFile, options)).toEqual(bytes)
+      expect(options).toEqual({ encoding: null, flag: 'r' })
+    })
+
+    it('动态选项保留 string 与 Buffer 联合类型及实际行为', async () => {
+      async function check(
+        options: BufferEncoding | ReadFileOptions | null | undefined,
+        syncOptions: BufferEncoding | ReadFileSyncOptions | null | undefined,
+        expected: string | Buffer,
+      ) {
+        const read = readFile(testFile, options)
+        const syncRead = readFileSync(testFile, syncOptions)
+        expectTypeOf(read).toEqualTypeOf<Promise<string | Buffer>>()
+        expectTypeOf(syncRead).toEqualTypeOf<string | Buffer>()
+        expect(await read).toEqual(expected)
+        expect(syncRead).toEqual(expected)
+      }
+
+      for (const options of [
+        undefined,
+        'utf8',
+        {},
+        { encoding: undefined },
+        { encoding: 'utf8' },
+      ] as const) {
+        await check(options, options, 'Hello World!')
+      }
+      await check(null, null, Buffer.from('Hello World!'))
+      await check(
+        { encoding: null },
+        { encoding: null },
+        Buffer.from('Hello World!'),
+      )
+      async function checkObject(
+        options: ReadFileOptions,
+        syncOptions: ReadFileSyncOptions,
+      ) {
+        const read = readFile(testFile, options)
+        const syncRead = readFileSync(testFile, syncOptions)
+        expectTypeOf(read).toEqualTypeOf<Promise<string | Buffer>>()
+        expectTypeOf(syncRead).toEqualTypeOf<string | Buffer>()
+        expect(await read).toEqual(syncRead)
+      }
+      await checkObject({}, {})
+      await checkObject({ encoding: null }, { encoding: null })
+      expectTypeOf<ReadFileOptions>().toHaveProperty('signal')
+      expectTypeOf<ReadFileSyncOptions>().not.toHaveProperty('signal')
+      expectTypeOf<ReadFileOptions['flag']>().toEqualTypeOf<
+        string | number | undefined
+      >()
+      expectTypeOf<ReadFileSyncOptions['flag']>().toEqualTypeOf<
+        string | undefined
+      >()
+    })
+
+    it('转发异步 signal 并保留取消错误的名称、错误码与原因', async () => {
+      const controller = new AbortController()
+      const options = Object.freeze({ signal: controller.signal, flag: 'r' })
+      expect(await readFile(testFile, options)).toBe('Hello World!')
+      const reason = new Error('停止读取')
+      controller.abort(reason)
+
+      for (const encoding of [undefined, 'utf8', null] as const) {
+        await expect(
+          readFile(testFile, { ...options, encoding }),
+        ).rejects.toMatchObject({
+          name: 'AbortError',
+          code: 'ABORT_ERR',
+          cause: reason,
+          message: expect.stringContaining(`Read ${testFile} failed:`),
+        })
+      }
+      expect(options).toEqual({ signal: controller.signal, flag: 'r' })
+    })
+
+    it('选项读取失败仍保留错误码与路径前缀', async () => {
+      const missing = path.join(tempDir, 'missing.txt')
+      await expect(
+        readFile(missing, { encoding: null, flag: 'r' }),
+      ).rejects.toMatchObject({
+        code: 'ENOENT',
+        message: expect.stringContaining(`Read ${missing} failed:`),
+      })
+      expect(() =>
+        readFileSync(missing, { encoding: null, flag: 'r' }),
+      ).toThrow(
+        expect.objectContaining({
+          code: 'ENOENT',
+          message: expect.stringContaining(`Read ${missing} failed:`),
+        }),
+      )
+      await expect(
+        readFile(testFile, { flag: 'invalid' }),
+      ).rejects.toMatchObject({
+        code: 'ERR_INVALID_ARG_VALUE',
+        message: expect.stringContaining(`Read ${testFile} failed:`),
+      })
+      expect(() => readFileSync(testFile, { flag: 'invalid' })).toThrow(
+        expect.objectContaining({
+          code: 'ERR_INVALID_ARG_VALUE',
+          message: expect.stringContaining(`Read ${testFile} failed:`),
+        }),
+      )
+    })
   })
 
   describe('readFile 异步文件读取', () => {

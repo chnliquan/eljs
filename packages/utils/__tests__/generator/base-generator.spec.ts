@@ -371,4 +371,79 @@ describe('BaseGenerator 基础生成器', () => {
       expect(result).toBe(false)
     })
   })
+
+  describe.each([
+    ['copyFile', mockCopyFile],
+    ['copyFileSync', mockCopyFileSync],
+    ['copyTpl', mockCopyTemplate],
+    ['copyTplSync', mockCopyTemplateSync],
+    ['copyDirectory', mockCopyDirectory],
+    ['copyDirectorySync', mockCopyDirectorySync],
+  ] as const)('%s 渲染选项优先级', (method, copy) => {
+    const invoke = async (
+      instance: BaseGenerator,
+      renderOptions?: RenderTemplateOptions,
+    ) => {
+      const options = { renderOptions }
+      if (method === 'copyFile' || method === 'copyFileSync') {
+        await instance[method]('/source', '/target', options)
+      } else {
+        await instance[method]('/source', '/target', {}, options)
+      }
+      return copy.mock.calls.at(-1)?.at(-1) as CopyFileOptions
+    }
+
+    it('未设置实例选项时应该保留调用选项', async () => {
+      const renderOptions: RenderTemplateOptions = {
+        type: 'ejs',
+        options: { delimiter: '?' },
+      }
+
+      expect((await invoke(generator, renderOptions)).renderOptions).toEqual(
+        renderOptions,
+      )
+    })
+
+    it('应该继承默认字段并浅替换嵌套对象，不修改输入', async () => {
+      const defaults = Object.freeze({
+        type: 'ejs' as const,
+        options: Object.freeze({ delimiter: '?', strict: true }),
+      })
+      const override = Object.freeze({
+        options: Object.freeze({ delimiter: '%' }),
+      })
+      generator.renderTemplateOptions = defaults
+
+      expect((await invoke(generator, override)).renderOptions).toEqual({
+        type: 'ejs',
+        options: { delimiter: '%' },
+      })
+      expect(generator.renderTemplateOptions).toBe(defaults)
+      expect(defaults.options.strict).toBe(true)
+      expect(override.options.delimiter).toBe('%')
+    })
+
+    it('应该允许显式 undefined 字段清除默认值', async () => {
+      generator.renderTemplateOptions = {
+        type: 'ejs',
+        options: { delimiter: '?' },
+      }
+
+      expect(
+        (await invoke(generator, { type: undefined, options: undefined }))
+          .renderOptions,
+      ).toEqual({ type: undefined, options: undefined })
+    })
+
+    it('未传调用选项时应该保留实例默认值，并允许显式切换引擎', async () => {
+      generator.renderTemplateOptions = { type: 'mustache' }
+
+      expect((await invoke(generator)).renderOptions).toEqual({
+        type: 'mustache',
+      })
+      expect((await invoke(generator, { type: 'ejs' })).renderOptions).toEqual({
+        type: 'ejs',
+      })
+    })
+  })
 })

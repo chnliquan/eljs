@@ -60,6 +60,9 @@ interface GeneratorDoneCtx {
   data: object
 }
 
+/**
+ * 根据问询结果解析路径和模板数据，完成文件生成后调用完成回调
+ */
 export class Generator extends BaseGenerator {
   /**
    * 模版文件夹路径
@@ -184,4 +187,13 @@ export class Generator extends BaseGenerator {
 
     return true
   }
+}
+
+/**
+ * 生成文件
+ * @param options - 选项
+ */
+export async function generateFile(options: GeneratorOptions) {
+  const generator = new Generator(options)
+  await generator.run()
 }

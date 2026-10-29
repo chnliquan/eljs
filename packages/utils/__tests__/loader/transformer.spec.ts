@@ -13,7 +13,7 @@ import { addHook } from 'pirates'
 import {
   Transformer,
   type TransformerOptions,
-} from '../../src/file/transformer'
+} from '../../src/loader/transformer'
 
 // Mock 依赖项
 vi.mock('pirates')

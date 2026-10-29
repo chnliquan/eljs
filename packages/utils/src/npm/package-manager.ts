@@ -10,6 +10,7 @@ import type { PackageManager } from '../types'
 /**
  * 获取包管理器
  *
+ * @remarks 锁文件按目录距离优先，同一目录仍按 pnpm、yarn、bun、npm 的顺序选择
  * @param cwd - 当前工作目录
  * @returns 由最近的锁文件或全局安装状态推断出的包管理器
  * @throws 当锁文件查找或全局命令检测失败时传播原始错误
@@ -55,28 +56,19 @@ export async function getPackageManager(
 async function detectLockfilePackageManager(
   cwd = process.cwd(),
 ): Promise<PackageManager | null> {
-  const [isPnpm, isYarn, isBun, isNpm] = await Promise.all([
+  const roots = await Promise.all([
     getPnpmWorkspaceRoot(cwd),
     getYarnWorkspaceRoot(cwd),
     getBunWorkspaceRoot(cwd),
     getNpmWorkspaceRoot(cwd),
   ])
 
-  if (isPnpm) {
-    return 'pnpm'
-  }
+  const managers = ['pnpm', 'yarn', 'bun', 'npm'] as const
+  // 查找结果均为 cwd 的祖先绝对路径，路径越长越近；稳定排序保留同目录优先级
+  const candidates = roots
+    .map((root, index) => ({ root, manager: managers[index] }))
+    .filter(candidate => candidate.root)
+    .sort((left, right) => right.root.length - left.root.length)
 
-  if (isYarn) {
-    return 'yarn'
-  }
-
-  if (isBun) {
-    return 'bun'
-  }
-
-  if (isNpm) {
-    return 'npm'
-  }
-
-  return null
+  return candidates[0]?.manager ?? null
 }

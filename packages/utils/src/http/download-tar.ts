@@ -5,6 +5,7 @@ import type { DownloadOptions } from './download-options'
 
 /**
  * 创建带条目数限制与路径保护的 tar 解压器
+ * @remarks 超限通过解压器的 abort/error 通道报告，使 pipeline 拒绝并触发清理
  * @param destination - 解压目标目录
  * @param options - 下载选项
  * @returns tar 解压流
@@ -34,7 +35,7 @@ export function createTarExtractor(
   let entryCount = 0
   let unpackedBytes = 0
 
-  return extractTar({
+  const extractor = extractTar({
     cwd: destination,
     ...(maxEntries === undefined && maxUnpackedBytes === undefined
       ? {}
@@ -43,14 +44,17 @@ export function createTarExtractor(
             entryCount += 1
 
             if (maxEntries && entryCount > maxEntries) {
-              throw new UtilsError(
-                'ERR_ARCHIVE_TOO_MANY_ENTRIES',
-                `Archive contains more than ${maxEntries} entries`,
-                {
-                  details: { maxEntries },
-                  operation: 'http.download',
-                },
+              extractor.abort(
+                new UtilsError(
+                  'ERR_ARCHIVE_TOO_MANY_ENTRIES',
+                  `Archive contains more than ${maxEntries} entries`,
+                  {
+                    details: { maxEntries },
+                    operation: 'http.download',
+                  },
+                ),
               )
+              return false
             }
 
             const entrySize = Number(entry.size ?? 0)
@@ -59,14 +63,17 @@ export function createTarExtractor(
             }
 
             if (maxUnpackedBytes && unpackedBytes > maxUnpackedBytes) {
-              throw new UtilsError(
-                'ERR_ARCHIVE_TOO_LARGE',
-                `Archive expands beyond the ${maxUnpackedBytes} byte limit`,
-                {
-                  details: { maxUnpackedBytes, unpackedBytes },
-                  operation: 'http.download',
-                },
+              extractor.abort(
+                new UtilsError(
+                  'ERR_ARCHIVE_TOO_LARGE',
+                  `Archive expands beyond the ${maxUnpackedBytes} byte limit`,
+                  {
+                    details: { maxUnpackedBytes, unpackedBytes },
+                    operation: 'http.download',
+                  },
+                ),
               )
+              return false
             }
 
             return true
@@ -76,4 +83,6 @@ export function createTarExtractor(
     strict: true,
     strip: options.strip ?? 0,
   }) as Unpack
+
+  return extractor
 }

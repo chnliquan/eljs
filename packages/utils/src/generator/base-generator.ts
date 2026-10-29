@@ -12,6 +12,7 @@ import {
   copyTemplate,
   copyTemplateSync,
   type CopyFileOptions,
+  type CopyFileSyncOptions,
   type RenderTemplateOptions,
 } from '../file'
 import { isFunction } from '../guards'
@@ -32,7 +33,11 @@ export class BaseGenerator {
    */
   public prompts: Answers<string>
   /**
-   * 模版渲染选项
+   * 模版渲染默认选项
+   *
+   * @remarks
+   * 六个复制方法均按字段浅合并调用选项，调用方显式字段（含 `undefined`）优先
+   * 嵌套对象整体替换；未传 `renderOptions` 时沿用实例默认值
    */
   public renderTemplateOptions: RenderTemplateOptions | undefined
 
@@ -87,12 +92,16 @@ export class BaseGenerator {
    * 拷贝文件
    * @param from - 源文件路径
    * @param to - 目标文件路径
-   * @param options - 选项
+   * @param options - 同步复制选项，不支持取消信号；渲染字段浅合并并覆盖实例默认值
    */
-  public copyFileSync(from: string, to: string, options: CopyFileOptions = {}) {
+  public copyFileSync(
+    from: string,
+    to: string,
+    options: CopyFileSyncOptions = {},
+  ) {
     copyFileSync(from, to, {
       ...options,
-      renderOptions: this.renderTemplateOptions,
+      renderOptions: this._resolveRenderOptions(options.renderOptions),
       basedir: this._basedir,
     })
   }
@@ -101,7 +110,7 @@ export class BaseGenerator {
    * 拷贝文件
    * @param from - 源文件路径
    * @param to - 目标文件路径
-   * @param options - 选项
+   * @param options - 复制选项，渲染字段浅合并并覆盖实例默认值
    */
   public async copyFile(
     from: string,
@@ -110,7 +119,7 @@ export class BaseGenerator {
   ) {
     await copyFile(from, to, {
       ...options,
-      renderOptions: this.renderTemplateOptions,
+      renderOptions: this._resolveRenderOptions(options.renderOptions),
       basedir: this._basedir,
     })
   }
@@ -120,17 +129,17 @@ export class BaseGenerator {
    * @param from - 源文件路径
    * @param to - 目标文件路径
    * @param data - 模版数据
-   * @param options - 选项
+   * @param options - 同步复制选项，不支持取消信号；渲染字段浅合并并覆盖实例默认值
    */
   public copyTplSync(
     from: string,
     to: string,
     data: object,
-    options: CopyFileOptions = {},
+    options: CopyFileSyncOptions = {},
   ) {
     copyTemplateSync(from, to, data, {
       ...options,
-      renderOptions: this.renderTemplateOptions,
+      renderOptions: this._resolveRenderOptions(options.renderOptions),
       basedir: this._basedir,
     })
   }
@@ -140,7 +149,7 @@ export class BaseGenerator {
    * @param from - 源文件路径
    * @param to - 目标文件路径
    * @param data - 模版数据
-   * @param options - 选项
+   * @param options - 复制选项，渲染字段浅合并并覆盖实例默认值
    */
   public async copyTpl(
     from: string,
@@ -150,7 +159,7 @@ export class BaseGenerator {
   ) {
     await copyTemplate(from, to, data, {
       ...options,
-      renderOptions: this.renderTemplateOptions,
+      renderOptions: this._resolveRenderOptions(options.renderOptions),
       basedir: this._basedir,
     })
   }
@@ -159,17 +168,17 @@ export class BaseGenerator {
    * 拷贝文件夹
    * @param from - 源文件路径
    * @param to - 目标文件路径
-   * @param options - 选项
+   * @param options - 同步复制选项，不支持取消信号；渲染字段浅合并并覆盖实例默认值
    */
   public copyDirectorySync(
     from: string,
     to: string,
     data: object,
-    options: CopyFileOptions = {},
+    options: CopyFileSyncOptions = {},
   ) {
     copyDirectorySync(from, to, data, {
       ...options,
-      renderOptions: this.renderTemplateOptions,
+      renderOptions: this._resolveRenderOptions(options.renderOptions),
       basedir: this._basedir,
     })
   }
@@ -178,7 +187,7 @@ export class BaseGenerator {
    * 拷贝文件夹
    * @param from - 源文件路径
    * @param to - 目标文件路径
-   * @param options - 选项
+   * @param options - 复制选项，渲染字段浅合并并覆盖实例默认值
    */
   public async copyDirectory(
     from: string,
@@ -188,9 +197,20 @@ export class BaseGenerator {
   ) {
     await copyDirectory(from, to, data, {
       ...options,
-      renderOptions: this.renderTemplateOptions,
+      renderOptions: this._resolveRenderOptions(options.renderOptions),
       basedir: this._basedir,
     })
+  }
+
+  /**
+   * 按字段应用调用方覆盖，保持嵌套渲染配置整体替换的兼容语义
+   */
+  private _resolveRenderOptions(
+    options: RenderTemplateOptions | undefined,
+  ): RenderTemplateOptions | undefined {
+    return options === undefined
+      ? this.renderTemplateOptions
+      : { ...this.renderTemplateOptions, ...options }
   }
 
   /**

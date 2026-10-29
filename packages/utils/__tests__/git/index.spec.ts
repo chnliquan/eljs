@@ -700,7 +700,11 @@ describe('Git 工具函数', () => {
             exitCode: 0,
           } as Result) // git add
           .mockRejectedValueOnce(
-            new Error('nothing to commit, working tree clean'),
+            Object.assign(new Error('Command failed'), {
+              exitCode: 1,
+              stdout: 'nothing to commit, working tree clean',
+              stderr: '',
+            }),
           )
 
         await expect(gitCommit('测试提交')).resolves.not.toThrow()

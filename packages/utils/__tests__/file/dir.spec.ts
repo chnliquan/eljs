@@ -71,18 +71,17 @@ describe('目录操作工具', () => {
 
       const result = await mkdir(testDir)
 
-      expect(mockPathExists).toHaveBeenCalledWith(testDir)
       expect(mockMkdirp).toHaveBeenCalledWith(testDir, undefined)
       expect(result).toBe('/created/path')
     })
 
-    it('应该跳过已存在的目录', async () => {
+    it('应该委托 mkdirp 检查已存在的目录', async () => {
       mockPathExists.mockResolvedValue(true)
+      mockMkdirp.mockResolvedValue(undefined)
 
       const result = await mkdir(testDir)
 
-      expect(mockPathExists).toHaveBeenCalledWith(testDir)
-      expect(mockMkdirp).not.toHaveBeenCalled()
+      expect(mockMkdirp).toHaveBeenCalledWith(testDir, undefined)
       expect(result).toBeUndefined()
     })
 
@@ -111,18 +110,17 @@ describe('目录操作工具', () => {
 
       const result = mkdirSync(testDir)
 
-      expect(mockPathExistsSync).toHaveBeenCalledWith(testDir)
       expect(mockMkdirpSync).toHaveBeenCalledWith(testDir, undefined)
       expect(result).toBe('/created/sync/path')
     })
 
-    it('应该跳过已存在的目录', () => {
+    it('应该委托 mkdirpSync 检查已存在的目录', () => {
       mockPathExistsSync.mockReturnValue(true)
+      mockMkdirpSync.mockReturnValue(undefined)
 
       const result = mkdirSync(testDir)
 
-      expect(mockPathExistsSync).toHaveBeenCalledWith(testDir)
-      expect(mockMkdirpSync).not.toHaveBeenCalled()
+      expect(mockMkdirpSync).toHaveBeenCalledWith(testDir, undefined)
       expect(result).toBeUndefined()
     })
 
@@ -133,6 +131,32 @@ describe('目录操作工具', () => {
       })
 
       expect(() => mkdirSync(testDir)).toThrow(/Create directory .* failed/)
+    })
+  })
+
+  describe('真实文件系统目录检查', () => {
+    beforeEach(async () => {
+      const actual = await vi.importActual<typeof import('mkdirp')>('mkdirp')
+      mockMkdirp.mockImplementation(actual.mkdirp)
+      mockMkdirpSync.mockImplementation(actual.mkdirpSync)
+    })
+
+    it('重复创建目录成功，普通文件和文件下级路径保留系统错误码', async () => {
+      await mkdir(testDir)
+      await expect(mkdir(testDir)).resolves.toBeUndefined()
+      expect(mkdirSync(testDir)).toBeUndefined()
+      const file = path.join(tempDir, 'file')
+      await fsp.writeFile(file, 'keep')
+      for (const [destination, code] of [
+        [file, 'EEXIST'],
+        [path.join(file, 'child'), 'ENOTDIR'],
+      ] as const) {
+        await expect(mkdir(destination)).rejects.toMatchObject({ code })
+        expect(() => mkdirSync(destination)).toThrow(
+          expect.objectContaining({ code }),
+        )
+      }
+      expect(await fsp.readFile(file, 'utf8')).toBe('keep')
     })
   })
 

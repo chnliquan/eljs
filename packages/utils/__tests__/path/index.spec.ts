@@ -48,7 +48,9 @@ describe('路径工具函数', () => {
     ) => Promise<string | undefined>
   >
   const mockGlob = requiredModule1 as {
-    sync: MockedFunction<(pattern: string, options: unknown) => string[]>
+    glob: MockedFunction<
+      (pattern: string, options: unknown) => Promise<string[]>
+    >
   }
   const mockYaml = requiredModule2 as {
     load: MockedFunction<(content: string) => unknown>
@@ -267,17 +269,20 @@ describe('路径工具函数', () => {
       })
     })
 
-    it('工作区根目录检测应该包含 Bun 且优先于 npm', async () => {
-      mockFindUp
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce('/project/bun.lock')
+    it('工作区根目录检测应该在同一次向上查找中包含所有标记', async () => {
+      mockFindUp.mockResolvedValueOnce('/project/bun.lock')
 
       const result = await getWorkspaceRoot('/project/sub')
 
       expect(result).toBe('/project')
-      expect(mockFindUp).toHaveBeenCalledTimes(4)
+      expect(mockFindUp).toHaveBeenCalledExactlyOnceWith(
+        expect.arrayContaining([
+          'pnpm-workspace.yaml',
+          'bun.lock',
+          'package-lock.json',
+        ]),
+        { cwd: '/project/sub' },
+      )
     })
 
     it('应该在找不到时返回空字符串', async () => {
@@ -301,7 +306,7 @@ describe('路径工具函数', () => {
     it('应该获取npm工作区', async () => {
       mockGetPackageManager.mockResolvedValue('npm')
       mockReadJson.mockResolvedValue({ workspaces: ['packages/*'] })
-      mockGlob.sync.mockReturnValue(['packages/app'])
+      mockGlob.glob.mockResolvedValue(['packages/app/package.json'])
 
       const result = await getWorkspacePackageRoots('/project')
 
@@ -313,7 +318,7 @@ describe('路径工具函数', () => {
       mockPathExists.mockResolvedValue(true)
       mockReadFile.mockResolvedValue('packages:\n  - "packages/*"')
       mockYaml.load.mockReturnValue({ packages: ['packages/*'] })
-      mockGlob.sync.mockReturnValue(['packages/core'])
+      mockGlob.glob.mockResolvedValue(['packages/core/package.json'])
 
       const result = await getWorkspacePackageRoots('/pnpm-project')
 
@@ -327,7 +332,7 @@ describe('路径工具函数', () => {
     it('应该返回相对路径', async () => {
       mockGetPackageManager.mockResolvedValue('npm')
       mockReadJson.mockResolvedValue({ workspaces: ['packages/*'] })
-      mockGlob.sync.mockReturnValue(['packages/app'])
+      mockGlob.glob.mockResolvedValue(['packages/app/package.json'])
 
       const result = await getWorkspacePackageRoots('/project-relative', true)
 
@@ -337,12 +342,12 @@ describe('路径工具函数', () => {
     it('应该处理特定包', async () => {
       mockGetPackageManager.mockResolvedValue('npm')
       mockReadJson.mockResolvedValue({ workspaces: ['specific-pkg'] })
-      mockGlob.sync.mockReturnValue(['specific-pkg'])
+      mockGlob.glob.mockResolvedValue(['specific-pkg/package.json'])
 
       const result = await getWorkspacePackageRoots('/project-specific', true)
 
-      expect(mockGlob.sync).toHaveBeenCalledWith(
-        'specific-pkg',
+      expect(mockGlob.glob).toHaveBeenCalledWith(
+        'specific-pkg/package.json',
         expect.any(Object),
       )
       expect(result).toEqual(['specific-pkg'])
@@ -366,18 +371,18 @@ describe('路径工具函数', () => {
       expect(result).toEqual(['/no-pnpm-config'])
     })
 
-    it('应该正规化工作区模式', async () => {
+    it('应该保留递归工作区模式', async () => {
       mockGetPackageManager.mockResolvedValue('npm')
-      mockReadJson.mockResolvedValue({ workspaces: ['packages/***'] })
-      mockGlob.sync.mockReturnValue(['packages/test'])
+      mockReadJson.mockResolvedValue({ workspaces: ['packages/**'] })
+      mockGlob.glob.mockResolvedValue(['packages/group/test/package.json'])
 
       const result = await getWorkspacePackageRoots('/norm', true)
 
-      expect(mockGlob.sync).toHaveBeenCalledWith(
-        'packages/*',
+      expect(mockGlob.glob).toHaveBeenCalledWith(
+        'packages/**/package.json',
         expect.any(Object),
       )
-      expect(result).toEqual(['packages/test'])
+      expect(result).toEqual(['packages/group/test'])
     })
 
     it('应该处理复杂配置', async () => {
@@ -385,9 +390,9 @@ describe('路径工具函数', () => {
       mockReadJson.mockResolvedValue({
         workspaces: ['packages/*', 'tools/build'],
       })
-      mockGlob.sync
-        .mockReturnValueOnce(['packages/app'])
-        .mockReturnValueOnce(['tools/build'])
+      mockGlob.glob
+        .mockResolvedValueOnce(['packages/app/package.json'])
+        .mockResolvedValueOnce(['tools/build/package.json'])
 
       const result = await getWorkspacePackageRoots('/complex', true)
 
@@ -399,7 +404,7 @@ describe('路径工具函数', () => {
       mockReadJson.mockResolvedValue({
         workspaces: { packages: ['packages/*'] },
       })
-      mockGlob.sync.mockReturnValue(['packages/app'])
+      mockGlob.glob.mockResolvedValue(['packages/app/package.json'])
 
       const result = await getWorkspacePackageRoots('/yarn-object', true)
 
@@ -411,17 +416,17 @@ describe('路径工具函数', () => {
       mockReadJson.mockResolvedValue({
         workspaces: ['packages/*', 'packages/app', '!packages/private'],
       })
-      mockGlob.sync
-        .mockReturnValueOnce(['packages/app'])
-        .mockReturnValueOnce(['packages/app'])
+      mockGlob.glob
+        .mockResolvedValueOnce(['packages/app/package.json'])
+        .mockResolvedValueOnce(['packages/app/package.json'])
 
       const result = await getWorkspacePackageRoots('/patterns', true)
 
       expect(result).toEqual(['packages/app'])
-      expect(mockGlob.sync).toHaveBeenCalledWith(
+      expect(mockGlob.glob).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          ignore: ['*/*.*', 'packages/private'],
+          ignore: ['**/node_modules/**', 'packages/private/**'],
         }),
       )
       expect(mockGetPackageManager).toHaveBeenCalledTimes(1)
@@ -432,9 +437,9 @@ describe('路径工具函数', () => {
       mockReadJson
         .mockResolvedValueOnce({ workspaces: ['packages/*'] })
         .mockResolvedValueOnce({ workspaces: ['apps/*'] })
-      mockGlob.sync
-        .mockReturnValueOnce(['packages/app'])
-        .mockReturnValueOnce(['apps/web'])
+      mockGlob.glob
+        .mockResolvedValueOnce(['packages/app/package.json'])
+        .mockResolvedValueOnce(['apps/web/package.json'])
 
       await expect(getWorkspacePackageRoots('/fresh', true)).resolves.toEqual([
         'packages/app',
@@ -493,7 +498,10 @@ describe('路径工具函数', () => {
       mockPathExists.mockResolvedValue(true)
       mockReadFile.mockResolvedValue('packages:\n  - "packages/*"')
       mockYaml.load.mockReturnValue({ packages: ['packages/*'] })
-      mockGlob.sync.mockReturnValue(['packages/core', 'packages/ui'])
+      mockGlob.glob.mockResolvedValue([
+        'packages/core/package.json',
+        'packages/ui/package.json',
+      ])
 
       const result = await getWorkspacePackageRoots('/monorepo', true)
 
@@ -527,7 +535,7 @@ describe('路径工具函数', () => {
     it('应该返回字符串数组', async () => {
       mockGetPackageManager.mockResolvedValue('npm')
       mockReadJson.mockResolvedValue({ workspaces: ['packages/*'] })
-      mockGlob.sync.mockReturnValue(['packages/test'])
+      mockGlob.glob.mockResolvedValue(['packages/test/package.json'])
 
       const result = await getWorkspacePackageRoots('/project')
 

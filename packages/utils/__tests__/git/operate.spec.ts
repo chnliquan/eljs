@@ -22,7 +22,16 @@ vi.mock('../../src/guards')
 vi.mock('../../src/git/refs')
 
 describe('Git 操作工具', () => {
-  const mockRun = requiredModule0.run as MockedFunction<
+  const queryCapture = {
+    verbose: false,
+    stdio: undefined,
+    stdout: 'pipe',
+    stderr: 'pipe',
+    buffer: true,
+    encoding: 'utf8',
+    lines: false,
+  }
+  const mockRun = requiredModule0.run as unknown as MockedFunction<
     (
       command: string,
       args: string[],
@@ -121,7 +130,11 @@ describe('Git 操作工具', () => {
       mockRun
         .mockResolvedValueOnce({ stdout: 'added files' }) // git add
         .mockRejectedValueOnce(
-          new Error('nothing to commit, working tree clean'),
+          Object.assign(new Error('Command failed'), {
+            exitCode: 1,
+            stdout: 'nothing to commit, working tree clean',
+            stderr: '',
+          }),
         ) // git commit
 
       await expect(gitCommit(message)).resolves.toBeUndefined()
@@ -131,7 +144,13 @@ describe('Git 操作工具', () => {
       const message = 'test: 无变更'
       mockRun
         .mockResolvedValueOnce({ stdout: 'added files' })
-        .mockRejectedValueOnce(new Error('无文件要提交，工作区是干净的'))
+        .mockRejectedValueOnce(
+          Object.assign(new Error('命令失败'), {
+            exitCode: 1,
+            stdout: '',
+            stderr: '无文件要提交，工作区是干净的',
+          }),
+        )
 
       await expect(gitCommit(message)).resolves.toBeUndefined()
     })
@@ -147,6 +166,35 @@ describe('Git 操作工具', () => {
       )
     })
 
+    it.each([
+      { exitCode: 1, stdout: '', stderr: 'hook failed' },
+      {
+        exitCode: 129,
+        stdout: 'nothing to commit, working tree clean',
+        stderr: 'unknown option',
+      },
+    ])('不能仅根据错误信息或无变更措辞忽略失败：%j', async result => {
+      mockRun
+        .mockResolvedValueOnce({ stdout: '' })
+        .mockRejectedValueOnce(
+          Object.assign(new Error('git commit -m "nothing to commit"'), result),
+        )
+      await expect(gitCommit('nothing to commit')).rejects.toThrow(
+        'Git commit failed:',
+      )
+    })
+
+    it('git add 失败即使输出包含无变更措辞也应抛错', async () => {
+      mockRun.mockRejectedValueOnce(
+        Object.assign(new Error('add failed'), {
+          exitCode: 1,
+          stdout: 'nothing to commit, working tree clean',
+        }),
+      )
+      await expect(gitCommit('test')).rejects.toThrow('Git commit failed:')
+      expect(mockRun).toHaveBeenCalledTimes(1)
+    })
+
     it('应该在git add失败时抛出错误', async () => {
       mockRun.mockRejectedValue(new Error('Git add failed'))
 
@@ -155,12 +203,83 @@ describe('Git 操作工具', () => {
   })
 
   describe('gitPush', () => {
+    it.each([
+      ['backup', 'HEAD:refs/heads/release'],
+      ['--force', 'ssh://git@example.com/repo.git', 'HEAD'],
+      ['--repo=backup', 'HEAD'],
+      ['--repo', 'backup'],
+      ['--', 'backup', 'HEAD'],
+      ['--tags'],
+      ['--all'],
+      ['--mirror'],
+    ])('应原样保留显式推送目标或引用选择：%j', async (...args) => {
+      mockGetGitUpstreamBranch.mockResolvedValue(null)
+      await gitPush(args)
+      expect(mockRun).toHaveBeenCalledWith('git', ['push', ...args], undefined)
+      expect(mockGetGitBranch).not.toHaveBeenCalled()
+      expect(mockGetGitUpstreamBranch).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      ['--push-option', 'ci.skip'],
+      ['-o', 'ci.skip'],
+      ['--receive-pack', 'custom-receive-pack'],
+      ['--exec', 'custom-receive-pack'],
+      ['--push-option=ci.skip'],
+    ])('选项值不应被误判为推送仓库：%j', async (...args) => {
+      mockGetGitUpstreamBranch.mockResolvedValue(null)
+      await gitPush(args)
+      expect(mockRun).toHaveBeenCalledWith(
+        'git',
+        ['push', ...args, '--set-upstream', 'origin', 'main'],
+        undefined,
+      )
+    })
+
+    it.each(['ignore', 'inherit'] as const)(
+      '内部查询应覆盖 %s 输出选项，实际推送保留原选项',
+      async stdout => {
+        mockGetGitUpstreamBranch.mockResolvedValue(null)
+        const options = {
+          cwd: '/repo',
+          stdout,
+          buffer: false,
+          encoding: 'buffer',
+          lines: true,
+        } as const
+        await gitPush([], options)
+        expect(mockGetGitUpstreamBranch).toHaveBeenCalledWith({
+          ...options,
+          ...queryCapture,
+        })
+        expect(mockGetGitBranch).toHaveBeenCalledWith({
+          ...options,
+          ...queryCapture,
+        })
+        expect(mockRun).toHaveBeenCalledWith(
+          'git',
+          ['push', '--set-upstream', 'origin', 'main'],
+          options,
+        )
+      },
+    )
+
+    it('缺省目标应插入参数终止符之前', async () => {
+      mockGetGitUpstreamBranch.mockResolvedValue(null)
+      await gitPush(['--dry-run', '--'])
+      expect(mockRun).toHaveBeenCalledWith(
+        'git',
+        ['push', '--dry-run', '--set-upstream', 'origin', 'main', '--'],
+        undefined,
+      )
+    })
+
     it('应该推送到已存在的上游分支', async () => {
       mockGetGitUpstreamBranch.mockResolvedValue('origin/main')
 
       await gitPush()
 
-      expect(mockGetGitUpstreamBranch).toHaveBeenCalledWith({ verbose: false })
+      expect(mockGetGitUpstreamBranch).toHaveBeenCalledWith(queryCapture)
       expect(mockRun).toHaveBeenCalledWith('git', ['push'], undefined)
     })
 
@@ -170,8 +289,8 @@ describe('Git 操作工具', () => {
 
       await gitPush()
 
-      expect(mockGetGitUpstreamBranch).toHaveBeenCalledWith({ verbose: false })
-      expect(mockGetGitBranch).toHaveBeenCalledWith({ verbose: false })
+      expect(mockGetGitUpstreamBranch).toHaveBeenCalledWith(queryCapture)
+      expect(mockGetGitBranch).toHaveBeenCalledWith(queryCapture)
       expect(mockRun).toHaveBeenCalledWith(
         'git',
         ['push', '--set-upstream', 'origin', 'feature-branch'],
@@ -202,7 +321,7 @@ describe('Git 操作工具', () => {
 
       expect(mockGetGitUpstreamBranch).toHaveBeenCalledWith({
         cwd: '/git/repo',
-        verbose: false,
+        ...queryCapture,
       })
       expect(mockRun).toHaveBeenCalledWith('git', ['push'], options)
     })
@@ -252,11 +371,11 @@ describe('Git 操作工具', () => {
       // 应该传递修改后的选项（verbose: false）给分支查询
       expect(mockGetGitUpstreamBranch).toHaveBeenCalledWith({
         ...options,
-        verbose: false,
+        ...queryCapture,
       })
       expect(mockGetGitBranch).toHaveBeenCalledWith({
         ...options,
-        verbose: false,
+        ...queryCapture,
       })
     })
   })
@@ -506,8 +625,8 @@ describe('Git 操作工具', () => {
 
       await gitPush()
 
-      expect(mockGetGitUpstreamBranch).toHaveBeenCalledWith({ verbose: false })
-      expect(mockGetGitBranch).toHaveBeenCalledWith({ verbose: false })
+      expect(mockGetGitUpstreamBranch).toHaveBeenCalledWith(queryCapture)
+      expect(mockGetGitBranch).toHaveBeenCalledWith(queryCapture)
       expect(mockRun).toHaveBeenCalledWith(
         'git',
         ['push', '--set-upstream', 'origin', 'feature/new-awesome-feature'],
@@ -526,11 +645,11 @@ describe('Git 操作工具', () => {
       // 分支查询应该使用原选项但设置 verbose: false
       expect(mockGetGitUpstreamBranch).toHaveBeenCalledWith({
         cwd: '/project',
-        verbose: false,
+        ...queryCapture,
       })
       expect(mockGetGitBranch).toHaveBeenCalledWith({
         cwd: '/project',
-        verbose: false,
+        ...queryCapture,
       })
 
       // 实际push使用原始选项

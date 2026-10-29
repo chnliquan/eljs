@@ -115,6 +115,46 @@ describe('NPM 安装工具', () => {
   })
 
   describe('install 函数测试', () => {
+    it.each(['npm', 'pnpm', 'yarn', 'bun'])(
+      '数组重载应检测 %s 并传递正确的命令和参数',
+      async manager => {
+        mockIsArray.mockImplementation(Array.isArray)
+        mockIsObject.mockImplementation(
+          value =>
+            value !== null &&
+            typeof value === 'object' &&
+            !Array.isArray(value),
+        )
+        mockGetPackageManager.mockResolvedValue(manager)
+        const args = ['--frozen-lockfile']
+        const options = { cwd: '/ci', env: { CI: 'true' } }
+
+        await install(args, options)
+
+        expect(mockGetPackageManager).toHaveBeenCalledWith('/ci')
+        expect(mockExeca).toHaveBeenCalledWith(
+          manager,
+          [...(manager === 'yarn' ? [] : ['install']), ...args],
+          options,
+        )
+        expect(args).toEqual(['--frozen-lockfile'])
+      },
+    )
+
+    it.each([[], ['--offline']])(
+      '数组重载在省略选项时也应检测包管理器：%j',
+      async (...args) => {
+        mockIsArray.mockImplementation(Array.isArray)
+        await install(args)
+        expect(mockGetPackageManager).toHaveBeenCalledWith(undefined)
+        expect(mockExeca).toHaveBeenCalledWith(
+          'npm',
+          ['install', ...args],
+          undefined,
+        )
+      },
+    )
+
     it('应该成功执行基本安装', async () => {
       await expect(install()).resolves.toBeUndefined()
     })

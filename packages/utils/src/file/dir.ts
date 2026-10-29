@@ -5,10 +5,10 @@ import path from 'node:path'
 
 import { PLATFORM } from '../constants'
 import { isBoolean } from '../guards'
-import { pathExists, pathExistsSync } from './is'
 
 /**
  * 创建文件夹
+ * @throws 路径为普通文件或创建失败时抛出错误，保留系统错误码
  * @param path - 文件夹路径
  * @param mode - 文件夹类型
  */
@@ -16,20 +16,18 @@ export async function mkdir(
   path: string,
   mode?: number | string,
 ): Promise<string | void | undefined> {
-  if (!(await pathExists(path))) {
-    try {
-      const dir = await mkdirp(path, mode)
-      return dir
-    } catch (error) {
-      const err = error as Error
-      err.message = `Create directory ${path} failed: ${err.message}`
-      throw err
-    }
+  try {
+    return await mkdirp(path, mode)
+  } catch (error) {
+    const err = error as Error
+    err.message = `Create directory ${path} failed: ${err.message}`
+    throw err
   }
 }
 
 /**
  * 创建文件夹
+ * @throws 路径为普通文件或创建失败时抛出错误，保留系统错误码
  * @param path - 文件夹路径
  * @param mode - 文件夹类型
  */
@@ -37,14 +35,12 @@ export function mkdirSync(
   path: string,
   mode?: number | string,
 ): string | void | undefined {
-  if (!pathExistsSync(path)) {
-    try {
-      return mkdirpSync(path, mode)
-    } catch (error) {
-      const err = error as Error
-      err.message = `Create directory ${path} failed: ${err.message}`
-      throw err
-    }
+  try {
+    return mkdirpSync(path, mode)
+  } catch (error) {
+    const err = error as Error
+    err.message = `Create directory ${path} failed: ${err.message}`
+    throw err
   }
 }
 

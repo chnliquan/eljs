@@ -3,15 +3,9 @@ import * as yaml from 'js-yaml'
 import path from 'node:path'
 
 import { pathExists, readFile, readJson } from '../file'
+import { findUp } from '../module/find-up'
 import { getPackageManager } from '../npm/package-manager'
 import type { PackageJson } from '../types'
-import {
-  getBunWorkspaceRoot,
-  getLernaWorkspaceRoot,
-  getNpmWorkspaceRoot,
-  getPnpmWorkspaceRoot,
-  getYarnWorkspaceRoot,
-} from './workspace-lock'
 
 export {
   getBunWorkspaceRoot,
@@ -24,22 +18,30 @@ export {
 /**
  * 获取工作区根目录
  *
+ * @remarks 从当前目录逐级向上查找，不因包管理器不同而跳过更近的根目录
  * @param cwd - 当前工作目录
  * @returns 最近的受支持工作区根目录，未找到时返回空字符串
  */
 export async function getWorkspaceRoot(cwd: string): Promise<string> {
-  return (
-    (await getPnpmWorkspaceRoot(cwd)) ||
-    (await getYarnWorkspaceRoot(cwd)) ||
-    (await getLernaWorkspaceRoot(cwd)) ||
-    (await getBunWorkspaceRoot(cwd)) ||
-    (await getNpmWorkspaceRoot(cwd))
+  const marker = await findUp(
+    [
+      'pnpm-workspace.yaml',
+      'pnpm-lock.yaml',
+      'yarn.lock',
+      'lerna.json',
+      'bun.lock',
+      'bun.lockb',
+      'package-lock.json',
+    ],
+    { cwd },
   )
+  return marker ? path.dirname(marker) : ''
 }
 
 /**
  * 获取工作区包根目录
- * @param cwd - 当前工作目录
+ * @remarks 保留 glob 的递归与排除语义，仅返回含 package.json 的目录并排除 node_modules；未配置工作区时返回 cwd
+ * @param cwd - 工作区配置所在目录
  * @param relative - 是否展示相对路径
  * @returns 匹配的包根目录列表
  * @throws {@link TypeError} 工作区配置不是字符串数组或 `{ packages: string[] }` 时抛出
@@ -74,7 +76,7 @@ export async function getWorkspacePackageRoots(
 
   const ignoredPatterns = workspacePatterns
     .filter(pattern => pattern.startsWith('!'))
-    .map(pattern => normalizeWorkspacePattern(pattern.slice(1)))
+    .map(pattern => `${pattern.slice(1).replace(/\/+$/u, '')}/**`)
   const packageRoots = new Set<string>()
 
   for (const pattern of workspacePatterns) {
@@ -82,13 +84,18 @@ export async function getWorkspacePackageRoots(
       continue
     }
 
-    const matches = glob.sync(normalizeWorkspacePattern(pattern), {
+    const matches = await glob(`${pattern.replace(/\/+$/u, '')}/package.json`, {
       cwd: resolvedCwd,
-      ignore: ['*/*.*', ...ignoredPatterns],
+      dot: true,
+      nodir: true,
+      ignore: ['**/node_modules/**', ...ignoredPatterns],
     })
 
-    for (const match of matches) {
-      packageRoots.add(relative ? match : path.resolve(resolvedCwd, match))
+    for (const match of matches.sort()) {
+      const directory = path.dirname(match)
+      packageRoots.add(
+        relative ? directory : path.resolve(resolvedCwd, directory),
+      )
     }
   }
 
@@ -119,10 +126,6 @@ function normalizeWorkspacePatterns(
   }
 
   return patterns
-}
-
-function normalizeWorkspacePattern(pattern: string): string {
-  return pattern.replace(/\/\*+$/u, '/*')
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

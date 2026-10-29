@@ -62,7 +62,7 @@ export function clearCachedSudoPassword(): void {
  * 以 sudo 模式执行命令并等待子进程退出
  * @param options - 选项
  * @returns 子进程以退出码 `0` 结束后完成
- * @throws Windows 不支持 sudo、未找到可执行文件、启动失败或退出码非零时抛出 {@link UtilsError}
+ * @throws Windows 不支持 sudo、未找到可执行文件、启动或密码输入失败、退出码非零时抛出 {@link UtilsError}
  */
 export async function sudo(options?: SudoOptions): Promise<void>
 /**
@@ -70,7 +70,7 @@ export async function sudo(options?: SudoOptions): Promise<void>
  * @param args - 传给 sudo 的命令参数
  * @param options - 选项
  * @returns 子进程以退出码 `0` 结束后完成
- * @throws Windows 不支持 sudo、未找到可执行文件、启动失败或退出码非零时抛出 {@link UtilsError}
+ * @throws Windows 不支持 sudo、未找到可执行文件、启动或密码输入失败、退出码非零时抛出 {@link UtilsError}
  */
 export async function sudo(args: string[], options?: SudoOptions): Promise<void>
 export async function sudo(
@@ -170,22 +170,47 @@ async function spawnSudo(
       console.log(message)
     }
 
-    const writePassword = (value: string) => {
+    const failPassword = (message: string, cause: unknown) => {
+      if (settled) {
+        return
+      }
+
+      settle(
+        new UtilsError('ERR_PROCESS_SPAWN', message, {
+          cause,
+          operation: 'cp.sudo',
+        }),
+      )
+      child.stdin?.destroy()
       try {
-        child.stdin?.write(value + EOL)
-      } catch (cause) {
         child.kill()
-        settle(
-          new UtilsError(
-            'ERR_PROCESS_SPAWN',
-            'Unable to write the sudo password',
-            { cause, operation: 'cp.sudo' },
-          ),
-        )
+      } catch {
+        // 进程可能已经退出，清理失败不能覆盖密码输入的原始错误
       }
     }
 
+    const writePassword = (value: string) => {
+      if (settled) {
+        return
+      }
+
+      try {
+        child.stdin?.write(value + EOL)
+      } catch (cause) {
+        failPassword('Unable to write the sudo password', cause)
+      }
+    }
+
+    // write 的异步 EPIPE 通过流事件报告，结算后仍保留监听以接住迟到错误
+    child.stdin?.on('error', cause => {
+      failPassword('Unable to write the sudo password', cause)
+    })
+
     const requestPassword = () => {
+      if (settled) {
+        return
+      }
+
       const cached = getCachedPassword()
 
       if (password) {
@@ -200,6 +225,10 @@ async function spawnSudo(
 
       void read({ prompt, silent: true }).then(
         value => {
+          if (settled) {
+            return
+          }
+
           if (cachePassword) {
             cachedPassword = {
               expiresAt: Date.now() + Math.max(0, passwordCacheTtlMs),
@@ -209,14 +238,7 @@ async function spawnSudo(
           writePassword(value)
         },
         cause => {
-          child.kill()
-          settle(
-            new UtilsError(
-              'ERR_PROCESS_SPAWN',
-              'Unable to read the sudo password',
-              { cause, operation: 'cp.sudo' },
-            ),
-          )
+          failPassword('Unable to read the sudo password', cause)
         },
       )
     }

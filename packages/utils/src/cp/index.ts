@@ -1,5 +1,4 @@
 export * from './command'
 export * from './command-line'
-export * from './normalize'
 export * from './process-id'
 export * from './sudo'

@@ -2,6 +2,7 @@ import {
   beforeEach,
   describe,
   expect,
+  expectTypeOf,
   it,
   vi,
   type MockedFunction,
@@ -10,7 +11,10 @@ import * as importedModule0 from '../../src/file'
 import * as importedModule1 from '../../src/guards'
 
 import { downloadTo, type DownloadOptions } from '../../src/http/download'
-import { downloadNpmTarball } from '../../src/npm/download-npm-tarball'
+import {
+  downloadNpmTarball,
+  type DownloadNpmTarballOptions,
+} from '../../src/npm/download-npm-tarball'
 
 const requiredModule0 = vi.mocked(importedModule0, { deep: true })
 const requiredModule1 = vi.mocked(importedModule1, { deep: true })
@@ -42,6 +46,35 @@ describe('NPM Download 工具', () => {
   })
 
   describe('downloadNpmTarball', () => {
+    it.each([false, true])(
+      '兼容旧下载选项但始终解压为包根目录：extract=%s',
+      async extract => {
+        const options: DownloadOptions = {
+          extract,
+          strip: 0,
+          integrity: 'sha512-test',
+          headers: { authorization: 'Bearer token' },
+        }
+        await downloadNpmTarball(
+          'https://example.com/pkg.tgz',
+          '/dest',
+          options,
+        )
+        expect(mockDownloadTo).toHaveBeenCalledWith(
+          'https://example.com/pkg.tgz',
+          '/dest',
+          expect.objectContaining({
+            extract: true,
+            strip: 1,
+            integrity: 'sha512-test',
+          }),
+        )
+        const headers = mockDownloadTo.mock.calls[0][2]?.headers as Headers
+        expect(headers.get('authorization')).toBe('Bearer token')
+        expect(options).toMatchObject({ extract, strip: 0 })
+      },
+    )
+
     it('应该下载到指定目录', async () => {
       const url = 'https://registry.npmjs.org/package/-/package-1.0.0.tgz'
       const dest = '/custom/destination'
@@ -199,6 +232,12 @@ describe('NPM Download 工具', () => {
   })
 
   describe('类型安全', () => {
+    it('专用选项不再公开被固定的解压参数，并兼容旧选项变量', () => {
+      expectTypeOf<DownloadNpmTarballOptions>().not.toHaveProperty('extract')
+      expectTypeOf<DownloadNpmTarballOptions>().not.toHaveProperty('strip')
+      expectTypeOf<DownloadOptions>().toExtend<DownloadNpmTarballOptions>()
+    })
+
     it('应该保持正确的返回类型', async () => {
       const result = await downloadNpmTarball('https://example.com/test.tgz')
 

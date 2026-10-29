@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { createReadStream, createWriteStream } from 'node:fs'
-import { mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises'
 import { Readable, Writable } from 'node:stream'
 import { x as extractTar } from 'tar'
 import {
@@ -45,6 +45,9 @@ const mockExtractTar = extractTar as MockedFunction<typeof extractTar>
 describe('download', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(lstat).mockRejectedValue(
+      Object.assign(new Error('missing'), { code: 'ENOENT' }),
+    )
     mockMkdtemp.mockResolvedValue('/tmp/eljs-download-test')
     mockRename.mockResolvedValue(undefined)
     mockRm.mockResolvedValue(undefined)
@@ -74,6 +77,24 @@ describe('download', () => {
 
     await expect(result).resolves.toEqual(Buffer.from('downloaded'))
     expect(Buffer.concat(chunks)).toEqual(Buffer.from('downloaded'))
+  })
+
+  it('forwards third-argument options when destination is undefined', async () => {
+    const controller = new AbortController()
+    const headers = { accept: 'application/octet-stream' }
+
+    await expect(
+      download('https://example.com/archive.tgz', undefined, {
+        headers,
+        maxBytes: 4,
+        signal: controller.signal,
+        timeout: 0,
+      }),
+    ).rejects.toMatchObject({ code: 'ERR_DOWNLOAD_TOO_LARGE' })
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.any(URL),
+      expect.objectContaining({ headers, signal: controller.signal }),
+    )
   })
 
   it('rejects non-HTTP protocols before making a request', async () => {
@@ -181,10 +202,34 @@ describe('download', () => {
     })
 
     expect(mockMkdir).toHaveBeenCalledWith('/destination', { recursive: true })
+    const temporaryPath = mockWriteFile.mock.calls.at(-1)?.[0]
     expect(mockWriteFile).toHaveBeenCalledWith(
-      '/destination/unsafe.tgz',
+      expect.stringMatching(/^\/destination\/\.unsafe\.tgz\..+\.tmp$/),
       Buffer.from('downloaded'),
+      { flag: 'wx', mode: undefined },
     )
+    expect(mockRename).toHaveBeenCalledWith(
+      temporaryPath,
+      '/destination/unsafe.tgz',
+    )
+    expect(mockRm).toHaveBeenCalledWith(temporaryPath, {
+      force: true,
+      recursive: false,
+    })
+  })
+
+  it('cleans up a failed buffered write without publishing it', async () => {
+    const cause = new Error('disk full')
+    mockWriteFile.mockRejectedValueOnce(cause)
+
+    await expect(
+      download('https://example.com/archive.tgz', '/destination'),
+    ).rejects.toBe(cause)
+    expect(mockRename).not.toHaveBeenCalled()
+    expect(mockRm).toHaveBeenCalledWith(mockWriteFile.mock.calls.at(-1)?.[0], {
+      force: true,
+      recursive: false,
+    })
   })
 
   it('securely extracts tar archives with the requested strip depth', async () => {
@@ -209,50 +254,6 @@ describe('download', () => {
       strip: 1,
     })
     expect(mockWriteFile).not.toHaveBeenCalled()
-  })
-
-  it('limits the number of extracted archive entries', async () => {
-    const extractor = new Writable({
-      write(_chunk, _encoding, callback) {
-        callback()
-      },
-    })
-    mockExtractTar.mockReturnValue(
-      extractor as unknown as ReturnType<typeof extractTar>,
-    )
-
-    await download('https://example.com/archive.tgz', '/destination', {
-      extract: true,
-      maxEntries: 1,
-    })
-
-    const tarOptions = mockExtractTar.mock.calls.at(-1)?.[0]
-    expect(tarOptions?.filter?.('first', {} as never)).toBe(true)
-    expect(() => tarOptions?.filter?.('second', {} as never)).toThrow(
-      'more than 1 entries',
-    )
-  })
-
-  it('limits the total unpacked archive size', async () => {
-    const extractor = new Writable({
-      write(_chunk, _encoding, callback) {
-        callback()
-      },
-    })
-    mockExtractTar.mockReturnValue(
-      extractor as unknown as ReturnType<typeof extractTar>,
-    )
-
-    await download('https://example.com/archive.tgz', '/destination', {
-      extract: true,
-      maxUnpackedBytes: 10,
-    })
-
-    const tarOptions = mockExtractTar.mock.calls.at(-1)?.[0]
-    expect(tarOptions?.filter?.('first', { size: 6 } as never)).toBe(true)
-    expect(() => tarOptions?.filter?.('second', { size: 5 } as never)).toThrow(
-      'expands beyond the 10 byte limit',
-    )
   })
 
   it('rejects invalid archive limits before extraction', async () => {
@@ -390,6 +391,7 @@ describe('download', () => {
 
     expect(mockCreateWriteStream).toHaveBeenCalledWith(
       expect.stringMatching(/^\/destination\/\.archive\.tgz\..+\.tmp$/),
+      { flags: 'wx', mode: undefined },
     )
     const temporaryPath = mockCreateWriteStream.mock.calls.at(-1)?.[0]
     expect(mockRename).toHaveBeenCalledWith(

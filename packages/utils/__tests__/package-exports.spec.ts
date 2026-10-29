@@ -3,6 +3,9 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import * as rootExports from '../src'
+import * as fileExports from '../src/file'
+import * as loaderExports from '../src/loader'
+import { Transformer } from '../src/loader/transformer'
 import * as pathExports from '../src/path'
 
 interface PackageManifest {
@@ -11,6 +14,30 @@ interface PackageManifest {
 }
 
 describe('package exports contract', () => {
+  it('preserves loader identities through existing public entry points', () => {
+    const loaderNames = [
+      'fileLoaders',
+      'fileLoadersSync',
+      'loadJs',
+      'loadJsSync',
+      'loadJson',
+      'loadJsonSync',
+      'loadTs',
+      'loadTsSync',
+      'loadYaml',
+      'loadYamlSync',
+      'resolveTsConfig',
+    ] as const
+
+    expect(Object.keys(loaderExports).sort()).toEqual([...loaderNames].sort())
+    for (const name of loaderNames) {
+      expect(fileExports[name]).toBe(loaderExports[name])
+      expect(rootExports[name]).toBe(loaderExports[name])
+    }
+    expect(fileExports.Transformer).toBe(Transformer)
+    expect(rootExports.Transformer).toBe(Transformer)
+  })
+
   it('only exposes the root and documented domain entry points', async () => {
     const manifest = JSON.parse(
       await readFile(path.resolve('packages/utils/package.json'), 'utf8'),

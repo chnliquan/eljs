@@ -1,6 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import { createReadStream, createWriteStream } from 'node:fs'
-import { mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises'
+import {
+  chmod,
+  lstat,
+  mkdir,
+  mkdtemp,
+  rename,
+  rm,
+  writeFile,
+} from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { PassThrough, Readable } from 'node:stream'
@@ -23,6 +31,11 @@ export type { DownloadOptions, DownloadResult } from './download-options'
 
 /**
  * 下载 HTTP(S) 资源并写入目标目录
+ * @remarks
+ * 响应体逐块检查大小，完成后仍返回完整 Buffer；超限时取消剩余响应
+ * 普通文件校验完成后通过同目录临时文件重命名发布，失败时清理临时文件
+ * 替换已有普通文件时保留其读、写、执行权限，暂存文件不会获得更宽的权限
+ * tar 解压直接写入目标目录，失败时可能保留已解压条目
  * @param url - 资源地址
  * @param destination - 写入或解压资源的目标目录
  * @param options - 下载选项
@@ -37,6 +50,7 @@ export default function download(
 
 /**
  * 下载 HTTP(S) 资源并返回完整响应内容
+ * @remarks 响应体逐块检查大小，完成后仍返回完整 Buffer；超限时取消剩余响应
  * @param url - 资源地址
  * @param options - 下载选项
  * @returns 可作为 Promise 或双工流消费的下载结果
@@ -52,7 +66,7 @@ export default function download(
   options: DownloadOptions = {},
 ): DownloadResult {
   if (typeof destination !== 'string') {
-    options = destination ?? {}
+    options = destination ?? options
     destination = undefined
   }
 
@@ -83,6 +97,9 @@ export default function download(
  *
  * @remarks
  * 响应体不会完整保存在内存中，响应大小在流经管道时持续校验
+ * 普通文件校验完成后通过同目录临时文件重命名发布，失败时清理临时文件
+ * 替换已有普通文件时保留其读、写、执行权限，暂存文件不会获得更宽的权限
+ * tar 解压直接写入目标目录，失败时清理临时归档但可能保留已解压条目
  *
  * @param url - 资源地址
  * @param destination - 写入或解压资源的目标目录
@@ -141,21 +158,18 @@ export async function downloadTo(
           options.filename,
           response.url || parsedUrl.href,
         )
-        const outputPath = path.join(destination, filename)
-        const temporaryPath = path.join(
+        await publishFile(
           destination,
-          `.${filename}.${randomUUID()}.tmp`,
+          filename,
+          async (temporaryPath, mode) => {
+            await pipeline(
+              source,
+              limiter,
+              integrityVerifier,
+              createWriteStream(temporaryPath, { flags: 'wx', mode }),
+            )
+          },
         )
-
-        await runWithCleanup(temporaryPath, async () => {
-          await pipeline(
-            source,
-            limiter,
-            integrityVerifier,
-            createWriteStream(temporaryPath),
-          )
-          await rename(temporaryPath, outputPath)
-        })
       },
     )
   } catch (cause) {
@@ -201,8 +215,29 @@ async function downloadResource(
   return withDownloadResponse(url, options, async ({ parsedUrl, response }) => {
     const maxBytes = resolveMaxBytes(options.maxBytes)
     assertContentLength(response, maxBytes, parsedUrl.href)
-    const data = Buffer.from(await response.arrayBuffer())
-    assertDownloadedSize(data.byteLength, maxBytes, parsedUrl.href)
+    const chunks: Uint8Array[] = []
+    let receivedBytes = 0
+    const reader = response.body?.getReader()
+
+    if (reader) {
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) {
+            break
+          }
+
+          receivedBytes += value.byteLength
+          assertDownloadedSize(receivedBytes, maxBytes, parsedUrl.href)
+          chunks.push(value)
+        }
+      } finally {
+        // 释放锁后由响应生命周期统一取消未消费的数据
+        reader.releaseLock()
+      }
+    }
+
+    const data = Buffer.concat(chunks, receivedBytes)
     assertIntegrity(data, options.integrity)
 
     if (!destination) {
@@ -223,19 +258,21 @@ async function downloadResource(
       options.filename,
       response.url || parsedUrl.href,
     )
-    await writeFile(path.join(destination, filename), data)
+    await publishFile(destination, filename, (temporaryPath, mode) =>
+      writeFile(temporaryPath, data, { flag: 'wx', mode }),
+    )
 
     return data
   })
 }
 
 /**
- * 消费下载响应并确保请求代理在响应处理完成后关闭
+ * 消费下载响应，失败时取消未锁定的响应体，最后关闭请求代理
  * @param url - 资源地址
  * @param options - 下载选项
  * @param consume - 响应消费函数
  * @returns 响应消费结果
- * @throws 消费或代理清理失败时抛出错误，两者均失败时抛出 `AggregateError`
+ * @throws 消费或清理失败时抛出错误，两者均失败时抛出 `AggregateError`
  * @internal
  */
 async function withDownloadResponse<Result>(
@@ -258,18 +295,32 @@ async function withDownloadResponse<Result>(
 
   let cleanupError: unknown
 
+  if (consumeError !== undefined && response.body && !response.body.locked) {
+    try {
+      await response.body.cancel(consumeError)
+    } catch (error) {
+      // 已出错的 Web Stream 会再次抛出读取错误，不算独立的清理失败
+      if (error !== consumeError) {
+        cleanupError = error
+      }
+    }
+  }
+
   if (dispatcher) {
     try {
       await dispatcher.close()
     } catch (error) {
-      cleanupError = error
+      cleanupError =
+        cleanupError === undefined
+          ? error
+          : new AggregateError([cleanupError, error], 'Download cleanup failed')
     }
   }
 
   if (consumeError !== undefined && cleanupError !== undefined) {
     throw new AggregateError(
       [consumeError, cleanupError],
-      'Download failed and proxy cleanup also failed',
+      'Download failed and response cleanup also failed',
       { cause: cleanupError },
     )
   }
@@ -283,6 +334,47 @@ async function withDownloadResponse<Result>(
   }
 
   return consumeResult as Result
+}
+
+/**
+ * 在目标目录暂存普通文件，写入成功后重命名发布并清理临时路径
+ * @remarks 保留已有普通文件的 rwx 权限，不继承符号链接目标或特殊权限位；校验不提供并发隔离
+ * @param destination - 已创建的目标目录
+ * @param filename - 已校验的目标文件名
+ * @param write - 按给定权限排他创建并写入临时路径的任务，未指定权限时遵循默认值与 umask
+ * @returns 文件发布和临时路径清理完成后结束
+ * @internal
+ */
+async function publishFile(
+  destination: string,
+  filename: string,
+  write: (temporaryPath: string, mode: number | undefined) => Promise<void>,
+): Promise<void> {
+  const targetPath = path.join(destination, filename)
+  let mode: number | undefined
+  try {
+    const target = await lstat(targetPath)
+    if (target.isFile()) {
+      mode = target.mode & 0o777
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error
+    }
+  }
+  const temporaryPath = path.join(
+    destination,
+    `.${filename}.${randomUUID()}.tmp`,
+  )
+
+  await runWithCleanup(temporaryPath, async () => {
+    await write(temporaryPath, mode)
+    if (mode !== undefined) {
+      // 创建时受 umask 限制，写入后恢复原权限再发布，避免暂存内容比目标更开放
+      await chmod(temporaryPath, mode)
+    }
+    await rename(temporaryPath, targetPath)
+  })
 }
 
 /**

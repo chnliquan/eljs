@@ -1,321 +1,314 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-  type Mocked,
-  type MockedFunction,
-} from 'vitest'
-import * as importedModule0 from '../../src/guards'
+import readline from 'node:readline'
+import { PassThrough } from 'node:stream'
+import prompts, { type PromptObject } from 'prompts'
+import { afterEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
 
-import * as readline from 'node:readline'
-import type { Answers, PromptObject } from 'prompts'
-import prompts from 'prompts'
-
-import * as cliModule from '../../src/cli'
+import * as cli from '../../src/cli'
 import { confirm, loopPrompt, pause, prompt, select } from '../../src/cli'
 
-const requiredModule0 = vi.mocked(importedModule0, { deep: true })
+afterEach(() => {
+  delete (prompts as typeof prompts & { _injected?: unknown[] })._injected
+  prompts.override({})
+  vi.restoreAllMocks()
+})
 
-// Mock 依赖项
-vi.mock('node:readline')
-vi.mock('prompts')
-vi.mock('../../src/guards')
+it('导出 CLI 公共入口', () => {
+  for (const name of [
+    'pause',
+    'confirm',
+    'select',
+    'prompt',
+    'loopPrompt',
+    'runCliProcess',
+    'notifyUpdates',
+  ] as const) {
+    expect(cli[name]).toBeTypeOf('function')
+  }
+  expect(cli.prompts).toBe(prompts)
+})
 
-// 定义类型
-interface MockReadlineInterface {
-  question: MockedFunction<(query: string, callback: () => void) => void>
-  close: MockedFunction<() => void>
+describe('pause 的真实 readline 生命周期', () => {
+  function setup() {
+    const input = new PassThrough()
+    const output = new PassThrough()
+    const rl = readline.createInterface({ input, output, terminal: false })
+    vi.spyOn(readline, 'createInterface').mockReturnValueOnce(rl)
+    const close = vi.spyOn(rl, 'close')
+    const assertClean = () => {
+      expect(rl.listenerCount('close')).toBe(0)
+      expect(rl.listenerCount('error')).toBe(0)
+      expect(input.listenerCount('error')).toBe(0)
+      expect(input.listenerCount('data')).toBe(0)
+      expect(input.listenerCount('end')).toBe(0)
+      expect(close).toHaveBeenCalledTimes(1)
+      input.destroy()
+      output.destroy()
+    }
+    return { input, output, rl, assertClean }
+  }
+
+  it.each([undefined, '按 Enter 继续'])(
+    '正常 Enter 完成输入并清理，提示为 %s',
+    async message => {
+      const { input, output, assertClean } = setup()
+      const result = pause(message)
+      expect(output.read()?.toString()).toBe(
+        message ?? 'Press Enter key to continue...',
+      )
+      input.write('\n')
+      await expect(result).resolves.toBeUndefined()
+      assertClean()
+    },
+  )
+
+  it('stdin EOF 拒绝而不留下悬空 Promise', async () => {
+    const { input, assertClean } = setup()
+    const result = expect(pause()).rejects.toThrow(
+      'Input closed before pause received a line',
+    )
+    input.end()
+    await result
+    assertClean()
+  })
+
+  it('外部关闭 readline 时拒绝并清理一次', async () => {
+    const { rl, assertClean } = setup()
+    const result = expect(pause()).rejects.toThrow('Input closed')
+    rl.close()
+    await result
+    assertClean()
+  })
+
+  it('输入流错误保留错误原因并清理', async () => {
+    const { input, assertClean } = setup()
+    const error = new Error('stdin failed')
+    const result = expect(pause()).rejects.toBe(error)
+    input.destroy(error)
+    await result
+    assertClean()
+  })
+})
+
+describe('confirm 的真实取消行为和返回类型', () => {
+  it.each([true, false])('返回用户选择 %s', async answer => {
+    prompts.inject([answer])
+    const result = confirm('继续？')
+    expectTypeOf(result).toEqualTypeOf<Promise<boolean>>()
+    await expect(result).resolves.toBe(answer)
+  })
+
+  it.each([true, false])('保留 preferNo=%s 的默认值', async preferNo => {
+    prompts.inject([undefined])
+    await expect(confirm('继续？', preferNo)).resolves.toBe(!preferNo)
+  })
+
+  it('默认取消拒绝且不退出进程', async () => {
+    const exit = vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('Unexpected exit')
+    })
+    prompts.inject([new Error('cancel')])
+    await expect(confirm('继续？', undefined, undefined)).rejects.toThrow(
+      'Prompt was cancelled',
+    )
+    expect(exit).not.toHaveBeenCalled()
+  })
+
+  it('自定义取消回调正常返回时保留 undefined', async () => {
+    const onCancel = vi.fn(() => {})
+    prompts.inject([new Error('cancel')])
+    const result = confirm('继续？', true, onCancel)
+    expectTypeOf(result).toEqualTypeOf<Promise<boolean | undefined>>()
+    await expect(result).resolves.toBeUndefined()
+    expect(onCancel).toHaveBeenCalledOnce()
+  })
+
+  it('保留自定义取消回调抛出的错误', async () => {
+    const error = new Error('domain cancellation')
+    prompts.inject([new Error('cancel')])
+    await expect(
+      confirm('继续？', undefined, () => {
+        throw error
+      }),
+    ).rejects.toBe(error)
+  })
+})
+
+describe('select 值类型', () => {
+  it('推导字符串、数字和对象的值并原样返回', async () => {
+    const object = { id: 1 }
+    prompts.inject(['one', 2, object])
+    const text = select('文本', [{ title: 'one', value: 'one' }])
+    expectTypeOf(text).toEqualTypeOf<Promise<string>>()
+    await expect(text).resolves.toBe('one')
+    const number = select('数字', [{ title: 'two', value: 2 }])
+    expectTypeOf(number).toEqualTypeOf<Promise<number>>()
+    await expect(number).resolves.toBe(2)
+    const record = select('对象', [{ title: 'object', value: object }])
+    expectTypeOf(record).toEqualTypeOf<Promise<{ id: number }>>()
+    await expect(record).resolves.toBe(object)
+  })
+
+  it('推导动态选项值并支持显式值联合类型', async () => {
+    prompts.inject([3, 'one'])
+    const result = select('动态', () => [{ title: 'three', value: 3 }])
+    expectTypeOf(result).toEqualTypeOf<Promise<number>>()
+    await expect(result).resolves.toBe(3)
+    const mixed = select<string | number>('混合', [
+      { title: 'one', value: 'one' },
+      { title: 'two', value: 2 },
+    ])
+    expectTypeOf(mixed).toEqualTypeOf<Promise<string | number>>()
+    await expect(mixed).resolves.toBe('one')
+  })
+
+  it('取消选择时拒绝', async () => {
+    prompts.inject([new Error('cancel')])
+    await expect(select('选择', [{ title: 'one', value: 1 }])).rejects.toThrow(
+      'Prompt was cancelled',
+    )
+  })
+})
+
+// 编译期验证显式泛型约束选项值，不启动交互
+function checkSelectTypes() {
+  // @ts-expect-error 数字选项不能声明为字符串返回值
+  void select<string>('选择', [{ title: 'one', value: 1 }])
+  const missing = select('默认索引', [{ title: 'one' }])
+  expectTypeOf(missing).toEqualTypeOf<Promise<unknown>>()
+  const index = select('默认索引', [{ title: 'one', value: undefined }])
+  expectTypeOf(index).toEqualTypeOf<Promise<number>>()
 }
+void checkSelectTypes
 
-interface MockConsole {
-  log: MockedFunction<(...args: unknown[]) => void>
-}
-
-describe('命令行工具函数', () => {
-  const mockReadline = readline as Mocked<typeof readline>
-  const mockPrompts = prompts as MockedFunction<typeof prompts>
-  const mockIsNull = requiredModule0.isNull as MockedFunction<
-    (value: unknown) => boolean
-  >
-
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mockIsNull.mockReturnValue(false)
+describe('prompt 的真实提问流程', () => {
+  it('仅默认 undefined，保留静态和动态的跳过类型', async () => {
+    const questions: PromptObject[] = [
+      { name: 'skipFalse', type: false },
+      { name: 'skipNull', type: null },
+      { name: 'skipDynamic', type: () => false },
+      { name: 'default', type: undefined, message: '文本' },
+      { name: 'next', type: 'number', message: '数字' },
+    ]
+    prompts.inject(['value', 42])
+    await expect(prompt(questions)).resolves.toEqual({
+      default: 'value',
+      next: 42,
+    })
+    expect(questions[3].type).toBeUndefined()
+    expect(questions[2].type).toBeTypeOf('function')
   })
 
-  // 测试完整的模块导出
-  describe('模块导出完整性', () => {
-    it('应该导出所有预期的函数', () => {
-      expect(typeof cliModule.pause).toBe('function')
-      expect(typeof cliModule.confirm).toBe('function')
-      expect(typeof cliModule.select).toBe('function')
-      expect(typeof cliModule.prompt).toBe('function')
-      expect(typeof cliModule.loopPrompt).toBe('function')
-
-      // 测试重导出模块的所有可能路径
-      const allExports = Object.keys(cliModule)
-      expect(allExports).toContain('pause')
-      expect(allExports).toContain('confirm')
-      expect(allExports).toContain('select')
-      expect(allExports).toContain('prompt')
-      expect(allExports).toContain('loopPrompt')
-    })
-
-    it('应该能够通过通配符导出访问所有功能', () => {
-      // 这将触发重导出逻辑的所有分支
-      expect(cliModule).toBeDefined()
-      expect(Object.getOwnPropertyNames(cliModule).length).toBeGreaterThan(0)
-    })
+  it('保留 falsy 初始值且不修改问题定义', async () => {
+    const questions: PromptObject[] = [
+      { name: 'enabled', type: 'confirm', message: '启用' },
+      { name: 'count', type: 'number', message: '数量' },
+      { name: 'label', type: 'text', message: '名称' },
+    ]
+    prompts.inject([undefined, undefined, undefined])
+    await expect(
+      prompt(questions, { enabled: false, count: 0, label: '' }),
+    ).resolves.toEqual({ enabled: false, count: 0, label: '' })
+    expect(questions.every(question => question.initial === undefined)).toBe(
+      true,
+    )
   })
 
-  describe('pause 暂停输入', () => {
-    let mockRl: MockReadlineInterface
+  it('取消后拒绝而不返回部分答案', async () => {
+    prompts.inject(['partial', new Error('cancel')])
+    await expect(
+      prompt([
+        { name: 'first', type: 'text', message: '第一题' },
+        { name: 'second', type: 'text', message: '第二题' },
+      ]),
+    ).rejects.toThrow('Prompt was cancelled')
+  })
+})
 
-    beforeEach(() => {
-      mockRl = {
-        question: vi.fn(),
-        close: vi.fn(),
-      }
-      mockReadline.createInterface.mockReturnValue(
-        mockRl as unknown as readline.Interface,
-      )
+describe('loopPrompt 摘要脱敏', () => {
+  it('掩码整个敏感答案，包括动态类型、名称、样式和格式化对象', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const secret = { token: 'formatted-secret' }
+    const dynamicType = vi.fn(() => 'password' as const)
+    const dynamicName = vi.fn(() => 'dynamic')
+    const questions: PromptObject[] = [
+      { name: 'public', type: 'text', message: '公开' },
+      { name: 'password', type: 'password', message: '密码' },
+      { name: 'hidden', type: 'invisible', message: '隐藏' },
+      { name: dynamicName, type: dynamicType, message: '动态密码' },
+      {
+        name: 'formatted',
+        type: 'password',
+        message: '格式化密码',
+        format: () => secret,
+      },
+      {
+        name: 'styled',
+        type: 'text',
+        style: () => 'invisible',
+        message: '隐藏样式',
+      },
+    ]
+    prompts.inject([
+      'visible',
+      'raw-password',
+      'hidden-token',
+      'dynamic-secret',
+      'raw-formatted-secret',
+      'styled-secret',
+      true,
+    ])
+    const answers = await loopPrompt(questions)
+    expect(answers).toEqual({
+      public: 'visible',
+      password: 'raw-password',
+      hidden: 'hidden-token',
+      dynamic: 'dynamic-secret',
+      formatted: secret,
+      styled: 'styled-secret',
     })
-
-    it('应该使用默认消息暂停并等待用户输入', async () => {
-      mockRl.question.mockImplementation(
-        (message: string, callback: () => void) => {
-          expect(message).toBe('Press Enter key to continue...')
-          callback()
-        },
-      )
-
-      const pausePromise = pause()
-      await pausePromise
-
-      expect(mockReadline.createInterface).toHaveBeenCalledWith({
-        input: process.stdin,
-        output: process.stdout,
-      })
-      expect(mockRl.question).toHaveBeenCalledWith(
-        'Press Enter key to continue...',
-        expect.any(Function),
-      )
-      expect(mockRl.close).toHaveBeenCalled()
+    expect(answers.formatted).toBe(secret)
+    expect(JSON.parse(log.mock.calls[2][0])).toEqual({
+      public: 'visible',
+      password: '******',
+      hidden: '******',
+      dynamic: '******',
+      formatted: '******',
+      styled: '******',
     })
-
-    it('应该使用自定义消息暂停并等待用户输入', async () => {
-      const customMessage = '按任意键继续...'
-
-      mockRl.question.mockImplementation(
-        (message: string, callback: () => void) => {
-          expect(message).toBe(customMessage)
-          callback()
-        },
-      )
-
-      const pausePromise = pause(customMessage)
-      await pausePromise
-
-      expect(mockRl.question).toHaveBeenCalledWith(
-        customMessage,
-        expect.any(Function),
-      )
-      expect(mockRl.close).toHaveBeenCalled()
-    })
+    expect(dynamicType).toHaveBeenCalledOnce()
+    expect(dynamicName).toHaveBeenCalledOnce()
+    expect(questions[3].type).toBe(dynamicType)
+    expect(questions[3].name).toBe(dynamicName)
   })
 
-  describe('confirm 确认对话框', () => {
-    it('应该在用户确认时返回 true', async () => {
-      mockPrompts.mockResolvedValue({ confirm: true })
-
-      const result = await confirm('你确定吗？')
-
-      expect(result).toBe(true)
-      expect(mockPrompts).toHaveBeenCalledWith(
-        {
-          type: 'confirm',
-          message: '你确定吗？',
-          name: 'confirm',
-          initial: true,
-        },
-        {
-          onCancel: expect.any(Function),
-        },
-      )
-    })
-
-    it('应该在用户拒绝时返回 false', async () => {
-      mockPrompts.mockResolvedValue({ confirm: false })
-
-      const result = await confirm('你确定吗？')
-
-      expect(result).toBe(false)
-    })
-
-    it('默认取消处理不应该直接终止进程', async () => {
-      mockPrompts.mockResolvedValue({})
-      const exit = vi
-        .spyOn(process, 'exit')
-        .mockImplementation(() => undefined as never)
-
-      await confirm('你确定吗？')
-      const options = mockPrompts.mock.calls.at(-1)?.[1]
-
-      expect(() => options?.onCancel?.({} as PromptObject, {})).toThrow(
-        'Prompt was cancelled',
-      )
-      expect(exit).not.toHaveBeenCalled()
-    })
+  it('重新输入时重新解析动态类型，保留真实初始答案', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const type = vi
+      .fn<() => 'text' | 'password'>()
+      .mockReturnValueOnce('text')
+      .mockReturnValueOnce('password')
+    prompts.inject(['first', false, undefined, true])
+    const result = await loopPrompt([{ name: 'value', type, message: '内容' }])
+    expect(result).toEqual({ value: 'first' })
+    expect(type).toHaveBeenCalledTimes(2)
+    expect(JSON.parse(log.mock.calls[2][0])).toEqual({ value: 'first' })
+    expect(JSON.parse(log.mock.calls[6][0])).toEqual({ value: '******' })
   })
 
-  describe('select 选择对话框', () => {
-    it('应该返回选择的选项', async () => {
-      const choices = [
-        { title: '选项 1', value: 'opt1' },
-        { title: '选项 2', value: 'opt2' },
-      ]
-      mockPrompts.mockResolvedValue({ name: 'opt1' })
-
-      const result = await select('选择一个选项：', choices)
-
-      expect(result).toBe('opt1')
-      expect(mockPrompts).toHaveBeenCalledWith(
-        [
-          {
-            name: 'name',
-            message: '选择一个选项：',
-            type: 'select',
-            choices,
-            initial: undefined,
-          },
-        ],
-        { onCancel: expect.any(Function) },
-      )
-    })
-
-    it('取消时不应该返回空选项', async () => {
-      mockPrompts.mockResolvedValue({})
-
-      await select('选择一个选项：', [])
-      const options = mockPrompts.mock.calls.at(-1)?.[1]
-
-      expect(() => options?.onCancel?.({} as PromptObject, {})).toThrow(
-        'Prompt was cancelled',
-      )
-    })
+  it('密码重新输入的初始值保持原值', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+    prompts.inject(['secret', false, undefined, true])
+    await expect(
+      loopPrompt([{ name: 'password', type: 'password', message: '密码' }]),
+    ).resolves.toEqual({ password: 'secret' })
+    expect(JSON.stringify(log.mock.calls)).not.toContain('secret')
   })
 
-  describe('prompt 通用提示', () => {
-    it('应该处理问题并返回答案', async () => {
-      const questions: PromptObject[] = [
-        { name: 'username', message: '用户名：', type: 'text' },
-        { name: 'password', message: '密码：', type: 'password' },
-      ]
-      const expectedAnswers: Answers<string> = {
-        username: 'john',
-        password: 'secret',
-      }
-
-      mockPrompts.mockResolvedValue(expectedAnswers)
-
-      const result = await prompt(questions)
-
-      expect(result).toEqual(expectedAnswers)
-      expect(mockPrompts).toHaveBeenCalledWith(questions, {
-        onCancel: expect.any(Function),
-      })
-    })
-
-    it('应该保留 false、0 和空字符串初始值', async () => {
-      const questions: PromptObject[] = [
-        { name: 'enabled', message: '是否启用：', type: 'confirm' },
-        { name: 'count', message: '数量：', type: 'number' },
-        { name: 'label', message: '名称：', type: 'text' },
-      ]
-      mockPrompts.mockResolvedValue({})
-
-      await prompt(questions, {
-        enabled: false,
-        count: 0,
-        label: '',
-      })
-
-      expect(mockPrompts).toHaveBeenCalledWith(
-        [
-          expect.objectContaining({ name: 'enabled', initial: false }),
-          expect.objectContaining({ name: 'count', initial: 0 }),
-          expect.objectContaining({ name: 'label', initial: '' }),
-        ],
-        { onCancel: expect.any(Function) },
-      )
-    })
-
-    it('取消时不应该返回部分答案', async () => {
-      mockPrompts.mockResolvedValue({ name: 'partial' })
-
-      await prompt([{ name: 'name', message: '名称：', type: 'text' }])
-      const options = mockPrompts.mock.calls.at(-1)?.[1]
-
-      expect(() => options?.onCancel?.({} as PromptObject, {})).toThrow(
-        'Prompt was cancelled',
-      )
-    })
-  })
-
-  describe('loopPrompt 循环提示', () => {
-    let mockConsole: MockConsole
-
-    beforeEach(() => {
-      mockConsole = {
-        log: vi.fn(),
-      }
-      vi.spyOn(console, 'log').mockImplementation(mockConsole.log)
-    })
-
-    afterEach(() => {
-      vi.restoreAllMocks()
-    })
-
-    it('应该在用户确认时返回答案', async () => {
-      const questions: PromptObject[] = [
-        { name: 'name', message: '你的姓名：', type: 'text' },
-      ]
-      const answers: Answers<string> = { name: '张三' }
-
-      mockPrompts
-        .mockResolvedValueOnce(answers)
-        .mockResolvedValueOnce({ confirm: true })
-
-      const result = await loopPrompt(questions)
-
-      expect(result).toEqual(answers)
-      expect(mockConsole.log).toHaveBeenCalledWith()
-      expect(mockConsole.log).toHaveBeenCalledWith(
-        'The information you entered is as follows:',
-      )
-      expect(mockConsole.log).toHaveBeenCalledWith(
-        JSON.stringify(answers, null, 2),
-      )
-    })
-
-    it('应该处理重新提示', async () => {
-      const questions: PromptObject[] = [
-        { name: 'test', message: '测试：', type: 'text' },
-      ]
-
-      mockPrompts
-        .mockResolvedValueOnce({ test: 'first' })
-        .mockResolvedValueOnce({ confirm: false })
-        .mockResolvedValueOnce({ test: 'final' })
-        .mockResolvedValueOnce({ confirm: true })
-
-      const result = await loopPrompt(questions)
-
-      expect(result).toEqual({ test: 'final' })
-      expect(mockPrompts).toHaveBeenCalledTimes(4)
-    })
+  it('确认阶段取消时拒绝', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+    prompts.inject(['value', new Error('cancel')])
+    await expect(
+      loopPrompt([{ name: 'name', type: 'text', message: '姓名' }]),
+    ).rejects.toThrow('Prompt was cancelled')
   })
 })

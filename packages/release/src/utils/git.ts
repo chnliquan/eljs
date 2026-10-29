@@ -12,7 +12,7 @@ const INDEPENDENT_TAG_PATTERN =
  * 判断 Git 标签是否指向当前提交
  *
  * @remarks
- * 标签不存在或 Git 命令执行失败时返回 `false`
+ * 标签不存在、Git 命令执行失败或输出不是字符串时返回 `false`
  *
  * @param tagName - 待检查的 Git 标签
  * @param options - Git 命令执行选项
@@ -30,6 +30,13 @@ export async function isGitTagAtHead(
       options,
     )
     const headCommit = await run('git', ['rev-parse', 'HEAD'], options)
+
+    if (
+      typeof tagCommit.stdout !== 'string' ||
+      typeof headCommit.stdout !== 'string'
+    ) {
+      throw new TypeError('Git commit output must be text')
+    }
 
     return (
       tagCommit.stdout.trim().length > 0 &&
@@ -56,7 +63,7 @@ export async function isGitTagAtHead(
  * @param independent - 是否为独立标签模式
  * @param options - Git 命令执行选项
  * @returns 待重试的目标版本，无匹配发布标签时返回 `undefined`
- * @throws 检查期间收到取消信号时抛出取消原因
+ * @throws Git 命令执行失败时抛出原始错误，标签输出不是字符串时抛出 `TypeError`
  */
 export async function findRetryVersionAtHead(
   cwd: string,
@@ -67,6 +74,10 @@ export async function findRetryVersionAtHead(
     ...options,
     cwd,
   })
+
+  if (typeof stdout !== 'string') {
+    throw new TypeError('Git tag output must be text')
+  }
 
   const pattern = independent ? INDEPENDENT_TAG_PATTERN : UNIFIED_TAG_PATTERN
   let retryVersion: string | undefined

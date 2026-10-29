@@ -58,6 +58,8 @@ interface MockChildProcess {
     >
   }
   stdin: {
+    destroy: ReturnType<typeof vi.fn>
+    on: ReturnType<typeof vi.fn>
     write: MockedFunction<(data: string) => void>
   }
 }
@@ -473,7 +475,7 @@ describe('命令处理工具函数', () => {
         once: vi.fn(),
         stdout: { on: vi.fn() },
         stderr: { on: vi.fn() },
-        stdin: { write: vi.fn() },
+        stdin: { destroy: vi.fn(), on: vi.fn(), write: vi.fn() },
       }
       mockSpawn.mockReturnValue(mockChildProcess as unknown as ChildProcess)
 

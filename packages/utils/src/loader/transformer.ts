@@ -2,6 +2,7 @@ import path from 'node:path'
 import { addHook } from 'pirates'
 
 import type { AnyFunction, NoopFunction } from '../types'
+import { contextualizeError } from './error'
 
 /**
  * CommonJS 加载时源代码转换器的构造选项
@@ -31,6 +32,7 @@ export interface TransformerOptions<T> {
  * 在受控生命周期内安装 CommonJS 文件转换 Hook
  *
  * @typeParam T - 与底层转换工具兼容的转换函数类型
+ * @remarks 转换失败时补充源文件路径；不可修改的错误或其他抛出值通过 `cause` 保留
  */
 export class Transformer<T extends AnyFunction> {
   /**
@@ -115,9 +117,7 @@ export class Transformer<T extends AnyFunction> {
       })
       return code
     } catch (error) {
-      const err = error as Error
-      err.message = `Transform ${filename} failed: ${err.message}`
-      throw err
+      throw contextualizeError(error, `Transform ${filename} failed`)
     }
   }
 }

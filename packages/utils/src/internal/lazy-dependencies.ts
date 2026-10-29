@@ -3,7 +3,7 @@ import { createRequire } from 'node:module'
 const localRequire = createRequire(import.meta.url)
 
 /**
- * 文件加载器的惰性依赖边界
+ * 文件读取与模块加载共用的惰性依赖边界
  *
  * 这些依赖只在对应加载器首次使用时才会载入，避免仅导入 utils
  * 就初始化 TypeScript 等体积较大的模块

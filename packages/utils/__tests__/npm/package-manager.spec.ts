@@ -177,6 +177,14 @@ describe('Package Manager 工具', () => {
   })
 
   describe('lock 文件优先级', () => {
+    it('更近的 npm 锁文件优先于外层 pnpm 工作区', async () => {
+      mockGetPnpmWorkspaceRoot.mockResolvedValue('/project')
+      mockGetNpmWorkspaceRoot.mockResolvedValue('/project/inner')
+
+      await expect(getPackageManager('/project/inner/src')).resolves.toBe('npm')
+      expect(mockHasGlobalInstallation).not.toHaveBeenCalled()
+    })
+
     it('应该 pnpm 优先于 yarn', async () => {
       mockGetPnpmWorkspaceRoot.mockResolvedValue('/project')
       mockGetYarnWorkspaceRoot.mockResolvedValue('/project') // 同时存在

@@ -13,6 +13,8 @@ export interface RunCliProcessOptions {
   name: string
   /**
    * CLI 主流程，接收进程取消信号
+   *
+   * @remarks 同步启动，同步抛错与异步拒绝使用相同的错误分类与监听器清理流程
    */
   run(signal: AbortSignal): Promise<void>
   /**
@@ -43,7 +45,7 @@ export interface RunCliProcessOptions {
  *
  * @remarks
  * 内聚 SIGINT/SIGTERM 注册、首次信号宽限期强退、二次信号立即退出、
- * 错误分类（取消 130 / 域错误 1 / 未知 1）与监听器清理。
+ * 错误分类（取消 130 / 域错误 1 / 未知 1）与监听器清理
  * 域知识通过 options 注入，本函数不感知任何包的错误码
  *
  * @param options - 域注入参数
@@ -57,8 +59,10 @@ export function runCliProcess(options: RunCliProcessOptions): Promise<void> {
     options.createCancelReason,
   )
 
-  return options
-    .run(controller.signal)
+  // async 函数立即调用主流程，同时把同步异常转换为拒绝，保留取消监听的安装时机
+  const run = async () => options.run(controller.signal)
+
+  return run()
     .then(() => {
       if (controller.signal.aborted) {
         throw controller.signal.reason

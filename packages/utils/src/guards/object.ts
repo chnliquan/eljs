@@ -29,10 +29,13 @@ export function isPlainObject(target: unknown): target is object {
 /**
  * 判断目标值是否为 PromiseLike 对象
  *
+ * @remarks 只检测 then 方法，不保证存在 catch 或 finally，也不验证兑现值的类型
  * @param target - 目标值
  * @returns 目标值是否具有可调用的 `then` 方法
  */
-export function isPromise<T>(target: unknown): target is Promise<T> {
+export function isPromise<T = unknown>(
+  target: unknown,
+): target is PromiseLike<T> {
   return Boolean(
     target && typeof (target as PromiseLike<unknown>).then === 'function',
   )

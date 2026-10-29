@@ -108,6 +108,14 @@ describe('文件复制工具 - Mock 测试', () => {
     mockReadFileSync.mockReturnValue('Sync {{name}} content')
     mockWriteFile.mockResolvedValue(undefined)
     mockWriteFileSync.mockImplementation(() => undefined)
+    requiredModule0.stat.mockResolvedValue({
+      isDirectory: () => true,
+    } as importedModule1.Stats)
+    requiredModule1.statSync.mockReturnValue({
+      isDirectory: () => true,
+    } as importedModule1.Stats)
+    requiredModule0.realpath.mockImplementation(async file => String(file))
+    requiredModule1.realpathSync.mockImplementation(file => String(file))
 
     // Mock 控制台
     vi.spyOn(console, 'log').mockImplementation(() => undefined)
@@ -163,13 +171,14 @@ describe('文件复制工具 - Mock 测试', () => {
     it('应该处理 EJS 样式的模板', async () => {
       const data = { type: 'config' }
 
-      await copyFile('/source.txt', '/<% type %>.txt', { data })
-
-      expect(mockRenderTemplate).toHaveBeenCalledWith(
-        '/<% type %>.txt',
+      await copyFile('/source.txt', '/<% type %>.txt', {
         data,
-        undefined,
-      )
+        renderOptions: { type: 'ejs' },
+      })
+
+      expect(mockRenderTemplate).toHaveBeenCalledWith('/<% type %>.txt', data, {
+        type: 'ejs',
+      })
     })
 
     it('应该在复制失败时抛出增强错误', async () => {
@@ -211,6 +220,7 @@ describe('文件复制工具 - Mock 测试', () => {
       expect(mockWriteFile).toHaveBeenCalledWith(
         '/output.txt',
         'Template new content',
+        undefined,
       )
     })
 
@@ -228,6 +238,7 @@ describe('文件复制工具 - Mock 测试', () => {
       expect(mockWriteFile).toHaveBeenCalledWith(
         '/output.txt',
         'Template World content',
+        undefined,
       )
     })
 
@@ -284,6 +295,7 @@ describe('文件复制工具 - Mock 测试', () => {
       expect(mockWriteFileSync).toHaveBeenCalledWith(
         '/output.txt',
         'Sync new content',
+        undefined,
       )
     })
 
@@ -301,6 +313,7 @@ describe('文件复制工具 - Mock 测试', () => {
       expect(mockWriteFileSync).toHaveBeenCalledWith(
         '/sync-output.txt',
         'Sync SyncTest content',
+        undefined,
       )
     })
   })

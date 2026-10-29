@@ -3,6 +3,7 @@ import {
   beforeEach,
   describe,
   expect,
+  expectTypeOf,
   it,
   vi,
   type Mocked,
@@ -16,7 +17,12 @@ import urllib, { ProxyAgent } from 'urllib'
 import which from 'which'
 
 import { getNpmPrefix } from '../../src/npm/global-prefix'
-import { getNpmPackage } from '../../src/npm/package-metadata'
+import {
+  getNpmPackage,
+  type NpmPackage,
+  type NpmPackageQueryOptions,
+  type NpmPackageVersionQueryOptions,
+} from '../../src/npm/package-metadata'
 import { parsePackageSpecifier } from '../../src/npm/package-specifier'
 import { getNpmRegistry, getNpmUser } from '../../src/npm/registry-cli'
 
@@ -34,7 +40,7 @@ vi.mock('../../src/npm/request-config')
 describe('NPM Meta 工具', () => {
   const mockUrllib = urllib as Mocked<typeof urllib>
   const mockWhich = which as MockedFunction<typeof which>
-  const mockRun = requiredModule0.run as MockedFunction<
+  const mockRun = requiredModule0.run as unknown as MockedFunction<
     (
       command: string,
       args: string[],
@@ -165,6 +171,30 @@ describe('NPM Meta 工具', () => {
     it('应该获取指定版本的包', async () => {
       await getNpmPackage('test-package', { version: '1.0.0' })
 
+      expect(mockUrllib.request).toHaveBeenCalledWith(
+        'https://registry.npmjs.org/test-package/1.0.0',
+        { timeout: 10000, dataType: 'json' },
+      )
+    })
+
+    it('应根据选项变量或字面量推导包级与版本级返回类型', async () => {
+      const versionOptions: NpmPackageVersionQueryOptions = {
+        version: '1.0.0',
+      }
+      const packageOptions: NpmPackageQueryOptions = {}
+      const version = await getNpmPackage('test-package', versionOptions)
+      const literal = await getNpmPackage('test-package', { version: '1.0.0' })
+      const metadata = await getNpmPackage('test-package', packageOptions)
+      const defaultMetadata = await getNpmPackage('test-package')
+
+      expectTypeOf(version).toEqualTypeOf<Omit<
+        NpmPackage,
+        'versions' | 'dist-tags'
+      > | null>()
+      expectTypeOf(literal).toEqualTypeOf<typeof version>()
+      expectTypeOf(metadata).toEqualTypeOf<Omit<NpmPackage, 'version'> | null>()
+      expectTypeOf(defaultMetadata).toEqualTypeOf<typeof metadata>()
+      expect(version?.version).toBe('1.0.0')
       expect(mockUrllib.request).toHaveBeenCalledWith(
         'https://registry.npmjs.org/test-package/1.0.0',
         { timeout: 10000, dataType: 'json' },

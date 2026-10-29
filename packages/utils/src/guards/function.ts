@@ -78,7 +78,7 @@ export function isGeneratorFunction(
 }
 
 /**
- * 判断目标值是否为异步函数
+ * 判断目标值是否为异步函数，不包含返回异步迭代器的异步生成器
  *
  * @param target - 目标值
  * @returns 目标值是否为异步函数
@@ -99,7 +99,7 @@ export function isAsyncFunction(target: unknown): target is AnyAsyncFunction {
   }
 
   if (isAsyncGeneratorFunction(target)) {
-    return true
+    return false
   }
 
   const fnString = target.toString()

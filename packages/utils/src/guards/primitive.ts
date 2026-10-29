@@ -31,7 +31,7 @@ function isTypeOf(target: unknown, type: string): boolean {
  * @returns 目标值是否为 `undefined`
  */
 export function isUndefined(target: unknown): target is undefined {
-  return isTypeOf(target, 'undefined')
+  return target === undefined
 }
 
 /**
@@ -40,16 +40,16 @@ export function isUndefined(target: unknown): target is undefined {
  * @returns 目标值是否为 `null`
  */
 export function isNull(target: unknown): target is null {
-  return isTypeOf(target, 'null')
+  return target === null
 }
 
 /**
- * 判断目标值是否为字符串
+ * 判断目标值是否为字符串原始值，不包含 String 包装对象
  * @param target - 目标值
  * @returns 目标值是否为字符串
  */
 export function isString(target: unknown): target is string {
-  return isTypeOf(target, 'string')
+  return typeof target === 'string'
 }
 
 /**
@@ -69,7 +69,7 @@ export function isObject<T = Record<string, unknown>>(
  * @returns 目标值是否为数组
  */
 export function isArray<T = Array<unknown>>(target: unknown): target is T {
-  return isTypeOf(target, 'array')
+  return Array.isArray(target)
 }
 
 /**
@@ -84,10 +84,10 @@ export function isFunction<T extends AnyFunction = AnyFunction>(
 }
 
 /**
- * 判断目标值是否为布尔值
+ * 判断目标值是否为布尔原始值，不包含 Boolean 包装对象
  * @param target - 目标值
  * @returns 目标值是否为布尔值
  */
 export function isBoolean(target: unknown): target is boolean {
-  return isTypeOf(target, 'boolean')
+  return typeof target === 'boolean'
 }

@@ -4,8 +4,18 @@ import { createTempDir, remove } from '../file'
 import { isObject } from '../guards'
 
 /**
+ * npm tarball 下载选项，解压开关和目录层级由包根目录契约固定
+ * @remarks 兼容已有 DownloadOptions 变量；旧调用传入的 extract 和 strip 不会覆盖包解压行为
+ */
+export type DownloadNpmTarballOptions = Omit<
+  DownloadOptions,
+  'extract' | 'strip'
+>
+
+/**
  * 下载并解压 npm tarball 到自动创建的临时目录
  *
+ * @remarks 始终解压并移除归档的第一层目录，兼容选项中的 `extract` 和 `strip` 不会覆盖此行为
  * @param url - npm tarball 地址
  * @param options - 下载选项
  * @returns 解压目录的绝对路径
@@ -13,12 +23,13 @@ import { isObject } from '../guards'
  */
 export async function downloadNpmTarball(
   url: string,
-  options?: DownloadOptions,
+  options?: DownloadNpmTarballOptions,
 ): Promise<string>
 
 /**
  * 下载并解压 npm tarball 到指定目录
  *
+ * @remarks 始终解压并移除归档的第一层目录，兼容选项中的 `extract` 和 `strip` 不会覆盖此行为
  * @param url - npm tarball 地址
  * @param dest - 解压目标目录
  * @param options - 下载选项
@@ -28,12 +39,12 @@ export async function downloadNpmTarball(
 export async function downloadNpmTarball(
   url: string,
   dest: string,
-  options?: DownloadOptions,
+  options?: DownloadNpmTarballOptions,
 ): Promise<string>
 export async function downloadNpmTarball(
   url: string,
-  dest?: string | DownloadOptions,
-  options?: DownloadOptions,
+  dest?: string | DownloadNpmTarballOptions,
+  options?: DownloadNpmTarballOptions,
 ): Promise<string> {
   let ownsDestination = false
   let destination: string
@@ -55,9 +66,9 @@ export async function downloadNpmTarball(
 
   try {
     await downloadTo(url, destination, {
+      ...downloadOptions,
       extract: true,
       strip: 1,
-      ...downloadOptions,
       headers,
     })
   } catch (error) {

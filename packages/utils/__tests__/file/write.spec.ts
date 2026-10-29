@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  expectTypeOf,
+  it,
+  vi,
+} from 'vitest'
 
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
@@ -15,6 +23,7 @@ import {
   writeJsonAtomic,
   writeJsonAtomicSync,
   writeJsonSync,
+  type WriteFileSyncOptions,
 } from '../../src/file/write'
 
 describe('文件写入工具', () => {
@@ -60,6 +69,42 @@ describe('文件写入工具', () => {
       expect(await fsp.readFile(testFile, 'ascii')).toBe(content)
     })
 
+    it('应该通过选项对象指定编码并追加内容', async () => {
+      await writeFile(testFile, '你好', { encoding: 'utf16le' })
+      await writeFile(testFile, '世界', {
+        encoding: 'utf16le',
+        flag: 'a',
+      })
+
+      expect(await fsp.readFile(testFile, 'utf16le')).toBe('你好世界')
+    })
+
+    it('应该仅创建新文件并保留已存在文件及错误码', async () => {
+      const options = Object.freeze({ flag: 'wx' })
+      await writeFile(testFile, '原始内容', options)
+
+      await expect(
+        writeFile(testFile, '替换内容', options),
+      ).rejects.toMatchObject({
+        code: 'EEXIST',
+        message: expect.stringContaining(`Write ${testFile} failed:`),
+      })
+      expect(await fsp.readFile(testFile, 'utf8')).toBe('原始内容')
+    })
+
+    it('应该透传异步写入的取消信号', async () => {
+      const controller = new AbortController()
+      controller.abort()
+
+      await expect(
+        writeFile(testFile, 'content', { signal: controller.signal }),
+      ).rejects.toMatchObject({
+        code: 'ABORT_ERR',
+        message: expect.stringContaining(`Write ${testFile} failed:`),
+      })
+      expect(fs.existsSync(testFile)).toBe(false)
+    })
+
     it('应该在写入失败时抛出错误', async () => {
       const invalidPath = '/invalid/readonly/path/file.txt'
 
@@ -83,6 +128,27 @@ describe('文件写入工具', () => {
   })
 
   describe('writeFileSync 同步文件写入', () => {
+    it('公开同步类型兼容编码和 null，拒绝来自变量的取消信号', () => {
+      expectTypeOf(writeFileSync)
+        .parameter(2)
+        .toEqualTypeOf<WriteFileSyncOptions | undefined>()
+      const options = { signal: new AbortController().signal }
+      // @ts-expect-error 同步写入类型拒绝带取消信号的变量
+      const invalid: WriteFileSyncOptions = options
+      fs.writeFileSync(testFile, 'keep')
+      expect(() => writeFileSync(testFile, 'replace', invalid)).toThrow(
+        /do not support signal/,
+      )
+      expect(fs.readFileSync(testFile, 'utf8')).toBe('keep')
+      fs.unlinkSync(testFile)
+      expect(() => writeFileSync(testFile, 'new', invalid)).toThrow(
+        /do not support signal/,
+      )
+      expect(fs.readdirSync(tempDir)).toEqual([])
+      writeFileSync(testFile, 'null encoding', null)
+      expect(fs.readFileSync(testFile, 'utf8')).toBe('null encoding')
+    })
+
     it('应该同步写入文件内容', () => {
       const content = 'Sync content'
 
@@ -90,6 +156,29 @@ describe('文件写入工具', () => {
 
       expect(fs.existsSync(testFile)).toBe(true)
       expect(fs.readFileSync(testFile, 'utf8')).toBe(content)
+    })
+
+    it('应该兼容编码字符串并通过选项对象追加内容', () => {
+      writeFileSync(testFile, '你好', 'utf16le')
+      writeFileSync(testFile, '世界', {
+        encoding: 'utf16le',
+        flag: 'a',
+      })
+
+      expect(fs.readFileSync(testFile, 'utf16le')).toBe('你好世界')
+    })
+
+    it('应该同步仅创建新文件并保留已存在文件及错误码', () => {
+      const options = Object.freeze({ flag: 'wx' })
+      writeFileSync(testFile, '原始内容', options)
+
+      expect(() => writeFileSync(testFile, '替换内容', options)).toThrow(
+        expect.objectContaining({
+          code: 'EEXIST',
+          message: expect.stringContaining(`Write ${testFile} failed:`),
+        }),
+      )
+      expect(fs.readFileSync(testFile, 'utf8')).toBe('原始内容')
     })
 
     it('应该在同步写入失败时抛出错误', () => {
@@ -228,6 +317,46 @@ describe('文件写入工具', () => {
 
       expect(fs.existsSync(testFile)).toBe(true)
     })
+
+    it('应该通过选项对象替换内容并设置编码和权限', async () => {
+      await fsp.writeFile(testFile, 'original')
+      const options = Object.freeze({
+        encoding: 'utf16le' as const,
+        mode: 0o600,
+        flush: true,
+      })
+
+      await writeFileAtomic(testFile, '原子内容', options)
+
+      expect(await fsp.readFile(testFile, 'utf16le')).toBe('原子内容')
+      if (process.platform !== 'win32') {
+        expect(fs.statSync(testFile).mode & 0o777).toBe(
+          0o600 & ~process.umask(),
+        )
+      }
+    })
+
+    it('写入完成后收到取消时不替换目标并清理临时文件', async () => {
+      await fsp.writeFile(testFile, 'original')
+      const controller = new AbortController()
+      const reason = new Error('cancel before rename')
+      const originalWrite = fsp.writeFile
+      vi.spyOn(fsp, 'writeFile').mockImplementationOnce(async (...args) => {
+        await originalWrite(...args)
+        controller.abort(reason)
+      })
+      const rename = vi.spyOn(fsp, 'rename')
+
+      await expect(
+        writeFileAtomic(testFile, 'replacement', {
+          signal: controller.signal,
+        }),
+      ).rejects.toBe(reason)
+
+      expect(rename).not.toHaveBeenCalled()
+      expect(await fsp.readFile(testFile, 'utf8')).toBe('original')
+      expect(await fsp.readdir(tempDir)).toEqual([path.basename(testFile)])
+    })
   })
 
   describe('writeFileAtomicSync 同步安全文件写入', () => {
@@ -280,6 +409,55 @@ describe('文件写入工具', () => {
         cleanupError,
       ])
       expect((thrown as AggregateError).cause).toBe(cleanupError)
+    })
+
+    it('应该兼容编码字符串并支持编码和 flush 选项', () => {
+      writeFileAtomicSync(testFile, '原始内容', 'utf16le')
+      expect(fs.readFileSync(testFile, 'utf16le')).toBe('原始内容')
+
+      writeFileAtomicSync(testFile, '替换内容', {
+        encoding: 'utf16le',
+        mode: 0o600,
+        flush: true,
+      })
+      expect(fs.readFileSync(testFile, 'utf16le')).toBe('替换内容')
+      if (process.platform !== 'win32') {
+        expect(fs.statSync(testFile).mode & 0o777).toBe(
+          0o600 & ~process.umask(),
+        )
+      }
+    })
+
+    it('同步与异步原子写入都拒绝独占创建和追加标志', async () => {
+      await fsp.writeFile(testFile, 'original')
+
+      for (const flag of ['wx', 'a']) {
+        // @ts-expect-error 原子替换不接受原生写入标志
+        const result = writeFileAtomic(testFile, 'replacement', { flag })
+        await expect(result).rejects.toThrow(
+          'Atomic writes do not support the flag option',
+        )
+        const write = () => {
+          // @ts-expect-error 同步原子替换同样不接受写入标志
+          writeFileAtomicSync(testFile, 'replacement', { flag })
+        }
+        expect(write).toThrow('Atomic writes do not support the flag option')
+      }
+
+      expect(fs.readFileSync(testFile, 'utf8')).toBe('original')
+      expect(fs.readdirSync(tempDir)).toEqual([path.basename(testFile)])
+    })
+
+    it('同步原子写入拒绝取消信号', () => {
+      const write = () => {
+        writeFileAtomicSync(testFile, 'content', {
+          // @ts-expect-error 同步原子写入不支持取消信号
+          signal: new AbortController().signal,
+        })
+      }
+
+      expect(write).toThrow('Synchronous atomic writes do not support signal')
+      expect(fs.readdirSync(tempDir)).toEqual([])
     })
   })
 
@@ -348,6 +526,31 @@ describe('文件写入工具', () => {
         ),
       ).toBe(false)
     })
+  })
+
+  describe('JSON 序列化失败不修改文件', () => {
+    it.each([
+      ['async', writeJson],
+      ['sync', writeJsonSync],
+      ['atomic async', writeJsonAtomic],
+      ['atomic sync', writeJsonAtomicSync],
+    ] as const)(
+      '%s 在序列化未产生值时保留目标且不留下临时文件',
+      async (_kind, write) => {
+        fs.writeFileSync(testJsonFile, 'keep')
+        const data = { toJSON: () => undefined }
+        await expect(
+          Promise.resolve().then(() => write(testJsonFile, data)),
+        ).rejects.toThrow(TypeError)
+        expect(fs.readFileSync(testJsonFile, 'utf8')).toBe('keep')
+        expect(fs.readdirSync(tempDir)).toEqual([path.basename(testJsonFile)])
+        fs.unlinkSync(testJsonFile)
+        await expect(
+          Promise.resolve().then(() => write(testJsonFile, data)),
+        ).rejects.toThrow(TypeError)
+        expect(fs.readdirSync(tempDir)).toEqual([])
+      },
+    )
   })
 
   describe('边界情况和错误处理', () => {

@@ -1,12 +1,4 @@
-import {
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-  type Mocked,
-  type MockedClass,
-} from 'vitest'
+import { beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 
 import {
   generateFile,
@@ -14,24 +6,11 @@ import {
   type GeneratorOptions,
 } from '../../src/generator'
 
-// Mock 依赖项
-vi.mock('../../src/generator/generator')
-
 describe('generateFile 文件生成函数', () => {
-  const MockGenerator = Generator as MockedClass<typeof Generator>
-  let mockGeneratorInstance: Mocked<Generator>
+  let mockRun: MockInstance<Generator['run']>
 
   beforeEach(() => {
-    vi.clearAllMocks()
-
-    // 创建 mock 实例
-    mockGeneratorInstance = {
-      run: vi.fn().mockResolvedValue(undefined),
-    } as unknown as Mocked<Generator>
-
-    MockGenerator.mockImplementation(function MockGeneratorClass() {
-      return mockGeneratorInstance
-    })
+    mockRun = vi.spyOn(Generator.prototype, 'run').mockResolvedValue(true)
   })
 
   describe('基本功能', () => {
@@ -48,8 +27,9 @@ describe('generateFile 文件生成函数', () => {
 
       await generateFile(options)
 
-      expect(MockGenerator).toHaveBeenCalledWith(options)
-      expect(mockGeneratorInstance.run).toHaveBeenCalled()
+      expect(mockRun.mock.contexts[0]).toBeInstanceOf(Generator)
+      expect(mockRun.mock.contexts[0]).toMatchObject(options)
+      expect(mockRun).toHaveBeenCalledOnce()
     })
 
     it('应该处理最小配置', async () => {
@@ -60,8 +40,8 @@ describe('generateFile 文件生成函数', () => {
 
       await generateFile(minimalOptions)
 
-      expect(MockGenerator).toHaveBeenCalledWith(minimalOptions)
-      expect(mockGeneratorInstance.run).toHaveBeenCalled()
+      expect(mockRun.mock.contexts[0]).toMatchObject(minimalOptions)
+      expect(mockRun).toHaveBeenCalledOnce()
     })
 
     it('应该传递所有选项给 Generator', async () => {
@@ -95,31 +75,28 @@ describe('generateFile 文件生成函数', () => {
 
       await generateFile(completeOptions)
 
-      expect(MockGenerator).toHaveBeenCalledWith(completeOptions)
-      expect(mockGeneratorInstance.run).toHaveBeenCalledTimes(1)
+      expect(mockRun.mock.contexts[0]).toMatchObject(completeOptions)
+      expect(mockRun).toHaveBeenCalledTimes(1)
     })
   })
 
   describe('错误处理', () => {
     it('应该传递 Generator 构造错误', async () => {
-      MockGenerator.mockImplementation(() => {
-        throw new Error('Generator construction failed')
-      })
-
       const options: GeneratorOptions = {
-        src: '/invalid/template',
+        get src(): string {
+          throw new Error('Generator construction failed')
+        },
         dest: '/invalid/output',
       }
 
       await expect(generateFile(options)).rejects.toThrow(
         'Generator construction failed',
       )
+      expect(mockRun).not.toHaveBeenCalled()
     })
 
     it('应该传递 Generator 运行错误', async () => {
-      mockGeneratorInstance.run.mockRejectedValue(
-        new Error('Generation failed'),
-      )
+      mockRun.mockRejectedValue(new Error('Generation failed'))
 
       const options: GeneratorOptions = {
         src: '/template',
@@ -153,8 +130,8 @@ describe('generateFile 文件生成函数', () => {
 
       await generateFile(options)
 
-      expect(MockGenerator).toHaveBeenCalledWith(options)
-      expect(mockGeneratorInstance.run).toHaveBeenCalled()
+      expect(mockRun.mock.contexts[0]).toMatchObject(options)
+      expect(mockRun).toHaveBeenCalledOnce()
     })
 
     it('应该支持回调函数', async () => {
@@ -167,8 +144,10 @@ describe('generateFile 文件生成函数', () => {
 
       await generateFile(options)
 
-      expect(MockGenerator).toHaveBeenCalledWith(options)
-      expect(options.onGeneratorDone).toBe(onDone)
+      expect(mockRun.mock.contexts[0]).toMatchObject(options)
+      expect((mockRun.mock.contexts[0] as Generator).onGeneratorDone).toBe(
+        onDone,
+      )
     })
   })
 
@@ -204,11 +183,7 @@ describe('generateFile 文件生成函数', () => {
 
       await generateFile(options)
 
-      expect(MockGenerator).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: typedData,
-        }),
-      )
+      expect((mockRun.mock.contexts[0] as Generator).data).toBe(typedData)
     })
 
     it('应该处理函数形式的配置', async () => {
@@ -229,10 +204,10 @@ describe('generateFile 文件生成函数', () => {
 
       await generateFile(options)
 
-      expect(MockGenerator).toHaveBeenCalledWith(options)
-      expect(typeof options.src).toBe('function')
-      expect(typeof options.dest).toBe('function')
-      expect(typeof options.data).toBe('function')
+      const generator = mockRun.mock.contexts[0] as Generator
+      expect(generator.src).toBe(srcFn)
+      expect(generator.dest).toBe(destFn)
+      expect(generator.data).toBe(dataFn)
     })
   })
 
@@ -245,7 +220,7 @@ describe('generateFile 文件生成函数', () => {
 
       await generateFile(emptyOptions)
 
-      expect(MockGenerator).toHaveBeenCalledWith(emptyOptions)
+      expect(mockRun.mock.contexts[0]).toMatchObject(emptyOptions)
     })
 
     it('应该处理复杂的嵌套配置', async () => {
@@ -292,7 +267,25 @@ describe('generateFile 文件生成函数', () => {
 
       await generateFile(complexOptions)
 
-      expect(MockGenerator).toHaveBeenCalledWith(complexOptions)
+      expect(mockRun.mock.contexts[0]).toMatchObject(complexOptions)
     })
   })
+
+  it.each([true, false])(
+    '应该等待生成结束并返回 undefined：%s',
+    async result => {
+      const completion = Promise.withResolvers<boolean>()
+      mockRun.mockReturnValue(completion.promise)
+      const settled = vi.fn()
+      const generated = generateFile({ src: '/template', dest: '/output' })
+      void generated.then(settled)
+
+      await Promise.resolve()
+      expect(settled).not.toHaveBeenCalled()
+
+      completion.resolve(result)
+      await expect(generated).resolves.toBeUndefined()
+      expect(settled).toHaveBeenCalledOnce()
+    },
+  )
 })

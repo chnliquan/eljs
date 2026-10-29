@@ -25,7 +25,7 @@ import {
   loadYaml,
   loadYamlSync,
   resolveTsConfig,
-} from '../../src/file/loader'
+} from '../../src/loader'
 
 const requiredModule4 = vi.mocked(importedModule4, { deep: true })
 
@@ -54,7 +54,7 @@ const loaderDependencies = vi.hoisted(() => ({
 }))
 
 // Mock 依赖项
-vi.mock('../../src/file/loader-dependencies', () => ({
+vi.mock('../../src/internal/lazy-dependencies', () => ({
   loadImportFresh: () => loaderDependencies.importFresh,
   loadParseJson: () => loaderDependencies.parseJson,
   loadTypeScript: () => loaderDependencies.typescript,

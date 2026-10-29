@@ -11,6 +11,7 @@ import { getProjectGitDir, getProjectGitDirSync } from './directory'
  * @remarks
  * 由 origin 的 SSH 或 HTTP(S) 地址解析出的标准化标识，
  * `group` 为仓库名之前的完整路径段
+ * 显式 SSH URL 的端口和用户名保留在 `ssh` 中，SSH 端口不用于推导 HTTPS 地址
  */
 export interface GitRemoteRepository {
   /** Git 仓库名称 */
@@ -85,6 +86,7 @@ export function getGitUrlSync(cwd: string, exact?: boolean): string {
 
 /**
  * 解析 Git 远程地址
+ * @remarks 支持 SCP 风格与 `ssh://` 地址；显式 SSH URL 保留用户名和端口，网页地址按 HTTPS 主机推导
  * @param url - Git SSH 或 HTTP(S) 地址
  * @returns 标准化的远程仓库信息，无法解析时返回 `null`
  */
@@ -96,8 +98,19 @@ export function parseGitRemoteUrl(url: string): GitRemoteRepository | null {
   try {
     let repo = ''
     let hostname = ''
+    let sshUrl: URL | undefined
 
-    if (url.startsWith('git')) {
+    if (url.startsWith('ssh://')) {
+      sshUrl = new URL(url)
+      hostname = sshUrl.hostname
+      repo = sshUrl.pathname.slice(1).replace(/\.git$/, '')
+      if (!hostname || !repo || sshUrl.password) {
+        return null
+      }
+      sshUrl.search = ''
+      sshUrl.hash = ''
+      sshUrl.pathname = `/${repo}.git`
+    } else if (url.startsWith('git')) {
       const pieces = url.split(':')
       hostname = pieces[0].split('@')[1]
       repo = pieces[1].replace(/\.git$/, '')
@@ -125,9 +138,9 @@ export function parseGitRemoteUrl(url: string): GitRemoteRepository | null {
     return {
       name,
       group,
-      href: `https://${hostname}/${group}/${name}`,
-      https: `https://${hostname}/${group}/${name}.git`,
-      ssh: `git@${hostname}:${group}/${name}.git`,
+      href: `https://${hostname}/${repo}`,
+      https: `https://${hostname}/${repo}.git`,
+      ssh: sshUrl?.href ?? `git@${hostname}:${repo}.git`,
     }
   } catch {
     return null
