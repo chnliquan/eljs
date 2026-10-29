@@ -399,9 +399,14 @@ describe('发布中断恢复的本地事务', () => {
             '@eljs/utils/git',
           )
         vi.mocked(gitTag).mockImplementation(actual.gitTag)
-        await expect(retry.onRelease.mock.calls[0][0](info)).rejects.toThrow(
-          'already exists',
-        )
+        // 通过退出码和冲突标签验证真实 Git 失败，避免依赖本机语言的诊断措辞
+        await expect(
+          retry.onRelease.mock.calls[0][0](info),
+        ).rejects.toMatchObject({
+          message: expect.stringContaining('Git Tag failed:'),
+          exitCode: 128,
+          stderr: expect.stringContaining('pkg-b@1.1.0'),
+        })
       }
       expect(await git('rev-parse', 'pkg-b@1.1.0')).toBe(oldTag)
     },
