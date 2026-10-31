@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
  */
 
 import { getNpmPackage, logger, run } from '@eljs/utils'
+import { UtilsError } from '@eljs/utils/error'
 import resolveBin from 'resolve-bin'
 
 import {
@@ -45,6 +46,23 @@ describe('NPM 工具函数测试', () => {
   })
 
   describe('getRemoteDistTag 函数', () => {
+    it('查询失败时保留 utils 错误及其结构化诊断', async () => {
+      const error = new UtilsError(
+        'ERR_NPM_REGISTRY_REQUEST',
+        'npm registry request failed for @eljs/utils (ECONNRESET)',
+        {
+          cause: Object.assign(new Error('connection reset'), {
+            code: 'ECONNRESET',
+          }),
+          details: { packageName: '@eljs/utils' },
+          operation: 'npm.getPackage',
+        },
+      )
+      ;(getNpmPackage as Mock).mockRejectedValueOnce(error)
+
+      await expect(getRemoteDistTag(['@eljs/utils'])).rejects.toBe(error)
+    })
+
     it('应该正确获取远程 dist tag', async () => {
       const mockNpmMeta = {
         'dist-tags': {

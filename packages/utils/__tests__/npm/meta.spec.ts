@@ -367,19 +367,64 @@ describe('NPM Meta 工具', () => {
 
       await expect(getNpmPackage('private-package')).rejects.toMatchObject({
         code: 'ERR_NPM_REGISTRY_HTTP_STATUS',
+        message:
+          'npm registry request failed for private-package with status 401',
         details: { packageName: 'private-package', status: 401 },
       })
     })
 
     it('应该在请求失败时抛出稳定错误', async () => {
-      mockUrllib.request.mockRejectedValue(new Error('Network error'))
+      const cause = new Error('Network error: FAKE_REVIEW_TOKEN')
+      mockUrllib.request.mockRejectedValue(cause)
 
       await expect(getNpmPackage('network-fail-package')).rejects.toMatchObject(
         {
           code: 'ERR_NPM_REGISTRY_REQUEST',
+          message: 'npm registry request failed for network-fail-package',
+          cause,
+          details: { packageName: 'network-fail-package' },
           operation: 'npm.getPackage',
         },
       )
+    })
+
+    it.each(['ECONNRESET', 'ENOTFOUND', 'UND_ERR_CONNECT_TIMEOUT'])(
+      '请求失败消息包含安全错误码 %s 且保留原始 cause',
+      async code => {
+        const cause = Object.assign(new Error('FAKE_REVIEW_TOKEN'), {
+          code,
+          headers: { authorization: 'Bearer FAKE_REVIEW_TOKEN' },
+        })
+        mockUrllib.request.mockRejectedValueOnce(cause)
+
+        await expect(getNpmPackage('test-package')).rejects.toMatchObject({
+          code: 'ERR_NPM_REGISTRY_REQUEST',
+          message: `npm registry request failed for test-package (${code})`,
+          cause,
+          details: { packageName: 'test-package' },
+          operation: 'npm.getPackage',
+        })
+      },
+    )
+
+    it('诊断不执行错误码访问器，也不输出未知错误码', async () => {
+      const getter = vi.fn(() => 'FAKE_REVIEW_TOKEN')
+      const causes = [
+        Object.defineProperty(new Error('FAKE_REVIEW_TOKEN'), 'code', {
+          get: getter,
+        }),
+        Object.assign(new Error('FAKE_REVIEW_TOKEN'), {
+          code: 'FAKE_REVIEW_TOKEN',
+        }),
+      ]
+      for (const cause of causes) {
+        mockUrllib.request.mockRejectedValueOnce(cause)
+        await expect(getNpmPackage('test-package')).rejects.toMatchObject({
+          message: 'npm registry request failed for test-package',
+          cause,
+        })
+      }
+      expect(getter).not.toHaveBeenCalled()
     })
 
     it.each([

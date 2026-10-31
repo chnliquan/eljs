@@ -101,6 +101,7 @@ export interface NpmPackageVersionQueryOptions extends NpmPackageQueryOptions {
  * 版本查询重载优先匹配，显式类型的选项变量也返回版本级元数据
  * 响应包名必须匹配查询，精确 semver 查询必须匹配返回版本（兼容 `v` 前缀），标签可解析为精确版本
  * 响应流结束后才关闭本次请求创建的代理，畸形 registry 或代理地址使用不含原始 URL 的固定诊断
+ * 请求失败消息包含包名、总超时或已知网络错误码，不拼接原始传输消息，`cause` 仍保留原始原因
  * @param name - 包名
  * @param options - 指定版本的 npm 包查询选项
  * @returns 版本元数据，包或版本不存在时返回 `null`
@@ -118,6 +119,7 @@ export async function getNpmPackage(
  * 响应包名及所有版本条目的包名必须匹配查询，版本映射键必须等于条目的精确版本
  * 响应流结束后才关闭本次请求创建的代理，包级顶层版本与制品信息可缺省
  * 畸形 registry 或代理地址使用不含原始 URL 的固定诊断
+ * 请求失败消息包含包名、总超时或已知网络错误码，不拼接原始传输消息，`cause` 仍保留原始原因
  * @param name - 包名
  * @param options - npm 包查询选项
  * @returns 包级元数据，包不存在时返回 `null`
@@ -255,7 +257,7 @@ export async function getNpmPackage(
       } else if (response.status < 200 || response.status >= 300) {
         throw new UtilsError(
           'ERR_NPM_REGISTRY_HTTP_STATUS',
-          `npm registry request failed with status ${response.status}`,
+          `npm registry request failed for ${name} with status ${response.status}`,
           {
             details: { packageName: name, status: response.status },
             operation: 'npm.getPackage',
@@ -295,12 +297,17 @@ export async function getNpmPackage(
     }
   } catch (error) {
     const cause = signal.aborted ? signal.reason : error
+    const reason = signal.aborted
+      ? controller.signal.aborted && signal.reason === controller.signal.reason
+        ? `TimeoutError after ${timeout} ms`
+        : 'AbortError'
+      : getRegistryRequestCode(cause)
     requestError =
       cause instanceof UtilsError
         ? cause
         : new UtilsError(
             'ERR_NPM_REGISTRY_REQUEST',
-            'npm registry request failed',
+            `npm registry request failed for ${name}${reason ? ` (${reason})` : ''}`,
             {
               cause,
               details: { packageName: name },
@@ -332,6 +339,42 @@ export async function getNpmPackage(
   }
 
   return result as NpmPackage | NpmPackageVersion | null
+}
+
+/**
+ * 仅提取已知网络错误码，不执行错误对象的访问器或将任意诊断字段带入消息
+ */
+function getRegistryRequestCode(error: unknown): string | undefined {
+  try {
+    if (error === null || typeof error !== 'object') {
+      return undefined
+    }
+    const code = Object.getOwnPropertyDescriptor(error, 'code')?.value
+    return typeof code === 'string' &&
+      [
+        'EAI_AGAIN',
+        'ECONNREFUSED',
+        'ECONNRESET',
+        'EHOSTUNREACH',
+        'ENETUNREACH',
+        'ENOTFOUND',
+        'EPIPE',
+        'ETIMEDOUT',
+        'CERT_HAS_EXPIRED',
+        'DEPTH_ZERO_SELF_SIGNED_CERT',
+        'ERR_TLS_CERT_ALTNAME_INVALID',
+        'SELF_SIGNED_CERT_IN_CHAIN',
+        'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
+        'UND_ERR_CONNECT_TIMEOUT',
+        'UND_ERR_HEADERS_TIMEOUT',
+        'UND_ERR_BODY_TIMEOUT',
+        'UND_ERR_SOCKET',
+      ].includes(code)
+      ? code
+      : undefined
+  } catch {
+    return undefined
+  }
 }
 
 /**

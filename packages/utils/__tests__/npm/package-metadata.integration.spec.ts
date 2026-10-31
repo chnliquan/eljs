@@ -114,6 +114,7 @@ describe('npm metadata local registry', () => {
         }).catch((error: unknown) => error)
         expect(error).toMatchObject({
           code: 'ERR_NPM_REGISTRY_REQUEST',
+          message: 'npm registry request failed for local-package (AbortError)',
           operation: 'npm.getPackage',
         })
         expect((error as Error).cause).toBe(reason)
@@ -369,6 +370,8 @@ describe('npm metadata local registry', () => {
       }),
     ).rejects.toMatchObject({
       code: 'ERR_NPM_REGISTRY_REQUEST',
+      message:
+        'npm registry request failed for local-package (TimeoutError after 30 ms)',
       cause: { name: 'TimeoutError' },
     })
   })

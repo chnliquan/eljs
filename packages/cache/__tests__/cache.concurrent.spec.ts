@@ -70,6 +70,7 @@ describe('Cache 并发初始化测试', () => {
     })
 
     it('应该在初始化失败后正确处理状态', async () => {
+      const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
       // 使用无效路径强制初始化失败
       const blockedCacheDir = createBlockedDirectoryPath(tempDir)
       const cache = new Cache<string>({
@@ -83,6 +84,11 @@ describe('Cache 并发初始化测试', () => {
 
       // 应该返回null且不会崩溃
       expect(result).toBeNull()
+      expect(warning).toHaveBeenCalledTimes(1)
+      expect(warning).toHaveBeenCalledWith(
+        'Cache initialization failed:',
+        expect.objectContaining({ code: 'ENOTDIR' }),
+      )
     })
   })
 
@@ -160,6 +166,7 @@ describe('Cache 并发初始化测试', () => {
     })
 
     it('应该在初始化错误后清理Promise状态', async () => {
+      const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const blockedCacheDir = createBlockedDirectoryPath(tempDir)
       const cache = new Cache<string>({
         enabled: true,
@@ -173,9 +180,15 @@ describe('Cache 并发初始化测试', () => {
       // 验证公开状态
       expect(cache.options.enabled).toBe(true)
       expect(cache.enabled).toBe(false)
+      expect(warning).toHaveBeenCalledTimes(1)
+      expect(warning).toHaveBeenCalledWith(
+        'Cache initialization failed:',
+        expect.objectContaining({ code: 'ENOTDIR' }),
+      )
     })
 
     it('应该在初始化失败后所有后续调用都返回null', async () => {
+      const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const blockedCacheDir = createBlockedDirectoryPath(tempDir)
       const cache = new Cache<string>({
         enabled: true,
@@ -192,6 +205,11 @@ describe('Cache 并发初始化测试', () => {
       ])
 
       expect(results).toEqual([null, null, null, null])
+      expect(warning).toHaveBeenCalledTimes(1)
+      expect(warning).toHaveBeenCalledWith(
+        'Cache initialization failed:',
+        expect.objectContaining({ code: 'ENOTDIR' }),
+      )
     })
   })
 
