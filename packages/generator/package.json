@@ -1,6 +1,6 @@
 {
   "name": "@eljs/generator",
-  "version": "2.0.0-beta.5",
+  "version": "2.0.0-beta.6",
   "description": "Extensible project generation from local, npm, and Git templates, with CLI and programmatic APIs.",
   "keywords": [
     "eljs",

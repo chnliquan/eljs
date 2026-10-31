@@ -1,6 +1,6 @@
 {
   "name": "@eljs/cache",
-  "version": "2.0.0-beta.5",
+  "version": "2.0.0-beta.6",
   "description": "In-memory caching with disk persistence, TTL validation, and file invalidation for Node.js tools.",
   "keywords": [
     "eljs",

@@ -1,5 +1,11 @@
 # ChangeLog 
 
+# [2.0.0-beta.6](https://github.com/chnliquan/eljs/compare/v2.0.0-beta.5...v2.0.0-beta.6) (2026-10-31)
+
+### ♻ Code Refactoring
+
+* 重命名包并重构生成器架构，添加双语文档 ([ca16c50](https://github.com/chnliquan/eljs/commit/ca16c50cde5481d8fcd6ac043ef42e6913b0104f))
+
 # [2.0.0-beta.5](https://github.com/chnliquan/eljs/compare/v2.0.0-beta.4...v2.0.0-beta.5) (2026-10-29)
 
 ### ✨ Features
