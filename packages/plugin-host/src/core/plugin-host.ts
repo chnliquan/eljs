@@ -1,4 +1,4 @@
-import { ConfigManager } from '@eljs/config'
+import { ConfigLoader } from '@eljs/config-loader'
 import { isDirectorySync } from '@eljs/utils/file'
 import { resolve as resolvePath } from 'node:path'
 
@@ -262,7 +262,7 @@ export abstract class PluginHost<
    */
   private async _load(): Promise<void> {
     this._throwIfAborted('load-config')
-    const configManager = new ConfigManager({
+    const configManager = new ConfigLoader({
       defaultConfigFiles: [
         ...(this.constructorOptions.defaultConfigFiles || []),
       ],

@@ -1,134 +1,34 @@
 import { describe, expect, it } from 'vitest'
-/**
- * @file packages/release index 模块单元测试
- * @description 测试 index.ts 导出功能
- */
 
 import * as releaseIndex from '../src/index'
 
-describe('发布模块入口文件测试', () => {
-  describe('模块导出验证', () => {
-    it('应该导出 resolveBin 函数', () => {
-      expect(releaseIndex.resolveBin).toBeDefined()
-      expect(typeof releaseIndex.resolveBin).toBe('function')
-    })
-
-    it('应该导出 release 函数', () => {
-      expect(releaseIndex.release).toBeDefined()
-      expect(typeof releaseIndex.release).toBe('function')
-    })
-
-    it('应该导出 defaultConfig 对象', () => {
-      expect(releaseIndex.defaultConfig).toBeDefined()
-      expect(typeof releaseIndex.defaultConfig).toBe('object')
-    })
-
-    it('应该导出 defineConfig 函数', () => {
-      expect(releaseIndex.defineConfig).toBeDefined()
-      expect(typeof releaseIndex.defineConfig).toBe('function')
-    })
-
-    it('应该导出插件定义辅助函数', () => {
-      expect(typeof releaseIndex.definePlugin).toBe('function')
-      expect(typeof releaseIndex.definePreset).toBe('function')
-    })
-
-    it('ReleaseRunner 应该仅作为内部实现导出', () => {
-      // ReleaseRunner 与 release() 无独立使用场景，公共 API 不再承诺该入口
-      const releaseRunnerDescriptor = Object.getOwnPropertyDescriptor(
-        releaseIndex,
-        'ReleaseRunner',
-      )
-      expect(releaseRunnerDescriptor).toBeDefined()
-    })
-
-    it('应该导出工具函数模块', () => {
-      expect(releaseIndex.AppError).toBeDefined()
-      expect(releaseIndex.onCancel).toBeDefined()
-      expect(releaseIndex.parseVersion).toBeDefined()
-      expect(releaseIndex.isVersionValid).toBeDefined()
-    })
-
-    it('应该导出类型定义', () => {
-      // 类型导出在运行时不可直接检测，但可以确保没有错误
-      expect(() => {
-        // 这里主要确保没有导入错误
-        const module = releaseIndex
-        return module
-      }).not.toThrow()
-    })
-  })
-
-  describe('导出内容类型验证', () => {
-    it('resolveBin 应该是从 resolve-bin 库导出的函数', () => {
-      // 这里测试 resolveBin 的基本功能
-      expect(releaseIndex.resolveBin).toBeDefined()
-      expect(typeof releaseIndex.resolveBin).toBe('function')
-    })
-
-    it('所有核心函数都应该被正确导出', () => {
-      const expectedExports = [
-        'resolveBin',
+describe('release 消费者入口契约', () => {
+  it('仅暴露发布入口、插件契约、默认值和结构化错误', () => {
+    expect(Object.keys(releaseIndex).sort()).toEqual(
+      [
+        'AppError',
+        'ReleasePublishError',
+        'ReleaseRunnerStage',
         'defaultConfig',
         'defineConfig',
         'definePlugin',
         'definePreset',
         'release',
-        'AppError',
-        'onCancel',
-        'parseVersion',
-        'isVersionValid',
-      ]
-
-      expectedExports.forEach(exportName => {
-        expect(releaseIndex).toHaveProperty(exportName)
-        expect(
-          (releaseIndex as Record<string, unknown>)[exportName],
-        ).toBeDefined()
-      })
-    })
+        'releaseHookSchema',
+      ].sort(),
+    )
   })
 
-  describe('模块完整性验证', () => {
-    it('导出的模块应该没有未定义的值', () => {
-      const exportValues = Object.values(releaseIndex)
-      exportValues.forEach(value => {
-        expect(value).toBeDefined()
-        expect(value).not.toBeNull()
-      })
+  it('调用方能够按公开错误类型处理发布进度', () => {
+    const error = new releaseIndex.ReleasePublishError({
+      failedPackage: '@example/ui',
+      version: '2.0.0',
+      publishedPackages: ['@example/core'],
+      unpublishedPackages: ['@example/ui'],
     })
 
-    it('所有导出的函数应该是可调用的', () => {
-      const functions = [
-        'resolveBin',
-        'defineConfig',
-        'definePlugin',
-        'definePreset',
-        'release',
-        'onCancel',
-        'parseVersion',
-        'isVersionValid',
-      ]
-
-      functions.forEach(funcName => {
-        const func = (releaseIndex as Record<string, unknown>)[funcName]
-        expect(typeof func).toBe('function')
-      })
-    })
-
-    it('ReleaseRunner 类应该是可实例化的', () => {
-      expect(typeof releaseIndex.ReleaseRunner).toBe('function')
-      expect(() => new releaseIndex.ReleaseRunner()).not.toThrow()
-    })
-
-    it('AppError 类应该是可实例化的错误类', () => {
-      expect(typeof releaseIndex.AppError).toBe('function')
-
-      const error = new releaseIndex.AppError('测试错误')
-      expect(error).toBeInstanceOf(Error)
-      expect(error).toBeInstanceOf(releaseIndex.AppError)
-      expect(error.name).toBe('AppError')
-      expect(error.message).toBe('测试错误')
-    })
+    expect(error).toBeInstanceOf(releaseIndex.AppError)
+    expect(error.details.publishedPackages).toEqual(['@example/core'])
+    expect(Object.isFrozen(error.details)).toBe(true)
   })
 })

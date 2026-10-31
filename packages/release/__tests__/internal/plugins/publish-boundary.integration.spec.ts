@@ -138,6 +138,139 @@ describe('真实发布目录与 Hook 的只读边界', () => {
     },
   )
 
+  it.each(['npm', 'pnpm', 'yarn-classic', 'yarn-berry', 'bun'] as const)(
+    '%s 在所有预检入口拒绝提前退出参数及规范化绕过',
+    async variant => {
+      const context = await fixture(
+        variant.startsWith('yarn')
+          ? 'yarn'
+          : (variant as 'npm' | 'pnpm' | 'bun'),
+      )
+      context.appData.packageManagerVariant = variant
+      npmPlugin(context as unknown as ReleasePluginContext)
+      gitPlugin(context as unknown as ReleasePluginContext)
+      for (const arg of [
+        '--help',
+        '--usage',
+        '--version',
+        '--versions',
+        '-h',
+        '-v',
+        '-V',
+        '--he',
+        '--usa',
+        '--ver',
+        '--help=false',
+        '--usage=true',
+        '--version=false',
+        '---HELP',
+        '---USAGE=true',
+        '--no-no-help',
+        '--no-usage',
+        '--no-version',
+        '--no-versions=false',
+      ]) {
+        context.config.npm.publishArgs = [arg]
+        for (const dryRun of [false, true]) {
+          context.config.dryRun = dryRun
+          await expect(invoke(context.onCheck)).rejects.toThrow(
+            'cannot replace publishing',
+          )
+          await expect(invoke(context.onBeforeBumpVersion)).rejects.toThrow(
+            'cannot replace publishing',
+          )
+          await expect(invoke(context.onRelease)).rejects.toThrow(
+            'cannot replace publishing',
+          )
+        }
+      }
+      expect(gitCommit).not.toHaveBeenCalled()
+      expect(run).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(['npm', 'pnpm'] as const)(
+    '%s 本地预览和帮助可退出成功，固定发布模式进入发布入口并失败',
+    async packageManager => {
+      const { run: runCommand } =
+        await vi.importActual<typeof import('@eljs/utils/cp')>('@eljs/utils/cp')
+      const context = await fixture(packageManager)
+      const userConfig = path.join(cwd, 'empty-user.npmrc')
+      const globalConfig = path.join(cwd, 'empty-global.npmrc')
+      await writeFile(userConfig, '')
+      await writeFile(globalConfig, '')
+      context.appData.registry = 'http://127.0.0.1:1'
+      context.config.npm.publishArgs = ['--ignore-scripts']
+      if (packageManager === 'pnpm')
+        context.config.npm.publishArgs.push('--no-git-checks')
+      npmPlugin(context as unknown as ReleasePluginContext)
+      await invoke(context.onBeforeBumpVersion)
+      await invoke(context.onRelease)
+      const [, publishArgs, options] = vi.mocked(run).mock.calls[0]
+      expect(Array.isArray(publishArgs)).toBe(true)
+      const args = publishArgs as string[]
+      const rootPath = context.appData.workspacePackages[0].rootPath
+      // 不提供认证且 registry 固定到无服务的回环地址，npm 鉴权失败或 pnpm 连接失败均不会上传
+      const env = {
+        ...Object.fromEntries(
+          Object.entries(process.env).filter(
+            ([key]) => !/^npm_config_/i.test(key),
+          ),
+        ),
+        npm_config_userconfig: userConfig,
+        npm_config_globalconfig: globalConfig,
+        npm_config_offline: 'true',
+        npm_config_fetch_retries: '0',
+      }
+      const preview = await runCommand(
+        packageManager,
+        [
+          ...args.filter(
+            arg => !['--dry-run=false', '--usage=false'].includes(arg),
+          ),
+          '--dry-run',
+        ],
+        { cwd: rootPath, env, reject: false, timeout: 5000 },
+      )
+      expect(preview.exitCode, preview.stderr).toBe(0)
+      expect(`${preview.stdout}${preview.stderr}`).toMatch(/dry.run/i)
+      const help = await runCommand(packageManager, ['publish', '--help'], {
+        cwd: rootPath,
+        env,
+        reject: false,
+        timeout: 5000,
+      })
+      expect(help.exitCode, help.stderr).toBe(0)
+      expect(help.stdout).toContain('Usage:')
+      for (const inherited of [
+        { npm_config_dry_run: 'true' },
+        { npm_config_usage: 'true' },
+        {},
+      ]) {
+        await writeFile(
+          path.join(rootPath, '.npmrc'),
+          Object.keys(inherited).length ? '' : 'dry-run=true\nusage=true\n',
+        )
+        const actual = await runCommand(packageManager, args, {
+          cwd: rootPath,
+          env: { ...env, ...inherited, ...options?.env },
+          reject: false,
+          timeout: 5000,
+        })
+        expect(actual.exitCode, `${actual.stdout}${actual.stderr}`).not.toBe(0)
+        expect(`${actual.stdout}${actual.stderr}`).toMatch(
+          packageManager === 'npm'
+            ? /ENEEDAUTH/
+            : /publish request failed[\s\S]*127\.0\.0\.1:1/i,
+        )
+        expect(`${actual.stdout}${actual.stderr}`).not.toMatch(
+          /unexpected|unknown option/i,
+        )
+      }
+    },
+    30_000,
+  )
+
   it('pnpm 有效发布清单重建依赖顺序，并拒绝有效清单的 private 与循环依赖', async () => {
     const context = await fixture('pnpm', {
       publishConfig: { directory: 'dist' },
@@ -214,6 +347,310 @@ describe('真实发布目录与 Hook 的只读边界', () => {
   })
 
   it.each([
+    '--dry-run',
+    '--dry-run=true',
+    '--dry-run=false',
+    '--no-dry-run',
+    '---DRY_RUN=true',
+    '--no-no-dry-run',
+    '--dryRun=true',
+    '--dry',
+    '--dry-r',
+    '--dry-ru=false',
+    '--dr',
+    '--d',
+    '-d',
+  ])('额外预览参数 %s 在全部入口拒绝且不启动命令', async arg => {
+    const context = await fixture()
+    context.config.npm.publishArgs = [arg]
+    npmPlugin(context as unknown as ReleasePluginContext)
+    gitPlugin(context as unknown as ReleasePluginContext)
+    for (const dryRun of [false, true]) {
+      context.config.dryRun = dryRun
+      await expect(invoke(context.onCheck)).rejects.toThrow('top-level dryRun')
+      await expect(invoke(context.onBeforeBumpVersion)).rejects.toThrow(
+        'top-level dryRun',
+      )
+      await expect(invoke(context.onRelease)).rejects.toThrow(
+        'top-level dryRun',
+      )
+    }
+    expect(gitCommit).not.toHaveBeenCalled()
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it.each(['npm', 'pnpm', 'yarn-classic', 'yarn-berry', 'bun'] as const)(
+    '%s 按真实 registry 优先级复检 Hook 改写的清单',
+    async variant => {
+      const context = await fixture(
+        variant.startsWith('yarn')
+          ? 'yarn'
+          : (variant as 'npm' | 'pnpm' | 'bun'),
+      )
+      context.appData.packageManagerVariant = variant
+      context.appData.registry = 'https://fixed.invalid/'
+      npmPlugin(context as unknown as ReleasePluginContext)
+      gitPlugin(context as unknown as ReleasePluginContext)
+      await invoke(context.onBeforeBumpVersion)
+      const pkg = context.appData.workspacePackages[0]
+      await save(pkg.manifestPath, {
+        ...pkg.manifest,
+        publishConfig: { registry: 'https://user:secret@other.invalid' },
+      })
+      if (variant === 'yarn-berry') {
+        const error = await invoke(context.onRelease).catch(value => value)
+        expect(error.message).toContain('effective publishConfig.registry')
+        expect(error.message).not.toContain('secret')
+        expect(gitCommit).not.toHaveBeenCalled()
+        expect(run).not.toHaveBeenCalled()
+        await save(pkg.manifestPath, {
+          ...pkg.manifest,
+          publishConfig: { registry: 'https://fixed.invalid' },
+        })
+      }
+      await invoke(context.onRelease)
+      expect(run).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it('没有固定 registry 时新增产物地址必须在提交前拒绝', async () => {
+    const context = await fixture('pnpm', {
+      publishConfig: { directory: 'dist' },
+    })
+    const pkg = context.appData.workspacePackages[0]
+    await mkdir(path.join(pkg.rootPath, 'dist'))
+    await save(path.join(pkg.rootPath, 'dist/package.json'), {
+      ...pkg.manifest,
+      publishConfig: { registry: 'https://unexpected.invalid' },
+    })
+    npmPlugin(context as unknown as ReleasePluginContext)
+    gitPlugin(context as unknown as ReleasePluginContext)
+    await invoke(context.onBeforeBumpVersion)
+    await expect(invoke(context.onRelease)).rejects.toThrow(
+      'effective publishConfig.registry',
+    )
+    expect(gitCommit).not.toHaveBeenCalled()
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it('固定 registry 在预检后不能被 Hook 修改', async () => {
+    const context = await fixture()
+    context.appData.registry = 'https://fixed.invalid'
+    npmPlugin(context as unknown as ReleasePluginContext)
+    gitPlugin(context as unknown as ReleasePluginContext)
+    await invoke(context.onBeforeBumpVersion)
+    context.appData.registry = 'https://changed.invalid'
+    await expect(invoke(context.onRelease)).rejects.toThrow('registry changed')
+    expect(gitCommit).not.toHaveBeenCalled()
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it('pnpm 产物 registry 被固定 CLI 地址覆盖时允许发布', async () => {
+    const context = await fixture('pnpm', {
+      publishConfig: { directory: 'dist' },
+    })
+    context.appData.registry = 'https://fixed.invalid'
+    const pkg = context.appData.workspacePackages[0]
+    await mkdir(path.join(pkg.rootPath, 'dist'))
+    await save(path.join(pkg.rootPath, 'dist/package.json'), {
+      ...pkg.manifest,
+      publishConfig: { registry: 'https://overridden.invalid' },
+    })
+    npmPlugin(context as unknown as ReleasePluginContext)
+    await invoke(context.onBeforeBumpVersion)
+    await invoke(context.onRelease)
+    expect(run).toHaveBeenCalledWith(
+      'pnpm',
+      ['publish', '--registry', 'https://fixed.invalid', '--dry-run=false'],
+      expect.objectContaining({ cwd: pkg.rootPath }),
+    )
+  })
+
+  it('逐包发布前复检 Yarn Berry 的后续清单 registry 并保留进度', async () => {
+    const context = await fixture('yarn')
+    context.appData.packageManagerVariant = 'yarn-berry'
+    context.appData.registry = 'https://fixed.invalid'
+    const rootPath = path.join(cwd, 'second')
+    await mkdir(rootPath)
+    const second = {
+      rootPath,
+      manifestPath: path.join(rootPath, 'package.json'),
+      manifest: { name: 'second', version: info.version },
+    }
+    context.appData.workspacePackages.push(second)
+    await save(second.manifestPath, second.manifest)
+    npmPlugin(context as unknown as ReleasePluginContext)
+    await invoke(context.onBeforeBumpVersion)
+    vi.mocked(run).mockImplementationOnce((async () => {
+      await save(second.manifestPath, {
+        ...second.manifest,
+        publishConfig: { registry: 'https://other.invalid' },
+      })
+      return { stdout: '', stderr: '' }
+    }) as unknown as typeof run)
+    await expect(invoke(context.onRelease)).rejects.toMatchObject({
+      details: {
+        publishedPackages: ['app'],
+        unpublishedPackages: ['second'],
+      },
+    })
+    expect(run).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ['dependencies', 'workspace:^9.0.0'],
+    ['optionalDependencies', 'workspace:core@~9.0.0'],
+    ['peerDependencies', 'not-a-range'],
+    ['devDependencies', '^9.0.0'],
+    ['dependencies', 'workspace:core@broken'],
+    ['optionalDependencies', ''],
+    ['dependencies', '^'],
+  ])('产物内部 %s 的 %s 在提交前拒绝', async (field, range) => {
+    const context = await fixture('pnpm', {
+      publishConfig: { directory: 'dist' },
+    })
+    const app = context.appData.workspacePackages[0]
+    const rootPath = path.join(cwd, 'core')
+    await mkdir(rootPath)
+    const core = {
+      rootPath,
+      manifestPath: path.join(rootPath, 'package.json'),
+      manifest: { name: 'core', version: info.version },
+    }
+    context.appData.workspacePackages.push(core)
+    await save(core.manifestPath, core.manifest)
+    await mkdir(path.join(app.rootPath, 'dist'))
+    await save(path.join(app.rootPath, 'dist/package.json'), {
+      ...app.manifest,
+      [field]: { core: range },
+    })
+    npmPlugin(context as unknown as ReleasePluginContext)
+    gitPlugin(context as unknown as ReleasePluginContext)
+    await invoke(context.onBeforeBumpVersion)
+    await expect(invoke(context.onRelease)).rejects.toThrow(
+      /internal dependency range|Invalid workspace protocol/,
+    )
+    expect(gitCommit).not.toHaveBeenCalled()
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    'workspace:*',
+    'workspace:^',
+    'workspace:~',
+    'workspace:core@^1.0.0',
+    '^1.0.0',
+    '*',
+    'npm:external-core@^9.0.0',
+    'file:../external-core',
+    'link:../external-core',
+    'git+https://example.invalid/core.git#main',
+    'https://example.invalid/core.tgz',
+    'github:org/core',
+    'org/core#main',
+  ])('有效产物内部范围或外部协议 %s 保留合同', async range => {
+    const context = await fixture('pnpm', {
+      publishConfig: { directory: 'dist' },
+    })
+    const app = context.appData.workspacePackages[0]
+    const rootPath = path.join(cwd, 'core')
+    await mkdir(rootPath)
+    const core = {
+      rootPath,
+      manifestPath: path.join(rootPath, 'package.json'),
+      manifest: { name: 'core', version: info.version },
+    }
+    context.appData.workspacePackages.push(core)
+    await save(core.manifestPath, core.manifest)
+    await mkdir(path.join(app.rootPath, 'dist'))
+    await save(path.join(app.rootPath, 'dist/package.json'), {
+      ...app.manifest,
+      dependencies: { core: range },
+    })
+    await expect(
+      inspectPublishPlan(
+        context.appData,
+        structuredClone(context.appData.workspacePackages),
+        info.version,
+      ),
+    ).resolves.toHaveLength(2)
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['*', true],
+    ['workspace:^', true],
+    ['1.1.0-beta.1', true],
+    ['workspace:core@^1.1.0-beta.0', true],
+    ['^1.0.0', false],
+    ['workspace:^1.0.0', false],
+  ] as const)('预发布产物范围 %s', async (range, valid) => {
+    const version = '1.1.0-beta.1'
+    const context = await fixture('pnpm', {
+      version,
+      publishConfig: { directory: 'dist' },
+    })
+    const app = context.appData.workspacePackages[0]
+    const rootPath = path.join(cwd, 'core')
+    await mkdir(rootPath)
+    const core = {
+      rootPath,
+      manifestPath: path.join(rootPath, 'package.json'),
+      manifest: { name: 'core', version },
+    }
+    context.appData.workspacePackages.push(core)
+    await save(core.manifestPath, core.manifest)
+    await mkdir(path.join(app.rootPath, 'dist'))
+    await save(path.join(app.rootPath, 'dist/package.json'), {
+      ...app.manifest,
+      dependencies: { core: range },
+    })
+    const result = inspectPublishPlan(
+      context.appData,
+      structuredClone(context.appData.workspacePackages),
+      version,
+    )
+    if (valid) await expect(result).resolves.toHaveLength(2)
+    else await expect(result).rejects.toThrow('internal dependency range')
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['^0.5.0', true],
+    ['workspace:^0.5.0', true],
+    ['workspace:^1.0.0', false],
+    ['invalid', false],
+  ] as const)('private 目标产物范围 %s', async (range, valid) => {
+    const context = await fixture('pnpm', {
+      publishConfig: { directory: 'dist' },
+    })
+    const app = context.appData.workspacePackages[0]
+    const rootPath = path.join(cwd, 'core')
+    await mkdir(rootPath)
+    const core = {
+      rootPath,
+      manifestPath: path.join(rootPath, 'package.json'),
+      manifest: { name: 'core', version: '0.5.0', private: true },
+    }
+    context.appData.workspacePackages.push(core)
+    await save(core.manifestPath, core.manifest)
+    await mkdir(path.join(app.rootPath, 'dist'))
+    await save(path.join(app.rootPath, 'dist/package.json'), {
+      ...app.manifest,
+      devDependencies: { core: range },
+      peerDependencies: { core: range },
+    })
+    const result = inspectPublishPlan(
+      context.appData,
+      structuredClone(context.appData.workspacePackages),
+      info.version,
+    )
+    if (valid) await expect(result).resolves.toHaveLength(1)
+    else await expect(result).rejects.toThrow('internal dependency range')
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it.each([
     ['--registry', 'https://other.invalid'],
     ['--registry=https://other.invalid'],
     ['--reg=https://other.invalid'],
@@ -283,6 +720,8 @@ describe('真实发布目录与 Hook 的只读边界', () => {
         '--registry',
         'https://expected.invalid',
         '--fetch-retries=3',
+        '--dry-run=false',
+        '--usage=false',
       ],
       expect.anything(),
     )
@@ -301,7 +740,15 @@ describe('真实发布目录与 Hook 的只读边界', () => {
     await invoke(context.onRelease)
     expect(run).toHaveBeenCalledWith(
       'npm',
-      ['publish', '-f', '--access', 'public', '--fetch-retries=3'],
+      [
+        'publish',
+        '-f',
+        '--access',
+        'public',
+        '--fetch-retries=3',
+        '--dry-run=false',
+        '--usage=false',
+      ],
       expect.anything(),
     )
   })
@@ -320,6 +767,7 @@ describe('真实发布目录与 Hook 的只读边界', () => {
       npmPlugin(context as unknown as ReleasePluginContext)
       gitPlugin(context as unknown as ReleasePluginContext)
       for (const args of [
+        ['-'],
         ['--w=other-package'],
         ['--ws=true'],
         ['--C=/tmp/other-project'],

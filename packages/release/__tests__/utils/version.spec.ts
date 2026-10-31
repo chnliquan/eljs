@@ -12,6 +12,10 @@ import {
  */
 
 import { getGitCommitSha, run } from '@eljs/utils'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { createServer } from 'node:http'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 
 import {
   getCanaryVersion,
@@ -219,16 +223,24 @@ describe('版本处理工具函数测试', () => {
     describe('isVersionExist', () => {
       it('应该在版本存在时返回 true', async () => {
         const mockRun = run as MockedFunction<typeof run>
-        mockRun.mockResolvedValue({ stdout: '@it/package@1.0.0' } as Awaited<
-          ReturnType<typeof run>
-        >)
+        mockRun.mockResolvedValue({
+          stdout: '{"name":"it-package","version":"1.0.0"}',
+        } as Awaited<ReturnType<typeof run>>)
 
         const result = await isVersionExist('it-package', '1.0.0')
         expect(result).toBe(true)
-        expect(mockRun).toHaveBeenCalledWith('npm', [
-          'view',
-          'it-package@1.0.0',
-        ])
+        expect(mockRun).toHaveBeenCalledWith(
+          'npm',
+          [
+            'view',
+            'it-package@1.0.0',
+            'name',
+            'version',
+            '--json=true',
+            '--usage=false',
+          ],
+          { verbose: false, stdout: 'pipe', stderr: 'pipe' },
+        )
       })
 
       it('应该在版本不存在时返回 false', async () => {
@@ -251,39 +263,139 @@ describe('版本处理工具函数测试', () => {
         expect(result).toBe(false)
       })
 
-      it('应该传播网络或鉴权错误', async () => {
+      it.each([
+        'Publish a package\nUsage:\nnpm view <package-spec>',
+        '10.9.8',
+        '{"name":"other-package","version":"1.0.0"}',
+        '{"name":"it-package","version":"1.0.1"}',
+        '{"name":"it-package"}',
+        '{"version":"1.0.0"}',
+        '[{"name":"it-package","version":"1.0.0"}]',
+        '"it-package@1.0.0"',
+        'null',
+        '{}',
+        '{"name":"it-package","version":100}',
+      ])('不能将异常输出 %s 用作 retry skip 依据', async stdout => {
+        vi.mocked(run).mockResolvedValue({ stdout } as Awaited<
+          ReturnType<typeof run>
+        >)
+        await expect(
+          isVersionExist('it-package', '1.0.0'),
+        ).rejects.toMatchObject({
+          name: 'ReleaseCommandError',
+          message: 'Release operation failed',
+        })
+      })
+
+      it('结构化的作用域包和预发布版本必须精确匹配', async () => {
+        vi.mocked(run).mockResolvedValue({
+          stdout: '\n{"name":"@it/package","version":"1.0.0-beta.1"}\n',
+        } as Awaited<ReturnType<typeof run>>)
+        await expect(
+          isVersionExist('@it/package', '1.0.0-beta.1'),
+        ).resolves.toBe(true)
+      })
+
+      it('解析错误不回显响应中的凭据，响应文本不触发 404 回退', async () => {
+        const secret = 'unique-response-secret'
+        vi.mocked(run).mockResolvedValue({
+          stdout: `E404 https://user:${secret}@registry.invalid`,
+        } as Awaited<ReturnType<typeof run>>)
+        const error = await isVersionExist('it-package', '1.0.0').catch(
+          value => value,
+        )
+        expect(error.name).toBe('ReleaseCommandError')
+        expect(error.stack).not.toContain(secret)
+        expect(error.cause).toBeUndefined()
+        expect(JSON.stringify(error)).not.toContain(secret)
+      })
+
+      it('应该安全传播网络或鉴权错误', async () => {
         const mockRun = run as MockedFunction<typeof run>
         mockRun.mockRejectedValue(new Error('network timeout'))
 
         await expect(isVersionExist('it-package', '1.0.0')).rejects.toThrow(
-          'network timeout',
+          'Release operation failed',
         )
+      })
+
+      it.each(['E401', 'ECONNRESET', 'ETIMEDOUT'])(
+        '%s 错误不保留 URL userinfo、输出、堆栈或原始 cause',
+        async code => {
+          const secret = 'unique-registry-password'
+          const registry = `https://user:${secret}@registry.invalid`
+          const raw = Object.assign(new Error(`npm view failed: ${registry}`), {
+            code,
+            exitCode: 1,
+            stdout: registry,
+            stderr: registry,
+            cause: new Error(secret),
+          })
+          vi.mocked(run).mockRejectedValue(raw)
+          const error = await isVersionExist('app', '1.0.0', registry).catch(
+            value => value,
+          )
+          expect(error).not.toBe(raw)
+          expect(error).toMatchObject({
+            name: 'ReleaseCommandError',
+            code,
+            exitCode: 1,
+          })
+          expect(error.cause).toBeUndefined()
+          expect(error.stdout).toBeUndefined()
+          expect(error.stderr).toBeUndefined()
+          expect(error.stack).not.toContain(secret)
+          expect(JSON.stringify(error)).not.toContain(secret)
+        },
+      )
+
+      it('取消状态保留但取消原因不进入安全错误', async () => {
+        const controller = new AbortController()
+        controller.abort(new Error('secret-cancel-reason'))
+        vi.mocked(run).mockRejectedValue(controller.signal.reason)
+        await expect(
+          isVersionExist(
+            'app',
+            '1.0.0',
+            undefined,
+            undefined,
+            controller.signal,
+          ),
+        ).rejects.toMatchObject({ name: 'AbortError', isCanceled: true })
       })
 
       it('应该使用指定的 registry', async () => {
         const mockRun = run as MockedFunction<typeof run>
-        mockRun.mockResolvedValue({ stdout: '@it/package@1.0.0' } as Awaited<
-          ReturnType<typeof run>
-        >)
+        mockRun.mockResolvedValue({
+          stdout: '{"name":"it-package","version":"1.0.0"}',
+        } as Awaited<ReturnType<typeof run>>)
 
         await isVersionExist(
           'it-package',
           '1.0.0',
           'https://custom-registry.com',
         )
-        expect(mockRun).toHaveBeenCalledWith('npm', [
-          'view',
-          'it-package@1.0.0',
-          '--registry',
-          'https://custom-registry.com',
-        ])
+        expect(mockRun).toHaveBeenCalledWith(
+          'npm',
+          [
+            'view',
+            'it-package@1.0.0',
+            'name',
+            'version',
+            '--json=true',
+            '--usage=false',
+            '--registry',
+            'https://custom-registry.com',
+          ],
+          { verbose: false, stdout: 'pipe', stderr: 'pipe' },
+        )
       })
 
       it('应该在指定工作目录中读取 npm 配置', async () => {
         const mockRun = run as MockedFunction<typeof run>
-        mockRun.mockResolvedValue({ stdout: '@it/package@1.0.0' } as Awaited<
-          ReturnType<typeof run>
-        >)
+        mockRun.mockResolvedValue({
+          stdout: '{"name":"it-package","version":"1.0.0"}',
+        } as Awaited<ReturnType<typeof run>>)
 
         await isVersionExist(
           'it-package',
@@ -297,12 +409,98 @@ describe('版本处理工具函数测试', () => {
           [
             'view',
             'it-package@1.0.0',
+            'name',
+            'version',
+            '--json=true',
+            '--usage=false',
             '--registry',
             'https://custom-registry.com',
           ],
-          { cwd: '/target/project' },
+          {
+            cwd: '/target/project',
+            verbose: false,
+            stdout: 'pipe',
+            stderr: 'pipe',
+          },
         )
       })
+
+      it('真实 npm 在继承 usage 和非 JSON 配置时仍从本地 registry 核对精确身份', async () => {
+        const { run: runCommand } =
+          await vi.importActual<typeof import('@eljs/utils/cp')>(
+            '@eljs/utils/cp',
+          )
+        const cwd = await mkdtemp(path.join(tmpdir(), 'release-version-query-'))
+        const requests: string[] = []
+        const server = createServer((request, response) => {
+          requests.push(`${request.method} ${request.url}`)
+          response.setHeader('content-type', 'application/json')
+          response.end(
+            JSON.stringify({
+              name: '@it/package',
+              'dist-tags': { latest: '1.0.0-beta.1' },
+              versions: {
+                '1.0.0-beta.1': {
+                  name: '@it/package',
+                  version: '1.0.0-beta.1',
+                },
+              },
+            }),
+          )
+        })
+        try {
+          await writeFile(path.join(cwd, '.npmrc'), 'usage=true\njson=false\n')
+          const userConfig = path.join(cwd, 'user.npmrc')
+          const globalConfig = path.join(cwd, 'global.npmrc')
+          await writeFile(userConfig, '')
+          await writeFile(globalConfig, '')
+          await new Promise<void>(resolve =>
+            server.listen(0, '127.0.0.1', resolve),
+          )
+          const address = server.address()
+          if (!address || typeof address === 'string')
+            throw new Error('Missing test server address')
+          vi.mocked(run).mockImplementation(((
+            _command: string,
+            args: string[],
+          ) =>
+            runCommand('npm', args, {
+              cwd,
+              timeout: 5000,
+              env: {
+                ...Object.fromEntries(
+                  Object.entries(process.env).filter(
+                    ([key]) => !/^npm_config_/i.test(key),
+                  ),
+                ),
+                npm_config_userconfig: userConfig,
+                npm_config_globalconfig: globalConfig,
+                npm_config_cache: path.join(cwd, 'cache'),
+                npm_config_usage: 'true',
+                npm_config_json: 'false',
+                npm_config_fetch_retries: '0',
+                npm_config_update_notifier: 'false',
+              },
+            })) as unknown as typeof run)
+          const registry = `http://127.0.0.1:${address.port}`
+          await expect(
+            isVersionExist('@it/package', '1.0.0-beta.1', registry, cwd),
+          ).resolves.toBe(true)
+          await expect(
+            isVersionExist('@it/package', '1.0.0-beta.2', registry, cwd),
+          ).resolves.toBe(false)
+          expect(requests.length).toBeGreaterThan(0)
+          expect(
+            requests.every(request => /^GET \/@it%2fpackage$/i.test(request)),
+            requests.join('\n'),
+          ).toBe(true)
+        } finally {
+          await new Promise<void>((resolve, reject) =>
+            server.close(error => (error ? reject(error) : resolve())),
+          )
+          await rm(cwd, { recursive: true, force: true })
+        }
+      }, 15_000)
     })
   })
 

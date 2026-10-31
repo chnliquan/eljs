@@ -1,463 +1,152 @@
 # @eljs/create
 
-An extensible project generator for local, npm, and Git templates with guarded
-filesystem writes and both CLI and programmatic APIs.
+[简体中文](./README.zh-CN.md)
+
+Create projects from the latest official Eljs templates.
 
 [![NPM Version](https://img.shields.io/npm/v/@eljs/create.svg)](https://www.npmjs.com/package/@eljs/create)
-[![NPM Downloads](https://img.shields.io/npm/dm/@eljs/create.svg)](https://www.npmjs.com/package/@eljs/create)
 [![License](https://img.shields.io/npm/l/@eljs/create.svg)](https://github.com/chnliquan/eljs/blob/master/LICENSE)
 
-## ✨ Features
+This is the official project initialization entry point. It selects a template
+and delegates generation to [`@eljs/generator`](../generator). Use the generator
+directly to supply an arbitrary local, npm, or Git template.
 
-- 🚀 **Dual Usage** - Support both CLI and programmatic API usage
-- 📦 **Multiple Template Sources** - Support local, npm, and git templates
-- 🎯 **Smart Template Resolution** - Automatic template discovery and resolution
-- 💬 **Interactive Mode** - User-friendly prompts for directory conflicts
-- 🔧 **Plugin System** - Extensible plugin architecture for custom generators
-- 🎨 **Template Customization** - Support for custom generators and configurations
-- 🛡️ **Type Safety** - Full TypeScript support with comprehensive type definitions
+## Runtime Requirements
 
-## 📦 Installation
+- Node.js 22.14 or newer
+- ESM and CommonJS entries with TypeScript declarations
+- npm registry access to download official templates
 
-```bash
-# Using pnpm (recommended)
-pnpm add @eljs/create -g
-
-# Using yarn
-yarn global add @eljs/create
-
-# Using npm
-npm install @eljs/create -g
-```
-
-Global installations expose a single `create` command. You can also run the
-initializer without installing anything via `npm create @eljs`.
-
-## 🚀 Quick Start
-
-### CLI Usage (Recommended)
+## Quick Start
 
 ```bash
-# Create from an npm template
-create my-template my-project
+# Select an official template interactively.
+npm create @eljs my-project
 
-# Create from a git repository
-create https://github.com/user/template.git my-project
+# Select the npm package template explicitly.
+npm create @eljs my-package -- --template template-npm-package
 
-# Create from a local template
-create ./local-template my-project
-
-# Using npx (no global installation needed)
-npx @eljs/create my-template my-project
+# Equivalent invocation through npx.
+npx @eljs/create my-project
 ```
 
-### Programmatic API Usage
+## Installation
 
-```typescript
-import { ProjectCreator, defineConfig } from '@eljs/create'
-
-// Simple project creation
-const creator = new ProjectCreator({
-  template: 'my-template',
-})
-await creator.run('my-project')
-
-// Create with custom options
-const enterpriseCreator = new ProjectCreator({
-  template: {
-    type: 'npm',
-    value: '@company/enterprise-template',
-    registry: 'https://npm.company.com',
-  },
-  force: true,
-  cwd: '/workspace',
-})
-await enterpriseCreator.run('enterprise-app')
-```
-
-`force` 和 `merge` 使用可恢复事务：现有目录先移动到原始规范工作目录直属的 `.eljs-backup-*` 备份，生成失败时恢复原目录。同一物理目标的锁位于目标父目录，符号链接别名以及不同祖先 `cwd` 共用同一把锁；尚不存在的嵌套目标会先创建父目录，调用方的工作目录边界仍由 `ProjectCreator` 校验。
-
-锁的 version 2 元数据记录原始规范 `cwd` 和事务阶段：
-
-| 阶段               | 下一次运行的恢复行为                                                                                |
-| ------------------ | --------------------------------------------------------------------------------------------------- |
-| `active`           | 恢复原备份，或删除新建目标中的半成品                                                                |
-| `committing`       | 保留新目标，仅清理残余备份；新目标丢失时报 `CREATE_RECOVERY_FAILED`，不会还原可能已被部分删除的备份 |
-| `recovery-pending` | 前一流程已停止目标操作，即使其 PID 仍活跃也可重试；保留原先的回滚或提交方向                         |
-
-初始锁元数据写完整后才原子发布，避免退出时留下空或半份公共锁。删除备份前会原子持久化 `committing`。回滚先删除可丢弃的半成品目标，再无覆盖移动原备份；两步之间退出仍保留原恢复记录和备份，不引入额外的覆盖式移动临时目录。回滚或提交清理失败时保留恢复记录，在目标操作停止后持有获取 mutex 原子交接为 `recovery-pending`，后续同进程或其他进程可以安全重试。恢复时要求原始规范 `cwd` 仍是目标祖先，备份仍位于该 `cwd` 直属且不与目标重叠；从另一祖先工作目录启动也沿用这个原始边界。
-
-兼容旧 version 1 元数据和目标祖先工作目录中的旧锁位置，恢复前始终获取新位置的 mutex，并检查发现的旧位置 mutex。旧协议没有提交阶段，按 `active` 恢复；若发现多份恢复记录、不完整锁或无法安全验证的路径，会保留记录并报错，避免猜测覆盖顺序。不同版本进程同时启动时，旧版本不能识别新锁，因此不保证双向互斥，请避免混用。其他主机的活跃锁及无法确认退出的 PID 不会被自动接管；遗留获取 mutex 的不可变墓碑保留用于阻止延迟竞争者误删后继锁。协议针对进程异常退出，不提供断电时的目录落盘保证；获取锁时创建的空父目录和初始锁发布前退出留下的私有临时文件也不会自动删除，这些临时文件不代表已开始的目标事务。
-
-权限故障若阻止元数据交接或 mutex 释放，会保留现有状态并报错，需先修复权限或人工核验遗留状态；锁只协调遵循协议的创建流程，不防护外部进程并发替换目录或篡改锁文件。
-
-## 📖 CLI Reference
-
-### Commands
+For repeated CLI use:
 
 ```bash
-create [options] <template> <project-name>
+pnpm add --global @eljs/create
+create my-project
 ```
 
-### Arguments
-
-| Argument       | Description                                                  |
-| -------------- | ------------------------------------------------------------ |
-| `template`     | Template source (local path, npm package, or git repository) |
-| `project-name` | Name of the project to create                                |
-
-### Template Sources
-
-| Type               | Format                             | Example                                 |
-| ------------------ | ---------------------------------- | --------------------------------------- |
-| **Local Path**     | `./path` or `/absolute/path`       | `./my-template`, `/usr/templates/react` |
-| **NPM Package**    | `package-name` or `@scope/package` | `create-react-app`, `@vue/cli-template` |
-| **Git Repository** | `https://...` or `git@...`         | `https://github.com/user/template.git`  |
-
-### Options
-
-| Option                       | Description                                         | Default         |
-| ---------------------------- | --------------------------------------------------- | --------------- |
-| `-v, --version`              | Output the current version                          | -               |
-| `--cwd <cwd>`                | Specify the working directory                       | `process.cwd()` |
-| `-f, --force`                | Overwrite target directory if it exists             | `false`         |
-| `-m, --merge`                | Merge with target directory if it exists            | `false`         |
-| `--install` / `--no-install` | Install dependencies after creation                 | `true`          |
-| `-y, --yes`                  | Trust and execute the selected remote template      | `false`         |
-| `--allow-template-scripts`   | Allow dependency lifecycle scripts while loading it | `false`         |
-| `-h, --help`                 | Display help for command                            | -               |
-
-### CLI Examples
+For programmatic use:
 
 ```bash
-# Basic template creation
-create react-template my-react-app
-
-# Force overwrite existing directory
-create vue-template my-vue-app --force
-
-# Merge with existing directory
-create component-template my-component --merge
-
-# Custom working directory
-create context-template my-context --cwd ./projects
-
-# From scoped npm package
-create @company/enterprise-template my-enterprise-app
-
-# From a Git repository branch or tag
-create https://github.com/templates/fullstack.git#main my-fullstack-app
-
-# Local template with custom options
-create ./templates/custom-template my-custom-app --no-install
+pnpm add @eljs/create
 ```
 
-## 📖 API Reference
+## Available Templates
 
-### `ProjectCreator` Class
+| Template               | Creates                                                                  | npm source                               |
+| ---------------------- | ------------------------------------------------------------------------ | ---------------------------------------- |
+| `template-npm-package` | A single publishable package, with Node or browser target selection      | `@eljs/create-plugin-npm-package@latest` |
+| `template-project`     | A full-stack workspace with a web app, documentation, libraries, and CLI | `@eljs/create-plugin-project@latest`     |
 
-Main class for programmatic project creation.
+Both consume the shared `@eljs/create-preset-base-package` preset. It is a
+template dependency rather than a selectable project template.
 
-```typescript
-class ProjectCreator {
-  constructor(options: ProjectCreatorOptions)
-  async run(projectName: string): Promise<void>
-}
+Templates are published separately from this initializer. Each run resolves
+the selected package's `latest` release; template updates do not require a
+new initializer release.
+
+## CLI
+
+```bash
+create [options] <project-name>
 ```
 
-**Constructor Options:**
+| Option                      | Description                                                 | Default               |
+| --------------------------- | ----------------------------------------------------------- | --------------------- |
+| `-t, --template <template>` | One of the official template identifiers above              | Interactive selection |
+| `--cwd <cwd>`               | Working directory                                           | `process.cwd()`       |
+| `-f, --force`               | Replace an existing target directory                        | `false`               |
+| `-m, --merge`               | Merge generated files into an existing target directory     | `false`               |
+| `--allow-template-scripts`  | Allow lifecycle scripts in downloaded template dependencies | `false`               |
+| `-v, --version`             | Print the initializer version                               | —                     |
+| `-h, --help`                | Print command help                                          | —                     |
 
-```typescript
-interface ProjectCreatorOptions {
-  /**
-   * Working directory
-   * @default process.cwd()
-   */
-  cwd?: string
-  /**
-   * Template source
-   */
-  template: string | RemoteTemplate
-  /**
-   * Whether to overwrite target directory if it exists
-   * @default false
-   */
-  force?: boolean
-  /**
-   * Whether to merge with target directory if it exists
-   * @default false
-   */
-  merge?: boolean
-  /**
-   * Skip the remote template execution confirmation
-   * @default false
-   */
-  yes?: boolean
-  /**
-   * Allow lifecycle scripts in remote template dependencies
-   * @default false
-   */
-  allowTemplateScripts?: boolean
-  /**
-   * Cancel downloading, plugin execution, and generation at safe boundaries
-   */
-  signal?: AbortSignal
-}
+`force` and `merge` are mutually exclusive. Generation uses the generator's
+directory transaction: failed generation restores the original directory,
+and cooperating processes cannot write the same physical target concurrently.
+See [transaction recovery](https://github.com/chnliquan/eljs/blob/master/docs/generator-recovery.md).
+
+```bash
+create my-package --template template-npm-package
+create my-project --template template-project --cwd ./projects
+create existing-project --merge
 ```
 
-**Remote Template Configuration:**
+## Programmatic API
 
-```typescript
-interface RemoteTemplate {
-  /**
-   * Template type
-   */
-  type: 'npm' | 'git'
-  /**
-   * Template source value
-   */
-  value: string
-  /**
-   * NPM registry URL (npm type only)
-   */
-  registry?: string
-  /**
-   * Expected npm tarball Subresource Integrity digest
-   */
-  integrity?: string
-  /**
-   * Skip execution confirmation for a source trusted by the caller
-   * @default false
-   */
-  trusted?: boolean
-}
-```
-
-### Remote Template Security
-
-Remote templates are executable code and run with the current user's
-permissions. The CLI therefore asks for confirmation before downloading and
-executing an unknown npm or Git template. Use `--yes` only after verifying the
-source and version.
-
-Template dependency lifecycle scripts are disabled by default with
-`--ignore-scripts`. If a trusted template requires an install script, enable it
-explicitly with `--allow-template-scripts`. This option does not sandbox the
-template generator itself.
-
-NPM downloads inherit project and user `.npmrc` authentication, proxy, and
-`no-proxy` settings. Credentials are matched to the target host and path and are
-not forwarded to an unrelated tarball host. Tarballs are streamed with a 100 MiB
-download limit and a 20,000-entry extraction limit. A caller-provided
-`integrity` digest is used as the independent trust root for the downloaded
-archive; otherwise the registry integrity or shasum is used.
-
-#### Choosing `trusted` and `integrity`
-
-`trusted` and `integrity` guard two independent concerns and can be combined
-based on how a wrapper CLI resolves and ships templates:
-
-| `trusted` | `integrity`  | Use case                                                                                                                                      |
-| --------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `false`   | not provided | Default. End user types an arbitrary source; always confirm and fall back to registry-provided integrity                                      |
-| `true`    | pinned       | Internal CLI pins an exact template version. Strongest guarantee; bump the digest on every template release                                   |
-| `true`    | not provided | Internal CLI always resolves `latest`. No pinned digest to invalidate on template releases, so no CLI redeploy is needed per template release |
-| `false`   | pinned       | Caller knows the expected digest in advance but still wants the user to confirm before executing                                              |
-
-A pinned `integrity` fixes the downloaded bytes, not just a version number. If
-the template publishes a new release and the digest in a wrapper CLI is not
-updated, downloads fail closed instead of silently serving stale or
-unexpected content. This is why "always track latest" and "pin `integrity`"
-are mutually exclusive: pin the digest only when template upgrades go through
-a review-and-redeploy step for the wrapper CLI; omit it when the wrapper CLI
-is intended to always fetch the newest template release.
-
-### API Examples
-
-```typescript
+```ts
 import { ProjectCreator } from '@eljs/create'
 
-// Local template
-const localCreate = new ProjectCreator({
-  template: './my-local-template',
-  cwd: '/workspace',
-  merge: true,
+const creator = new ProjectCreator({
+  template: 'template-npm-package',
+  cwd: '/workspace/projects',
 })
-await localCreate.run('local-project')
 
-// NPM template
-const npmCreate = new ProjectCreator({
-  template: {
-    type: 'npm',
-    value: '@scope/template-name',
-    registry: 'https://registry.npmjs.org',
-  },
-  force: true,
-})
-await npmCreate.run('npm-project')
+await creator.run('orders-service')
+```
 
-// Git template
-const gitCreate = new ProjectCreator({
-  template: {
-    type: 'git',
-    value: 'https://github.com/user/template.git#main',
-  },
-})
-await gitCreate.run('git-project')
+`ProjectCreatorOptions` accepts an optional `OfficialTemplateName` and the
+generator's creation options except its arbitrary `template` source. Omitting
+the template starts interactive selection. Invalid template identifiers fail
+with `CREATE_INVALID_OPTIONS`.
 
-// Cancellable creation
+Options such as `force`, `merge`, `install`, `gitInit`, `defaultQuestions`, and
+`signal` are passed to the generator. Cancellation interrupts template
+selection and is forwarded to generation:
+
+```ts
 const controller = new AbortController()
-const cancellableCreate = new ProjectCreator({
-  template: './my-local-template',
+const creator = new ProjectCreator({
+  template: 'template-npm-package',
   signal: controller.signal,
 })
 
 process.once('SIGINT', () => controller.abort())
-await cancellableCreate.run('cancellable-project')
+await creator.run('my-package')
 ```
 
-## ⚙️ Configuration
+`constructorOptions` is a read-only snapshot. `cwd` contains the configured
+working directory, defaulting to `process.cwd()`.
 
-Create a **create.config.ts** file in the template root to configure template generation. It is loaded after the template and target directory have already been resolved, so source selection and target-directory options belong to `ProjectCreatorOptions`, not this file.
+## Template Execution
 
-```typescript
-import { defineConfig } from '@eljs/create'
+Official template sources use HTTPS npm registry URLs and are trusted by the
+initializer, so the remote-code confirmation prompt is skipped. Template
+code still runs with the current process permissions.
 
-export default defineConfig({
-  /**
-   * Post-creation options
-   */
-  install: true,
-  gitInit: true,
-  defaultQuestions: true,
+The initializer does not pin a separate integrity digest because it tracks
+`latest`. Downloads use the registry-provided integrity or shasum. Dependency
+lifecycle scripts are disabled unless `--allow-template-scripts` is enabled.
+See the generator's [template trust settings](https://github.com/chnliquan/eljs/tree/master/packages/generator#template-execution-and-integrity).
 
-  /**
-   * Custom presets
-   */
-  presets: ['@company/create-preset'],
+## Development
 
-  /**
-   * Custom plugins
-   */
-  plugins: ['./plugins/custom-generator.js'],
-})
+From the repository root:
+
+```bash
+pnpm --filter @eljs/create... build
+pnpm --filter @eljs/create typecheck
+pnpm --filter @eljs/create test
+pnpm --filter @eljs/create test:watch
+DEBUG=create:* pnpm exec create my-project
 ```
 
-## 🔌 Plugin System
+Verify published templates with npm registry access:
 
-Extend creation functionality with custom plugins and generators:
-
-### Custom Generator Plugin
-
-```typescript
-// plugins/custom-generator.js
-import { definePlugin } from '@eljs/create'
-
-export default definePlugin(context => {
-  // Add custom prompts
-  context.addQuestions(() => [
-    {
-      type: 'input',
-      name: 'authorName',
-      message: 'What is your name?',
-    },
-    {
-      type: 'select',
-      name: 'framework',
-      message: 'Choose a framework:',
-      choices: ['React', 'Vue', 'Angular'],
-    },
-  ])
-
-  // Modify package.json
-  // The callback runs after prompts and app data are available.
-  context.extendPackage(pkg => {
-    const framework = context.prompts.framework
-
-    return {
-      ...pkg,
-      author: context.prompts.authorName,
-      keywords: [
-        typeof framework === 'string' ? framework.toLowerCase() : 'unknown',
-      ],
-    }
-  })
-
-  // Generate files
-  context.onGenerateFiles(() => {
-    if (context.prompts.framework === 'React') {
-      context.copyTpl(
-        'templates/react/**',
-        context.paths.target,
-        context.prompts,
-      )
-    }
-  })
-})
+```bash
+ELJS_TEST_OFFICIAL_TEMPLATES=1 pnpm exec vitest run packages/create/__tests__/official-templates.integration.spec.ts
 ```
-
-### Template Structure
-
-A complete template should include:
-
-```
-my-template/
-├── create.config.ts          # Template configuration
-├── generators/
-│   └── index.ts             # Main generator
-├── templates/               # Template files
-│   ├── package.json.ejs
-│   ├── src/
-│   │   └── index.ts.ejs
-│   └── README.md.ejs
-└── package.json             # Template metadata
-```
-
-### Generator Example
-
-```typescript
-// generators/index.ts
-import { definePlugin } from '@eljs/create'
-
-export default definePlugin(context => {
-  // Extend package.json
-  context.extendPackage(pkg => ({
-    ...pkg,
-    name: context.appData.projectName,
-    version: '1.0.0',
-    scripts: {
-      dev: 'vite',
-      build: 'vite build',
-      test: 'jest',
-    },
-  }))
-
-  // Copy template files
-  context.onGenerateFiles(() => {
-    context.copyTpl('templates/**', context.paths.target, {
-      ...context.prompts,
-      ...context.appData,
-    })
-  })
-
-  // Post-generation hooks
-  context.onGenerateDone(() => {
-    console.log(
-      `✅ Project ${context.appData.projectName} created successfully!`,
-    )
-  })
-})
-```
-
-## 🏗️ Built-in Generators
-
-### Available Generator Methods
-
-| Method                                            | Description                   | Example                                                                             |
-| ------------------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------- |
-| `context.copyFile(from, to, options?)`            | Copy single file              | `context.copyFile('template.txt', context.resolve('output.txt'))`                   |
-| `context.copyTpl(from, to, data, options?)`       | Copy template with data       | `context.copyTpl('index.ts.tpl', context.resolve('src/index.ts'), context.prompts)` |
-| `context.copyDirectory(from, to, data, options?)` | Copy and render directory     | `context.copyDirectory('templates', context.paths.target, context.prompts)`         |
-| `context.render(path, data, options?)`            | Render a template file or dir | `context.render('./templates', context.prompts)`                                    |
-| `context.extendPackage(extension)`                | Extend package.json           | `context.extendPackage({scripts: {test: 'vitest'}})`                                |
-| `context.install(args?, options?)`                | Install project dependencies  | `context.install()`                                                                 |

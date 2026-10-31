@@ -1,0 +1,84 @@
+{
+  "name": "@eljs/generator",
+  "version": "2.0.0-beta.5",
+  "description": "Extensible project generation from local, npm, and Git templates, with CLI and programmatic APIs.",
+  "keywords": [
+    "eljs",
+    "project-generator",
+    "template",
+    "scaffolding"
+  ],
+  "homepage": "https://github.com/chnliquan/eljs/tree/master/packages/generator#readme",
+  "bugs": {
+    "url": "https://github.com/chnliquan/eljs/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chnliquan/eljs.git",
+    "directory": "packages/generator"
+  },
+  "license": "MIT",
+  "author": "chnliquan",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      },
+      "default": "./dist/index.js"
+    },
+    "./errors": {
+      "import": {
+        "types": "./dist/errors.d.ts",
+        "default": "./dist/errors.js"
+      },
+      "require": {
+        "types": "./dist/errors.d.cts",
+        "default": "./dist/errors.cjs"
+      },
+      "default": "./dist/errors.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "generator": "./bin/generator.js"
+  },
+  "files": [
+    "README.zh-CN.md",
+    "bin",
+    "dist"
+  ],
+  "scripts": {
+    "build": "rslib build",
+    "clean": "rimraf dist",
+    "dev": "rslib build --watch",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@eljs/plugin-host": "workspace:*",
+    "@eljs/utils": "workspace:*",
+    "commander": "^14.0.3",
+    "dayjs": "^1.11.23",
+    "ora": "^5.4.1",
+    "sort-package-json": "^4.1.0",
+    "update-notifier": "^7.3.1"
+  },
+  "devDependencies": {
+    "@types/update-notifier": "^6.0.8"
+  },
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  }
+}

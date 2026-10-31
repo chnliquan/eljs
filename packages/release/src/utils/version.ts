@@ -1,6 +1,7 @@
 import { run } from '@eljs/utils/cp'
 import { getGitCommitSha } from '@eljs/utils/git'
 import semver, { type ReleaseType } from 'semver'
+import { createSafeCommandError } from '../internal/safe-command-error'
 import type { DistTag, PrereleaseId } from '../types'
 
 const { RELEASE_TYPES } = semver
@@ -114,8 +115,11 @@ export function parseVersion(version: string) {
  * @param registry - 源仓库
  * @param cwd - 用于读取项目级 npm 配置的工作目录
  * @param signal - 用于取消 npm 查询的信号
+ * @remarks
+ * 固定 JSON 输出并关闭 npm 的 usage 提前退出模式，仅接受包名和版本都精确匹配的对象
+ * 空输出或 404 表示不存在；帮助文本、格式无效或身份不匹配的输出不能作为重试跳过依据
  * @returns 版本是否存在
- * @throws 当查询因网络、鉴权或服务端异常失败时抛出
+ * @throws 当查询因网络、鉴权、取消、服务端异常或响应不符合查询身份失败时抛出安全命令错误，不保留原始异常及凭据
  */
 export async function isVersionExist(
   pkgName: string,
@@ -124,22 +128,26 @@ export async function isVersionExist(
   cwd?: string,
   signal?: AbortSignal,
 ) {
+  let remote: string
   try {
     const registryArg = registry ? ['--registry', registry] : []
-    const cliArgs = ['view', `${pkgName}@${version}`, ...registryArg].filter(
-      Boolean,
-    )
-    const result =
-      cwd || signal
-        ? await run('npm', cliArgs, {
-            ...(cwd ? { cwd } : {}),
-            ...(signal ? { signal } : {}),
-          })
-        : await run('npm', cliArgs)
-    const remote = result.stdout.replace(/\W*/, '').trim()
-    if (!remote) {
-      return false
-    }
+    const cliArgs = [
+      'view',
+      `${pkgName}@${version}`,
+      'name',
+      'version',
+      '--json=true',
+      '--usage=false',
+      ...registryArg,
+    ]
+    const result = await run('npm', cliArgs, {
+      ...(cwd ? { cwd } : {}),
+      ...(signal ? { signal } : {}),
+      verbose: false,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    })
+    remote = result.stdout.trim()
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
 
@@ -152,10 +160,28 @@ export async function isVersionExist(
       return false
     }
 
-    throw error
+    throw createSafeCommandError(error, signal?.aborted)
   }
 
-  return true
+  if (!remote) return false
+  try {
+    // 只在命令失败时识别 404，响应中的文本不能冒充缺失版本或确认目标版本存在
+    const identity: unknown = JSON.parse(remote)
+    if (
+      !identity ||
+      typeof identity !== 'object' ||
+      Array.isArray(identity) ||
+      !('name' in identity) ||
+      !('version' in identity) ||
+      identity.name !== pkgName ||
+      identity.version !== version
+    ) {
+      throw new Error('Invalid npm version identity response')
+    }
+    return true
+  } catch (error) {
+    throw createSafeCommandError(error, signal?.aborted)
+  }
 }
 
 /**

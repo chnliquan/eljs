@@ -17,11 +17,12 @@ import { createSafeCommandError } from '../safe-command-error'
  * 文件写入前完成校验并绑定目标版本的发布计划
  *
  * @remarks
- * 快照固定包名和目录映射，Hook 完成后及每次发布前只读复检实际清单
+ * 快照固定包名、目录映射和 registry，Hook 完成后及每次发布前只读复检实际清单
  */
 interface PreparedPublishPlan {
   readonly version: string
   readonly workspacePackages: AppData['workspacePackages']
+  readonly registry: AppData['registry']
 }
 
 export default definePlugin(context => {
@@ -109,6 +110,7 @@ export default definePlugin(context => {
       preparedPlan = {
         version,
         workspacePackages: structuredClone(context.appData.workspacePackages),
+        registry: context.appData.registry,
       }
     },
     {
@@ -128,7 +130,12 @@ export default definePlugin(context => {
           : structuredClone(context.appData.workspacePackages)
       const targets = context.config.dryRun
         ? preparePublishPlan(version)
-        : await inspectPublishPlan(context.appData, expected, version)
+        : await inspectPublishPlan(
+            context.appData,
+            expected,
+            version,
+            preparedPlan ?? context.appData,
+          )
       validatePublishArgs(normalizeArgs(context.config.npm.publishArgs))
       const existingPkgNames = new Set<string>(
         context.appData.existingPkgNames ?? [],
@@ -165,6 +172,7 @@ export default definePlugin(context => {
             context.appData,
             expected,
             version,
+            preparedPlan ?? context.appData,
           )
           if (
             current.map(pkg => pkg.name).join('\0') !==
@@ -210,10 +218,13 @@ export default definePlugin(context => {
           registry && packageManagerVariant !== 'yarn-berry'
             ? ['--registry', registry]
             : []
+        // pnpm 通过环境覆盖 usage，避免传入 npm 专属的 CLI 配置参数
         const publishEnv =
           registry && packageManagerVariant === 'yarn-berry'
             ? { YARN_NPM_PUBLISH_REGISTRY: registry }
-            : undefined
+            : packageManager === 'pnpm'
+              ? { npm_config_usage: 'false' }
+              : undefined
         const { requireBranch } = context.config.git
         const pnpmGitCheckArg =
           packageManager === 'pnpm'
@@ -226,6 +237,14 @@ export default definePlugin(context => {
 
         const publishArgs = normalizeArgs(context.config.npm.publishArgs)
         validatePublishArgs(publishArgs)
+        // npm/pnpm 的项目配置或环境变量可能令 publish 退出成功但未上传，CLI 固定真实发布模式
+        // npm 的 usage 同样会提前退出；这些 npm 配置参数不能传给 Yarn Berry
+        const publishModeArgs =
+          packageManager === 'npm'
+            ? ['--dry-run=false', '--usage=false']
+            : packageManager === 'pnpm'
+              ? ['--dry-run=false']
+              : []
         const cliArgs = [
           ...(packageManagerVariant === 'yarn-berry'
             ? ['npm', 'publish']
@@ -234,6 +253,7 @@ export default definePlugin(context => {
           ...registryArg,
           ...pnpmGitCheckArg,
           ...publishArgs,
+          ...publishModeArgs,
         ].filter(Boolean)
 
         // 命令失败也可能已在 registry 生效，从实际发布入口起保留目标版本供重试
@@ -269,7 +289,12 @@ export default definePlugin(context => {
         preparedPlan?.version === version
           ? preparedPlan.workspacePackages
           : structuredClone(context.appData.workspacePackages)
-      await inspectPublishPlan(context.appData, expected, version)
+      await inspectPublishPlan(
+        context.appData,
+        expected,
+        version,
+        preparedPlan ?? context.appData,
+      )
     },
     {
       // onBeforeRelease 的所有 Hook 已完成，实际产物检查必须先于 Git 的 stage -10
@@ -285,7 +310,9 @@ export default definePlugin(context => {
  * 附加参数仅允许选项，已知取值选项可使用分离值；未知选项使用等号形式
  * 目录、工作区及 registry 限制同时检查规范化名称，防止多横线或否定形式绕过
  * 会改变目标的已知别名与唯一缩写一并拒绝，不改写传给包管理器的原始参数
- * @throws 位置参数、目录切换、版本改写、registry 覆盖或配置来源切换参数出现时抛出
+ * 顶层 `dryRun` 是唯一预览入口，不允许包管理器独立跳过真实发布
+ * 帮助、用法和版本显示选项及其别名、缩写不得将退出成功伪装为发布成功
+ * @throws 提前退出选项、位置参数、目录切换、版本改写、registry 覆盖或配置来源切换参数出现时抛出
  */
 function validatePublishArgs(args: string[]): void {
   const valueOptions = new Set([
@@ -329,6 +356,24 @@ function validatePublishArgs(args: string[]): void {
       .replace(/^-+/, '--')
       .replace(/^--(?:no-)+/, '--')
     if (
+      option !== '--' &&
+      ['--dry-run', '--dryrun'].some(name => name.startsWith(option))
+    ) {
+      throw new AppError(
+        'Publish preflight failed: publish arguments cannot set dry-run; configure top-level dryRun instead.',
+      )
+    }
+    if (
+      option !== '--' &&
+      ['--help', '--usage', '--version', '--versions'].some(name =>
+        name.startsWith(option),
+      )
+    ) {
+      throw new AppError(
+        'Publish preflight failed: help, usage and version display arguments cannot replace publishing.',
+      )
+    }
+    if (
       /^--reg(?:i(?:s(?:t(?:r(?:y)?)?)?)?)?$/.test(option) ||
       /^--(?:@[^:]+:registry|npm-(?:publish-)?registry|registry-url)$/.test(
         option,
@@ -344,6 +389,7 @@ function validatePublishArgs(args: string[]): void {
     }
     if (
       !arg.startsWith('-') ||
+      arg === '-' ||
       arg === '--' ||
       forbiddenOptions.has(option) ||
       // pnpm 的 -F 是过滤选项，npm 的小写 -f 是 force，不能通过小写规范化混为一项

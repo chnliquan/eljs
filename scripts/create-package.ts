@@ -13,6 +13,7 @@ import type { PackageJson } from '@eljs/utils/types'
 import { lstatSync, readdirSync } from 'node:fs'
 import { EOL } from 'node:os'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { parseArgs as parseNodeArgs } from 'node:util'
 
 const step = logger.step('Create package')
@@ -120,7 +121,7 @@ function createPackageManifest({
       },
       './package.json': './package.json',
     },
-    files: ['dist'],
+    files: ['dist', 'README.md', 'README.zh-CN.md'],
     engines: {
       node: '>=22.14.0',
     },
@@ -144,6 +145,7 @@ function createPackageManifest({
     }
   }
 
+  if (description !== undefined) manifest.description = description
   return manifest
 }
 
@@ -182,16 +184,36 @@ function createTsconfigFiles(): Record<
   }
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch(error => {
-    console.error(`create package error:${EOL}${error.message}.`)
-    process.exit(1)
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  createPackages(
+    fileURLToPath(new URL('..', import.meta.url)),
+    process.argv.slice(2),
+  ).catch(error => {
+    console.error(`create package error:${EOL}${error.message}`)
+    process.exitCode = 1
   })
+}
 
-async function main(): Promise<void> {
-  const cliArguments = parseArguments(process.argv.slice(2))
-  const rootPath = path.resolve(__dirname, '../')
+/**
+ * 在指定仓库中补齐包脚手架，已有文件仅在显式 force 的清单更新中覆写
+ *
+ * @remarks
+ * 仓库根目录由受信任的脚本入口提供，用户路径仍必须通过单层包目录校验
+ * 新包同时生成双语入口；缺失其中一种语言的既有文档须先人工同步
+ *
+ * @param rootPath - 受信任的仓库绝对根目录
+ * @param args - 与命令行相同的包目录和选项
+ * @throws 路径、描述或双语文档状态不符合仓库约定时抛出
+ * @internal
+ */
+export async function createPackages(
+  rootPath: string,
+  args: readonly string[],
+): Promise<void> {
+  const cliArguments = parseArguments([...args])
   const pkgPaths = getPackageDirectories(rootPath)
   const { version } = await readJson<PackageJson>(
     path.resolve(rootPath, 'package.json'),
@@ -216,6 +238,13 @@ async function main(): Promise<void> {
     console.log()
 
     const packageJsonPath = path.join(pkgDir, 'package.json')
+    const hasEnglish = pathExistsSync(path.join(pkgDir, 'README.md'))
+    const hasChinese = pathExistsSync(path.join(pkgDir, 'README.zh-CN.md'))
+
+    // 不能用空白脚手架冒充既有文档的翻译，检查须先于任何文件写入
+    if (hasEnglish !== hasChinese) {
+      throw new Error(`Package ${name} requires synchronized bilingual READMEs`)
+    }
 
     if (!pathExistsSync(packageJsonPath) && !description) {
       throw new Error(
@@ -276,7 +305,7 @@ function resolvePackageDirectory(rootPath: string, directory: string) {
     shortName.startsWith(`..${path.sep}`) ||
     path.isAbsolute(shortName) ||
     shortName.includes(path.sep) ||
-    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(shortName)
+    !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u.test(shortName)
   ) {
     throw new Error(
       `Package path must be a direct kebab-case child of \`packages/\`: ${directory}`,
@@ -313,6 +342,13 @@ function ensurePackageJson(
     if (pkgJSON.private) {
       return
     }
+
+    // 显式描述只更新该字段；未使用 force 时不重建已有包的其他元数据
+    if (description !== undefined && !force) {
+      step('Update package description')
+      writeJsonSync(pkgJSONPath, { ...pkgJSON, description })
+      return
+    }
   }
 
   if (force || !pkgJSONExists) {
@@ -331,21 +367,42 @@ function ensurePackageJson(
 }
 
 function ensureReadme(pkgDir: string, name: string, shortName: string): void {
-  const readmePath = path.join(pkgDir, 'README.md')
+  const packageJson = readJsonSync<PackageJson>(
+    path.join(pkgDir, 'package.json'),
+  )
+  const languages = [
+    {
+      file: 'README.md',
+      link: '[English](README.md) | [简体中文](README.zh-CN.md)',
+      installation: 'Installation',
+      usage: 'Usage',
+      api: 'API',
+      development: 'Development',
+    },
+    {
+      file: 'README.zh-CN.md',
+      link: '[English](README.md) | [简体中文](README.zh-CN.md)',
+      installation: '安装',
+      usage: '使用',
+      api: 'API',
+      development: '开发',
+    },
+  ]
 
-  if (!pathExistsSync(readmePath)) {
-    const packageJson = readJsonSync<PackageJson>(
-      path.join(pkgDir, 'package.json'),
-    )
-    step('Generate README.md')
+  for (const language of languages) {
+    const readmePath = path.join(pkgDir, language.file)
+    if (pathExistsSync(readmePath)) continue
+    step(`Generate ${language.file}`)
     writeFileAtomicSync(
       readmePath,
       `
 # ${name}
 
+${language.link}
+
 ${packageJson.description || name}
 
-## Installation
+## ${language.installation}
 
 \`\`\`bash
 pnpm add ${name}
@@ -355,16 +412,16 @@ yarn add ${name}
 npm install ${name}
 \`\`\`
 
-## Usage
+## ${language.usage}
 
 \`\`\`ts
-import * as ${camelCase(shortName)} from '${name}'
+import * as ${camelCase(shortName)}Api from '${name}'
 \`\`\`
 
-## API
+## ${language.api}
 
 
-## Development
+## ${language.development}
 
 \`\`\`bash
 pnpm --filter ${name} dev

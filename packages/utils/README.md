@@ -39,7 +39,7 @@ import { downloadTo } from '@eljs/utils/http'
 import type { PackageJson } from '@eljs/utils/types'
 ```
 
-The root entry remains available for compatibility:
+The root entry also groups the public utilities:
 
 ```ts
 import { logger, readJson, run } from '@eljs/utils'
@@ -71,8 +71,8 @@ indirect re-exports from `@eljs/utils`.
 | `@eljs/utils/string`    | Common string conversions                             |
 | `@eljs/utils/types`     | Shared public TypeScript types                        |
 
-Only these domain entries are public. Internal file paths such as
-`file/loader` are not compatibility contracts.
+These domain subpaths define the public module boundaries. Internal file paths
+such as `file/loader` are not public entry points.
 
 ## Scope Boundaries
 
@@ -308,6 +308,32 @@ error codes remain available. Cancellation still terminates the subprocess
 but reports `ERR_OPERATION_ABORTED` without retaining the caller's reason.
 Owned temporary-directory cleanup failures are sanitized independently and
 combined in an `AggregateError`; caller-supplied destinations are retained.
+
+`getNpmPackage()` follows at most 20 redirects manually, rejects non-HTTP(S)
+URLs, URL credentials and HTTPS downgrades, and uses the same credential
+stripping rules as downloads across origins. `timeout` defaults to 10 seconds
+for configuration resolution, all redirects and body reading; `0` disables
+the deadline. The caller's `signal` remains effective in either case; cancellation
+preserves its original reason in the request error without modifying that reason.
+`maxBytes` defaults to 32 MiB of decompressed metadata and must be a positive
+safe integer; increase it explicitly for unusually large package histories.
+Reading stops immediately when the limit is exceeded.
+Package queries return `NpmPackage` with `name`, `versions` and `dist-tags`;
+top-level `version` and `dist` are optional, and empty version/tag maps are
+allowed. Version queries return `NpmPackage['versions'][string]` with `name`,
+`version` and an HTTP(S) `dist.tarball`. Optional SRI/SHA-1 digests and byte counts are
+validated structurally, while registry extension fields are allowed.
+Response names, including every version entry, must match the queried package.
+Version map keys must equal their entries' exact semver versions. Exact semver
+queries must match the returned version (a leading `v` is accepted), including
+prerelease and build identifiers; tags may resolve to an exact version.
+Malformed registry/proxy URLs produce fixed diagnostics without retaining the
+original URL or parsing error.
+404 returns `null`; invalid metadata and size violations use
+`ERR_NPM_REGISTRY_RESPONSE`, while unsafe URLs/redirects and
+transport/timeout/cancellation failures use `ERR_NPM_REGISTRY_REQUEST`.
+`details.reason` distinguishes `PROTOCOL`, `REDIRECT`, `MAX_BYTES` and
+`RESPONSE` validation failures.
 
 ## API Naming Changes
 

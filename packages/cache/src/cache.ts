@@ -329,7 +329,8 @@ export class Cache<T = unknown> {
    * 通过文件路径获取缓存数据
    *
    * @remarks
-   * 文件身份按绝对路径归一化；源文件不存在、条目过期、校验失败或发生 I/O 错误时均返回 `null`
+   * 文件身份按绝对路径归一化；源文件不存在、不是普通文件、条目过期、校验失败或发生 I/O 错误时均返回 `null`
+   * 允许指向普通文件的源符号链接，小文件哈希使用身份校验后的句柄有界读取
    * 命中对象数据时返回内存中的同一引用，调用方不应直接修改该对象
    * 磁盘缓存超限或不是普通文件时视为未命中，迁移后必要时在按键任务结束后收敛磁盘容量
    *
@@ -364,6 +365,14 @@ export class Cache<T = unknown> {
 
         try {
           fileStats = await fs.promises.stat(normalizedPath)
+          if (!fileStats.isFile()) {
+            if (generation === this._generation) {
+              this._memoryCache.delete(cacheKey)
+              await this._removeFromDisk(cacheKey)
+            }
+            this._recordMiss()
+            return null
+          }
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
             throw error
@@ -443,6 +452,7 @@ export class Cache<T = unknown> {
    * 同一缓存键的写入按调用顺序串行，内存写入成功但磁盘持久化失败时方法仍会正常结束并输出警告
    * 完整 JSON 超过 `maxEntryBytes` 或无法序列化时不进入内存，并尽力删除同键旧缓存
    * 若执行期间发生 `clear`，该次旧生命周期写入会被放弃
+   * 非普通源文件或小文件读取期间身份、大小、修改状态变化时放弃写入，并尽力删除同键旧缓存
    *
    * @param filePath - 要缓存数据的文件路径
    * @param data - 要缓存的数据
@@ -472,12 +482,19 @@ export class Cache<T = unknown> {
     try {
       await this._runKeyOperation(cacheKey, async () => {
         const fileStats = await fs.promises.stat(normalizedPath)
-        const fileHash =
-          fileStats.size < SMALL_FILE_HASH_LIMIT
-            ? await this._getFileHash(normalizedPath)
+        const fileHash = !fileStats.isFile()
+          ? null
+          : fileStats.size < SMALL_FILE_HASH_LIMIT
+            ? await this._getFileHash(normalizedPath, fileStats)
             : ''
 
         if (generation !== this._generation) {
+          return
+        }
+
+        if (fileHash === null) {
+          this._memoryCache.delete(cacheKey)
+          await this._removeFromDisk(cacheKey)
           return
         }
 
@@ -1152,13 +1169,78 @@ export class Cache<T = unknown> {
   }
 
   /**
-   * 计算用于内容验证的文件哈希值
-   * @param filePath - 文件路径
-   * @returns 文件内容哈希值
+   * 对已观察到的普通小源文件执行身份校验与有界哈希读取
+   *
+   * @remarks
+   * 允许源符号链接，非阻塞打开防止 stat 后被替换为 FIFO 时挂住按键任务与 clear
+   * 只分配观察大小的缓冲区，探测额外字节并复查句柄及路径，变化时按未命中处理
+   * 目录及其父目录仍须可信，这些检查不提供任意并发修改下的文件系统快照
+   *
+   * @param filePath - 源文件绝对路径
+   * @param beforeOpen - 打开前的普通文件状态
+   * @returns SHA-256 哈希；读取失败或观察期间发生变化时返回 `null`
    */
-  private async _getFileHash(filePath: string): Promise<string> {
-    const content = await fs.promises.readFile(filePath)
-    return crypto.createHash('sha256').update(content).digest('hex')
+  private async _getFileHash(
+    filePath: string,
+    beforeOpen: fs.Stats,
+  ): Promise<string | null> {
+    let handle: fs.promises.FileHandle | undefined
+    const matches = (stat: fs.Stats) =>
+      stat.isFile() &&
+      stat.dev === beforeOpen.dev &&
+      stat.ino === beforeOpen.ino &&
+      stat.size === beforeOpen.size &&
+      stat.mtimeMs === beforeOpen.mtimeMs &&
+      stat.ctimeMs === beforeOpen.ctimeMs
+
+    try {
+      if (
+        !beforeOpen.isFile() ||
+        !Number.isSafeInteger(beforeOpen.size) ||
+        beforeOpen.size < 0 ||
+        beforeOpen.size >= SMALL_FILE_HASH_LIMIT
+      ) {
+        return null
+      }
+
+      handle = await fs.promises.open(
+        filePath,
+        fs.constants.O_RDONLY | fs.constants.O_NONBLOCK,
+      )
+      if (!matches(await handle.stat())) {
+        return null
+      }
+
+      const content = Buffer.alloc(beforeOpen.size)
+      let offset = 0
+      // 固定读取预算，不能让检查后的增长驱动 readFile 的无界分配
+      while (offset < content.length) {
+        const { bytesRead } = await handle.read(
+          content,
+          offset,
+          content.length - offset,
+          offset,
+        )
+        if (bytesRead === 0) {
+          return null
+        }
+        offset += bytesRead
+      }
+
+      const probe = await handle.read(Buffer.alloc(1), 0, 1, offset)
+      if (
+        probe.bytesRead !== 0 ||
+        !matches(await handle.stat()) ||
+        !matches(await fs.promises.stat(filePath))
+      ) {
+        return null
+      }
+      return crypto.createHash('sha256').update(content).digest('hex')
+    } catch {
+      return null
+    } finally {
+      await handle?.close().catch(() => {})
+    }
   }
 
   /**
@@ -1185,7 +1267,7 @@ export class Cache<T = unknown> {
 
     if (fileStats.size < SMALL_FILE_HASH_LIMIT) {
       // 小文件以内容哈希为准，避免低精度文件系统时间戳造成误判
-      const currentHash = await this._getFileHash(filePath)
+      const currentHash = await this._getFileHash(filePath, fileStats)
       if (cacheEntry.hash !== currentHash) {
         return false
       }

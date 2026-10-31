@@ -1,7 +1,7 @@
 {
   "name": "@eljs/conventional-changelog-preset",
   "version": "2.0.0-beta.5",
-  "description": "Conventional changelog preset for @eljs/release.",
+  "description": "Conventional Changelog preset with commit grouping and semantic version recommendations for @eljs/release.",
   "keywords": [
     "eljs",
     "conventional-changelog",
@@ -38,6 +38,7 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
+    "README.zh-CN.md",
     "dist"
   ],
   "scripts": {

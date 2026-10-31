@@ -2,7 +2,6 @@ import { defineConfig } from '@rslib/core'
 
 const sharedLibraryOptions = {
   autoExtension: true,
-  autoExternal: true,
   bundle: false,
   dts: {
     autoExtension: true,
@@ -28,6 +27,7 @@ export default defineConfig({
     },
   ],
   output: {
+    autoExternal: true,
     cleanDistPath: true,
     distPath: {
       root: 'dist',

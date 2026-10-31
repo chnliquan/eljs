@@ -4,6 +4,7 @@
 
 # Cache
 .vitest-cache/
+.rslib/
 .pnpm-store/
 .turbo/
 *.cache
@@ -29,4 +30,5 @@ esm/
 lib/
 
 # Other
+.codeflicker/
 *.local.*

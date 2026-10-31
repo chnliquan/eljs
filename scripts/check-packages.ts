@@ -204,6 +204,9 @@ try {
     ) as PnpmPackResult
     const packedFiles = new Set(packResult.files.map(file => file.path))
     const requiredFiles = [
+      // 双语入口必须随发布产物分发，避免 npm 安装后的语言切换链接失效
+      'README.md',
+      'README.zh-CN.md',
       packageJson.main,
       packageJson.module,
       packageJson.types,
@@ -399,20 +402,20 @@ try {
       "import assert from 'node:assert/strict'",
       "import { writeFileSync } from 'node:fs'",
       "import path from 'node:path'",
-      "import { ConfigManager } from '@eljs/config'",
+      "import { ConfigLoader } from '@eljs/config-loader'",
       `const fixtureRoot = ${JSON.stringify(configFixtureRoot)}`,
       "const tsFile = path.join(fixtureRoot, 'config.ts')",
-      'assert.deepEqual(await ConfigManager.getConfig([tsFile]), { value: 42 })',
-      'assert.deepEqual(ConfigManager.getConfigSync([tsFile]), { value: 42 })',
+      'assert.deepEqual(await ConfigLoader.getConfig([tsFile]), { value: 42 })',
+      'assert.deepEqual(ConfigLoader.getConfigSync([tsFile]), { value: 42 })',
       "const esmFile = path.join(fixtureRoot, 'reload.js')",
-      'assert.deepEqual(await ConfigManager.getConfig([esmFile]), { evaluationCount: 1, version: 1 })',
+      'assert.deepEqual(await ConfigLoader.getConfig([esmFile]), { evaluationCount: 1, version: 1 })',
       "writeFileSync(esmFile, 'globalThis.__eljsConfigReloadCount = (globalThis.__eljsConfigReloadCount ?? 0) + 1; export default { evaluationCount: globalThis.__eljsConfigReloadCount, version: 2 }\\n')",
-      'assert.deepEqual(await ConfigManager.getConfig([esmFile], undefined, { reload: true }), { evaluationCount: 2, version: 2 })',
+      'assert.deepEqual(await ConfigLoader.getConfig([esmFile], undefined, { reload: true }), { evaluationCount: 2, version: 2 })',
       "const cjsFile = path.join(fixtureRoot, 'reload.cjs')",
-      'assert.deepEqual(await ConfigManager.getConfig([cjsFile]), { version: 1 })',
+      'assert.deepEqual(await ConfigLoader.getConfig([cjsFile]), { version: 1 })',
       "writeFileSync(cjsFile, 'module.exports = { version: 2 }\\n')",
-      'assert.deepEqual(await ConfigManager.getConfig([cjsFile], undefined, { reload: true }), { version: 2 })',
-      "const selectedFile = await ConfigManager.getMainConfigFile(['directory.js', 'fallback.json'], fixtureRoot)",
+      'assert.deepEqual(await ConfigLoader.getConfig([cjsFile], undefined, { reload: true }), { version: 2 })',
+      "const selectedFile = await ConfigLoader.getMainConfigFile(['directory.js', 'fallback.json'], fixtureRoot)",
       "assert.equal(selectedFile, path.join(fixtureRoot, 'fallback.json'))",
     ].join(';'),
   ])
@@ -422,16 +425,16 @@ try {
       "const assert = require('node:assert/strict')",
       "const { writeFileSync } = require('node:fs')",
       "const path = require('node:path')",
-      "const { ConfigManager } = require('@eljs/config')",
+      "const { ConfigLoader } = require('@eljs/config-loader')",
       `const fixtureRoot = ${JSON.stringify(configFixtureRoot)}`,
       'void (async () => {',
       "const tsFile = path.join(fixtureRoot, 'config.ts')",
-      'assert.deepEqual(await ConfigManager.getConfig([tsFile]), { value: 42 })',
-      'assert.deepEqual(ConfigManager.getConfigSync([tsFile]), { value: 42 })',
+      'assert.deepEqual(await ConfigLoader.getConfig([tsFile]), { value: 42 })',
+      'assert.deepEqual(ConfigLoader.getConfigSync([tsFile]), { value: 42 })',
       "const esmFile = path.join(fixtureRoot, 'reload.js')",
-      'assert.deepEqual(await ConfigManager.getConfig([esmFile]), { evaluationCount: 1, version: 2 })',
+      'assert.deepEqual(await ConfigLoader.getConfig([esmFile]), { evaluationCount: 1, version: 2 })',
       "writeFileSync(esmFile, 'globalThis.__eljsConfigReloadCount = (globalThis.__eljsConfigReloadCount ?? 0) + 1; export default { evaluationCount: globalThis.__eljsConfigReloadCount, version: 3 }\\n')",
-      'assert.deepEqual(await ConfigManager.getConfig([esmFile], undefined, { reload: true }), { evaluationCount: 2, version: 3 })',
+      'assert.deepEqual(await ConfigLoader.getConfig([esmFile], undefined, { reload: true }), { evaluationCount: 2, version: 3 })',
       '})().catch(error => { console.error(error); process.exitCode = 1 })',
     ].join(';'),
   ])
@@ -508,26 +511,45 @@ try {
     ].join(';'),
   ])
 
-  run(runtimeNode, [
-    '--input-type=module',
-    '-e',
-    [
-      "import { ReleaseRunner } from '@eljs/release'",
-      'class SmokeRunner extends ReleaseRunner { smokeLoad() { return this.load() } }',
-      `const runner = new SmokeRunner({ cwd: ${JSON.stringify(releaseFixtureRoot)} })`,
-      'await runner.smokeLoad()',
-      "if (runner.state !== 'ready') throw new Error('Release ESM plugins were not fully loaded')",
-    ].join(';'),
-  ])
-  run(runtimeNode, [
-    '-e',
-    [
-      "const { ReleaseRunner } = require('@eljs/release')",
-      'class SmokeRunner extends ReleaseRunner { smokeLoad() { return this.load() } }',
-      `const runner = new SmokeRunner({ cwd: ${JSON.stringify(releaseFixtureRoot)} })`,
-      "runner.smokeLoad().then(() => { if (runner.state !== 'ready') throw new Error('Release CJS plugins were not fully loaded') })",
-    ].join(';'),
-  ])
+  for (const esm of [true, false]) {
+    const pluginPath = path.join(
+      releaseFixtureRoot,
+      esm ? 'smoke.mjs' : 'smoke.cjs',
+    )
+    writeFileSync(
+      pluginPath,
+      [
+        esm
+          ? "import { AppError, definePlugin } from '@eljs/release'"
+          : "const { AppError, definePlugin } = require('@eljs/release')",
+        `${esm ? 'export default' : 'module.exports ='} definePlugin(context => {`,
+        'context.modifyConfig(config => {',
+        "if (!config.dryRun) throw new Error('Smoke test requires dryRun')",
+        // 在所有插件加载完成后、任何项目检查或远端请求之前结束流程
+        "throw new AppError('ELJS_SMOKE_PLUGINS_LOADED')",
+        '})',
+        '})',
+      ].join('\n'),
+    )
+    run(runtimeNode, [
+      ...(esm ? ['--input-type=module'] : []),
+      '-e',
+      [
+        esm
+          ? "import assert from 'node:assert/strict'"
+          : "const assert = require('node:assert/strict')",
+        esm
+          ? "import { release, AppError } from '@eljs/release'"
+          : "const { release, AppError } = require('@eljs/release')",
+        `const options = ${JSON.stringify({
+          cwd: releaseFixtureRoot,
+          dryRun: true,
+          plugins: [pluginPath],
+        })}`,
+        "assert.rejects(release('patch', options), error => error.code === 'PLUGIN_HOST_HOOK_EXECUTION_FAILED' && error.cause instanceof AppError && error.cause.message === 'ELJS_SMOKE_PLUGINS_LOADED').catch(error => { console.error(error); process.exitCode = 1 })",
+      ].join(';'),
+    ])
+  }
 
   const createTemplateRoot = path.join(smokeRoot, 'create-template')
   mkdirSync(createTemplateRoot, { recursive: true })
@@ -544,16 +566,16 @@ try {
     '--input-type=module',
     '-e',
     [
-      "import { ProjectCreator } from '@eljs/create'",
-      `const creator = new ProjectCreator({ cwd: ${JSON.stringify(smokeRoot)}, template: ${JSON.stringify(createTemplateRoot)} })`,
+      "import { ProjectGenerator } from '@eljs/generator'",
+      `const creator = new ProjectGenerator({ cwd: ${JSON.stringify(smokeRoot)}, template: ${JSON.stringify(createTemplateRoot)} })`,
       "await creator.run('create-esm-output')",
     ].join(';'),
   ])
   run(runtimeNode, [
     '-e',
     [
-      "const { ProjectCreator } = require('@eljs/create')",
-      `const creator = new ProjectCreator({ cwd: ${JSON.stringify(smokeRoot)}, template: ${JSON.stringify(createTemplateRoot)} })`,
+      "const { ProjectGenerator } = require('@eljs/generator')",
+      `const creator = new ProjectGenerator({ cwd: ${JSON.stringify(smokeRoot)}, template: ${JSON.stringify(createTemplateRoot)} })`,
       "creator.run('create-cjs-output')",
     ].join(';'),
   ])

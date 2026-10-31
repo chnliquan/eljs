@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
+import semver from 'semver'
 import type { AppData, WorkspacePackageJson } from '../types'
 import { AppError } from '../utils'
 import { resolveWorkspaceReference } from './workspace-reference'
@@ -25,6 +26,8 @@ export interface PublishTarget {
  * @param version - 所有发布包应具备的目标版本
  * @returns 依赖包在前、消费包在后的发布目标
  * @remarks 标记为 private 的包不会进入发布目标，但发布包不能在运行时依赖这些包
+ * 所有内部依赖字段的 semver 范围必须有效，指向本次发布制品时须匹配统一版本
+ * workspace 显式范围须匹配目标清单版本，占位符及外部协议保持原语义
  * @throws {@link AppError}
  * 当包名重复、发布包版本不一致、依赖了不可发布的包或存在运行时循环依赖时抛出
  * @throws workspace 协议无效或目标无法解析时抛出解析错误
@@ -60,6 +63,9 @@ export function createPublishPlan(
       return { name, packageJson, rootPath }
     })
   const targetNames = new Set(targets.map(({ name }) => name))
+  for (const target of targets) {
+    assertDependencyRanges(target, workspacePackages, version)
+  }
   const dependenciesByName = new Map(
     targets.map(target => [
       target.name,
@@ -136,6 +142,65 @@ function getRuntimeDependencies(
 }
 
 /**
+ * 复核版本更新合同覆盖的四类内部依赖，防止 Hook 或产物重新引入旧范围
+ *
+ * @remarks
+ * 外部获取协议沿用版本更新时的保留语义，不按本次统一版本判断
+ * private 目标不属于本次发布制品，普通 dev/peer 范围只检查有效性
+ */
+function assertDependencyRanges(
+  target: PublishTarget,
+  packages: AppData['workspacePackages'],
+  version: string,
+): void {
+  for (const field of [
+    'dependencies',
+    'optionalDependencies',
+    'devDependencies',
+    'peerDependencies',
+  ] as const) {
+    for (const [name, value] of Object.entries(
+      target.packageJson[field] ?? {},
+    )) {
+      const reference = resolveWorkspaceReference(name, value, {
+        packageNames: packages.map(pkg => pkg.manifest.name),
+        rootPath: target.rootPath,
+        packages,
+      })
+      if (!reference || reference.relative) continue
+      const workspace = Boolean(reference.prefix)
+      const dependency = packages.find(
+        pkg => pkg.manifest.name === reference.name,
+      )?.manifest
+      if (workspace && ['*', '^', '~'].includes(reference.range)) continue
+      // 这些协议由包管理器解析为外部来源，版本更新也不会将其改写为统一版本
+      if (
+        !workspace &&
+        (/^(?:npm:|file:|link:|https?:|git(?:\+[^:]+)?:|ssh:|github:|gitlab:|bitbucket:)/i.test(
+          value,
+        ) ||
+          /^[^@\s/:]+\/[^/\s]+(?:#.*)?$/.test(value))
+      )
+        continue
+      if (
+        !reference.range.trim() ||
+        !semver.validRange(reference.range) ||
+        (reference.range !== '*' &&
+          (workspace || !dependency?.private) &&
+          !semver.satisfies(
+            workspace ? (dependency?.version ?? version) : version,
+            reference.range,
+          ))
+      ) {
+        throw new AppError(
+          `Publish preflight failed: internal dependency range in ${target.name}.${field}.${name} must be valid and match the target version.`,
+        )
+      }
+    }
+  }
+}
+
+/**
  * 只读复检磁盘上的源清单和包管理器实际发布目录
  *
  * @remarks
@@ -143,20 +208,36 @@ function getRuntimeDependencies(
  * pnpm 使用源清单的 `publishConfig.directory`，其他变体使用包根目录
  * 不执行 pack、发布脚本或网络请求；包名、版本及 private 状态不得偏离版本预检快照
  * 依赖图以实际发布清单重建，保留源目录作为发布命令 cwd
+ * 固定 registry 不得变化；Yarn Berry 的清单优先配置必须与固定值一致
+ * 其他变体使用固定 CLI registry 覆盖清单声明，未固定时拒绝新增清单 registry
  * 校验覆盖命令启动前的文件状态，包管理器自身脚本和外部并发写入仍由调用方约束
  *
  * @param appData - 当前运行数据
  * @param expected - 版本预检时固定的工作区清单和目录
  * @param version - 本次发布版本
+ * @param registrySnapshot - 版本预检快照，其中 `registry: undefined` 表示不得新增地址
  * @returns 根据实际发布清单排序的目标
- * @throws 清单缺失、格式无效、发布身份变化或依赖图不安全时抛出
+ * @throws 清单缺失、格式无效、发布身份或生效 registry 变化、内部范围或依赖图不安全时抛出
  * @internal
  */
 export async function inspectPublishPlan(
-  appData: Pick<AppData, 'workspacePackages' | 'packageManager'>,
+  appData: Pick<
+    AppData,
+    | 'workspacePackages'
+    | 'packageManager'
+    | 'packageManagerVariant'
+    | 'registry'
+  >,
   expected: AppData['workspacePackages'],
   version: string,
+  registrySnapshot: Pick<AppData, 'registry'> = appData,
 ): Promise<PublishTarget[]> {
+  const { registry } = registrySnapshot
+  if (normalizeRegistry(appData.registry) !== normalizeRegistry(registry)) {
+    throw new AppError(
+      'Publish preflight failed: registry changed after version preflight.',
+    )
+  }
   if (
     appData.workspacePackages.length !== expected.length ||
     expected.some(
@@ -179,6 +260,7 @@ export async function inspectPublishPlan(
       ) as WorkspacePackageJson
       assertPublishIdentity(source, pkg.manifest, version)
       if (source.private) return { ...pkg, manifest: source }
+      assertPublishRegistry(source, appData.packageManagerVariant, registry)
       const directory = source.publishConfig?.directory
       if (
         appData.packageManager === 'pnpm' &&
@@ -200,6 +282,7 @@ export async function inspectPublishPlan(
               await readFile(path.join(rootPath, 'package.json'), 'utf8'),
             ) as WorkspacePackageJson)
       assertPublishIdentity(manifest, pkg.manifest, version)
+      assertPublishRegistry(manifest, appData.packageManagerVariant, registry)
       return { ...pkg, rootPath, manifest }
     }),
   )
@@ -213,6 +296,32 @@ export async function inspectPublishPlan(
     ...target,
     rootPath: rootsByName.get(target.name) as string,
   }))
+}
+
+function normalizeRegistry(registry: string | undefined): string | undefined {
+  return registry?.replace(/\/+$/, '')
+}
+
+/**
+ * 按发布命令的优先级比较生效 registry，错误不回显可能含认证信息的地址
+ */
+function assertPublishRegistry(
+  manifest: WorkspacePackageJson,
+  variant: AppData['packageManagerVariant'],
+  registry: string | undefined,
+): void {
+  const declared = manifest.publishConfig?.registry
+  if (
+    declared !== undefined &&
+    (variant === 'yarn-berry' || !registry) &&
+    (typeof declared !== 'string' ||
+      !declared ||
+      normalizeRegistry(declared) !== normalizeRegistry(registry))
+  ) {
+    throw new AppError(
+      'Publish preflight failed: effective publishConfig.registry must match the fixed release registry; align or remove the manifest declaration.',
+    )
+  }
 }
 
 /**

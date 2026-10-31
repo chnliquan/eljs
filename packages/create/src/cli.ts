@@ -1,3 +1,4 @@
+import { AppError } from '@eljs/generator/errors'
 import { notifyUpdates, runCliProcess } from '@eljs/utils/cli'
 import { readJson } from '@eljs/utils/file'
 import { createDebugger } from '@eljs/utils/logger'
@@ -6,20 +7,17 @@ import { Command } from 'commander'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { ProjectCreator } from './core'
-import { AppError } from './utils'
-
 /**
- * 启动 create 命令行程序
+ * 启动使用官方模板初始化项目的 create 命令行程序
  *
  * @returns 命令行流程 Promise
  */
-export function cli(): Promise<void> {
+export async function cli(): Promise<void> {
   return runCliProcess({
     name: 'create',
     run: main,
     createCancelReason: signal =>
-      new AppError(`Create operation received ${signal}`, {
+      new AppError(`Create template operation received ${signal}`, {
         code: 'CREATE_OPERATION_CANCELLED',
         details: { signal },
       }),
@@ -39,40 +37,25 @@ async function main(signal: AbortSignal) {
 
   const command = new Command()
     .name('create')
-    .description('Generate a project from a local, npm, or Git template')
+    .description('Initialize a project from an official template')
     .version(pkg.version, '-v, --version', 'Output the current version')
-    .arguments('<template> <project-name>')
+    .argument('<project-name>', 'Project name')
     .option('--cwd <cwd>', 'Specify the working directory')
+    .option('-t, --template <template>', 'Specify an application template')
     .option('-f, --force', 'Overwrite target directory if it exists')
     .option('-m, --merge', 'Merge target directory if it exists')
-    .option('--install', 'Install dependencies after create done', true)
-    .option('--no-install', 'Skip install dependencies after create done')
-    .option('-y, --yes', 'Trust and execute the selected remote template')
     .option(
       '--allow-template-scripts',
-      'Allow lifecycle scripts while installing remote template dependencies',
+      'Allow lifecycle scripts while installing template dependencies',
     )
-    .action(async (template, projectName, options, command) => {
-      debug?.(`template:`, template)
+    .action(async (projectName, options) => {
       debug?.(`projectName:`, projectName)
       debug?.(`options:%O`, options)
-      const creatorOptions = { ...options }
-
-      // 只有 CLI 显式传递的值才能覆盖模版配置，commander 注入的默认值
-      // 与未传递状态的 source 均不为 cli
-      const source = command.getOptionValueSource('install')
-      if (source !== 'cli' && source !== 'env') {
-        delete creatorOptions.install
-      }
-
-      await new ProjectCreator({
-        ...creatorOptions,
-        signal,
-        template,
-      }).run(projectName)
+      const { ProjectCreator } = await import('./create')
+      await new ProjectCreator({ ...options, signal }).run(projectName)
     })
+    .showHelpAfterError()
 
-  command.showHelpAfterError()
   await command.parseAsync(process.argv)
 }
 

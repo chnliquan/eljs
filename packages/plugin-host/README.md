@@ -1,5 +1,7 @@
 # @eljs/plugin-host
 
+[简体中文](./README.zh-CN.md)
+
 A type-safe plugin host for Node.js tools with presets, ordered hooks, and extensible plugin contexts.
 
 [![NPM Version](https://img.shields.io/npm/v/@eljs/plugin-host.svg)](https://www.npmjs.com/package/@eljs/plugin-host)
@@ -27,17 +29,25 @@ yarn add @eljs/plugin-host
 npm install @eljs/plugin-host -S
 ```
 
+Requires Node.js `>=22.14.0`. TypeScript is provided as a runtime dependency of
+`@eljs/plugin-host` for loading `.ts` and `.cts` plugins.
+
 ## 🚀 Quick Start
 
 ### Basic Usage
 
+Create these two files in the same directory. Plugin declarations accept module names or local
+paths, so this example defines a local plugin without depending on external plugin packages.
+
 ```ts
+// runner.ts
 import {
   PluginHost,
   defineEventHook,
   defineHooks,
   defineModifyHook,
   type PluginHostOptions,
+  type PluginContext,
   type UserConfig,
 } from '@eljs/plugin-host'
 
@@ -46,6 +56,8 @@ export const runnerHooks = defineHooks({
   onBuild: defineEventHook(),
   modifyConfig: defineModifyHook<Record<string, unknown>>(),
 })
+
+export type RunnerPluginContext = PluginContext<typeof runnerHooks>
 
 // Create a plugin-powered runner
 export class Runner extends PluginHost<UserConfig, typeof runnerHooks> {
@@ -61,30 +73,58 @@ export class Runner extends PluginHost<UserConfig, typeof runnerHooks> {
     await this.runHook('onStart')
     await this.runHook('onBuild')
 
-    const result = await this.runHook('modifyConfig', {
-      initialValue: {/* initial config */},
+    const config = await this.runHook('modifyConfig', {
+      initialValue: { outputDir: 'dist' },
     })
+    console.log(config)
   }
 }
 
 // Initialize and run
 const runner = new Runner({
   cwd: process.cwd(),
-  presets: ['preset-react'],
-  plugins: [
-    'plugin-typescript',
-    ['plugin-babel', { presets: ['@babel/preset-env'] }],
-  ],
+  plugins: ['./hello-plugin.ts'],
 })
 
-await runner.run()
+runner.run().catch(error => {
+  console.error(error)
+  process.exitCode = 1
+})
+```
+
+```ts
+// hello-plugin.ts
+import { definePlugin } from '@eljs/plugin-host'
+import type { RunnerPluginContext } from './runner'
+
+export default definePlugin<Record<string, never>, RunnerPluginContext>(
+  context => {
+    context.describe({ key: 'hello-plugin' })
+    context.onStart(() => {
+      console.log('Build started')
+    })
+    context.onBuild(() => {
+      console.log('Building')
+    })
+    context.modifyConfig(config => ({
+      ...config,
+      outputDir: 'build',
+    }))
+  },
+)
+```
+
+Run from that directory with Node.js type stripping:
+
+```bash
+node --experimental-strip-types runner.ts
 ```
 
 ### Type-Safe Plugin Development
 
 ```ts
 import { definePlugin, type PluginContext } from '@eljs/plugin-host'
-import { runnerHooks } from './runner'
+import type { runnerHooks } from './runner'
 
 type MyPluginContext = PluginContext<typeof runnerHooks>
 
@@ -125,9 +165,12 @@ export default definePlugin<MyPluginOptions, MyPluginContext>(
     })
 
     // Register a custom capability
-    context.registerCapability('customBuild', async buildOptions => {
-      // Custom build logic
-    })
+    context.registerCapability(
+      'customBuild',
+      async (buildOptions: Record<string, unknown>) => {
+        return { ...buildOptions, outputDir: options.outputDir }
+      },
+    )
   },
 )
 ```
@@ -142,14 +185,19 @@ pnpm add zod
 ```
 
 ```ts
-import { definePlugin } from '@eljs/plugin-host'
+import { definePlugin, type PluginContext } from '@eljs/plugin-host'
 import { z } from 'zod'
+import type { runnerHooks } from './runner'
+
+type MyPluginContext = PluginContext<typeof runnerHooks>
 
 export default definePlugin({
-  optionsSchema: z.object({
-    outputDir: z.string().default('dist'),
-    minify: z.boolean().default(true),
-  }),
+  optionsSchema: z
+    .object({
+      outputDir: z.string().default('dist'),
+      minify: z.boolean().default(true),
+    })
+    .prefault({}),
   initialize(context: MyPluginContext, options) {
     // `options` contains the parsed output, including defaults and transforms.
     context.onStart(() => {
@@ -161,8 +209,11 @@ export default definePlugin({
 
 The Schema validates the second item of a plugin declaration before initialization. Its input type
 describes user configuration, while its output type describes the initializer's `options`
-parameter. A Schema must accept `undefined` when the declaration may omit options. Valibot, ArkType,
-Yup, and other Standard Schema-compatible validators can be used without adapters. Use the singular
+parameter. A Schema must accept `undefined` when the declaration may omit options. With Zod 4
+(the repository uses 4.6.7), `.prefault({})` parses an empty object when options are omitted, so the
+field defaults still run. For example, if this plugin is saved as `schema-plugin.ts`, the declaration
+`plugins: ['./schema-plugin.ts']` initializes it with `{ outputDir: 'dist', minify: true }`.
+Valibot, ArkType, Yup, and other Standard Schema-compatible validators can be used without adapters. Use the singular
 `definePreset()` because each call defines one preset, even when that preset returns multiple nested
 declarations.
 
@@ -198,7 +249,7 @@ import {
   type PluginContext,
   type UserConfig,
 } from '@eljs/plugin-host'
-import { runnerHooks } from './runner'
+import type { runnerHooks } from './runner'
 
 interface CustomCapabilities {
   logger(message: string): void
@@ -425,8 +476,8 @@ Nested preset/plugin initialization errors include their declaration source and 
 ### Plugin module formats
 
 Plugin entry files support `.js`, `.cjs`, `.mjs`, `.ts`, and `.cts`. `.jsx`, `.tsx`, `.mts`, and
-exports-only packages are not part of the supported contract. TypeScript plugin loading requires
-TypeScript to be available in the consuming project.
+exports-only packages are not part of the supported contract. The package provides TypeScript as
+a runtime dependency for loading `.ts` and `.cts` plugins.
 The loader checks syntax before executing each `.ts` or `.cts` module, including relative
 dependencies, and restores its temporary require hooks after success or failure. It uses fixed
 CommonJS compiler options and does not perform a full type check. Side effects from modules
@@ -444,18 +495,39 @@ the current process permissions. Only load trusted plugins and configuration.
 Hooks support execution order control through `stage` and `before` options:
 
 ```typescript
-// Plugin A
-context.modifyConfig(configA, { stage: -100 }) // Runs first
+import { definePlugin, type PluginContext } from '@eljs/plugin-host'
+import type { runnerHooks } from './runner'
 
-// Plugin B
-context.modifyConfig(configB, { before: 'plugin-c' }) // Runs before plugin-c
+type Context = PluginContext<typeof runnerHooks>
 
-// Plugin C
-context.modifyConfig(configC) // Default stage (0)
+// Save each initializer in its own plugin module and declare all four in the host.
+// Every callback receives and returns the configuration value.
+export const pluginA = definePlugin<Record<string, never>, Context>(context => {
+  context.describe({ key: 'plugin-a' })
+  context.modifyConfig(config => ({ ...config, a: true }), { stage: -100 })
+})
 
-// Plugin D
-context.modifyConfig(configD, { stage: 100 }) // Runs last
+export const pluginB = definePlugin<Record<string, never>, Context>(context => {
+  context.describe({ key: 'plugin-b' })
+  context.modifyConfig(config => ({ ...config, b: true }), {
+    before: 'plugin-c',
+  })
+})
+
+export const pluginC = definePlugin<Record<string, never>, Context>(context => {
+  context.describe({ key: 'plugin-c' })
+  context.modifyConfig(config => ({ ...config, c: true }))
+})
+
+export const pluginD = definePlugin<Record<string, never>, Context>(context => {
+  context.describe({ key: 'plugin-d' })
+  context.modifyConfig(config => ({ ...config, d: true }), { stage: 100 })
+})
 ```
+
+Export each initializer as its module's default export. For these registrations, the execution
+order is A → B → C → D, even when C is declared before B. `before` refers to the target plugin's
+`describe({ key })` value; a lower `stage` runs earlier when no `before` constraint overrides it.
 
 ### Hook Types in Detail
 
@@ -500,7 +572,30 @@ const webpackConfig = await this.runHook('modifyWebpackConfig', {
 
 ```typescript
 // my-awesome-plugin.ts
-import { definePlugin } from '@eljs/plugin-host'
+import {
+  defineAddHook,
+  defineEventHook,
+  defineHooks,
+  defineModifyHook,
+  definePlugin,
+  type PluginContext,
+} from '@eljs/plugin-host'
+
+interface BuildConfig {
+  output: string
+  minification: boolean
+  target: 'browser' | 'node'
+}
+
+// Pass this same Schema to the host constructor.
+export const buildHooks = defineHooks({
+  addEntries: defineAddHook<void, string[]>(),
+  modifyConfig: defineModifyHook<BuildConfig, { isDev: boolean }>(),
+  onBuildStart: defineEventHook(),
+  onBuildComplete: defineEventHook<{ stats: { duration: number } }>(),
+})
+
+type MyPluginContext = PluginContext<typeof buildHooks>
 
 export interface MyPluginOptions {
   outputDir?: string
@@ -508,49 +603,55 @@ export interface MyPluginOptions {
   target?: 'browser' | 'node'
 }
 
-export default definePlugin<MyPluginOptions>((context, options = {}) => {
-  const { outputDir = 'dist', minify = true, target = 'browser' } = options
+const myAwesomePlugin = definePlugin<MyPluginOptions, MyPluginContext>(
+  (context, options = {}) => {
+    const { outputDir = 'dist', minify = true, target = 'browser' } = options
 
-  // Describe plugin
-  context.describe({
-    key: 'my-awesome-plugin',
-    enable: () => true, // Always enabled
-  })
+    // Describe plugin
+    context.describe({
+      key: 'my-awesome-plugin',
+      enable: () => true, // Always enabled
+    })
 
-  // Add configuration entries
-  context.register('addEntries', () => {
-    return target === 'node' ? ['src/server.js'] : []
-  })
+    // Add configuration entries
+    context.addEntries(() => {
+      return target === 'node' ? ['src/server.js'] : []
+    })
 
-  // Modify build configuration
-  context.register(
-    'modifyConfig',
-    (config, { isDev }) => {
-      return {
-        ...config,
-        output: outputDir,
-        minification: minify && !isDev,
-        target,
-      }
-    },
-    { stage: -50 },
-  ) // Run early
+    // Modify build configuration
+    context.modifyConfig(
+      (config, { isDev }) => {
+        return {
+          ...config,
+          output: outputDir,
+          minification: minify && !isDev,
+          target,
+        }
+      },
+      { stage: -50 },
+    ) // Run early
 
-  // Add build event listeners
-  context.register('onBuildStart', async () => {
-    console.log('🚀 Starting build process...')
-  })
+    // Add build event listeners
+    context.onBuildStart(async () => {
+      console.log('🚀 Starting build process...')
+    })
 
-  context.register('onBuildComplete', async ({ stats }) => {
-    console.log(`✨ Build completed in ${stats.duration}ms`)
-  })
+    context.onBuildComplete(async ({ stats }) => {
+      console.log(`✨ Build completed in ${stats.duration}ms`)
+    })
 
-  // Register custom method
-  context.registerCapability('customOptimize', async options => {
-    // Custom optimization logic
-    return { optimized: true, ...options }
-  })
-})
+    // Register custom method
+    context.registerCapability(
+      'customOptimize',
+      async (options: Record<string, unknown>) => {
+        // Custom optimization logic
+        return { optimized: true, ...options }
+      },
+    )
+  },
+)
+
+export default myAwesomePlugin
 
 // Export type for users
 export type MyAwesomePlugin = typeof myAwesomePlugin
@@ -559,16 +660,37 @@ export type MyAwesomePlugin = typeof myAwesomePlugin
 ### Using the Plugin
 
 ```typescript
+import {
+  PluginHost,
+  type PluginHostOptions,
+  type UserConfig,
+} from '@eljs/plugin-host'
+import { buildHooks } from './my-awesome-plugin'
+
+class BuildTool extends PluginHost<UserConfig, typeof buildHooks> {
+  public constructor(options: PluginHostOptions) {
+    super(options, buildHooks)
+  }
+
+  public async run() {
+    await this.load()
+    await this.runHook('onBuildStart')
+    const config = await this.runHook('modifyConfig', {
+      initialValue: { output: 'dist', minification: true, target: 'browser' },
+      args: { isDev: false },
+    })
+    console.log(config)
+    await this.runHook('onBuildComplete', { args: { stats: { duration: 0 } } })
+  }
+}
+
 // Configuration
 const runner = new BuildTool({
   cwd: process.cwd(),
   plugins: [
-    // Basic usage
-    'my-awesome-plugin',
-
     // With options
     [
-      'my-awesome-plugin',
+      './my-awesome-plugin.ts',
       {
         outputDir: 'build',
         minify: false,
@@ -577,4 +699,6 @@ const runner = new BuildTool({
     ],
   ],
 })
+
+await runner.run()
 ```

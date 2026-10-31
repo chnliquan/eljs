@@ -50,7 +50,7 @@ export default defineConfig({
         functions: 80,
         lines: 80,
         statements: 80,
-        'packages/create/src/core/project-creator.ts': {
+        'packages/generator/src/core/project-generator.ts': {
           branches: 85,
           functions: 90,
           lines: 90,

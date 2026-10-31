@@ -178,6 +178,8 @@ export interface Config extends UserConfig {
      * 会改变目标的已知别名与缩写同样被拒绝，例如 `--w`、`--ws`、`--C`
      * 不允许覆盖 registry，包含缩写、作用域配置、配置文件切换及 `--config.*` 包装
      * 应使用 `npm.registry` 统一配置发布地址
+     * 不允许额外 dry-run 选项及其规范化形式或缩写，顶层 `dryRun` 是唯一预览入口
+     * 不允许帮助、用法或版本显示选项及其规范化形式、别名和缩写，防止提前退出被误记为发布成功
      * 未知选项的取值应使用 `--option=value` 形式
      */
     publishArgs?: string | string[]
@@ -287,7 +289,7 @@ export interface ResolvedConfig extends UserConfig {
     canary: boolean
     /** 是否在发布前要求确认目标版本 */
     confirm: boolean
-    /** 附加到 npm publish 命令的参数 */
+    /** 附加到包管理器 publish 的选项，沿用发布身份、registry 和提前退出限制 */
     publishArgs?: string | string[]
   }
   /**

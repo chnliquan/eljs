@@ -1,7 +1,7 @@
 import * as crypto from 'node:crypto'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Cache, CacheValidator } from '../src'
 import { isCacheFile } from '../src/internal/cache-file'
@@ -20,6 +20,7 @@ describe('Cache 验证和 TTL 测试', () => {
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     cleanupDir(tempDir)
   })
 
@@ -57,6 +58,253 @@ describe('Cache 验证和 TTL 测试', () => {
   })
 
   describe('文件缓存验证', () => {
+    it.each(['directory', 'FIFO', 'socket', 'device'])(
+      '非普通源文件 %s 不进入哈希读取，旧缓存失效且 clear 可结束',
+      async kind => {
+        const cache = new Cache<string>({
+          cacheDir: path.join(tempDir, '.cache-source-type'),
+          autoCleanup: false,
+        })
+        const source = createTempFile(tempDir, 'source.txt', 'content')
+        await cache.set(source, 'old data')
+        const sourceStat = fs.statSync(source)
+        const stat = fs.promises.stat
+        const open = vi.spyOn(fs.promises, 'open')
+        vi.spyOn(fs.promises, 'stat').mockImplementation((...args) => {
+          if (args[0] === source) {
+            const nonFile = Object.create(sourceStat) as fs.Stats
+            nonFile.isFile = () => false
+            if (kind === 'directory') nonFile.isDirectory = () => true
+            if (kind === 'FIFO') nonFile.isFIFO = () => true
+            if (kind === 'socket') nonFile.isSocket = () => true
+            if (kind === 'device') nonFile.isCharacterDevice = () => true
+            return Promise.resolve(nonFile)
+          }
+          return stat(...args)
+        })
+
+        expect(await cache.get(source)).toBeNull()
+        await cache.set(source, kind)
+        expect(open.mock.calls.some(([filePath]) => filePath === source)).toBe(
+          false,
+        )
+        expect(cache.memoryCache.size).toBe(0)
+        expect(cache.stats.misses).toBe(1)
+        await cache.clear()
+        expect((await cache.getStats()).files).toBe(0)
+      },
+    )
+
+    it('目录不能作为源文件，指向普通文件的符号链接仍可缓存', async () => {
+      const cache = new Cache<string>({
+        cacheDir: path.join(tempDir, '.cache-source-link'),
+        autoCleanup: false,
+      })
+      const source = createTempFile(tempDir, 'source.txt', 'content')
+      const alias = path.join(tempDir, 'alias.txt')
+      fs.symlinkSync(source, alias)
+      await cache.set(tempDir, 'directory data')
+      expect(await cache.get(tempDir)).toBeNull()
+      expect(cache.memoryCache.size).toBe(0)
+      await cache.set(alias, 'linked data')
+      expect(await cache.get(alias)).toBe('linked data')
+    })
+
+    it.each(['set', 'get'] as const)(
+      '%s 在 stat 与 open 之间源身份变化时拒绝读取替换文件并关闭句柄',
+      async operation => {
+        const cache = new Cache<string>({
+          cacheDir: path.join(tempDir, '.cache-source-replaced'),
+          autoCleanup: false,
+        })
+        const source = createTempFile(tempDir, 'source.txt', 'content')
+        await cache.set(source, 'old data')
+        const replacement = createTempFile(
+          tempDir,
+          'replacement.txt',
+          'changed',
+        )
+        const open = fs.promises.open
+        let sourceRead: ReturnType<typeof vi.spyOn> | undefined
+        let sourceClose: ReturnType<typeof vi.spyOn> | undefined
+        vi.spyOn(fs.promises, 'open').mockImplementation(async (...args) => {
+          if (args[0] === source) {
+            expect(args[1]).toBe(
+              fs.constants.O_RDONLY | fs.constants.O_NONBLOCK,
+            )
+            fs.renameSync(replacement, source)
+            const handle = await open(...args)
+            sourceRead = vi.spyOn(handle, 'read')
+            sourceClose = vi.spyOn(handle, 'close')
+            return handle
+          }
+          return open(...args)
+        })
+        if (operation === 'set') {
+          await cache.set(source, 'new data')
+        } else {
+          expect(await cache.get(source)).toBeNull()
+        }
+        expect(sourceRead).not.toHaveBeenCalled()
+        expect(sourceClose).toHaveBeenCalledOnce()
+        expect(cache.memoryCache.size).toBe(0)
+        expect((await cache.getStats()).files).toBe(0)
+      },
+    )
+
+    it('打开后句柄为非普通文件时不读取且关闭句柄', async () => {
+      const cache = new Cache<string>({
+        cacheDir: path.join(tempDir, '.cache-source-handle-type'),
+        autoCleanup: false,
+      })
+      const source = createTempFile(tempDir, 'source.txt', 'content')
+      const open = fs.promises.open
+      let read: ReturnType<typeof vi.spyOn> | undefined
+      let close: ReturnType<typeof vi.spyOn> | undefined
+      vi.spyOn(fs.promises, 'open').mockImplementation(async (...args) => {
+        const handle = await open(...args)
+        if (args[0] === source) {
+          const stat = await handle.stat()
+          stat.isFile = () => false
+          vi.spyOn(handle, 'stat').mockResolvedValue(stat)
+          read = vi.spyOn(handle, 'read')
+          close = vi.spyOn(handle, 'close')
+        }
+        return handle
+      })
+      await cache.set(source, 'data')
+      expect(read).not.toHaveBeenCalled()
+      expect(close).toHaveBeenCalledOnce()
+      expect(cache.memoryCache.size).toBe(0)
+      await cache.clear()
+    })
+
+    it.each(['growth', 'shrink', 'same-size-change', 'path-replacement'])(
+      '哈希读取期间 %s 使缓存失效且保持读取预算',
+      async change => {
+        const cache = new Cache<string>({
+          cacheDir: path.join(tempDir, '.cache-source-mutation'),
+          autoCleanup: false,
+        })
+        const source = createTempFile(tempDir, 'source.txt', 'content')
+        await cache.set(source, 'old data')
+        const open = fs.promises.open
+        const readFile = vi.spyOn(fs.promises, 'readFile')
+        const buffers: Buffer[] = []
+        vi.spyOn(fs.promises, 'open').mockImplementation(async (...args) => {
+          const handle = await open(...args)
+          if (args[0] === source) {
+            const realRead = handle.read.bind(handle)
+            let mutated = false
+            vi.spyOn(handle, 'read').mockImplementation(async (...readArgs) => {
+              if (Buffer.isBuffer(readArgs[0])) {
+                buffers.push(readArgs[0])
+              }
+              const result = await realRead(...readArgs)
+              if (mutated) {
+                return result
+              }
+              mutated = true
+              if (change === 'path-replacement') {
+                const replacement = createTempFile(
+                  tempDir,
+                  'replacement.txt',
+                  'content',
+                )
+                fs.renameSync(replacement, source)
+              } else {
+                fs.writeFileSync(
+                  source,
+                  change === 'growth'
+                    ? 'x'.repeat(60 * 1024)
+                    : change === 'shrink'
+                      ? 'short'
+                      : 'changed',
+                )
+                const stat = fs.statSync(source)
+                fs.utimesSync(source, stat.atime, stat.mtimeMs / 1000 + 1)
+              }
+              return result
+            })
+          }
+          return handle
+        })
+        expect(await cache.get(source)).toBeNull()
+        expect(readFile).not.toHaveBeenCalled()
+        expect(buffers.map(buffer => buffer.length)).toEqual([7, 1])
+        expect(cache.memoryCache.size).toBe(0)
+      },
+    )
+
+    it.each([0, 50 * 1024 - 1, 50 * 1024])(
+      '源大小 %s 的哈希阈值和读取预算正确',
+      async size => {
+        const cache = new Cache<string>({
+          cacheDir: path.join(tempDir, '.cache-source-budget'),
+          autoCleanup: false,
+        })
+        const source = createTempFile(tempDir, 'source.txt', 'x'.repeat(size))
+        const open = fs.promises.open
+        const reads: number[] = []
+        vi.spyOn(fs.promises, 'open').mockImplementation(async (...args) => {
+          const handle = await open(...args)
+          if (args[0] === source) {
+            const read = handle.read.bind(handle)
+            vi.spyOn(handle, 'read').mockImplementation(async (...readArgs) => {
+              if (Buffer.isBuffer(readArgs[0])) {
+                reads.push(readArgs[0].length)
+              }
+              return read(...readArgs)
+            })
+          }
+          return handle
+        })
+        await cache.set(source, 'data')
+        expect(await cache.get(source)).toBe('data')
+        const expected = size >= 50 * 1024 ? [] : size === 0 ? [1] : [size, 1]
+        expect(reads).toEqual([...expected, ...expected])
+      },
+    )
+
+    it('源哈希读取期间 clear 等待有界读取并阻止旧生命周期发布', async () => {
+      const cache = new Cache<string>({
+        cacheDir: path.join(tempDir, '.cache-source-clear'),
+        autoCleanup: false,
+      })
+      const source = createTempFile(tempDir, 'source.txt', 'content')
+      const open = fs.promises.open
+      let resume: () => void = () => undefined
+      let entered: () => void = () => undefined
+      const paused = new Promise<void>(resolve => {
+        entered = resolve
+      })
+      const gate = new Promise<void>(resolve => {
+        resume = resolve
+      })
+      vi.spyOn(fs.promises, 'open').mockImplementation(async (...args) => {
+        const handle = await open(...args)
+        if (args[0] === source) {
+          const read = handle.read.bind(handle)
+          vi.spyOn(handle, 'read').mockImplementationOnce(
+            async (...readArgs) => {
+              entered()
+              await gate
+              fs.appendFileSync(source, 'x'.repeat(60 * 1024))
+              return read(...readArgs)
+            },
+          )
+        }
+        return handle
+      })
+      const writing = cache.set(source, 'old lifecycle data')
+      await paused
+      const clearing = cache.clear()
+      resume()
+      await Promise.all([writing, clearing])
+      expect(cache.memoryCache.size).toBe(0)
+      expect((await cache.getStats()).files).toBe(0)
+    })
+
     it('应该在文件内容变化时使缓存失效（小文件）', async () => {
       const cache = new Cache<string>({
         enabled: true,

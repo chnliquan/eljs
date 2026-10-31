@@ -32,8 +32,8 @@ interface PluginHostWithInternals {
 }
 
 // Mock the config manager
-vi.mock('@eljs/config', () => ({
-  ConfigManager: vi.fn().mockImplementation(function ConfigManager() {
+vi.mock('@eljs/config-loader', () => ({
+  ConfigLoader: vi.fn().mockImplementation(function ConfigLoader() {
     return {
       getConfig: vi.fn().mockResolvedValue({}),
     }

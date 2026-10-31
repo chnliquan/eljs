@@ -1,5 +1,7 @@
 # @eljs/release
 
+[简体中文](./README.zh-CN.md)
+
 A programmable npm release workflow for versioning, changelogs, GitHub, and
 ordered workspace publishing.
 
@@ -10,16 +12,18 @@ ordered workspace publishing.
 ## ✨ Features
 
 - 🚀 **Dual Usage** - Support both CLI and programmatic API usage
-- 📦 **Smart Version Management** - Automatic semantic versioning with validation
+- 📦 **Version Management** - Semantic version suggestions from commits and explicit version validation
 - 📝 **Changelog Generation** - Automatic changelog generation using conventional commits
-- 🔐 **NPM Publishing** - Secure npm publishing with owner validation
+- 🔐 **NPM Publishing** - Registry and package ownership checks before publishing
 - 🧪 **Safe Preview** - Validate and preview a release with `--dry-run`
 - 🧩 **Monorepo Aware** - Publish workspace packages in runtime dependency order
-- ⚙️ **Highly Configurable** - Flexible configuration with presets and plugins
-- 🎯 **Type Safety** - Full TypeScript support with comprehensive type definitions
+- ⚙️ **Configuration** - Release configuration files, presets, and plugins
+- 🎯 **TypeScript APIs** - Typed release options and plugin contexts
 - 🔧 **Plugin System** - Extensible plugin architecture for custom workflows
 
 ## 📦 Installation
+
+Published packages require Node.js 22.14 or newer.
 
 ```bash
 # Using pnpm (recommended)
@@ -112,7 +116,6 @@ release [options] [version]
 | `--dry-run`                                    | Preview without publishing or modifying project files   | `false`            |
 | `--git.independent` / `--no-git.independent`   | Generate one git tag per workspace package              | `false`            |
 | `--git.requireClean` / `--no-git.requireClean` | Check git working tree is clean                         | `true`             |
-| `--no-git.changelog`                           | Skip changelog generation                               | `true`             |
 | `--git.commit` / `--no-git.commit`             | Commit version and changelog changes                    | `true`             |
 | `--git.push` / `--no-git.push`                 | Push commit and tags to remote                          | `true`             |
 | `--git.requireBranch <branch>`                 | Require that the release is on a particular branch      | -                  |
@@ -126,6 +129,21 @@ release [options] [version]
 | `--github.release` / `--no-github.release`     | Create GitHub Release                                   | `true`             |
 | `--github.mode <mode>`                         | Create GitHub Release through `browser` or `api`        | `browser`          |
 | `-h, --help`                                   | Display help for command                                | -                  |
+
+`--dry-run` previews the built-in workflow without publishing or modifying
+project files. Custom plugin hooks still execute and must check
+`context.config.dryRun` before performing their own side effects.
+
+To disable changelog generation, set `git.changelog: false` in
+`release.config.ts` or pass it to the programmatic API:
+
+```ts
+import { defineConfig } from '@eljs/release'
+
+export default defineConfig({
+  git: { changelog: false },
+})
+```
 
 #### Precedence
 
@@ -164,6 +182,12 @@ release minor --no-git.independent
 ```
 
 ## 📖 API Reference
+
+The package root exports `release`, `defineConfig`, `definePlugin`,
+`definePreset`, `defaultConfig`, `releaseHookSchema`, `ReleaseRunnerStage`,
+`AppError`, and `ReleasePublishError`, together with their configuration,
+plugin-context, application-data, and error-detail types. The runner and
+command, version, Git, and manifest helpers are internal implementation details.
 
 ### `release(version?, options?)`
 
@@ -564,6 +588,12 @@ supported. Yarn Berry is distinguished by the declaration or `.yarnrc.yml`, so i
 `yarn publish`. Bun 1.2+ `bun.lock` and legacy `bun.lockb` are both detected.
 When Yarn Berry is used, any manifest `publishConfig.registry` must match an
 explicit `npm.registry`, because Yarn gives the manifest value precedence.
+The registry fixed during version preflight is checked again before committing
+and before each publish, including manifest declarations changed by Hooks.
+Berry declarations must match that fixed address (trailing slashes are ignored).
+For other managers, a fixed CLI registry overrides manifest declarations, so
+different overridden values are allowed. If no registry was fixed, introducing
+a manifest registry later is rejected; configure `npm.registry` before releasing.
 
 After all `onBeforeRelease` Hooks, disk manifests are checked before the Git
 commit, then checked again before each package is published. pnpm's
@@ -572,6 +602,20 @@ its manifest in `onBeforeRelease` when building publish artifacts; the check doe
 not run `pack` or lifecycle scripts. It guarantees the manifest state before the
 command starts, without locking the final tarball or external filesystem writers.
 `dryRun` uses the in-memory plan and does not require built artifacts.
+
+All four dependency fields in the effective publish manifest are checked:
+`dependencies`, `optionalDependencies`, `devDependencies`, and `peerDependencies`.
+Explicit workspace ranges must be valid and contain the target version;
+workspace aliases, relative references, and `*`/`^`/`~` placeholders retain their
+existing meaning. Ordinary internal semver ranges must also be valid and contain
+the unified release version: version updates normally replace these ranges with
+that version, so stale artifact ranges are rejected. `*` remains allowed for
+prereleases; other ranges follow standard semver prerelease matching. External
+source protocols such as `npm:`, `file:`, `link:`, Git and tarball URLs are preserved
+without imposing the unified version on their external targets.
+Private workspace packages are not release artifacts: ordinary dev/peer ranges
+need only be valid, while explicit workspace ranges must match their actual
+manifest version. Runtime dependencies on private workspace packages remain rejected.
 
 `publishArgs` cannot override the registry, publish directory, workspace selection
 or version. Registry overrides include scoped settings, configuration-file
@@ -582,13 +626,29 @@ names, including multi-hyphen forms such as `---workspace`.
 Known target-changing aliases and abbreviations such as `--w`, `--ws`, `--C`,
 and `--prefi` are also rejected, as are workspace-root inclusion options,
 pnpm `-F`, and `--workspace-packages`. npm's lowercase `-f` remains available.
+Extra `--dry-run` options are rejected, including false/negated values, normalized
+forms such as `---DRY_RUN`, and abbreviations such as `--dry`, `--dr`, and `-d`.
+Use top-level `dryRun` (or CLI `--dry-run`) for the only supported preview contract;
+a package-manager preview must never be recorded as a successful publication.
+Help, usage, and version-display options are also rejected, including normalized,
+negated, and abbreviated forms such as `---HELP`, `--no-usage`, `--ver`, and `-v`.
+npm publishes with `--dry-run=false --usage=false`; pnpm uses `--dry-run=false`
+and overrides inherited `npm_config_usage` for versions that delegate to npm.
+These settings override project `.npmrc` and environment preview/usage settings.
+Yarn Classic, Yarn Berry, and Bun keep their existing commands without receiving
+npm-only configuration flags.
 
 Publish commands do not echo their arguments or stream subprocess output to
 logs, because OTP values and registry URLs may contain credentials. Publish
 errors retain structured progress and a safe `cause` with exit codes, recognized
 error codes, and cancellation status; raw command errors, output, and original
-cause chains are discarded. Owner-check command failures use the same safe
-diagnostics.
+cause chains are discarded. Owner checks and `isVersionExist` failures use the
+same safe diagnostics. Missing-version/404 queries still return `false`; other
+query failures throw a new safe error without the original sensitive cause.
+Version queries explicitly request JSON `name` and `version` fields and disable
+npm usage output. Only an object matching both requested fields confirms existence;
+help text, invalid JSON, and mismatched identities throw safe errors and cannot
+cause retry to skip a package. Empty output retains the existing `false` result.
 
 Changelog generation receives the runner's cancellation signal. The exported
 `getChangelog({ cwd, signal })` helper also supports cancellation: an already
@@ -607,5 +667,6 @@ pnpm --filter @eljs/release test
 pnpm --filter @eljs/release build
 ```
 
-The project requires Node.js 22.14 or newer and uses pnpm. Persistent settings
-can be placed in `release.config.ts` or `release.config.js` at the target root.
+Repository development requires Node.js 22.18 or newer and pnpm 11.20.0.
+Persistent settings can be placed in `release.config.ts` or `release.config.js`
+at the target root.

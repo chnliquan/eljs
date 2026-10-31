@@ -1,52 +1,64 @@
 # Eljs — Composable Node.js Tooling
 
+[简体中文](./README.zh-CN.md)
+
 A TypeScript toolkit for building extensible Node.js CLIs, project generators,
 and release workflows.
 
-Eljs is the umbrella identity for the `@eljs/*` packages. The repository name
-stays short, while each package name describes a concrete role and can be used
+Each `@eljs/*` package provides one part of the toolchain and can be used
 independently.
+
+## Choosing a Package
+
+- Create a project from an official template with `@eljs/create`
+- Build a generator or use your own local, npm, or Git template with `@eljs/generator`
+- Build a plugin-powered CLI or workflow with `@eljs/plugin-host`
+- Version and publish npm packages or workspaces with `@eljs/release`
+- Use configuration loading, caching, and Node.js utilities independently
 
 ## Package Architecture
 
-| Layer         | Package                                                                           | Responsibility                                                           |
-| ------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Foundations   | [`@eljs/utils`](./packages/utils)                                                 | Files, processes, downloads, Git, npm, paths, logging, and shared types  |
-| Foundations   | [`@eljs/cache`](./packages/cache)                                                 | Persistent memory-and-disk cache with TTL validation and bounded cleanup |
-| Foundations   | [`@eljs/config`](./packages/config)                                               | Layered configuration loading, merging, and runtime validation           |
-| Extensibility | [`@eljs/plugin-host`](./packages/plugin-host)                                     | Typed plugin lifecycle, presets, ordered hooks, and context extensions   |
-| Workflows     | [`@eljs/create`](./packages/create)                                               | Extensible project generation from local, npm, and Git templates         |
-| Workflows     | [`@eljs/release`](./packages/release)                                             | Programmable npm release and ordered workspace publishing                |
-| Entry points  | [`@eljs/create-template`](./packages/create-template)                             | Project initialization from version-pinned official templates            |
-| Integration   | [`@eljs/conventional-changelog-preset`](./packages/conventional-changelog-preset) | Default Conventional Changelog preset used by `@eljs/release`            |
+| Layer         | Package                                                                           | Responsibility                                                             |
+| ------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Foundations   | [`@eljs/utils`](./packages/utils)                                                 | Files, processes, downloads, Git, npm, paths, logging, and shared types    |
+| Foundations   | [`@eljs/cache`](./packages/cache)                                                 | In-memory caching, disk persistence, TTL validation, and file invalidation |
+| Foundations   | [`@eljs/config-loader`](./packages/config-loader)                                 | Configuration discovery, loading, merging, and runtime validation          |
+| Extensibility | [`@eljs/plugin-host`](./packages/plugin-host)                                     | Typed plugin lifecycle, presets, ordered hooks, and context extensions     |
+| Workflows     | [`@eljs/generator`](./packages/generator)                                         | Extensible project generation from local, npm, and Git templates           |
+| Workflows     | [`@eljs/release`](./packages/release)                                             | Programmable npm release and ordered workspace publishing                  |
+| Entry points  | [`@eljs/create`](./packages/create)                                               | Project initialization from the latest official Eljs templates             |
+| Integration   | [`@eljs/conventional-changelog-preset`](./packages/conventional-changelog-preset) | Default Conventional Changelog preset used by `@eljs/release`              |
 
 ## Quick Start
 
 ```bash
-# Generate a project from any supported template source
-npx @eljs/create my-template my-project
-
 # Start from a curated official template
-npx @eljs/create-template my-project
+npm create @eljs my-project
+
+# Generate a project from your own local template
+npx @eljs/generator ./my-template my-project
 
 # Run a programmable npm release workflow
 npx @eljs/release
 ```
 
-Global installations expose the commands `create`, `create-template`, and
+Global installations expose the commands `create`, `generator`, and
 `release`.
 
 ## Requirements
 
-- Node.js 24 LTS is recommended; Node.js 22.14 or newer is required
-- pnpm 11.17.0 is pinned through Corepack for repository development
+- Published packages require Node.js 22.14 or newer
+- Repository development requires Node.js 22.18 or newer; Node.js 24 LTS is recommended
+- pnpm 11.20.0 is pinned through Corepack for repository development
 
 ## Documentation
 
-Each package directory contains its installation guide, API examples, runtime
-constraints, and package-specific development commands. See
-[`CONTRIBUTING.md`](./CONTRIBUTING.md) for workspace setup, package creation,
-versioning, releases, and the complete validation checklist.
+The root and every package provide an English `README.md` and a Simplified
+Chinese `README.zh-CN.md`, with matching installation guides, API examples,
+runtime constraints, and package-specific development commands.
+
+See the [contribution guide](./CONTRIBUTING.md) for workspace setup, package
+creation, versioning, releases, and the complete validation checklist.
 
 ## Contributing
 

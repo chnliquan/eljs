@@ -52,7 +52,6 @@
         "--cwd=/Users/ender/kwai/technology/monorepo-release",
         // "--git.independent",
         "--no-git.requireClean",
-        // "--no-git.changelog",
         // "--git.requireBranch=master",
         // "--no-npm.requireOwner",
         // "--npm.prerelease",
@@ -66,18 +65,18 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug Create",
+      "name": "Debug Generator",
       "runtimeExecutable": "tsx",
       "runtimeArgs": [
         "--tsconfig",
-        "${workspaceFolder}/packages/create/tsconfig.json"
+        "${workspaceFolder}/packages/generator/tsconfig.json"
       ],
-      "program": "${workspaceFolder}/packages/create/src/cli.ts",
+      "program": "${workspaceFolder}/packages/generator/src/cli.ts",
       "windows": {
-        "program": "${workspaceFolder}/packages/create/src/cli.ts"
+        "program": "${workspaceFolder}/packages/generator/src/cli.ts"
       },
       "env": {
-        "DEBUG": "create*"
+        "DEBUG": "generator*"
       },
       "args": [
         // "--help",
@@ -98,15 +97,15 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug Create Template",
+      "name": "Debug Create",
       "runtimeExecutable": "tsx",
       "runtimeArgs": [
         "--tsconfig",
-        "${workspaceFolder}/packages/create-template/tsconfig.json"
+        "${workspaceFolder}/packages/create/tsconfig.json"
       ],
-      "program": "${workspaceFolder}/packages/create-template/src/cli.ts",
+      "program": "${workspaceFolder}/packages/create/src/cli.ts",
       "windows": {
-        "program": "${workspaceFolder}/packages/create-template/src/cli.ts"
+        "program": "${workspaceFolder}/packages/create/src/cli.ts"
       },
       "env": {
         "DEBUG": "create*"
@@ -115,8 +114,7 @@
         // "--help",
         "create-app",
         "--cwd=/Users/ender/kwai/technology/polyrepo-release",
-        "--scene=npm",
-        // "--template=template-npm-package",
+        "--template=template-npm-package",
         "-f"
       ],
       "console": "integratedTerminal",

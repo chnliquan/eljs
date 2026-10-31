@@ -25,7 +25,7 @@ describe('runCliProcess', () => {
 
   const runHarness = (options?: { run?: () => Promise<void> }) =>
     runCliProcess({
-      name: 'create',
+      name: 'generator',
       createCancelReason,
       isCancellation,
       run: options?.run ?? vi.fn().mockResolvedValue(undefined),
@@ -97,7 +97,9 @@ describe('runCliProcess', () => {
     await runHarness({ run })
 
     expect(signalHandler).toBeTypeOf('function')
-    expect(loggerEvent).toHaveBeenCalledWith('Cancelling create after SIGINT')
+    expect(loggerEvent).toHaveBeenCalledWith(
+      'Cancelling generator after SIGINT',
+    )
     expect(process.exitCode).toBe(130)
     expect(process.listeners('SIGINT')).not.toContain(signalHandler)
   })
@@ -147,7 +149,7 @@ describe('runCliProcess', () => {
     const beforeTerm = process.listeners('SIGTERM')
     let observed = false
     const result = runCliProcess({
-      name: 'create',
+      name: 'generator',
       createCancelReason,
       isCancellation,
       run: signal =>

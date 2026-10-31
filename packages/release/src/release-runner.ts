@@ -57,6 +57,9 @@ type InitialAppData = Pick<
  * @remarks
  * 每个实例只能运行一次，同一工作目录同时只允许一个发布进程
  * 启用 Git 提交时，发布提交和标签会先保留在本地，所有包发布成功后才推送到远程
+ * 外部调用方通过 `release()` 执行流程，插件通过上下文访问扩展能力
+ *
+ * @internal
  */
 export class ReleaseRunner extends PluginHost<
   Config,

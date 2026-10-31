@@ -10,7 +10,7 @@ vi.mock('update-notifier', () => ({
 }))
 
 describe('notifyUpdates', () => {
-  const pkg = { name: '@eljs/create', version: '2.0.0-beta.0' }
+  const pkg = { name: '@eljs/generator', version: '2.0.0-beta.0' }
 
   beforeEach(() => {
     vi.clearAllMocks()

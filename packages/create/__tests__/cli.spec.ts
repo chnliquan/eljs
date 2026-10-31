@@ -1,3 +1,4 @@
+import { AppError } from '@eljs/generator/errors'
 import { createDebugger, logger, readJson } from '@eljs/utils'
 import updateNotifier from 'update-notifier'
 import {
@@ -12,8 +13,7 @@ import {
 } from 'vitest'
 
 import { cli } from '../src/cli'
-import { ProjectCreator } from '../src/core'
-import { AppError } from '../src/errors'
+import { ProjectCreator } from '../src/create'
 
 vi.mock('@eljs/utils/file', async () => import('@eljs/utils'))
 vi.mock('@eljs/utils/logger', async () => import('@eljs/utils'))
@@ -26,7 +26,7 @@ vi.mock('@eljs/utils', () => ({
   readJson: vi.fn(),
 }))
 vi.mock('update-notifier')
-vi.mock('../src/core')
+vi.mock('../src/create')
 
 describe('create CLI', () => {
   const originalArgv = process.argv
@@ -47,7 +47,7 @@ describe('create CLI', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     process.exitCode = undefined
-    process.argv = ['node', 'create', 'template-package', 'test-project']
+    process.argv = ['node', 'create', 'test-project']
     debug.mockReset()
     notify.mockReset()
     run.mockReset().mockResolvedValue(undefined)
@@ -75,13 +75,12 @@ describe('create CLI', () => {
     process.argv = [
       'node',
       'create',
-      '@scope/template',
       'orders-service',
       '--cwd',
       '/workspace',
+      '--template',
+      'template-npm-package',
       '--force',
-      '--no-install',
-      '--yes',
       '--allow-template-scripts',
     ]
 
@@ -91,44 +90,14 @@ describe('create CLI', () => {
       allowTemplateScripts: true,
       cwd: '/workspace',
       force: true,
-      install: false,
       signal: expect.any(AbortSignal),
-      template: '@scope/template',
-      yes: true,
+      template: 'template-npm-package',
     })
     expect(run).toHaveBeenCalledWith('orders-service')
     expect(process.exitCode).toBeUndefined()
   })
 
-  it('显式 --install 传递 true 以覆盖模板配置', async () => {
-    process.argv = [
-      'node',
-      'create',
-      '@scope/template',
-      'orders-service',
-      '--install',
-    ]
-
-    await cli()
-
-    expect(mockedProjectCreator).toHaveBeenCalledWith(
-      expect.objectContaining({
-        install: true,
-        template: '@scope/template',
-      }),
-    )
-    expect(run).toHaveBeenCalledWith('orders-service')
-  })
-
-  it('未显式禁用安装时不覆盖模板配置', async () => {
-    await cli()
-
-    const options = mockedProjectCreator.mock.calls[0]?.[0]
-    expect(options).toBeDefined()
-    expect(options && 'install' in options).toBe(false)
-  })
-
-  it('每次调用使用独立命令实例', async () => {
+  it('为每次调用创建独立命令实例', async () => {
     await cli()
     await cli()
 
@@ -136,15 +105,18 @@ describe('create CLI', () => {
     expect(run).toHaveBeenCalledTimes(2)
   })
 
-  it('更新提示在后台执行', async () => {
+  it('输出调试信息并执行更新提示', async () => {
+    process.argv = ['node', 'create', 'debug-project', '--merge']
+
     await cli()
 
-    await vi.waitFor(() => {
-      expect(mockedUpdateNotifier).toHaveBeenCalledWith({
-        pkg: { name: '@eljs/create', version: '2.0.0-alpha.0' },
-      })
-      expect(notify).toHaveBeenCalledOnce()
+    expect(mockedCreateDebugger).toHaveBeenCalledWith('create:cli')
+    expect(debug).toHaveBeenCalledWith('projectName:', 'debug-project')
+    expect(debug).toHaveBeenCalledWith('options:%O', { merge: true })
+    expect(mockedUpdateNotifier).toHaveBeenCalledWith({
+      pkg: { name: '@eljs/create', version: '2.0.0-alpha.0' },
     })
+    await vi.waitFor(() => expect(notify).toHaveBeenCalledOnce())
   })
 
   it('更新提示失败不会阻止创建主路径', async () => {
@@ -165,7 +137,7 @@ describe('create CLI', () => {
     expect(process.exitCode).toBeUndefined()
   })
 
-  it('首次信号取消流程并在结束后移除监听器', async () => {
+  it('首次信号会取消流程并在结束后移除监听器', async () => {
     const previousListeners = new Set(process.listeners('SIGINT'))
     let signalHandler: NodeJS.SignalsListener | undefined
     run.mockImplementation(async () => {
@@ -232,28 +204,29 @@ describe('create CLI', () => {
 
   it('领域错误输出简洁消息并设置退出码', async () => {
     run.mockRejectedValue(
-      new AppError('Invalid project options', {
+      new AppError('Unknown application template', {
         code: 'CREATE_INVALID_OPTIONS',
       }),
     )
 
     await cli()
 
-    expect(logger.error).toHaveBeenCalledWith('Invalid project options')
+    expect(logger.error).toHaveBeenCalledWith('Unknown application template')
     expect(process.exitCode).toBe(1)
   })
 
-  it('错误日志失败时仍然保留退出码', async () => {
-    run.mockRejectedValue(
-      new AppError('Invalid project options', {
-        code: 'CREATE_INVALID_OPTIONS',
-      }),
-    )
+  it('错误日志失败时仍保留领域退出码', async () => {
     vi.mocked(logger.error).mockImplementationOnce(() => {
       throw new Error('Logger failed')
     })
+    run.mockRejectedValue(
+      new AppError('Unknown application template', {
+        code: 'CREATE_INVALID_OPTIONS',
+      }),
+    )
 
     await expect(cli()).resolves.toBeUndefined()
+
     expect(process.exitCode).toBe(1)
   })
 
@@ -265,6 +238,17 @@ describe('create CLI', () => {
     await cli()
 
     expect(consoleError).toHaveBeenCalledWith(error)
+    expect(process.exitCode).toBe(1)
+  })
+
+  it('读取包信息失败时不会启动命令解析', async () => {
+    const error = new Error('Failed to read package.json')
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    mockedReadJson.mockRejectedValue(error)
+
+    await cli()
+
+    expect(mockedProjectCreator).not.toHaveBeenCalled()
     expect(process.exitCode).toBe(1)
   })
 })
