@@ -17,7 +17,11 @@ import { getNpmUser, logger, normalizeArgs, run } from '@eljs/utils'
 import { inspect } from 'node:util'
 
 import npmPlugin from '../../../src/internal/plugins/npm'
-import { createPublishPlan } from '../../../src/internal/publish-plan'
+import { resolvePublishAccess } from '../../../src/internal/publish-access'
+import {
+  createPublishPlan,
+  type PublishAccessPolicy,
+} from '../../../src/internal/publish-plan'
 import type {
   Config,
   PrereleaseId,
@@ -28,8 +32,22 @@ vi.mock('../../../src/internal/publish-plan', async importOriginal => ({
   ...(await importOriginal<
     typeof import('../../../src/internal/publish-plan')
   >()),
-  inspectPublishPlan: vi.fn(async (appData, _expected, version) =>
-    createPublishPlan(appData, version),
+  inspectPublishPlan: vi.fn(
+    async (
+      appData,
+      _expected,
+      version,
+      _registry,
+      policy?: PublishAccessPolicy,
+    ) =>
+      createPublishPlan(appData, version).map(target => ({
+        ...target,
+        access: resolvePublishAccess(
+          target.packageJson,
+          policy?.rootAccess,
+          policy?.explicitAccess,
+        ),
+      })),
   ),
 }))
 

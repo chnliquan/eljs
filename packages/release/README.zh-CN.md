@@ -578,6 +578,17 @@ Berry 清单声明必须与固定地址一致（忽略尾部斜杠）。
 其他管理器使用固定的 CLI registry 覆盖清单声明，因此允许被覆盖的不同地址。
 如果此前没有固定 registry，则拒绝后来新增清单地址；请在发布前配置 `npm.registry`。
 
+发布权限依次采用 `npm.publishArgs` 中显式的 `--access`、
+子包的 `publishConfig.access`、根清单的 `publishConfig.access`。
+只接受 `public` 和 `restricted`；均未声明时保留包管理器默认行为。
+有效值在版本预检时固定，并在提交前和逐包发布前与源清单及实际发布清单复核。
+权限选项必须使用完整的 `--access` 拼写；重复值必须一致，最终只传递一次。
+
+升级时请注意：未自行声明权限的子包现在继承根默认值，不再依赖包管理器的默认权限。
+如果根默认值不适用，请显式设置子包的 `publishConfig.access`；
+将 `--acc=public` 等缩写改为 `--access=public`。
+检查也会重读磁盘上的根清单；根默认值变化仅在改变包的有效权限时被拒绝。
+
 所有 `onBeforeRelease` 钩子执行完成后，在 Git 提交前检查磁盘上的包清单，
 并在发布每个包前再次检查。pnpm 的 `publishConfig.directory` 会作为实际发布目录进行检查。
 构建发布产物时，应在 `onBeforeRelease` 中准备该目录的包清单；
@@ -618,6 +629,9 @@ Yarn Classic、Yarn Berry 和 Bun 保持原有命令，不传入 npm 专用配�
 原始命令错误、输出和原始 cause 链会被丢弃。所有权检查与 `isVersionExist` 查询失败时
 使用相同的安全诊断信息。版本不存在或 404 仍返回 `false`；
 其他查询失败抛出新的安全错误，不携带原始敏感 cause。
+逐包预检失败仍保留结构化进度，并提供固定的 `EPUBLISH_PREFLIGHT` 诊断，
+提示检查包清单、发布权限、registry 配置和依赖顺序。原始预检错误消息同样会被丢弃；
+取消和超时诊断优先。
 版本查询显式请求 JSON 格式的 `name` 和 `version` 字段，并关闭 npm 用法输出。
 只有两个字段都与查询目标精确匹配的对象才能确认版本存在；
 帮助文本、无效 JSON 和身份不匹配均抛出安全错误，不能令重试跳过包。

@@ -57,6 +57,13 @@ The root and every package provide an English `README.md` and a Simplified
 Chinese `README.zh-CN.md`, with matching installation guides, API examples,
 runtime constraints, and package-specific development commands.
 
+`pnpm docs:check` provides lightweight checks for required documentation files,
+links to the other language within the five lines after the title, closed code
+fences, and relative file links in prose. It skips fenced examples and does not
+compare bilingual structure, tables, or code, check anchors, or access external
+URLs. It is included in `pnpm verify:static` and `pnpm verify`, so running
+`pnpm verify` requires no separate documentation check.
+
 See the [contribution guide](./CONTRIBUTING.md) for workspace setup, package
 creation, versioning, releases, and the complete validation checklist.
 

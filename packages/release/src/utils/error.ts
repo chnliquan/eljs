@@ -46,6 +46,8 @@ export interface ReleasePublishFailure {
  * 重试会复用本地发布提交和标签
  * 已经发布成功的包会在核对标签后跳过
  * `cause` 仅保留白名单诊断，不引用原始命令异常或取消原因，防止认证信息泄露
+ * `message` 包含重新生成的安全诊断和固定恢复提示，供只记录外层消息的日志展示失败原因
+ * 内置逐包预检失败保留固定的预检诊断及发布进度，不透传清单或异常中的自由文本
  */
 export class ReleasePublishError extends AppError {
   /**
@@ -57,9 +59,11 @@ export class ReleasePublishError extends AppError {
    * 创建发布中断错误
    *
    * @param details - 发布进度
-   * @param cause - 发布失败原因，构造时转换为不包含命令、输出和原始异常图的安全副本
+   * @param cause - 发布失败原因，构造时转换为安全副本并将固定诊断加入外层消息
    */
   public constructor(details: ReleasePublishFailure, cause?: unknown) {
+    const safeCause =
+      cause === undefined ? undefined : createSafeCommandError(cause)
     const published = details.publishedPackages
       .map(name => `${name}@${details.version}`)
       .join(', ')
@@ -70,6 +74,7 @@ export class ReleasePublishError extends AppError {
     super(
       [
         `Failed to publish ${details.failedPackage}@${details.version}.`,
+        ...(safeCause ? [`Reason: ${safeCause.message}`] : []),
         `Published before failure: ${published || 'none'}.`,
         `Not published: ${unpublished}.`,
         'Git changes were not pushed.',
@@ -82,6 +87,6 @@ export class ReleasePublishError extends AppError {
       publishedPackages: Object.freeze([...details.publishedPackages]),
       unpublishedPackages: Object.freeze([...details.unpublishedPackages]),
     })
-    this.cause = cause === undefined ? undefined : createSafeCommandError(cause)
+    this.cause = safeCause
   }
 }

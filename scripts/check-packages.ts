@@ -1,4 +1,3 @@
-import { spawnSync } from 'node:child_process'
 import {
   existsSync,
   mkdirSync,
@@ -12,13 +11,19 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-type ExportTarget =
-  | string
-  | null
-  | {
-      [condition: string]: ExportTarget
-    }
+import { runPackageCheckCommand } from './package-check-command'
+import {
+  assertExportTargets,
+  getExportEntries,
+  type ExportTarget,
+} from './package-exports'
 
+/**
+ * 描述工作区及已安装 tarball 清单中用于发布校验和消费者烟测的字段
+ *
+ * @remarks
+ * JSON 读取后按合法包清单处理，安装后的名称、版本和依赖协议仍须独立核对
+ */
 interface PackageManifest {
   name: string
   version: string
@@ -29,13 +34,19 @@ interface PackageManifest {
   module?: string
   types?: string
   bin?: Record<string, string>
-  exports?: Record<string, ExportTarget>
+  exports?: ExportTarget
   dependencies?: Record<string, string>
   devDependencies?: Record<string, string>
   optionalDependencies?: Record<string, string>
   peerDependencies?: Record<string, string>
 }
 
+/**
+ * 描述 pnpm 实际打包返回的持久化产物及文件清单
+ *
+ * @remarks
+ * 文件路径以 tarball 根目录为基准，filename 用于后续真实安装，不能替换为源码路径
+ */
 interface PnpmPackResult {
   name: string
   version: string
@@ -56,36 +67,9 @@ function run(
   args: string[],
   options: { cwd?: string } = {},
 ): string {
-  const result = spawnSync(command, args, {
+  return runPackageCheckCommand(command, args, {
     cwd: options.cwd ?? smokeRoot,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      CI: 'true',
-      NO_UPDATE_NOTIFIER: '1',
-    },
   })
-
-  if (result.status !== 0) {
-    const output = [result.stdout, result.stderr].filter(Boolean).join('\n')
-    throw new Error(
-      `${command} ${args.join(' ')} failed with exit code ${result.status}.\n${output}`,
-    )
-  }
-
-  return result.stdout.trim()
-}
-
-function collectExportTargets(target: ExportTarget | undefined): string[] {
-  if (typeof target === 'string') {
-    return [target]
-  }
-
-  if (!target || typeof target !== 'object') {
-    return []
-  }
-
-  return Object.values(target).flatMap(collectExportTargets)
 }
 
 function hasExportCondition(
@@ -142,15 +126,15 @@ function assertNoWorkspaceProtocols(packageJson: PackageManifest): void {
 }
 
 function getRootExport(packageJson: PackageManifest): ExportTarget | undefined {
-  return packageJson.exports?.['.']
+  return getExportEntries(packageJson.exports).find(([key]) => key === '.')?.[1]
 }
 
 /**
- * 展开无需模式匹配即可由消费者直接导入的公开入口
+ * 展开由消费者直接导入的具体公开入口
  *
  * @remarks
- * `package.json` 与通配符导出不适合通用运行时烟测，其他入口必须分别验证 ESM、
- * 可用的 CommonJS 条件以及 TypeScript 声明解析
+ * 子路径模式在打包校验阶段报不支持错误，`package.json` 与 null 排除项不参与通用运行时烟测
+ * 其他入口必须分别验证 ESM、可用的 CommonJS 条件以及 TypeScript 声明解析
  *
  * @param packageJson - 已安装 tarball 的包清单
  * @returns 包名或完整子路径与对应条件导出目标
@@ -158,7 +142,7 @@ function getRootExport(packageJson: PackageManifest): ExportTarget | undefined {
 function getPublicExportSpecifiers(
   packageJson: PackageManifest,
 ): Array<{ specifier: string; target: ExportTarget | undefined }> {
-  const entries = Object.entries(packageJson.exports ?? {})
+  const entries = getExportEntries(packageJson.exports)
 
   if (entries.length === 0) {
     return [{ specifier: packageJson.name, target: undefined }]
@@ -166,7 +150,10 @@ function getPublicExportSpecifiers(
 
   return entries
     .filter(
-      ([subpath]) => subpath !== './package.json' && !subpath.includes('*'),
+      ([subpath, target]) =>
+        target !== null &&
+        subpath !== './package.json' &&
+        !subpath.includes('*'),
     )
     .map(([subpath, target]) => ({
       specifier:
@@ -203,6 +190,16 @@ try {
       }),
     ) as PnpmPackResult
     const packedFiles = new Set(packResult.files.map(file => file.path))
+    const excludedFile = [...packedFiles].find(file =>
+      /(?:^|\/)(?:src|__tests__|__mocks__)(?:\/|$)|\.(?:spec|test)\.[cm]?[jt]sx?$/u.test(
+        file,
+      ),
+    )
+    if (excludedFile) {
+      throw new Error(
+        `${packageJson.name} unexpectedly publishes source or test file ${excludedFile}.`,
+      )
+    }
     const requiredFiles = [
       // 双语入口必须随发布产物分发，避免 npm 安装后的语言切换链接失效
       'README.md',
@@ -211,7 +208,6 @@ try {
       packageJson.module,
       packageJson.types,
       ...Object.values(packageJson.bin || {}),
-      ...Object.values(packageJson.exports || {}).flatMap(collectExportTargets),
     ]
       .filter((file): file is string => Boolean(file))
       .map(normalizePackagePath)
@@ -222,6 +218,10 @@ try {
           `${packageJson.name} is missing ${requiredFile} from its published tarball.`,
         )
       }
+    }
+    if (packageJson.exports !== undefined) {
+      // 仅以真实打包清单检查具体导出目标，工作区中存在文件并不保证消费者能安装到
+      assertExportTargets(packageJson.name, packageJson.exports, packedFiles)
     }
 
     return { packResult }

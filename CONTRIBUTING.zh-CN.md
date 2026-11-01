@@ -101,9 +101,11 @@ CI 使用 Node.js 24 构建，并通过 `ELJS_SMOKE_NODE` 在 Node.js 22.14 上�
 仓库贡献指南 `CONTRIBUTING.md` 和 `CONTRIBUTING.zh-CN.md` 也应保持一致，
 并在标题后添加语言链接。贡献规则或开发流程发生变化时，应同步更新两种语言。
 
-修改 README 时应同步更新两种语言。使用 `pnpm docs:check` 检查 README 和贡献指南的
-语言链接、标题层级、表格行数、可执行示例和本地链接目标。该结构检查不会验证翻译正文，
-也不能代替对照实现的审查。使用 `pnpm package:check` 验证两种语言的入口文件
+修改 README 时应同步更新两种语言。`pnpm docs:check` 提供轻量保障：检查根目录四份
+文档和各公开包的双语 README 是否存在、标题后五行内是否有另一语言入口、
+代码围栏是否闭合，以及正文中的相对文件链接是否有效。
+该检查跳过 fenced 示例，不比较双语结构、表格或代码，不检查锚点，也不访问外部 URL。
+API 契约和命令示例应对照实现审查。使用 `pnpm package:check` 验证两种语言的入口文件
 都包含在发布的 tarball 中。
 
 ## 验证
@@ -114,7 +116,13 @@ CI 使用 Node.js 24 构建，并通过 `ELJS_SMOKE_NODE` 在 Node.js 22.14 上�
 pnpm verify
 ```
 
-该命令运行格式检查、lint、类型检查、覆盖率检查、构建，以及针对实际 npm 发布文件的隔离验证。
+`pnpm verify` 运行格式检查、lint、类型检查、文档检查、覆盖率检查、构建，
+以及针对实际 npm 发布文件的隔离验证。`pnpm docs:check` 已纳入 `pnpm verify:static`，
+CI 在 Node.js 24 上运行该静态验证，根目录发布验证也会调用它。
+运行 `pnpm verify` 后无需单独再运行文档检查。
+
+`pnpm package:check` 中每条子进程命令最多运行五分钟。超时会停止验证、
+报告具体命令并清理临时烟测目录；该限制仅适用于校验命令。
 
 单独运行 `pnpm verify:templates`，可检查已发布官方模板的内容及真实项目生成流程。
 该检查要求网络连接和已发布的模板包。手动触发的 **Official Templates**
@@ -158,6 +166,9 @@ pnpm release:alpha
 pnpm release:beta
 pnpm release -- patch
 ```
+
+根发布脚本将验证命令、Git 检查和发布固定在本仓库根目录。
+显式传入的 `--cwd` 必须解析为同一目录；其他目录会在执行任何命令前被拒绝。
 
 发布流程会验证 workspace，同步更新包版本和锁文件，生成 changelog，
 并按运行时依赖顺序发布各包。

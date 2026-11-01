@@ -53,6 +53,11 @@ npx @eljs/release
 根目录和各包都提供英文 `README.md` 与简体中文 `README.zh-CN.md`，
 包含对应一致的安装说明、API 示例、运行约束和包专属开发命令。
 
+`pnpm docs:check` 提供轻量保障：检查必需文档是否存在、标题后五行内是否有另一语言
+入口、代码围栏是否闭合，以及正文相对文件链接是否有效。该检查跳过 fenced 示例，
+不比较双语结构、表格或代码，不检查锚点，也不访问外部 URL。
+它已纳入 `pnpm verify:static` 和 `pnpm verify`，运行 `pnpm verify` 后无需单独再运行文档检查。
+
 workspace 设置、新包创建、版本管理、发布流程和完整验证清单见
 [贡献指南](./CONTRIBUTING.zh-CN.md)。
 

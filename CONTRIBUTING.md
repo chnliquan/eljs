@@ -117,10 +117,14 @@ Keep the repository contribution guide in `CONTRIBUTING.md` and
 `CONTRIBUTING.zh-CN.md` aligned as well, with language links after the title.
 Update both versions whenever contribution rules or development workflows change.
 
-Update both versions whenever a README changes. Use `pnpm docs:check` for
-READMEs and the contribution guide to check language links, heading levels, table row counts, executable examples,
-and local link targets. This structural check does not validate translated
-prose or replace review against the implementation. Use `pnpm package:check`
+Update both versions whenever a README changes. `pnpm docs:check` provides
+lightweight checks that the four root documents and both READMEs in every public
+package exist, link to the other language within the five lines after the title,
+have closed code fences, and contain valid relative file links in prose. It skips
+fenced examples and does not compare bilingual structure, tables, or code, check
+anchors, or access external URLs. Review API contracts and command examples
+against the implementation.
+Use `pnpm package:check`
 to verify that both language entry points are present in the published tarballs.
 
 ## Validation
@@ -131,8 +135,15 @@ Run the same checks as CI before opening a pull request:
 pnpm verify
 ```
 
-This runs formatting, linting, type checking, coverage, builds, and isolated
-checks against the files that would be published to npm.
+`pnpm verify` runs formatting, linting, type checking, documentation checking,
+coverage, builds, and isolated checks against the files that would be published
+to npm. `pnpm docs:check` is included in `pnpm verify:static`, which CI runs on
+Node.js 24 and root release validation also uses. Running `pnpm verify` requires
+no separate documentation check.
+
+Each subprocess in `pnpm package:check` has a five-minute timeout. A timeout
+stops verification, reports the command, and cleans up the temporary smoke
+directory. This limit applies to verification commands only.
 
 Run `pnpm verify:templates` separately to check published official template
 contents and real project generation. It requires network access and published
@@ -185,6 +196,10 @@ pnpm release:alpha
 pnpm release:beta
 pnpm release -- patch
 ```
+
+The root release script fixes verification commands, Git checks, and publishing
+to this repository's root directory. An explicit `--cwd` must resolve to that
+same directory; other directories are rejected before any commands run.
 
 The release workflow validates the workspace, updates package versions and the
 lockfile together, generates the changelog, and publishes packages in runtime

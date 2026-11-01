@@ -46,6 +46,10 @@ describe('包脚手架交付契约', () => {
       name: '@eljs/example-tool',
       version: '2.0.0',
       files: ['dist', 'README.md', 'README.zh-CN.md'],
+      publishConfig: {
+        access: 'public',
+        registry: 'https://registry.npmjs.org',
+      },
     })
     const english = await readFile(path.join(pkgRoot, 'README.md'), 'utf8')
     const chinese = await readFile(
@@ -66,6 +70,96 @@ describe('包脚手架交付契约', () => {
     await createPackages(fixtureRoot, ['packages/example-tool'])
     expect(await readFile(path.join(pkgRoot, 'README.md'), 'utf8')).toBe(
       `${english}\nCustom text\n`,
+    )
+  })
+
+  it.each([
+    { access: 'restricted', registry: 'https://registry.example.org' },
+    { access: 'restricted' },
+    { registry: 'https://registry.example.org' },
+    {},
+  ])('仅继承根清单的发布访问级别和 registry：%j', async defaults => {
+    await writeFile(
+      path.join(fixtureRoot, 'package.json'),
+      JSON.stringify({
+        version: '2.0.0',
+        publishConfig: { ...defaults, directory: 'root-dist', tag: 'next' },
+      }),
+    )
+    await createPackages(fixtureRoot, [
+      'packages/example',
+      '--description',
+      'Example',
+    ])
+    const manifest = JSON.parse(
+      await readFile(
+        path.join(fixtureRoot, 'packages/example/package.json'),
+        'utf8',
+      ),
+    )
+    expect(manifest.publishConfig).toEqual({
+      access: 'public',
+      registry: 'https://registry.npmjs.org',
+      ...defaults,
+    })
+  })
+
+  it.each([
+    undefined,
+    {},
+    { access: 'restricted' },
+    { registry: 'https://package.example.org' },
+    {
+      access: 'public',
+      registry: 'https://package.example.org',
+      directory: 'package-dist',
+      tag: 'beta',
+    },
+  ])('force 补齐发布默认值并保留包自身覆盖：%j', async existing => {
+    await writeFile(
+      path.join(fixtureRoot, 'package.json'),
+      JSON.stringify({
+        version: '2.0.0',
+        publishConfig: {
+          access: 'restricted',
+          registry: 'https://root.example.org',
+          directory: 'root-dist',
+        },
+      }),
+    )
+    const pkgRoot = path.join(fixtureRoot, 'packages/example')
+    await mkdir(pkgRoot)
+    await writeFile(
+      path.join(pkgRoot, 'package.json'),
+      JSON.stringify({
+        name: '@eljs/example',
+        version: '2.0.0',
+        publishConfig: existing,
+      }),
+    )
+    await createPackages(fixtureRoot, ['packages/example', '--force'])
+    const manifest = JSON.parse(
+      await readFile(path.join(pkgRoot, 'package.json'), 'utf8'),
+    )
+    expect(manifest.publishConfig).toEqual({
+      access: 'restricted',
+      registry: 'https://root.example.org',
+      ...existing,
+    })
+  })
+
+  it('未使用 force 时不改写已有包清单或补齐发布字段', async () => {
+    const pkgRoot = path.join(fixtureRoot, 'packages/example')
+    await mkdir(pkgRoot)
+    const original = JSON.stringify({
+      name: '@eljs/example',
+      version: '2.0.0',
+      publishConfig: { access: 'restricted' },
+    })
+    await writeFile(path.join(pkgRoot, 'package.json'), original)
+    await createPackages(fixtureRoot, ['packages/example'])
+    expect(await readFile(path.join(pkgRoot, 'package.json'), 'utf8')).toBe(
+      original,
     )
   })
 

@@ -7,8 +7,15 @@ import { AppError, ReleasePublishError } from '../../utils'
 import { mapWithConcurrency } from '../concurrency'
 import { closeRollbackWindow } from '../precommit-rollback'
 import {
+  extractPublishAccess,
+  parsePublishAccess,
+  resolvePublishAccess,
+  type PublishAccess,
+} from '../publish-access'
+import {
   createPublishPlan,
   inspectPublishPlan,
+  type PublishAccessPolicy,
   type PublishTarget,
 } from '../publish-plan'
 import { createSafeCommandError } from '../safe-command-error'
@@ -17,12 +24,13 @@ import { createSafeCommandError } from '../safe-command-error'
  * 文件写入前完成校验并绑定目标版本的发布计划
  *
  * @remarks
- * 快照固定包名、目录映射和 registry，Hook 完成后及每次发布前只读复检实际清单
+ * 快照固定包名、目录映射、registry 和有效 access，Hook 完成后及每次发布前只读复检实际清单
  */
 interface PreparedPublishPlan {
   readonly version: string
   readonly workspacePackages: AppData['workspacePackages']
   readonly registry: AppData['registry']
+  readonly access: PublishAccessPolicy
 }
 
 export default definePlugin(context => {
@@ -33,8 +41,43 @@ export default definePlugin(context => {
     return createPublishPlan(context.appData, version)
   }
 
+  /**
+   * 一次读取发布参数并校验权限快照，剩余参数与本次清单复检共用相同输入
+   */
+  function accessPolicy(): PublishAccessPolicy & { args: string[] } {
+    const args = normalizeArgs(context.config.npm.publishArgs)
+    validatePublishArgs(args)
+    const { access: explicitAccess, args: remainingArgs } =
+      extractPublishAccess(args)
+    const rootAccess = parsePublishAccess(
+      context.appData.projectPkg?.publishConfig?.access,
+    )
+    const policy = { rootAccess, explicitAccess }
+    const snapshot = preparedPlan?.access
+    const expected =
+      preparedPlan?.workspacePackages ?? context.appData.workspacePackages
+    for (const { manifest } of expected) {
+      if (manifest.private) continue
+      const access = resolvePublishAccess(manifest, rootAccess, explicitAccess)
+      if (
+        snapshot &&
+        access !==
+          resolvePublishAccess(
+            manifest,
+            snapshot.rootAccess,
+            snapshot.explicitAccess,
+          )
+      ) {
+        throw new AppError(
+          'Publish preflight failed: effective access changed after version preflight.',
+        )
+      }
+    }
+    return { ...policy, args: remainingArgs }
+  }
+
   context.onCheck(async () => {
-    validatePublishArgs(normalizeArgs(context.config.npm.publishArgs))
+    accessPolicy()
     const { requireOwner } = context.config.npm
 
     if (requireOwner) {
@@ -105,12 +148,17 @@ export default definePlugin(context => {
 
   context.onBeforeBumpVersion(
     ({ version }) => {
-      validatePublishArgs(normalizeArgs(context.config.npm.publishArgs))
+      preparedPlan = undefined
+      const access = accessPolicy()
       preparePublishPlan(version)
       preparedPlan = {
         version,
         workspacePackages: structuredClone(context.appData.workspacePackages),
         registry: context.appData.registry,
+        access: {
+          rootAccess: access.rootAccess,
+          explicitAccess: access.explicitAccess,
+        },
       }
     },
     {
@@ -128,6 +176,7 @@ export default definePlugin(context => {
         preparedPlan?.version === version
           ? preparedPlan.workspacePackages
           : structuredClone(context.appData.workspacePackages)
+      const policy = accessPolicy()
       const targets = context.config.dryRun
         ? preparePublishPlan(version)
         : await inspectPublishPlan(
@@ -135,8 +184,8 @@ export default definePlugin(context => {
             expected,
             version,
             preparedPlan ?? context.appData,
+            policy,
           )
-      validatePublishArgs(normalizeArgs(context.config.npm.publishArgs))
       const existingPkgNames = new Set<string>(
         context.appData.existingPkgNames ?? [],
       )
@@ -166,13 +215,17 @@ export default definePlugin(context => {
       for (let index = 0; index < pendingTargets.length; index++) {
         const target = pendingTargets[index]
 
+        /** 仅将命令启动前的内置复检映射为预检诊断，不按异常类型信任原始消息 */
+        let isPreflight = true
         try {
           // 前一个包的生命周期脚本可能改写后续产物，命令启动前重新核对完整图与顺序
+          const currentPolicy = accessPolicy()
           const current = await inspectPublishPlan(
             context.appData,
             expected,
             version,
             preparedPlan ?? context.appData,
+            currentPolicy,
           )
           if (
             current.map(pkg => pkg.name).join('\0') !==
@@ -182,9 +235,21 @@ export default definePlugin(context => {
               'Publish preflight failed: dependency order changed during publishing.',
             )
           }
-          await publishPackage(target.rootPath, target.name, version)
+          const currentTarget = current.find(pkg => pkg.name === target.name)
+          isPreflight = false
+          await publishPackage(
+            target.rootPath,
+            target.name,
+            version,
+            currentTarget?.access,
+            currentPolicy.args,
+          )
           publishedPackages.push(target.name)
         } catch (error) {
+          const safeError = createSafeCommandError(
+            error,
+            context.signal?.aborted,
+          )
           const publishError = new ReleasePublishError(
             {
               failedPackage: target.name,
@@ -194,7 +259,9 @@ export default definePlugin(context => {
                 .slice(index)
                 .map(({ name }) => name),
             },
-            createSafeCommandError(error, context.signal?.aborted),
+            isPreflight
+              ? { ...safeError, code: 'EPUBLISH_PREFLIGHT' }
+              : safeError,
           )
           logger.error(publishError.message)
           throw publishError
@@ -205,6 +272,8 @@ export default definePlugin(context => {
         pkgRootPath: string,
         pkgName: string,
         version: string,
+        access: PublishAccess | undefined,
+        publishArgs: readonly string[],
       ) {
         // 数字型或保留标识的预发布版本不能直接作为安全的 npm dist-tag
         const distTag = isPrerelease
@@ -235,8 +304,6 @@ export default definePlugin(context => {
                 : ['--no-git-checks']
             : []
 
-        const publishArgs = normalizeArgs(context.config.npm.publishArgs)
-        validatePublishArgs(publishArgs)
         // npm/pnpm 的项目配置或环境变量可能令 publish 退出成功但未上传，CLI 固定真实发布模式
         // npm 的 usage 同样会提前退出；这些 npm 配置参数不能传给 Yarn Berry
         const publishModeArgs =
@@ -252,6 +319,7 @@ export default definePlugin(context => {
           ...tagArg,
           ...registryArg,
           ...pnpmGitCheckArg,
+          ...(access ? ['--access', access] : []),
           ...publishArgs,
           ...publishModeArgs,
         ].filter(Boolean)
@@ -283,7 +351,7 @@ export default definePlugin(context => {
 
   context.onRelease(
     async ({ version }) => {
-      validatePublishArgs(normalizeArgs(context.config.npm.publishArgs))
+      const policy = accessPolicy()
       if (context.config.dryRun) return
       const expected =
         preparedPlan?.version === version
@@ -294,6 +362,7 @@ export default definePlugin(context => {
         expected,
         version,
         preparedPlan ?? context.appData,
+        policy,
       )
     },
     {

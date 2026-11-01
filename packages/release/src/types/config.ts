@@ -178,6 +178,11 @@ export interface Config extends UserConfig {
      * 会改变目标的已知别名与缩写同样被拒绝，例如 `--w`、`--ws`、`--C`
      * 不允许覆盖 registry，包含缩写、作用域配置、配置文件切换及 `--config.*` 包装
      * 应使用 `npm.registry` 统一配置发布地址
+     * `--access public` 或 `--access restricted` 优先于子包及根清单的 `publishConfig.access`
+     * 子包未声明权限时继承根默认值，两者均未声明时保留包管理器默认行为
+     * 有效权限会在版本预检时固定，并在提交前和每个包发布前复核
+     * 复检会重读磁盘根清单，根默认值变化仅在影响包的有效权限时拒绝
+     * 权限选项只接受完整拼写，重复值必须一致，清单中的无效权限也会被拒绝
      * 不允许额外 dry-run 选项及其规范化形式或缩写，顶层 `dryRun` 是唯一预览入口
      * 不允许帮助、用法或版本显示选项及其规范化形式、别名和缩写，防止提前退出被误记为发布成功
      * 未知选项的取值应使用 `--option=value` 形式
@@ -289,7 +294,7 @@ export interface ResolvedConfig extends UserConfig {
     canary: boolean
     /** 是否在发布前要求确认目标版本 */
     confirm: boolean
-    /** 附加到包管理器 publish 的选项，沿用发布身份、registry 和提前退出限制 */
+    /** 附加到包管理器 publish 的选项，沿用发布身份、registry、access 优先级和提前退出限制 */
     publishArgs?: string | string[]
   }
   /**

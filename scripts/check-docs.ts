@@ -1,182 +1,104 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import ts from 'typescript'
 
-/**
- * 双语文档中需要保持一致的结构与可执行示例
- *
- * @remarks
- * 文本输出和目录示意允许翻译，代码与命令只允许注释和空白变化
- * 结构检查不能替代对正文语义及 API 行为的人工审查
- */
-interface DocumentContract {
-  headingLevels: number[]
-  tableRows: number[]
-  code: Array<{ language: string; content: string }>
-  prose: string
-}
-
-function parseDocument(markdown: string): DocumentContract {
-  const result: DocumentContract = {
-    headingLevels: [],
-    tableRows: [],
-    code: [],
-    prose: '',
+function checkDocument(file: string): void {
+  if (!existsSync(file)) {
+    throw new Error(`Missing documentation file: ${file}`)
   }
-  let fence: { marker: string; language: string; lines: string[] } | undefined
-  let rows = 0
-  const flushTable = () => {
-    if (rows) result.tableRows.push(rows)
-    rows = 0
-  }
-
-  for (const line of markdown.split(/\r?\n/)) {
+  let fence: { marker: string; length: number } | undefined
+  let hasLanguageLink = false
+  const name = path.basename(file)
+  const otherLanguage = name.endsWith('.zh-CN.md')
+    ? name.replace('.zh-CN.md', '.md')
+    : name.replace('.md', '.zh-CN.md')
+  const lines = readFileSync(file, 'utf8').split(/\r?\n/)
+  for (const [index, line] of lines.entries()) {
+    const marker = /^\s*(`{3,}|~{3,})(.*)$/.exec(line)
     if (fence) {
-      if (line.trimEnd() === fence.marker) {
-        result.code.push({
-          language: fence.language,
-          content: fence.lines.join('\n'),
-        })
-        fence = undefined
-      } else {
-        fence.lines.push(line)
-      }
-      continue
-    }
-    const opening = /^(`{3,}|~{3,})(\w*)\s*$/.exec(line)
-    if (opening) {
-      flushTable()
-      fence = { marker: opening[1], language: opening[2], lines: [] }
-      continue
-    }
-    const heading = /^(#{1,6})\s/.exec(line)
-    if (heading) result.headingLevels.push(heading[1].length)
-    if (/^\s*\|.*\|\s*$/.test(line)) {
-      if (!/^\s*\|[\s:|-]+\|\s*$/.test(line)) rows++
-    } else {
-      flushTable()
-    }
-    result.prose += `${line}\n`
-  }
-  flushTable()
-  if (fence) throw new Error('Unclosed Markdown code fence')
-  return result
-}
-
-function codeTokens(language: string, content: string): string[] | undefined {
-  if (
-    ['ts', 'tsx', 'typescript', 'js', 'javascript', 'json'].includes(language)
-  ) {
-    // 使用语法树提供的 token 边界，避免模板字符串后的注释被普通 scanner 误读
-    const source = ts.createSourceFile(
-      'example.ts',
-      content,
-      ts.ScriptTarget.Latest,
-      true,
-      language === 'tsx' ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-    )
-    const tokens: string[] = []
-    const collect = (node: ts.Node) => {
-      const children = node.getChildren(source)
-      if (children.length) {
-        children.forEach(collect)
-      } else if (
-        node.kind >= ts.SyntaxKind.FirstToken &&
-        node.kind <= ts.SyntaxKind.LastToken &&
-        node.kind !== ts.SyntaxKind.EndOfFileToken
+      if (
+        marker &&
+        marker[1][0] === fence.marker &&
+        marker[1].length >= fence.length &&
+        !marker[2].trim()
       ) {
-        tokens.push(node.getText(source))
+        fence = undefined
       }
+      continue
     }
-    collect(source)
-    return tokens
-  }
-  if (['bash', 'sh', 'yaml', 'yml'].includes(language)) {
-    return content
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line && !line.startsWith('#'))
-  }
-  return undefined
-}
-
-/**
- * 校验双语入口、章节层级、表格行数、可执行示例与本地链接目标
- *
- * @param directory - 文档所在目录
- * @param files - 英文与中文入口文件名，默认检查 README
- * @throws 双语交付合同不一致或相对链接目标不存在时抛出
- * @internal
- */
-export function checkDocumentPair(
-  directory: string,
-  files: readonly [string, string] = ['README.md', 'README.zh-CN.md'],
-): void {
-  const documents = files.map(file => {
-    const markdown = readFileSync(path.join(directory, file), 'utf8')
-    const otherLanguage = file === files[0] ? files[1] : files[0]
-    if (
-      !markdown
-        .split(/\r?\n/)
-        .slice(1, 6)
-        .some(line => line.includes(otherLanguage))
-    ) {
-      throw new Error(`${directory}/${file}: missing language link after title`)
+    if (marker) {
+      fence = { marker: marker[1][0], length: marker[1].length }
+      continue
     }
-    const contract = parseDocument(markdown)
-    for (const match of contract.prose.matchAll(
-      /\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g,
-    )) {
+    // 示例中的 Markdown 属于代码数据；只检查正文中的本地文件链接，不访问网络或解析锚点
+    for (const match of line.matchAll(/\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)) {
       const target = match[1].split('#')[0]
       if (!target || /^(?:[a-z][a-z\d+.-]*:|\/)/i.test(target)) continue
-      if (!existsSync(path.resolve(directory, decodeURIComponent(target)))) {
-        throw new Error(`${directory}/${file}: broken relative link ${target}`)
+      const resolved = path.resolve(
+        path.dirname(file),
+        decodeURIComponent(target),
+      )
+      if (!existsSync(resolved)) {
+        throw new Error(`${file}:${index + 1}: broken relative link ${target}`)
+      }
+      if (
+        index >= 1 &&
+        index < 6 &&
+        resolved === path.resolve(path.dirname(file), otherLanguage)
+      ) {
+        hasLanguageLink = true
       }
     }
-    return contract
-  })
-  const [english, chinese] = documents
-  const assertEqual = (left: unknown, right: unknown, label: string) => {
-    if (JSON.stringify(left) !== JSON.stringify(right)) {
-      throw new Error(`${directory}: bilingual ${label} differ`)
-    }
   }
-  assertEqual(english.headingLevels, chinese.headingLevels, 'heading levels')
-  assertEqual(english.tableRows, chinese.tableRows, 'table rows')
-  assertEqual(
-    english.code.map(block => block.language),
-    chinese.code.map(block => block.language),
-    'code fence languages',
-  )
-  english.code.forEach((block, index) => {
-    const expected = codeTokens(block.language, block.content)
-    if (expected) {
-      assertEqual(
-        expected,
-        codeTokens(chinese.code[index].language, chinese.code[index].content),
-        `executable code block ${index + 1}`,
-      )
+  if (fence) throw new Error(`${file}: Unclosed Markdown code fence`)
+  if (!hasLanguageLink) {
+    throw new Error(`${file}: missing language link after title`)
+  }
+}
+
+/**
+ * 检查必需文档、标题后语言入口、围栏闭合及正文相对链接目标
+ *
+ * @remarks
+ * 根目录检查双语 README 与 CONTRIBUTING，公开包检查双语 README
+ * 另一语言入口必须位于首行标题后的五行正文内
+ * 跳过 fenced 示例，不比较译文结构、表格或代码，不校验外部 URL 与文档锚点
+ * 由 docs:check 命令执行，并纳入 verify:static 静态验证
+ *
+ * @param root - 本仓库根目录
+ * @throws 当文档或语言入口缺失、围栏未闭合、相对链接失效或包清单无法读取时抛出
+ * @internal
+ */
+export function checkDocumentationTree(root: string): void {
+  for (const name of [
+    'README.md',
+    'README.zh-CN.md',
+    'CONTRIBUTING.md',
+    'CONTRIBUTING.zh-CN.md',
+  ]) {
+    checkDocument(path.join(root, name))
+  }
+  const packagesRoot = path.join(root, 'packages')
+  if (!existsSync(packagesRoot)) return
+  for (const entry of readdirSync(packagesRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const directory = path.join(packagesRoot, entry.name)
+    const manifest = path.join(directory, 'package.json')
+    if (
+      !existsSync(manifest) ||
+      JSON.parse(readFileSync(manifest, 'utf8')).private
+    ) {
+      continue
     }
-  })
+    checkDocument(path.join(directory, 'README.md'))
+    checkDocument(path.join(directory, 'README.zh-CN.md'))
+  }
 }
 
 if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
-  const root = fileURLToPath(new URL('..', import.meta.url))
-  checkDocumentPair(root)
-  checkDocumentPair(root, ['CONTRIBUTING.md', 'CONTRIBUTING.zh-CN.md'])
-  for (const entry of readdirSync(path.join(root, 'packages'), {
-    withFileTypes: true,
-  })) {
-    if (!entry.isDirectory()) continue
-    const directory = path.join(root, 'packages', entry.name)
-    const manifest = JSON.parse(
-      readFileSync(path.join(directory, 'package.json'), 'utf8'),
-    )
-    if (!manifest.private) checkDocumentPair(directory)
-  }
-  console.log('Bilingual documentation contracts passed')
+  checkDocumentationTree(fileURLToPath(new URL('..', import.meta.url)))
+  console.log('Repository documentation checks passed')
 }

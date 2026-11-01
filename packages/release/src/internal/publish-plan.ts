@@ -3,6 +3,11 @@ import path from 'node:path'
 import semver from 'semver'
 import type { AppData, WorkspacePackageJson } from '../types'
 import { AppError } from '../utils'
+import {
+  parsePublishAccess,
+  resolvePublishAccess,
+  type PublishAccess,
+} from './publish-access'
 import { resolveWorkspaceReference } from './workspace-reference'
 
 /**
@@ -17,6 +22,19 @@ export interface PublishTarget {
   rootPath: string
   /** 已通过发布前校验的包清单 */
   packageJson: WorkspacePackageJson
+  /** 已复检的发布权限，未声明时保留包管理器默认行为 */
+  access?: PublishAccess
+}
+
+/**
+ * 根默认权限与显式发布参数，用于结合已有工作区清单快照解析有效权限
+ *
+ * @remarks 源清单和实际发布目录的权限不得令有效值偏离快照
+ * @internal
+ */
+export interface PublishAccessPolicy {
+  rootAccess?: PublishAccess
+  explicitAccess?: PublishAccess
 }
 
 /**
@@ -211,13 +229,15 @@ function assertDependencyRanges(
  * 固定 registry 不得变化；Yarn Berry 的清单优先配置必须与固定值一致
  * 其他变体使用固定 CLI registry 覆盖清单声明，未固定时拒绝新增清单 registry
  * 校验覆盖命令启动前的文件状态，包管理器自身脚本和外部并发写入仍由调用方约束
+ * 提供根清单路径时同时复检磁盘根默认权限，低优先级变化仅在影响有效权限时拒绝
  *
  * @param appData - 当前运行数据
  * @param expected - 版本预检时固定的工作区清单和目录
  * @param version - 本次发布版本
  * @param registrySnapshot - 版本预检快照，其中 `registry: undefined` 表示不得新增地址
+ * @param accessPolicy - 已校验的权限来源，提供时结合 expected 复核源清单及实际发布清单的有效权限
  * @returns 根据实际发布清单排序的目标
- * @throws 清单缺失、格式无效、发布身份或生效 registry 变化、内部范围或依赖图不安全时抛出
+ * @throws 清单缺失、格式无效、发布身份、生效 registry 或 access 变化、内部范围或依赖图不安全时抛出
  * @internal
  */
 export async function inspectPublishPlan(
@@ -227,10 +247,12 @@ export async function inspectPublishPlan(
     | 'packageManager'
     | 'packageManagerVariant'
     | 'registry'
-  >,
+  > &
+    Partial<Pick<AppData, 'projectPkgJsonPath'>>,
   expected: AppData['workspacePackages'],
   version: string,
   registrySnapshot: Pick<AppData, 'registry'> = appData,
+  accessPolicy?: PublishAccessPolicy,
 ): Promise<PublishTarget[]> {
   const { registry } = registrySnapshot
   if (normalizeRegistry(appData.registry) !== normalizeRegistry(registry)) {
@@ -253,6 +275,31 @@ export async function inspectPublishPlan(
       'Publish preflight failed: workspace identity changed after version preflight.',
     )
 
+  const sourcesByName = new Map(
+    expected.map(pkg => [
+      pkg.manifest.name,
+      {
+        rootPath: pkg.rootPath,
+        ...(accessPolicy && !pkg.manifest.private
+          ? {
+              access: resolvePublishAccess(
+                pkg.manifest,
+                accessPolicy.rootAccess,
+                accessPolicy.explicitAccess,
+              ),
+            }
+          : {}),
+      },
+    ]),
+  )
+  // 私有根包不会作为发布目标读取，但它仍可能提供子包的默认权限
+  const currentRootAccess =
+    accessPolicy && appData.projectPkgJsonPath
+      ? parsePublishAccess(
+          JSON.parse(await readFile(appData.projectPkgJsonPath, 'utf8'))
+            .publishConfig?.access,
+        )
+      : accessPolicy?.rootAccess
   const effectivePackages = await Promise.all(
     expected.map(async pkg => {
       const source = JSON.parse(
@@ -283,18 +330,33 @@ export async function inspectPublishPlan(
             ) as WorkspacePackageJson)
       assertPublishIdentity(manifest, pkg.manifest, version)
       assertPublishRegistry(manifest, appData.packageManagerVariant, registry)
+      if (accessPolicy) {
+        const expectedAccess = sourcesByName.get(source.name)?.access
+        const sourceAccess = resolvePublishAccess(
+          source,
+          currentRootAccess,
+          accessPolicy.explicitAccess,
+        )
+        const access = resolvePublishAccess(
+          manifest,
+          sourceAccess,
+          accessPolicy.explicitAccess,
+        )
+        if (sourceAccess !== expectedAccess || access !== expectedAccess) {
+          throw new AppError(
+            'Publish preflight failed: effective access changed after version preflight.',
+          )
+        }
+      }
       return { ...pkg, rootPath, manifest }
     }),
-  )
-  const rootsByName = new Map(
-    expected.map(pkg => [pkg.manifest.name, pkg.rootPath]),
   )
   return createPublishPlan(
     { workspacePackages: effectivePackages },
     version,
   ).map(target => ({
     ...target,
-    rootPath: rootsByName.get(target.name) as string,
+    ...sourcesByName.get(target.name),
   }))
 }
 

@@ -595,6 +595,21 @@ For other managers, a fixed CLI registry overrides manifest declarations, so
 different overridden values are allowed. If no registry was fixed, introducing
 a manifest registry later is rejected; configure `npm.registry` before releasing.
 
+Publishing access is resolved in this order: explicit `npm.publishArgs`
+`--access` option, child `publishConfig.access`, then root `publishConfig.access`.
+Only `public` and `restricted` are accepted. Without a declaration, the package
+manager retains its default. The effective value is fixed during version
+preflight and checked against source and effective publish manifests before
+committing and before each publish. Use the full `--access` spelling; repeated
+values must agree and are emitted only once.
+
+When upgrading, packages without their own access declaration now inherit the
+root default instead of relying on the package manager default. Set child
+`publishConfig.access` explicitly if that default is unsuitable, and replace
+abbreviated access options such as `--acc=public` with `--access=public`.
+The root manifest is also reread from disk; changing its default is rejected
+only when it changes a package's effective access.
+
 After all `onBeforeRelease` Hooks, disk manifests are checked before the Git
 commit, then checked again before each package is published. pnpm's
 `publishConfig.directory` is checked as the effective publish directory. Prepare
@@ -645,6 +660,11 @@ error codes, and cancellation status; raw command errors, output, and original
 cause chains are discarded. Owner checks and `isVersionExist` failures use the
 same safe diagnostics. Missing-version/404 queries still return `false`; other
 query failures throw a new safe error without the original sensitive cause.
+Per-package preflight failures retain structured progress and the fixed
+`EPUBLISH_PREFLIGHT` diagnostic, with a reminder to check package manifests,
+publish access, registry configuration, and dependency order. Their original
+error messages are also discarded; cancellation and timeout diagnostics take
+precedence.
 Version queries explicitly request JSON `name` and `version` fields and disable
 npm usage output. Only an object matching both requested fields confirms existence;
 help text, invalid JSON, and mismatched identities throw safe errors and cannot

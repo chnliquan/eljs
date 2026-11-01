@@ -742,9 +742,9 @@ describe('真实发布目录与 Hook 的只读边界', () => {
       'npm',
       [
         'publish',
-        '-f',
         '--access',
         'public',
+        '-f',
         '--fetch-retries=3',
         '--dry-run=false',
         '--usage=false',

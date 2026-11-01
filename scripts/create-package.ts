@@ -36,7 +36,6 @@ const preservedPackageFields = [
   'optionalDependencies',
   'peerDependencies',
   'peerDependenciesMeta',
-  'publishConfig',
 ] as const
 
 interface CreatePackageManifestOptions {
@@ -46,6 +45,7 @@ interface CreatePackageManifestOptions {
   shortName: string
   description?: string
   existingPackageJson?: PackageJson
+  rootPublishConfig?: PackageJson['publishConfig']
 }
 
 interface PackageManifest extends PackageJson {
@@ -86,6 +86,7 @@ function createPackageManifest({
   shortName,
   description,
   existingPackageJson,
+  rootPublishConfig,
 }: CreatePackageManifestOptions): PackageManifest {
   const manifest: PackageManifest = {
     name,
@@ -131,6 +132,11 @@ function createPackageManifest({
       dev: 'rslib build --watch',
       typecheck: 'tsc --noEmit && tsc --noEmit -p tsconfig.build.json',
     },
+    // 根目录的发布目录不适用于新包，只继承访问级别和 registry
+    publishConfig: {
+      access: rootPublishConfig?.access ?? 'public',
+      registry: rootPublishConfig?.registry ?? 'https://registry.npmjs.org',
+    },
   }
 
   if (!existingPackageJson) {
@@ -145,6 +151,11 @@ function createPackageManifest({
     }
   }
 
+  // force 补齐发布默认值，同时保留包自身显式设置的发布选项
+  manifest.publishConfig = {
+    ...manifest.publishConfig,
+    ...existingPackageJson.publishConfig,
+  }
   if (description !== undefined) manifest.description = description
   return manifest
 }
@@ -203,6 +214,8 @@ if (
  * @remarks
  * 仓库根目录由受信任的脚本入口提供，用户路径仍必须通过单层包目录校验
  * 新包同时生成双语入口；缺失其中一种语言的既有文档须先人工同步
+ * 发布默认使用公开访问与官方 registry，根清单仅覆盖 access 和 registry
+ * force 更新时补齐发布默认值并保留包自身的显式发布配置
  *
  * @param rootPath - 受信任的仓库绝对根目录
  * @param args - 与命令行相同的包目录和选项
@@ -215,7 +228,7 @@ export async function createPackages(
 ): Promise<void> {
   const cliArguments = parseArguments([...args])
   const pkgPaths = getPackageDirectories(rootPath)
-  const { version } = await readJson<PackageJson>(
+  const { version, publishConfig } = await readJson<PackageJson>(
     path.resolve(rootPath, 'package.json'),
   )
 
@@ -264,6 +277,7 @@ export async function createPackages(
       shortName,
       description,
       cliArguments.force,
+      publishConfig,
     )
     ensureReadme(pkgDir, name, shortName)
     ensureSrcIndex(pkgDir)
@@ -331,6 +345,7 @@ function ensurePackageJson(
   shortName: string,
   description?: string,
   force = false,
+  rootPublishConfig?: PackageJson['publishConfig'],
 ): void {
   const pkgJSONPath = path.join(pkgDir, 'package.json')
   const pkgJSONExists = pathExistsSync(pkgJSONPath)
@@ -359,6 +374,7 @@ function ensurePackageJson(
       shortName,
       description,
       existingPackageJson: pkgJSONExists ? pkgJSON : undefined,
+      rootPublishConfig,
     })
 
     step('Generate package.json')
