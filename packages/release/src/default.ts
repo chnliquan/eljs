@@ -88,16 +88,8 @@ export const defaultConfig: Config = {
      */
     release: true,
     /**
-     * GitHub Release 创建方式
+     * GitHub Release 创建方式，API 模式固定读取 `GITHUB_TOKEN`
      */
     mode: 'browser',
-    /**
-     * API 令牌环境变量名
-     */
-    tokenEnv: 'GITHUB_TOKEN',
-    /**
-     * 默认不信任任何 GitHub Enterprise 主机
-     */
-    enterpriseHost: undefined,
   },
 }

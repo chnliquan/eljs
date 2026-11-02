@@ -355,11 +355,6 @@ export default defineConfig({
      * @default 'browser'
      */
     mode: 'browser',
-    /**
-     * Environment variable containing the API token
-     * @default 'GITHUB_TOKEN'
-     */
-    tokenEnv: 'GITHUB_TOKEN',
   },
   /**
    * Custom presets
@@ -372,9 +367,11 @@ export default defineConfig({
 })
 ```
 
-API mode sends tokens to `github.com` by default. For GitHub Enterprise, set
-`github.enterpriseHost` to the remote's exact lowercase hostname (for example,
-`git.corp.example.com`); protocols, ports, and paths are rejected.
+The built-in GitHub integration only supports repositories hosted on `github.com`.
+API mode always reads `GITHUB_TOKEN` from the environment and sends requests to
+`https://api.github.com`. The token needs Contents write permission for the target
+repository. Map any differently named CI secret to `GITHUB_TOKEN`.
+Use a custom plugin for GitHub Enterprise releases.
 
 ## 🔌 Plugin System
 

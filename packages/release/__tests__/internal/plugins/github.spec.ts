@@ -98,7 +98,6 @@ describe('GitHub 插件测试', () => {
         github: {
           release: true,
           mode: 'browser',
-          tokenEnv: 'GITHUB_TOKEN',
         },
       } as Config,
       appData: {
@@ -114,6 +113,7 @@ describe('GitHub 插件测试', () => {
     }
 
     vi.clearAllMocks()
+    vi.stubEnv('GITHUB_TOKEN', undefined)
 
     // 设置默认模拟返回值
     ;(getGitUrlSync as MockedFunction<typeof getGitUrlSync>).mockReturnValue(
@@ -136,7 +136,7 @@ describe('GitHub 插件测试', () => {
   })
 
   afterEach(() => {
-    delete process.env.RELEASE_TEST_GITHUB_TOKEN
+    vi.unstubAllEnvs()
     vi.unstubAllGlobals()
   })
 
@@ -200,37 +200,26 @@ describe('GitHub 插件测试', () => {
       expect(describeCall.enable({ cwd: '/it/project' })).toBe(false)
     })
 
-    it('应该支持以 github 子域标识的企业仓库', () => {
+    it.each([
+      'github.corp.example.com',
+      'git.corp.example.com',
+      'github.example.com',
+      'api.github.com',
+      'github.com.example.com',
+    ])('应该在非公共 GitHub 主机 %s 中禁用', host => {
       ;(getGitUrlSync as MockedFunction<typeof getGitUrlSync>).mockReturnValue(
-        'https://github.corp.example.com/user/repo.git',
+        `https://${host}/user/repo.git`,
       )
       ;(
         parseGitRemoteUrl as MockedFunction<typeof parseGitRemoteUrl>
       ).mockReturnValue({
-        href: 'https://github.corp.example.com/user/repo',
+        href: `https://${host}/user/repo`,
       } as ReturnType<typeof parseGitRemoteUrl>)
 
       githubPlugin(mockContext as unknown as ReleasePluginContext)
       const describeCall = mockContext.describe.mock.calls[0][0]
 
-      expect(describeCall.enable({ cwd: '/it/project' })).toBe(true)
-    })
-
-    it('应该支持显式配置且不以 github 开头的企业仓库', () => {
-      mockContext.config.github!.enterpriseHost = 'git.corp.example.com'
-      ;(getGitUrlSync as MockedFunction<typeof getGitUrlSync>).mockReturnValue(
-        'https://git.corp.example.com/user/repo.git',
-      )
-      ;(
-        parseGitRemoteUrl as MockedFunction<typeof parseGitRemoteUrl>
-      ).mockReturnValue({
-        href: 'https://git.corp.example.com/user/repo',
-      } as ReturnType<typeof parseGitRemoteUrl>)
-
-      githubPlugin(mockContext as unknown as ReleasePluginContext)
-      const describeCall = mockContext.describe.mock.calls[0][0]
-
-      expect(describeCall.enable({ cwd: '/it/project' })).toBe(true)
+      expect(describeCall.enable({ cwd: '/it/project' })).toBe(false)
     })
   })
 
@@ -454,7 +443,6 @@ describe('GitHub 插件测试', () => {
       mockContext.config.github = {
         mode: 'api',
         release: true,
-        tokenEnv: 'RELEASE_TEST_GITHUB_TOKEN',
       }
       githubPlugin(mockContext as unknown as ReleasePluginContext)
 
@@ -468,13 +456,11 @@ describe('GitHub 插件测试', () => {
     it('预检时应该拒绝缺失令牌', async () => {
       const { onCheckHandler } = enableApiMode()
 
-      await expect(onCheckHandler()).rejects.toThrow(
-        'RELEASE_TEST_GITHUB_TOKEN',
-      )
+      await expect(onCheckHandler()).rejects.toThrow('GITHUB_TOKEN')
     })
 
     it('应该通过 REST API 创建 Release', async () => {
-      process.env.RELEASE_TEST_GITHUB_TOKEN = 'secret-token'
+      vi.stubEnv('GITHUB_TOKEN', 'secret-token')
       const fetchMock = vi
         .fn<typeof fetch>()
         .mockResolvedValueOnce(new Response('', { status: 404 }))
@@ -521,7 +507,7 @@ describe('GitHub 插件测试', () => {
     })
 
     it('已存在同名 Release 时应该幂等跳过', async () => {
-      process.env.RELEASE_TEST_GITHUB_TOKEN = 'secret-token'
+      vi.stubEnv('GITHUB_TOKEN', 'secret-token')
       const fetchMock = vi
         .fn<typeof fetch>()
         .mockResolvedValue(new Response('{}', { status: 200 }))
@@ -542,7 +528,7 @@ describe('GitHub 插件测试', () => {
     })
 
     it('创建时发生并发冲突应该再次查询并复用 Release', async () => {
-      process.env.RELEASE_TEST_GITHUB_TOKEN = 'secret-token'
+      vi.stubEnv('GITHUB_TOKEN', 'secret-token')
       const fetchMock = vi
         .fn<typeof fetch>()
         .mockResolvedValueOnce(new Response('', { status: 404 }))
@@ -565,7 +551,7 @@ describe('GitHub 插件测试', () => {
     })
 
     it('API 查询失败时应该传播不包含令牌的诊断信息', async () => {
-      process.env.RELEASE_TEST_GITHUB_TOKEN = 'secret-token'
+      vi.stubEnv('GITHUB_TOKEN', 'secret-token')
       const fetchMock = vi
         .fn<typeof fetch>()
         .mockResolvedValue(
@@ -587,7 +573,7 @@ describe('GitHub 插件测试', () => {
     })
 
     it('应该使用发布取消信号终止 API 请求', async () => {
-      process.env.RELEASE_TEST_GITHUB_TOKEN = 'secret-token'
+      vi.stubEnv('GITHUB_TOKEN', 'secret-token')
       const controller = new AbortController()
       const cancellation = new Error('cancelled')
       mockContext.signal = controller.signal
@@ -624,19 +610,78 @@ describe('GitHub 插件测试', () => {
       )
     })
 
-    it('企业 GitHub 应该使用 /api/v3 端点', async () => {
-      process.env.RELEASE_TEST_GITHUB_TOKEN = 'secret-token'
+    it.each([
+      'git.corp.example.com',
+      'github.corp.example.com',
+      'github.example.com',
+      'api.github.com',
+      'github.com.example.com',
+      'evilgithub.com',
+      'gitlab.com',
+    ])('非公共 GitHub 主机 %s 应该禁用 API 发布且不发送请求', async host => {
+      vi.stubEnv('GITHUB_TOKEN', 'secret-token')
+      ;(getGitUrlSync as MockedFunction<typeof getGitUrlSync>).mockReturnValue(
+        `https://${host}/team/repo.git`,
+      )
+      ;(getGitUrl as MockedFunction<typeof getGitUrl>).mockResolvedValue(
+        `https://${host}/team/repo.git`,
+      )
       ;(
         parseGitRemoteUrl as MockedFunction<typeof parseGitRemoteUrl>
       ).mockReturnValue({
-        href: 'https://git.corp.example.com/team/repo',
+        href: `https://${host}/team/repo`,
       } as ReturnType<typeof parseGitRemoteUrl>)
+      const fetchMock = vi.fn<typeof fetch>()
+      vi.stubGlobal('fetch', fetchMock)
+      const { onCheckHandler, onReleaseHandler } = enableApiMode()
+
+      expect(
+        mockContext.describe.mock.calls[0][0].enable({
+          cwd: '/it/project',
+        }),
+      ).toBe(false)
+      await expect(onCheckHandler()).resolves.toBeUndefined()
+      await expect(
+        onReleaseHandler({
+          version: '1.1.0',
+          isPrerelease: false,
+          prereleaseId: null,
+          changelog: '## Changes',
+        }),
+      ).resolves.toBeUndefined()
+      expect(fetchMock).not.toHaveBeenCalled()
+      expect(newGithubReleaseUrl).not.toHaveBeenCalled()
+      expect(open).not.toHaveBeenCalled()
+    })
+
+    it('独立发布应该在公共 API 创建每个非私有包对应的 Release', async () => {
+      vi.stubEnv('GITHUB_TOKEN', 'secret-token')
+      mockContext.config.git!.independent = true
+      mockContext.appData.workspacePackages = [
+        {
+          manifest: { name: '@scope/core', version: '1.0.0' },
+          manifestPath: '/it/core/package.json',
+          rootPath: '/it/core',
+        },
+        {
+          manifest: { name: 'app', version: '1.0.0' },
+          manifestPath: '/it/app/package.json',
+          rootPath: '/it/app',
+        },
+        {
+          manifest: { name: 'private-app', version: '1.0.0', private: true },
+          manifestPath: '/it/private-app/package.json',
+          rootPath: '/it/private-app',
+        },
+      ]
       const fetchMock = vi
         .fn<typeof fetch>()
-        .mockResolvedValue(new Response('{}', { status: 200 }))
+        .mockResolvedValueOnce(new Response('', { status: 404 }))
+        .mockResolvedValueOnce(new Response('{}', { status: 201 }))
+        .mockResolvedValueOnce(new Response('', { status: 404 }))
+        .mockResolvedValueOnce(new Response('{}', { status: 201 }))
       vi.stubGlobal('fetch', fetchMock)
       const { onReleaseHandler } = enableApiMode()
-      mockContext.config.github!.enterpriseHost = 'git.corp.example.com'
 
       await onReleaseHandler({
         version: '1.1.0',
@@ -645,24 +690,39 @@ describe('GitHub 插件测试', () => {
         changelog: '## Changes',
       })
 
-      expect(fetchMock).toHaveBeenCalledWith(
-        'https://git.corp.example.com/api/v3/repos/team/repo/releases/tags/v1.1.0',
-        expect.any(Object),
-      )
+      expect(fetchMock).toHaveBeenCalledTimes(4)
+      for (const [index, tag] of ['@scope/core@1.1.0', 'app@1.1.0'].entries()) {
+        expect(fetchMock).toHaveBeenNthCalledWith(
+          index * 2 + 1,
+          `https://api.github.com/repos/user/repo/releases/tags/${encodeURIComponent(tag)}`,
+          expect.objectContaining({
+            headers: expect.objectContaining({
+              Authorization: 'Bearer secret-token',
+            }),
+          }),
+        )
+        expect(fetchMock).toHaveBeenNthCalledWith(
+          index * 2 + 2,
+          'https://api.github.com/repos/user/repo/releases',
+          expect.objectContaining({
+            body: JSON.stringify({
+              body: '## Changes',
+              name: tag,
+              prerelease: false,
+              tag_name: tag,
+            }),
+            method: 'POST',
+          }),
+        )
+      }
+      expect(open).not.toHaveBeenCalled()
     })
 
-    it('未显式信任企业主机时不应该向其发送令牌', async () => {
-      process.env.RELEASE_TEST_GITHUB_TOKEN = 'secret-token'
-      ;(
-        parseGitRemoteUrl as MockedFunction<typeof parseGitRemoteUrl>
-      ).mockReturnValue({
-        href: 'https://github.corp.example.com/team/repo',
-      } as ReturnType<typeof parseGitRemoteUrl>)
+    it('发布时缺失 GITHUB_TOKEN 应该报错且不发送请求', async () => {
       const fetchMock = vi.fn<typeof fetch>()
       vi.stubGlobal('fetch', fetchMock)
-      const { onCheckHandler, onReleaseHandler } = enableApiMode()
+      const { onReleaseHandler } = enableApiMode()
 
-      await expect(onCheckHandler()).rejects.toThrow('github.enterpriseHost')
       await expect(
         onReleaseHandler({
           version: '1.1.0',
@@ -670,7 +730,7 @@ describe('GitHub 插件测试', () => {
           prereleaseId: null,
           changelog: '## Changes',
         }),
-      ).rejects.toThrow('github.enterpriseHost')
+      ).rejects.toThrow('GITHUB_TOKEN')
       expect(fetchMock).not.toHaveBeenCalled()
     })
   })

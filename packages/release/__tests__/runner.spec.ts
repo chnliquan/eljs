@@ -128,7 +128,6 @@ describe('ReleaseRunner 类测试', () => {
       github: {
         release: true,
         mode: 'browser',
-        tokenEnv: 'GITHUB_TOKEN',
       },
     })
     readJsonSync.mockReturnValue({ name: 'it-package', version: '1.0.0' })

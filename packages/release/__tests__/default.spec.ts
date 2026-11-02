@@ -124,10 +124,11 @@ describe('默认配置测试', () => {
       expect(defaultConfig.github?.release).toBe(true)
     })
 
-    it('应该默认使用浏览器模式和 GITHUB_TOKEN', () => {
-      expect(defaultConfig.github?.mode).toBe('browser')
-      expect(defaultConfig.github?.tokenEnv).toBe('GITHUB_TOKEN')
-      expect(defaultConfig.github?.enterpriseHost).toBeUndefined()
+    it('应该仅配置发布开关和默认浏览器模式', () => {
+      expect(defaultConfig.github).toEqual({
+        release: true,
+        mode: 'browser',
+      })
     })
   })
 

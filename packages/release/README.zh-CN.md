@@ -349,11 +349,6 @@ export default defineConfig({
      * @default 'browser'
      */
     mode: 'browser',
-    /**
-     * 包含 API token 的环境变量
-     * @default 'GITHUB_TOKEN'
-     */
-    tokenEnv: 'GITHUB_TOKEN',
   },
   /**
    * 自定义预设
@@ -366,9 +361,10 @@ export default defineConfig({
 })
 ```
 
-API 模式默认将 token 发送到 `github.com`。使用 GitHub Enterprise 时，
-将 `github.enterpriseHost` 设置为与远程地址完全一致的小写主机名
-（例如 `git.corp.example.com`）；协议、端口和路径均会被拒绝。
+内置 GitHub 集成仅支持 `github.com` 上的仓库。API 模式固定读取环境变量
+`GITHUB_TOKEN`，并向 `https://api.github.com` 发送请求，令牌需要目标仓库
+Contents 写权限。CI 中其他名称的 secret 应映射到 `GITHUB_TOKEN`。
+GitHub Enterprise 发布可通过自定义插件接入。
 
 ## 🔌 插件系统
 

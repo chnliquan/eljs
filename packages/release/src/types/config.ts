@@ -7,6 +7,7 @@ import type { PrereleaseId } from './npm'
  *
  * @remarks
  * `browser` 打开预填页面供人工确认，`api` 使用令牌直接调用 REST API
+ * 仅支持公共 `github.com` 仓库，API 模式固定读取 `GITHUB_TOKEN` 环境变量
  */
 export type GithubReleaseMode = 'browser' | 'api'
 
@@ -191,6 +192,9 @@ export interface Config extends UserConfig {
   }
   /**
    * GitHub 配置
+   *
+   * @remarks
+   * 内置发布功能仅支持公共 `github.com` 仓库
    */
   github?: {
     /**
@@ -200,24 +204,12 @@ export interface Config extends UserConfig {
     release?: boolean
     /**
      * GitHub Release 创建方式
+     *
+     * @remarks
+     * API 模式固定读取 `GITHUB_TOKEN` 环境变量，令牌需要目标仓库 Contents 写权限
      * @defaultValue `'browser'`
      */
     mode?: GithubReleaseMode
-    /**
-     * API 模式读取访问令牌的环境变量名
-     *
-     * @remarks
-     * 环境变量中的令牌需要目标仓库 Contents 写权限，配置仅保存变量名而不保存令牌
-     * @defaultValue `'GITHUB_TOKEN'`
-     */
-    tokenEnv?: string
-    /**
-     * 允许 API 模式发送令牌的 GitHub Enterprise 主机名
-     *
-     * @remarks
-     * 仅填写不含协议、端口和路径的小写主机名；公共 `github.com` 无需配置
-     */
-    enterpriseHost?: string
   }
 }
 
@@ -299,15 +291,14 @@ export interface ResolvedConfig extends UserConfig {
   }
   /**
    * 已解析的 GitHub 配置
+   *
+   * @remarks
+   * 内置发布功能仅支持公共 `github.com` 仓库
    */
   github: {
     /** 是否在发布和推送完成后创建 GitHub Release */
     release: boolean
-    /** GitHub Release 创建方式 */
+    /** GitHub Release 创建方式，API 模式固定读取具备目标仓库 Contents 写权限的 `GITHUB_TOKEN` */
     mode: GithubReleaseMode
-    /** API 模式读取访问令牌的环境变量名 */
-    tokenEnv: string
-    /** 允许 API 模式发送令牌的 GitHub Enterprise 主机名 */
-    enterpriseHost?: string
   }
 }

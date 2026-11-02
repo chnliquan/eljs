@@ -29,7 +29,6 @@ function createConfig(): ResolvedConfig {
     github: {
       release: true,
       mode: 'browser',
-      tokenEnv: 'GITHUB_TOKEN',
     },
   }
 }
@@ -45,13 +44,6 @@ describe('release 配置运行时校验', () => {
     const config = createConfig()
     config.git.changelog = false
     config.npm.prereleaseId = 'preview'
-
-    expect(validateResolvedConfig(config)).toBe(config)
-  })
-
-  it('应该允许显式配置 GitHub Enterprise 主机名', () => {
-    const config = createConfig()
-    config.github.enterpriseHost = 'github.corp.example.com'
 
     expect(validateResolvedConfig(config)).toBe(config)
   })
@@ -129,29 +121,6 @@ describe('release 配置运行时校验', () => {
       'github.mode',
       config =>
         ((config.github as unknown as Record<string, unknown>).mode = 'cli'),
-    ],
-    [
-      'github.tokenEnv',
-      config =>
-        ((config.github as unknown as Record<string, unknown>).tokenEnv = ''),
-    ],
-    [
-      'github.tokenEnv',
-      config =>
-        ((config.github as unknown as Record<string, unknown>).tokenEnv =
-          'INVALID-NAME'),
-    ],
-    [
-      'github.enterpriseHost',
-      config => (config.github.enterpriseHost = 'https://github.corp.test'),
-    ],
-    [
-      'github.enterpriseHost',
-      config => (config.github.enterpriseHost = 'github.corp.test/api/v3'),
-    ],
-    [
-      'github.enterpriseHost',
-      config => (config.github.enterpriseHost = 'github.com'),
     ],
   ] satisfies Array<[string, (config: ResolvedConfig) => void]>)(
     '应该拒绝无效字段 %s',
