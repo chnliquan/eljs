@@ -379,12 +379,12 @@ describe('NPM 工具函数测试', () => {
       expect(logger.ready).not.toHaveBeenCalled()
     })
 
-    it('应该处理 resolveBin 失败的情况', () => {
+    it('应该处理 resolveBin 失败的情况', async () => {
       ;(resolveBin.sync as Mock).mockImplementation(() => {
         throw new Error('cnpm not found')
       })
 
-      expect(() => syncCnpm(['it-package'])).rejects.toThrow('cnpm not found')
+      await expect(syncCnpm(['it-package'])).rejects.toThrow('cnpm not found')
     })
 
     it('应该使用正确的 cnpm 命令路径', async () => {

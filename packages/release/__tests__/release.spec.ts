@@ -82,10 +82,9 @@ describe('发布函数核心测试', () => {
     })
 
     it('应该正确处理 ReleaseRunner 构造函数抛出的错误', async () => {
-      // 简化这个测试，不去模拟构造函数
-      expect(async () => {
-        await release(undefined, { cwd: '/non/existent/path' })
-      }).rejects.toThrow()
+      await expect(
+        release(undefined, { cwd: '/non/existent/path' }),
+      ).rejects.toThrow()
     })
   })
 
